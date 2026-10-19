@@ -1,0 +1,60 @@
+# The UI and the API must share one site: the refresh-token cookie is scoped to /api/v1/auth.
+# This server answers for the UI and forwards /api to ${API_UPSTREAM} (scheme and host only, no path).
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Imports are capped by the API (it answers 413); leave headroom for the multipart envelope.
+    client_max_body_size 16m;
+
+    location /api/ {
+        # Resolved per request, so nginx still starts if the API is unreachable at boot.
+        # NGINX_LOCAL_RESOLVERS is exported by the image entrypoint when NGINX_ENTRYPOINT_LOCAL_RESOLVERS is set (see Dockerfile).
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=30s ipv6=off;
+        set $api_upstream "${API_UPSTREAM}";
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header Host ${API_HOST};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        # Reports (CSV) and invoice PDFs stream through without buffering.
+        proxy_buffering off;
+        proxy_read_timeout 5m;
+    }
+
+    # Hashed build output never changes under the same name.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+        try_files $uri =404;
+    }
+
+    # Single-page app: unknown paths get the shell, which is never cached.
+    location / {
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        try_files $uri $uri/ /index.html;
+    }
+}

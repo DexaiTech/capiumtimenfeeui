@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+@import './theme.css';
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  html[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100dvh;
+    isolation: isolate;
+  }
+
+  /* The block a route renders takes the height left under the bars, so a short page fills the screen. */
+  #main-content > div > :only-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* A sideways scroller holds what it scrolls, so hidden text in a wide table cannot widen the page. */
+  .overflow-x-auto {
+    position: relative;
+  }
+
+  /* A page-level card that holds only an empty state (no access, coming soon) fills the page and centres it. */
+  #main-content > div > .rounded-xl:has(> [data-empty-state]:only-child),
+  #main-content > div > * > .rounded-xl:has(> [data-empty-state]:only-child) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* One visible focus ring everywhere; it is never removed. */
+  :focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--shadow-glow-focus);
+  }
+
+  ::selection {
+    background-color: var(--color-primary-soft);
+  }
+
+  ::placeholder {
+    color: var(--color-text-subtle);
+    opacity: 1;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary {
+    cursor: pointer;
+  }
+
+  /* Figures in tables line up. */
+  .tabular-nums,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

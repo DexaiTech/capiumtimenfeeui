@@ -1,0 +1,209 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useId, useMemo, useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+
+import { FormAlert, useSubmitError } from '@/components/forms';
+import {
+  Button,
+  DateField,
+  DurationInput,
+  Input,
+  Modal,
+  Select,
+  Textarea,
+  useToast,
+  type SelectOption,
+} from '@/components/ui';
+
+import { useCreateTask, useUpdateTask } from '../api';
+import { LIMITS, TASK_STATUS_META } from '../constants';
+import {
+  taskDefaults,
+  taskSchema,
+  toTaskInput,
+  toTaskUpdate,
+  type TaskValues,
+} from '../schemas/task';
+import { TASK_STATUSES, type Job, type Task } from '../types';
+import { toFormError } from '../utils/errors';
+import { AssigneePicker } from './AssigneePicker';
+import { DialogActions } from './DialogActions';
+
+const FIELDS = ['title', 'description', 'due_date', 'budget_minutes', 'status'] as const;
+
+const STATUS_OPTIONS: ReadonlyArray<SelectOption> = TASK_STATUSES.map((status) => ({
+  value: status,
+  label: TASK_STATUS_META[status].label,
+}));
+
+export interface TaskFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  job: Job;
+  /** The task to edit; null adds a new one. */
+  task: Task | null;
+}
+
+interface TaskFormProps extends Omit<TaskFormDialogProps, 'open'> {
+  formId: string;
+}
+
+function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
+  const { toast } = useToast();
+  const create = useCreateTask();
+  const update = useUpdateTask();
+  const [assignees, setAssignees] = useState<string[]>([]);
+  const schema = useMemo(
+    () => taskSchema({ jobStart: job.start_date, jobDue: job.due_date }),
+    [job.start_date, job.due_date],
+  );
+  const {
+    register,
+    handleSubmit,
+    setError,
+    setValue,
+    control,
+    formState: { errors, isDirty },
+  } = useForm<TaskValues>({ resolver: zodResolver(schema), defaultValues: taskDefaults(task) });
+  const { submitError, retryIn, handleSubmitError, clearSubmitError } = useSubmitError<TaskValues>({
+    setError,
+    fields: FIELDS,
+  });
+  const budgetMinutes = useWatch({ control, name: 'budget_minutes' });
+
+  const onSubmit = handleSubmit((values) => {
+    clearSubmitError();
+    const onError = (error: unknown) => handleSubmitError(toFormError(error));
+    if (!task) {
+      create.mutate(
+        { jobId: job.id, body: toTaskInput(values, assignees) },
+        {
+          onSuccess: () => {
+            toast({ tone: 'success', title: 'Task added', description: values.title });
+            onClose();
+          },
+          onError,
+        },
+      );
+      return;
+    }
+    const body = toTaskUpdate(values, task);
+    if (Object.keys(body).length === 0) {
+      onClose();
+      return;
+    }
+    update.mutate(
+      { jobId: job.id, taskId: task.id, body },
+      {
+        onSuccess: () => {
+          toast({ tone: 'success', title: 'Task saved', description: values.title });
+          onClose();
+        },
+        onError,
+      },
+    );
+  });
+
+  return (
+    <>
+      <form
+        id={formId}
+        noValidate
+        onSubmit={(event) => void onSubmit(event)}
+        className="flex flex-col gap-4"
+      >
+        <Input
+          label="Title"
+          autoComplete="off"
+          maxLength={LIMITS.taskTitle}
+          error={errors.title?.message}
+          {...register('title')}
+        />
+        <Textarea
+          label="Description"
+          rows={2}
+          maxLength={LIMITS.taskDescription}
+          error={errors.description?.message}
+          {...register('description')}
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Controller
+            control={control}
+            name="due_date"
+            render={({ field }) => (
+              <DateField
+                label="Due date"
+                value={field.value || null}
+                min={job.start_date}
+                max={job.due_date}
+                onChange={(value) => field.onChange(value ?? '')}
+                error={errors.due_date?.message}
+              />
+            )}
+          />
+          <DurationInput
+            label="Hours budget"
+            value={budgetMinutes}
+            hint="For example 8:00 or 2.5"
+            error={errors.budget_minutes?.message}
+            onCommit={(minutes) =>
+              setValue('budget_minutes', minutes, { shouldDirty: true, shouldValidate: true })
+            }
+          />
+        </div>
+        {task ? null : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Starts as"
+              options={STATUS_OPTIONS}
+              error={errors.status?.message}
+              {...register('status')}
+            />
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-text">Assigned to</span>
+              <AssigneePicker
+                label="Assignees of the new task"
+                value={assignees}
+                onChange={setAssignees}
+              />
+            </div>
+          </div>
+        )}
+        {submitError ? (
+          <FormAlert message={submitError.message} requestId={submitError.requestId} />
+        ) : null}
+      </form>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          loading={create.isPending || update.isPending}
+          disabled={(task !== null && !isDirty) || retryIn > 0}
+        >
+          {task ? 'Save task' : 'Add task'}
+        </Button>
+      </DialogActions>
+    </>
+  );
+}
+
+/** Add a task to a job, or change the title, description, due date and budget of one. */
+export function TaskFormDialog({ open, onClose, ...rest }: TaskFormDialogProps) {
+  const formId = useId();
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={rest.task ? 'Edit task' : 'Add task'}
+      description={rest.job.name}
+      size="md"
+      closeOnBackdrop={false}
+    >
+      {open ? (
+        <TaskForm key={rest.task?.id ?? 'new'} formId={formId} onClose={onClose} {...rest} />
+      ) : null}
+    </Modal>
+  );
+}

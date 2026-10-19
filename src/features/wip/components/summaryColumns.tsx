@@ -1,0 +1,181 @@
+import { Link } from 'react-router';
+
+import type { DataTableColumn } from '@/components/ui';
+import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
+import { formatUkDate } from '@/utils/dates';
+import { formatMoney } from '@/utils/money';
+
+import { AGE_BUCKETS, GROUP_META } from '../constants';
+import type { WipGroup, WipGroupRow } from '../types';
+import { shareText } from '../utils/format';
+import { AgeBar } from './AgeBar';
+
+export interface SummaryColumnsOptions {
+  slug: string;
+  currency: string;
+  group: WipGroup;
+}
+
+const amount = (pence: number, currency: string) => (
+  <span className="text-text tabular-nums">{formatMoney(pence, currency)}</span>
+);
+
+const oldest = (row: WipGroupRow) =>
+  row.oldest_date ? (
+    <span className="whitespace-nowrap text-text">{formatUkDate(row.oldest_date)}</span>
+  ) : (
+    <span className="text-text-muted">—</span>
+  );
+
+/** The first column: what the row stands for, linking to the items behind it. */
+function nameColumn({ slug, group }: SummaryColumnsOptions): DataTableColumn<WipGroupRow> {
+  const meta = GROUP_META[group];
+  const secondary = (row: WipGroupRow) =>
+    group === 'job' ? (row.client?.name ?? row.code) : row.code;
+  return {
+    id: 'name',
+    header: meta.column,
+    hideable: false,
+    sortable: true,
+    className: 'min-w-52 max-w-80',
+    cell: (row) => {
+      const detail = secondary(row);
+      const content = (
+        <>
+          <span className="truncate font-semibold text-text" title={row.name}>
+            {row.name}
+          </span>
+          {detail ? <span className="truncate text-xs text-text-muted">{detail}</span> : null}
+        </>
+      );
+      return row.key ? (
+        <Link
+          to={`${modulePath(slug, ORG_SEGMENTS.wip, 'details')}?${meta.filter}=${encodeURIComponent(row.key)}`}
+          className="flex min-w-0 flex-col hover:text-brand-text"
+          aria-label={`${row.name}: see the WIP items`}
+        >
+          {content}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 flex-col">{content}</div>
+      );
+    },
+  };
+}
+
+/** WIP by time, fixed fee and expense, with the oldest item and the share over 90 days. */
+export function summaryColumns(options: SummaryColumnsOptions): DataTableColumn<WipGroupRow>[] {
+  const { currency } = options;
+  return [
+    nameColumn(options),
+    {
+      id: 'time',
+      header: 'Time WIP',
+      align: 'end',
+      sortable: true,
+      className: 'whitespace-nowrap',
+      cell: (row) => amount(row.time, currency),
+    },
+    {
+      id: 'fixed_fee',
+      header: 'Fixed fee WIP',
+      align: 'end',
+      sortable: true,
+      className: 'whitespace-nowrap',
+      cell: (row) => amount(row.fixed_fee, currency),
+    },
+    {
+      id: 'expense',
+      header: 'Expense WIP',
+      align: 'end',
+      sortable: true,
+      className: 'whitespace-nowrap',
+      cell: (row) => amount(row.expense, currency),
+    },
+    {
+      id: 'total',
+      header: 'Total WIP',
+      align: 'end',
+      sortable: true,
+      className: 'whitespace-nowrap font-semibold',
+      cell: (row) => amount(row.total, currency),
+    },
+    {
+      id: 'hours',
+      header: 'Hours',
+      align: 'end',
+      className: 'whitespace-nowrap',
+      cell: (row) => <span className="text-text tabular-nums">{row.hours}</span>,
+    },
+    {
+      id: 'oldest',
+      header: 'Oldest item',
+      sortable: true,
+      className: 'whitespace-nowrap',
+      cell: oldest,
+    },
+    {
+      id: 'over_90',
+      header: 'Over 90 days',
+      align: 'end',
+      sortable: true,
+      className: 'whitespace-nowrap',
+      cell: (row) => (
+        <span className="text-text tabular-nums">
+          {formatMoney(row.ages.days_90_plus, currency)} ({shareText(row.over_90_bp)})
+        </span>
+      ),
+    },
+    {
+      id: 'items',
+      header: 'Items',
+      align: 'end',
+      sortable: true,
+      cell: (row) => <span className="text-text tabular-nums">{row.item_count}</span>,
+    },
+  ];
+}
+
+/** WIP by the age of its items: one column for each ageing bucket and a bar across them. */
+export function ageingColumns(options: SummaryColumnsOptions): DataTableColumn<WipGroupRow>[] {
+  const { currency } = options;
+  return [
+    nameColumn(options),
+    ...AGE_BUCKETS.map((bucket): DataTableColumn<WipGroupRow> => ({
+      id: bucket.key,
+      header: bucket.label,
+      align: 'end',
+      className: 'whitespace-nowrap',
+      cell: (row) => amount(row.ages[bucket.key], currency),
+    })),
+    {
+      id: 'total',
+      header: 'Total WIP',
+      align: 'end',
+      sortable: true,
+      className: 'whitespace-nowrap font-semibold',
+      cell: (row) => amount(row.total, currency),
+    },
+    {
+      id: 'over_90',
+      header: 'Over 90 days',
+      align: 'end',
+      sortable: true,
+      className: 'whitespace-nowrap',
+      cell: (row) => <span className="text-text tabular-nums">{shareText(row.over_90_bp)}</span>,
+    },
+    {
+      id: 'oldest',
+      header: 'Oldest item',
+      sortable: true,
+      className: 'whitespace-nowrap',
+      cell: oldest,
+    },
+    {
+      id: 'ageing',
+      header: 'Ageing',
+      className: 'w-40',
+      cell: (row) => <AgeBar ages={row.ages} label={`Ageing of ${row.name}`} currency={currency} />,
+    },
+  ];
+}

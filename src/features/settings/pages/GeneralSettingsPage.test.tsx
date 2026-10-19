@@ -1,0 +1,395 @@
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http } from 'msw';
+import { describe, expect, it } from 'vitest';
+
+import type { Organization } from '@/features/organizations';
+import { fail, ok, server } from '@/test/server';
+
+import { orgContext, staffRole, testOrganization } from '../test/fixtures';
+import { orgPath } from '../test/handlers';
+import { renderSettings } from '../test/render';
+import GeneralSettingsPage from './GeneralSettingsPage';
+
+function capturePatch(
+  respond: (body: Partial<Organization>) => Organization = (body) => ({
+    ...testOrganization,
+    ...body,
+  }),
+) {
+  const bodies: unknown[] = [];
+  server.use(
+    http.patch(orgPath(''), async ({ request }) => {
+      const body = (await request.json()) as Partial<Organization>;
+      bodies.push(body);
+      return ok(respond(body));
+    }),
+  );
+  return bodies;
+}
+
+const card = (name: string) => screen.getByRole('form', { name });
+const box = (form: string, name: string) => within(card(form)).getByRole('textbox', { name });
+const save = (form: string, label: string) =>
+  within(card(form)).getByRole('button', { name: label });
+
+describe('GeneralSettingsPage', () => {
+  it('shows every general setting in a card of its own', () => {
+    renderSettings(<GeneralSettingsPage />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'General' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Practice Settings' })).toHaveAttribute(
+      'href',
+      '/lovelace/settings/practice',
+    );
+
+    const time = within(card('Time recording'));
+    expect(time.getByRole('combobox', { name: 'Time increment' })).toHaveValue('6');
+    expect(time.getByRole('textbox', { name: 'Daily target (hours)' })).toHaveValue('7.5');
+    expect(time.getByRole('combobox', { name: 'Week starts on' })).toHaveValue('1');
+    expect(time.getByRole('button', { name: 'Monday' })).toHaveAttribute('aria-pressed', 'true');
+    expect(time.getByRole('button', { name: 'Saturday' })).toHaveAttribute('aria-pressed', 'false');
+    expect(time.getByRole('switch', { name: 'Timesheet approval' })).not.toBeChecked();
+
+    const billing = within(card('WIP and billing'));
+    expect(billing.getByRole('combobox', { name: 'Fixed-fee WIP' })).toHaveValue('on_completion');
+    expect(
+      billing.getByRole('textbox', { name: 'WIP adjustment approval threshold (£)' }),
+    ).toHaveValue('500.00');
+    expect(billing.getByRole('switch', { name: 'Invoice approval' })).not.toBeChecked();
+    expect(billing.getByRole('textbox', { name: 'Invoice approval threshold (£)' })).toHaveValue(
+      '0.00',
+    );
+    expect(billing.getByRole('switch', { name: 'Automatic payment reminders' })).not.toBeChecked();
+    expect(billing.getByRole('textbox', { name: 'Days after the due date' })).toHaveValue('7');
+
+    expect(within(card('Rates')).getByRole('combobox', { name: 'Rate mode' })).toHaveValue(
+      'staff_first',
+    );
+
+    const expenses = within(card('Expenses'));
+    expect(expenses.getByRole('textbox', { name: 'Mileage rate (£ per mile)' })).toHaveValue(
+      '0.45',
+    );
+    expect(expenses.getByRole('textbox', { name: 'Expense mark-up (%)' })).toHaveValue('0');
+    expect(expenses.getByRole('textbox', { name: 'Receipt required above (£)' })).toHaveValue(
+      '25.00',
+    );
+
+    const locale = within(card('Locale'));
+    expect(locale.getByRole('combobox', { name: 'Timezone' })).toHaveValue('Europe/London');
+    expect(locale.getByText('dd/MM/yyyy, for example 31/12/2026')).toBeInTheDocument();
+    expect(locale.getByText(/GBP \(£\), set when the practice was created/)).toBeInTheDocument();
+
+    for (const label of [
+      'Save time settings',
+      'Save billing settings',
+      'Save rate settings',
+      'Save expense settings',
+      'Save locale',
+    ]) {
+      expect(screen.getByRole('button', { name: label })).toBeDisabled();
+    }
+  });
+
+  it('saves the time card with only what changed, in minutes and numbers', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    const time = within(card('Time recording'));
+    await user.selectOptions(time.getByRole('combobox', { name: 'Time increment' }), '15');
+    await user.clear(box('Time recording', 'Daily target (hours)'));
+    await user.type(box('Time recording', 'Daily target (hours)'), '8');
+    await user.selectOptions(time.getByRole('combobox', { name: 'Week starts on' }), '7');
+    await user.click(time.getByRole('button', { name: 'Friday' }));
+    await user.click(time.getByRole('button', { name: 'Saturday' }));
+    await user.click(time.getByRole('switch', { name: 'Timesheet approval' }));
+    expect(screen.getByText('You have unsaved changes.')).toBeInTheDocument();
+    await user.click(save('Time recording', 'Save time settings'));
+
+    expect(await screen.findByText('Time settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        time_increment_minutes: 15,
+        minutes_per_day: 480,
+        week_start: 7,
+        working_days: [1, 2, 3, 4, 6],
+        require_timesheet_approval: true,
+      },
+    ]);
+    await waitFor(() => expect(save('Time recording', 'Save time settings')).toBeDisabled());
+  });
+
+  it('keeps the unsaved changes of the other cards when one card is saved', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
+    await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '0.55');
+    await user.selectOptions(
+      within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }),
+      'grade_only',
+    );
+    await user.click(save('Rates', 'Save rate settings'));
+
+    expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ rate_mode: 'grade_only' }]);
+    expect(box('Expenses', 'Mileage rate (£ per mile)')).toHaveValue('0.55');
+    expect(save('Expenses', 'Save expense settings')).toBeEnabled();
+  });
+
+  it('sends the WIP and billing settings in pence and days', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    const billing = within(card('WIP and billing'));
+    await user.selectOptions(
+      billing.getByRole('combobox', { name: 'Fixed-fee WIP' }),
+      'by_budget_progress',
+    );
+    expect(
+      billing.getByText(/in step with the budget hours used \(fee × hours logged ÷ budget hours\)/),
+    ).toBeInTheDocument();
+    const wip = box('WIP and billing', 'WIP adjustment approval threshold (£)');
+    await user.clear(wip);
+    await user.type(wip, '1,250.5');
+    await user.click(billing.getByRole('switch', { name: 'Invoice approval' }));
+    const invoice = box('WIP and billing', 'Invoice approval threshold (£)');
+    await user.clear(invoice);
+    await user.type(invoice, '2000');
+    await user.click(billing.getByRole('switch', { name: 'Automatic payment reminders' }));
+    const days = box('WIP and billing', 'Days after the due date');
+    await user.clear(days);
+    await user.type(days, '14');
+    await user.click(save('WIP and billing', 'Save billing settings'));
+
+    expect(await screen.findByText('WIP and billing settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        fixed_fee_wip_mode: 'by_budget_progress',
+        wip_adjustment_approval_threshold: 125050,
+        invoice_approval_required: true,
+        invoice_approval_threshold: 200000,
+        payment_reminders_enabled: true,
+        payment_reminder_days_after_due: 14,
+      },
+    ]);
+  });
+
+  it('leaves the invoice threshold and the reminder delay off until their switches are on', async () => {
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    const billing = within(card('WIP and billing'));
+    const threshold = billing.getByRole('textbox', { name: 'Invoice approval threshold (£)' });
+    const delay = billing.getByRole('textbox', { name: 'Days after the due date' });
+    expect(threshold).toBeDisabled();
+    expect(delay).toBeDisabled();
+    expect(billing.getByText('Turn on invoice approval to set a threshold.')).toBeInTheDocument();
+
+    await user.click(billing.getByRole('switch', { name: 'Invoice approval' }));
+    await user.click(billing.getByRole('switch', { name: 'Automatic payment reminders' }));
+    expect(threshold).toBeEnabled();
+    expect(delay).toBeEnabled();
+  });
+
+  it('explains the rate mode and saves it', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    expect(
+      screen.getByText(/A person's own charge-out rate prices their time/),
+    ).toBeInTheDocument();
+    await user.selectOptions(
+      within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }),
+      'grade_only',
+    );
+    expect(screen.getByText(/Staff-level rates are skipped/)).toBeInTheDocument();
+    await user.click(save('Rates', 'Save rate settings'));
+
+    expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ rate_mode: 'grade_only' }]);
+  });
+
+  it('converts the expense settings: mileage in pence, the mark-up in basis points', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
+    await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '£0.55');
+    await user.clear(box('Expenses', 'Expense mark-up (%)'));
+    await user.type(box('Expenses', 'Expense mark-up (%)'), '12.5');
+    await user.clear(box('Expenses', 'Receipt required above (£)'));
+    await user.type(box('Expenses', 'Receipt required above (£)'), '50');
+    await user.click(save('Expenses', 'Save expense settings'));
+
+    expect(await screen.findByText('Expense settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([
+      { mileage_rate: 55, expense_markup_bp: 1250, receipt_required_threshold: 5000 },
+    ]);
+  });
+
+  it('saves the timezone', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    await user.selectOptions(
+      within(card('Locale')).getByRole('combobox', { name: 'Timezone' }),
+      'Europe/Paris',
+    );
+    await user.click(save('Locale', 'Save locale'));
+
+    expect(await screen.findByText('Locale settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ timezone: 'Europe/Paris' }]);
+  });
+
+  it('checks every value against the API ranges before sending anything', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    await user.clear(box('Time recording', 'Daily target (hours)'));
+    await user.type(box('Time recording', 'Daily target (hours)'), '25');
+    await user.click(within(card('Time recording')).getByRole('button', { name: 'Monday' }));
+    for (const day of ['Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+      await user.click(within(card('Time recording')).getByRole('button', { name: day }));
+    }
+    await user.click(save('Time recording', 'Save time settings'));
+    expect(
+      await screen.findByText('Enter the working hours of a day, more than 0 and at most 24'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Choose at least one working day')).toBeInTheDocument();
+
+    await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
+    await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '10.01');
+    await user.clear(box('Expenses', 'Expense mark-up (%)'));
+    await user.type(box('Expenses', 'Expense mark-up (%)'), '1001');
+    await user.clear(box('Expenses', 'Receipt required above (£)'));
+    await user.type(box('Expenses', 'Receipt required above (£)'), '1000000.01');
+    await user.click(save('Expenses', 'Save expense settings'));
+    expect(
+      await screen.findByText(
+        'Enter the rate per mile in pounds, from 0 to 10.00, for example 0.45',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Enter a percentage from 0 to 1000 with at most two decimals, for example 10 or 12.5',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Enter an amount in pounds from 0 to 1,000,000.00, for example 500.00'),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(card('WIP and billing')).getByRole('switch', { name: 'Automatic payment reminders' }),
+    );
+    const days = box('WIP and billing', 'Days after the due date');
+    await user.clear(days);
+    await user.type(days, '400');
+    await user.click(save('WIP and billing', 'Save billing settings'));
+    expect(await screen.findByText('Enter a number of days from 1 to 365')).toBeInTheDocument();
+
+    expect(bodies).toEqual([]);
+  });
+
+  it('puts 422 details on the field they name, mapping API names to the form', async () => {
+    server.use(
+      http.patch(orgPath(''), () =>
+        fail(422, 'VALIDATION_ERROR', 'Invalid.', {
+          details: [{ field: 'minutes_per_day', message: 'A day cannot be that long here.' }],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    await user.clear(box('Time recording', 'Daily target (hours)'));
+    await user.type(box('Time recording', 'Daily target (hours)'), '9');
+    await user.click(save('Time recording', 'Save time settings'));
+
+    expect(await screen.findByText('A day cannot be that long here.')).toBeInTheDocument();
+    expect(box('Time recording', 'Daily target (hours)')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('shows what the API refused that matches no field, and keeps the typed values', async () => {
+    server.use(
+      http.patch(orgPath(''), () =>
+        fail(403, 'PERMISSION_DENIED', 'You do not have permission to do that.', {}),
+      ),
+    );
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
+    await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '0.50');
+    await user.click(save('Expenses', 'Save expense settings'));
+
+    expect(await screen.findByText('No permission')).toBeInTheDocument();
+    expect(await screen.findAllByText('You do not have permission to do that.')).not.toHaveLength(
+      0,
+    );
+    expect(box('Expenses', 'Mileage rate (£ per mile)')).toHaveValue('0.50');
+  });
+
+  it('discards the changes of a card', async () => {
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    const rate = box('Expenses', 'Mileage rate (£ per mile)');
+    await user.clear(rate);
+    await user.type(rate, '0.99');
+    await user.click(within(card('Expenses')).getByRole('button', { name: 'Discard changes' }));
+
+    expect(rate).toHaveValue('0.45');
+    expect(save('Expenses', 'Save expense settings')).toBeDisabled();
+    expect(screen.queryByText('You have unsaved changes.')).not.toBeInTheDocument();
+  });
+
+  it('asks the browser to confirm closing the tab only while a card has unsaved changes', async () => {
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    const closing = () => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(closing()).toBe(false);
+
+    await user.click(within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }));
+    fireEvent.change(within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }), {
+      target: { value: 'grade_only' },
+    });
+    await waitFor(() => expect(closing()).toBe(true));
+
+    await user.click(within(card('Rates')).getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(closing()).toBe(false));
+  });
+
+  it('is read-only without organization.update', () => {
+    renderSettings(<GeneralSettingsPage />, {
+      context: orgContext({ role: staffRole, permissions: ['organization.read'] }),
+    });
+
+    expect(screen.getByText('Read only')).toBeInTheDocument();
+    expect(card('Time recording')).toBeInTheDocument();
+    expect(
+      within(card('Time recording')).getByRole('combobox', { name: 'Time increment' }),
+    ).toBeDisabled();
+    expect(
+      within(card('WIP and billing')).getByRole('switch', { name: 'Invoice approval' }),
+    ).toBeDisabled();
+    expect(
+      within(card('Expenses')).getByRole('textbox', { name: 'Mileage rate (£ per mile)' }),
+    ).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^Save / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Discard changes' })).not.toBeInTheDocument();
+  });
+});

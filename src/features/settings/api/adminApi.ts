@@ -1,0 +1,100 @@
+import { PAGE_SIZE } from '@/constants/limits';
+import { api } from '@/services/api';
+
+import type {
+  ImportResult,
+  IntegrationCard,
+  IntegrationKey,
+  IntegrationUpdate,
+  MappingsWrite,
+  Mappings,
+  MockAvailability,
+  Onboarding,
+  PeriodLock,
+  PeriodLockCreate,
+  PeriodLockEvent,
+  PeriodLockReopen,
+  RetryFailedResult,
+  StepState,
+  SyncItem,
+  SyncItemFilters,
+  SyncItemRetried,
+  SyncLogEntry,
+  SyncLogFilters,
+  SyncRunResult,
+} from '../adminTypes';
+
+const org = (organizationId: string) => `/organizations/${encodeURIComponent(organizationId)}`;
+const id = encodeURIComponent;
+
+interface PageRequest {
+  cursor?: string;
+  signal?: AbortSignal;
+}
+
+/** Typed wrappers over the period-lock, onboarding, integration and client import/export endpoints. */
+export const adminApi = {
+  /* ------------------------------ Period lock ------------------------------ */
+  getPeriodLock: (organizationId: string, signal?: AbortSignal) =>
+    api.get<PeriodLock>(`${org(organizationId)}/period-locks`, { signal }),
+  listPeriodLockHistory: (organizationId: string, page: PageRequest = {}) =>
+    api.list<PeriodLockEvent>(`${org(organizationId)}/period-locks/history`, {
+      query: { limit: PAGE_SIZE, cursor: page.cursor },
+      signal: page.signal,
+    }),
+  lockPeriod: (organizationId: string, body: PeriodLockCreate) =>
+    api.post<PeriodLock>(`${org(organizationId)}/period-locks`, body),
+  reopenPeriod: (organizationId: string, body: PeriodLockReopen) =>
+    api.post<PeriodLock>(`${org(organizationId)}/period-locks/reopen`, body),
+
+  /* ------------------------------- Onboarding ------------------------------ */
+  getOnboarding: (organizationId: string, signal?: AbortSignal) =>
+    api.get<Onboarding>(`${org(organizationId)}/onboarding`, { signal }),
+  setOnboardingStep: (organizationId: string, key: string, state: StepState) =>
+    api.put<Onboarding>(`${org(organizationId)}/onboarding/steps/${id(key)}`, { state }),
+
+  /* ------------------------------ Integrations ----------------------------- */
+  listIntegrations: (organizationId: string, signal?: AbortSignal) =>
+    api.get<IntegrationCard[]>(`${org(organizationId)}/integrations`, { signal }),
+  updateIntegration: (organizationId: string, key: IntegrationKey, body: IntegrationUpdate) =>
+    api.patch<IntegrationCard>(`${org(organizationId)}/integrations/${id(key)}`, body),
+  runIntegration: (organizationId: string, key: IntegrationKey) =>
+    api.post<SyncRunResult>(`${org(organizationId)}/integrations/${id(key)}/sync`),
+  retryFailed: (organizationId: string, key: IntegrationKey) =>
+    api.post<RetryFailedResult>(`${org(organizationId)}/integrations/${id(key)}/retry-failed`),
+  setMockAvailability: (organizationId: string, key: IntegrationKey, available: boolean) =>
+    api.post<MockAvailability>(`${org(organizationId)}/integrations/${id(key)}/mock/availability`, {
+      available,
+    }),
+  listSyncItems: (organizationId: string, filters: SyncItemFilters, page: PageRequest = {}) =>
+    api.list<SyncItem>(`${org(organizationId)}/integrations/sync-items`, {
+      query: { ...filters, limit: PAGE_SIZE, cursor: page.cursor },
+      signal: page.signal,
+    }),
+  retrySyncItem: (organizationId: string, itemId: string) =>
+    api.post<SyncItemRetried>(`${org(organizationId)}/integrations/sync-items/${id(itemId)}/retry`),
+  listSyncLogs: (organizationId: string, filters: SyncLogFilters, page: PageRequest = {}) =>
+    api.list<SyncLogEntry>(`${org(organizationId)}/integrations/sync-logs`, {
+      query: { ...filters, limit: PAGE_SIZE, cursor: page.cursor },
+      signal: page.signal,
+    }),
+  getMappings: (organizationId: string, signal?: AbortSignal) =>
+    api.get<Mappings>(`${org(organizationId)}/integrations/bookkeeping/mappings`, { signal }),
+  putMappings: (organizationId: string, body: MappingsWrite) =>
+    api.put<Mappings>(`${org(organizationId)}/integrations/bookkeeping/mappings`, body),
+
+  /* ----------------------------- Import / export ---------------------------- */
+  /** The CSV of every client (the clients list's default filters and order). */
+  exportClients: (organizationId: string) =>
+    api.getBlob(`${org(organizationId)}/clients/export`, {
+      query: { format: 'csv' },
+      accept: 'text/csv',
+    }),
+  importClients: (organizationId: string, file: File, dryRun: boolean) => {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return api.upload<ImportResult>(`${org(organizationId)}/imports/clients`, body, {
+      query: { dry_run: dryRun },
+    });
+  },
+};
