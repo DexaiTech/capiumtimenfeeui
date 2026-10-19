@@ -10,6 +10,7 @@ import type {
   Mappings,
   MockAvailability,
   Onboarding,
+  OpeningBalanceTimeImportResult,
   PeriodLock,
   PeriodLockCreate,
   PeriodLockEvent,
@@ -96,5 +97,14 @@ export const adminApi = {
     return api.upload<ImportResult>(`${org(organizationId)}/imports/clients`, body, {
       query: { dry_run: dryRun },
     });
+  },
+  importOpeningBalanceTime: (organizationId: string, file: File, dryRun: boolean) => {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return api.upload<OpeningBalanceTimeImportResult>(
+      `${org(organizationId)}/imports/opening_balance_time`,
+      body,
+      { query: { dry_run: dryRun } },
+    );
   },
 };

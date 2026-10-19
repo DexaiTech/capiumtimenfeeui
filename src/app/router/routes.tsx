@@ -133,6 +133,8 @@ const MOVED: ReadonlyArray<readonly [string, string]> = [
   ['settings/audit', 'settings/audit-logs'],
   ['time/timer', 'time'],
   ['billing/wip', 'wip'],
+  // Opening Balances import moved from a Billing placeholder to the real feature in Settings.
+  ['billing/opening-balances', 'settings/import-export'],
 ];
 
 /** `/:orgSlug/...`: the ten modules, the account and the redirects of moved pages. */

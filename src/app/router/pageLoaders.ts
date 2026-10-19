@@ -67,7 +67,6 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
     payments: () => import('@/features/billing/pages/PaymentsPage'),
     debtors: () => import('@/features/billing/pages/DebtorsPage'),
     statements: () => import('@/features/billing/pages/ClientStatementsPage'),
-    'opening-balances': () => import('@/features/billing/pages/OpeningBalancesImportPage'),
   },
   reports: {
     'time-analysis': () => import('@/features/time/pages/TimeAnalysisPage'),

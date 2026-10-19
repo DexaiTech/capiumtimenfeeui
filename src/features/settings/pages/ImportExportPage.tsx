@@ -13,7 +13,9 @@ import { NoAccess, SettingsSection } from '../components/SettingsSection';
 export default function ImportExportPage() {
   const { can } = useOrg();
   useDocumentTitle('Import/Export');
-  const allowed = [P.clientRead, P.clientCreate, P.dataImportExport].some((code) => can(code));
+  const allowed = [P.clientRead, P.clientCreate, P.dataImportExport, P.openingBalanceImport].some(
+    (code) => can(code),
+  );
   return (
     <SettingsSection title="Import/Export" description="Import and export staff, rates and jobs.">
       {allowed ? <ImportExportView /> : <NoAccess what="importing and exporting data" />}

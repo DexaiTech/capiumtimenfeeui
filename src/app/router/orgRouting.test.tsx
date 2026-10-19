@@ -253,6 +253,7 @@ describe('practice route (/:orgSlug)', () => {
     ['/acme/settings/estimate-numbering', '/acme/settings/document-numbering'],
     ['/acme/settings/audit', '/acme/settings/audit-logs'],
     ['/acme/billing/wip', '/acme/wip'],
+    ['/acme/billing/opening-balances', '/acme/settings/import-export'],
   ])('redirects the old address %s to %s', async (from, to) => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp(from);

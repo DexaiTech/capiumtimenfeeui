@@ -22,6 +22,7 @@ export const testOrganization: Organization = {
   require_timesheet_approval: false,
   fixed_fee_wip_mode: 'on_completion',
   wip_adjustment_approval_threshold: 50000,
+  wip_write_off_approval_threshold_percent: 1000,
   receipt_required_threshold: 2500,
   invoice_approval_required: false,
   invoice_approval_threshold: 0,

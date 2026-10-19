@@ -11,6 +11,7 @@ import { useExportClients } from '../../api/adminHooks';
 import { downloadBlob } from '../../utils/download';
 import { describeError } from '../../utils/errors';
 import { ClientsImportDialog } from './ClientsImportDialog';
+import { OpeningBalanceImportDialog } from './OpeningBalanceImportDialog';
 
 /** Data the API cannot move in bulk yet, with where each is managed meanwhile. */
 function NotYet({ title, where, to }: { title: string; where: string; to: string }) {
@@ -32,10 +33,11 @@ function NotYet({ title, where, to }: { title: string; where: string; to: string
   );
 }
 
-type ImportExportTab = 'clients' | 'reports' | 'other';
+type ImportExportTab = 'clients' | 'opening-balances' | 'reports' | 'other';
 
 const TABS: ReadonlyArray<{ value: ImportExportTab; label: string }> = [
   { value: 'clients', label: 'Clients' },
+  { value: 'opening-balances', label: 'Opening Balances' },
   { value: 'reports', label: 'Reports & logs' },
   { value: 'other', label: 'Staff, rates & jobs' },
 ];
@@ -46,10 +48,12 @@ export function ImportExportView() {
   const { toast } = useToast();
   const exporter = useExportClients();
   const [importing, setImporting] = useState(false);
+  const [importingOpeningBalances, setImportingOpeningBalances] = useState(false);
   const [tab, setTab] = useState<ImportExportTab>('clients');
   const slug = organization.slug;
   const canExport = can(P.clientRead);
   const canImport = can(P.clientCreate);
+  const canImportOpeningBalances = can(P.openingBalanceImport);
 
   const exportClients = () =>
     exporter.mutate(undefined, {
@@ -107,6 +111,39 @@ export function ImportExportView() {
                   : canImport
                     ? 'Exporting clients needs permission to view them.'
                     : 'Importing and exporting clients need permission to view and to create them.'}
+              </p>
+            )}
+          </Card>
+        ) : null}
+
+        {tab === 'opening-balances' ? (
+          <Card
+            padding="lg"
+            role="region"
+            aria-label="Opening Balances"
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1">
+              <h2 className="text-base font-semibold text-text">Opening Balances</h2>
+              <p className="text-sm text-text-muted">
+                Import historic unbilled time from a client&apos;s previous system. Checked
+                first; nothing is created unless every row is valid. Imported time is shown
+                separately from newly recorded time, and can still be billed together with it.
+              </p>
+            </div>
+            <div>
+              <Button
+                variant="primary"
+                leftIcon={<FileUp aria-hidden="true" className="size-4" />}
+                disabled={!canImportOpeningBalances}
+                onClick={() => setImportingOpeningBalances(true)}
+              >
+                Import historic time
+              </Button>
+            </div>
+            {canImportOpeningBalances ? null : (
+              <p className="text-sm text-text-muted">
+                Importing opening balances needs the opening balance import permission.
               </p>
             )}
           </Card>
@@ -172,6 +209,10 @@ export function ImportExportView() {
       </div>
 
       <ClientsImportDialog open={importing} onClose={() => setImporting(false)} />
+      <OpeningBalanceImportDialog
+        open={importingOpeningBalances}
+        onClose={() => setImportingOpeningBalances(false)}
+      />
     </>
   );
 }

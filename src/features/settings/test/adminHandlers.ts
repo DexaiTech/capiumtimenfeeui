@@ -9,6 +9,7 @@ import type {
   Mappings,
   MappingsWrite,
   Onboarding,
+  OpeningBalanceTimeImportResult,
   PeriodLock,
   PeriodLockEvent,
   StepState,
@@ -58,6 +59,8 @@ export interface AdminBackend {
   mappings: Mappings;
   /** What a client import answers (the file itself is not readable under jsdom). */
   importResult: ImportResult;
+  /** What an opening-balance time import answers. */
+  openingBalanceResult: OpeningBalanceTimeImportResult;
   /** Rows per page of the lists (everything when 0). */
   pageSize: number;
   calls: Call[];
@@ -76,6 +79,17 @@ const emptyImport = (dryRun: boolean): ImportResult => ({
   clients: [],
 });
 
+const emptyOpeningBalanceImport = (dryRun: boolean): OpeningBalanceTimeImportResult => ({
+  dry_run: dryRun,
+  total_rows: 2,
+  valid_rows: 2,
+  created: dryRun ? 0 : 2,
+  columns: ['client', 'staff', 'date', 'hours'],
+  ignored_columns: [],
+  errors: [],
+  entries: [],
+});
+
 export function createBackend(initial: Partial<AdminBackend> = {}): AdminBackend {
   return {
     lock: NOT_LOCKED,
@@ -86,6 +100,7 @@ export function createBackend(initial: Partial<AdminBackend> = {}): AdminBackend
     logs: logsOf(),
     mappings: mappingsOf(),
     importResult: emptyImport(true),
+    openingBalanceResult: emptyOpeningBalanceImport(true),
     pageSize: 0,
     calls: [],
     refusals: {},
@@ -442,6 +457,18 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
         ...backend.importResult,
         dry_run: dryRun,
         created: dryRun ? 0 : backend.importResult.valid_rows,
+      });
+    }),
+    http.post(orgApiPath('/imports/opening_balance_time'), ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      const dryRun = params.get('dry_run') === 'true';
+      record('POST', '/imports/opening_balance_time', undefined, params);
+      const failed = refusal('POST', '/imports/opening_balance_time');
+      if (failed) return failed;
+      return ok({
+        ...backend.openingBalanceResult,
+        dry_run: dryRun,
+        created: dryRun ? 0 : backend.openingBalanceResult.valid_rows,
       });
     }),
   ];

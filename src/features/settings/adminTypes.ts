@@ -268,3 +268,23 @@ export interface ImportResult {
   errors: ImportRowError[];
   clients: ImportedClient[];
 }
+
+export interface ImportedOpeningBalanceTime {
+  row: number;
+  client_code: string;
+  staff_email: string;
+  entry_date: string;
+  minutes: number;
+  id: string | null;
+}
+
+export interface OpeningBalanceTimeImportResult {
+  dry_run: boolean;
+  total_rows: number;
+  valid_rows: number;
+  created: number;
+  columns: string[];
+  ignored_columns: string[];
+  errors: ImportRowError[];
+  entries: ImportedOpeningBalanceTime[];
+}

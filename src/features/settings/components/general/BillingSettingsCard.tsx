@@ -7,26 +7,33 @@ import { currencySymbol, parsePounds, penceToPoundsInput } from '@/utils/money';
 import { useOrganizationForm } from '../../hooks/useOrganizationForm';
 import { billingSettingsSchema, type BillingSettingsValues } from '../../schemas/general';
 import { WIP_MODE_HELP, WIP_MODE_OPTIONS } from '../../utils/general';
+import { bpToPercentInput, parsePercentToBp } from '../../utils/vat';
 import { SettingsCard } from './SettingsCard';
 import type { GeneralCardProps } from './types';
 
 const FIELDS = [
   'fixed_fee_wip_mode',
   'wip_adjustment_approval_threshold',
+  'wip_write_off_approval_threshold_percent',
   'invoice_approval_required',
   'invoice_approval_threshold',
   'payment_reminders_enabled',
   'payment_reminder_days_after_due',
 ] as const;
+const DEFAULT_PERCENT = '10';
 
 function toValues(organization: Organization): BillingSettingsValues {
   const { currency } = organization;
+  const percent = organization.wip_write_off_approval_threshold_percent;
   return {
     fixed_fee_wip_mode: organization.fixed_fee_wip_mode,
     wip_adjustment_approval_threshold: penceToPoundsInput(
       organization.wip_adjustment_approval_threshold,
       currency,
     ),
+    wip_write_off_percent_enabled: percent !== null,
+    wip_write_off_approval_threshold_percent:
+      percent !== null ? bpToPercentInput(percent) : DEFAULT_PERCENT,
     invoice_approval_required: organization.invoice_approval_required,
     invoice_approval_threshold: penceToPoundsInput(
       organization.invoice_approval_threshold,
@@ -46,6 +53,12 @@ function toUpdate(values: BillingSettingsValues, organization: Organization): Or
   const wip = parsePounds(values.wip_adjustment_approval_threshold, currency);
   if (wip !== null && wip !== organization.wip_adjustment_approval_threshold) {
     body.wip_adjustment_approval_threshold = wip;
+  }
+  const percent = values.wip_write_off_percent_enabled
+    ? parsePercentToBp(values.wip_write_off_approval_threshold_percent)
+    : null;
+  if (percent !== organization.wip_write_off_approval_threshold_percent) {
+    body.wip_write_off_approval_threshold_percent = percent;
   }
   if (values.invoice_approval_required !== organization.invoice_approval_required) {
     body.invoice_approval_required = values.invoice_approval_required;
@@ -80,6 +93,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
     formState: { errors },
   } = form;
   const mode = useWatch({ control, name: 'fixed_fee_wip_mode' });
+  const percentEnabled = useWatch({ control, name: 'wip_write_off_percent_enabled' });
   const approval = useWatch({ control, name: 'invoice_approval_required' });
   const reminders = useWatch({ control, name: 'payment_reminders_enabled' });
   const symbol = currencySymbol(organization.currency);
@@ -115,6 +129,36 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
           {...register('wip_adjustment_approval_threshold')}
         />
       </div>
+
+      <Controller
+        control={control}
+        name="wip_write_off_percent_enabled"
+        render={({ field }) => (
+          <Switch
+            ref={field.ref}
+            checked={field.value}
+            onChange={field.onChange}
+            disabled={!editable}
+            label="Write-off percentage rule"
+            description="On: a write-off above this share of the job's or client's current WIP also needs approval, in addition to the amount threshold above."
+            className="rounded-md border border-border px-3 py-2"
+          />
+        )}
+      />
+      <Input
+        label="Write-off approval threshold (%)"
+        inputMode="decimal"
+        autoComplete="off"
+        className="sm:max-w-sm"
+        disabled={!percentEnabled}
+        hint={
+          percentEnabled
+            ? 'A write-off above this percentage of the WIP there is to write off needs approval.'
+            : 'Turn on the percentage rule to set it.'
+        }
+        error={errors.wip_write_off_approval_threshold_percent?.message}
+        {...register('wip_write_off_approval_threshold_percent')}
+      />
 
       <Controller
         control={control}

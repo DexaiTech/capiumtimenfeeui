@@ -150,7 +150,6 @@ describe('TopBar', () => {
       'Payments',
       'Debtors',
       'Client Statements',
-      'Opening Balances Import',
     ]);
     expect(within(bar).getByRole('link', { name: 'Invoices' })).toHaveAttribute(
       'aria-current',
@@ -325,7 +324,7 @@ describe('TopBar', () => {
       await openSearch(user);
       const labels = optionLabels();
       expect(labels.slice(0, 3)).toEqual(['Dashboard', 'Overview', 'My Actions']);
-      expect(labels).toContain('Opening Balances Import');
+      expect(labels).toContain('Document Numbering');
       expect(labels).toContain('Audit Logs');
       expect(labels.at(-1)).toBe('Add staff member');
     });

@@ -67,6 +67,10 @@ describe('GeneralSettingsPage', () => {
     expect(
       billing.getByRole('textbox', { name: 'WIP adjustment approval threshold (£)' }),
     ).toHaveValue('500.00');
+    expect(billing.getByRole('switch', { name: 'Write-off percentage rule' })).toBeChecked();
+    expect(
+      billing.getByRole('textbox', { name: 'Write-off approval threshold (%)' }),
+    ).toHaveValue('10');
     expect(billing.getByRole('switch', { name: 'Invoice approval' })).not.toBeChecked();
     expect(billing.getByRole('textbox', { name: 'Invoice approval threshold (£)' })).toHaveValue(
       '0.00',
@@ -189,6 +193,30 @@ describe('GeneralSettingsPage', () => {
         payment_reminders_enabled: true,
         payment_reminder_days_after_due: 14,
       },
+    ]);
+  });
+
+  it('sends the write-off percentage threshold, and null when its switch is turned off', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'WIP & billing');
+
+    const percent = box('WIP and billing', 'Write-off approval threshold (%)');
+    await user.clear(percent);
+    await user.type(percent, '12.5');
+    await user.click(save('WIP and billing', 'Save billing settings'));
+    expect(await screen.findByText('WIP and billing settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ wip_write_off_approval_threshold_percent: 1250 }]);
+
+    await user.click(
+      within(card('WIP and billing')).getByRole('switch', { name: 'Write-off percentage rule' }),
+    );
+    await user.click(save('WIP and billing', 'Save billing settings'));
+    expect(await screen.findByText('WIP and billing settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([
+      { wip_write_off_approval_threshold_percent: 1250 },
+      { wip_write_off_approval_threshold_percent: null },
     ]);
   });
 

@@ -38,6 +38,9 @@ export interface Organization {
   fixed_fee_wip_mode: FixedFeeWipMode;
   /** A WIP write-on or write-off above this (pence) needs approval; 0 means every one does. */
   wip_adjustment_approval_threshold: number;
+  /** A write-off above this share (basis points, 1000 = 10%) of the job's or client's current
+   * WIP also needs approval, in addition to the pence threshold above; null turns it off. */
+  wip_write_off_approval_threshold_percent: number | null;
   /** An expense above this gross amount (pence) must carry a receipt. */
   receipt_required_threshold: number;
   invoice_approval_required: boolean;
@@ -96,6 +99,7 @@ export type OrganizationUpdate = Partial<
     | 'require_timesheet_approval'
     | 'fixed_fee_wip_mode'
     | 'wip_adjustment_approval_threshold'
+    | 'wip_write_off_approval_threshold_percent'
     | 'receipt_required_threshold'
     | 'invoice_approval_required'
     | 'invoice_approval_threshold'

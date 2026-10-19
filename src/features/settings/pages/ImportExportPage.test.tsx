@@ -6,12 +6,17 @@ import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { server } from '@/test/server';
 
-import type { ImportResult } from '../adminTypes';
+import type { ImportResult, OpeningBalanceTimeImportResult } from '../adminTypes';
 import { adminHandlers, callsOf, createBackend, type AdminBackend } from '../test/adminHandlers';
 import ImportExportPage from './ImportExportPage';
 
 const READER = ['organization.read', 'client.read'];
 const CREATOR = ['organization.read', 'client.create'];
+const IMPORTER = ['organization.read', 'opening_balance.import'];
+
+async function openTab(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(await screen.findByRole('tab', { name: label }));
+}
 
 function setup(init: Partial<AdminBackend> = {}, permissions = OWNER_PERMISSIONS) {
   const backend = createBackend(init);
@@ -49,6 +54,31 @@ const result = (over: Partial<ImportResult> = {}): ImportResult => ({
 async function openImport(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Import clients' }));
   return screen.findByRole('dialog', { name: 'Import clients' });
+}
+
+const openingBalanceCsv = (name = 'opening-balances.csv') =>
+  new File(['client,staff,date,hours\nACME,jane@example.com,2024-01-15,3.5\n'], name, {
+    type: 'text/csv',
+  });
+
+const openingBalanceResult = (
+  over: Partial<OpeningBalanceTimeImportResult> = {},
+): OpeningBalanceTimeImportResult => ({
+  dry_run: true,
+  total_rows: 2,
+  valid_rows: 2,
+  created: 0,
+  columns: ['client', 'staff', 'date', 'hours'],
+  ignored_columns: [],
+  errors: [],
+  entries: [],
+  ...over,
+});
+
+async function openOpeningBalanceImport(user: ReturnType<typeof userEvent.setup>) {
+  await openTab(user, 'Opening Balances');
+  await user.click(await screen.findByRole('button', { name: 'Import historic time' }));
+  return screen.findByRole('dialog', { name: 'Import historic time' });
 }
 
 afterEach(() => {
@@ -244,6 +274,77 @@ describe('importing clients', () => {
   });
 });
 
+describe('importing opening balances', () => {
+  it('checks the file first, then imports the historic time', async () => {
+    const user = userEvent.setup();
+    const backend = setup({ openingBalanceResult: openingBalanceResult() }, IMPORTER);
+    const dialog = await openOpeningBalanceImport(user);
+
+    expect(within(dialog).getByRole('button', { name: 'Check file' })).toBeDisabled();
+    await user.upload(within(dialog).getByLabelText('CSV file'), openingBalanceCsv());
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+
+    expect(
+      await within(dialog).findByText(/2 rows checked: 2 valid, 0 errors\./),
+    ).toBeInTheDocument();
+    expect(
+      callsOf(backend, 'POST', '/imports/opening_balance_time')[0]?.params?.get('dry_run'),
+    ).toBe('true');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Import 2 time entries' }));
+
+    await waitFor(() =>
+      expect(callsOf(backend, 'POST', '/imports/opening_balance_time')).toHaveLength(2),
+    );
+    expect(await screen.findByText('2 time entries imported')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'Import historic time' }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it('lists the rows with errors and offers no import until the file is right', async () => {
+    const user = userEvent.setup();
+    setup(
+      {
+        openingBalanceResult: openingBalanceResult({
+          valid_rows: 1,
+          errors: [
+            { row: 2, field: 'client', code: 'not_found', message: 'No client with that code.' },
+          ],
+        }),
+      },
+      IMPORTER,
+    );
+    const dialog = await openOpeningBalanceImport(user);
+
+    await user.upload(within(dialog).getByLabelText('CSV file'), openingBalanceCsv());
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+
+    expect(
+      await within(dialog).findByText(/2 rows checked: 1 valid, 1 error\./),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('table', { name: 'Rows with errors' })).toHaveTextContent(
+      'No client with that code.',
+    );
+    expect(within(dialog).queryByRole('button', { name: /^Import \d/ })).not.toBeInTheDocument();
+  });
+
+  it('offers a template with the columns the import maps', async () => {
+    const user = userEvent.setup();
+    const { createObjectURL, names } = stubDownloads();
+    setup({}, IMPORTER);
+    const dialog = await openOpeningBalanceImport(user);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Download template' }));
+
+    expect(names).toEqual(['opening-balance-time-import-template.csv']);
+    const blob = createObjectURL.mock.calls[0]?.[0];
+    expect(await blob?.text()).toContain('client,staff,date,hours,activity,job,billable');
+  });
+});
+
 describe('the permissions', () => {
   it('lets someone who may view clients export them but not import', async () => {
     setup({}, READER);
@@ -269,5 +370,16 @@ describe('the permissions', () => {
     setup({}, ['organization.read']);
 
     expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
+  });
+
+  it('disables the opening balance import without opening_balance.import', async () => {
+    const user = userEvent.setup();
+    setup({}, CREATOR);
+    await openTab(user, 'Opening Balances');
+
+    expect(screen.getByRole('button', { name: 'Import historic time' })).toBeDisabled();
+    expect(
+      screen.getByText('Importing opening balances needs the opening balance import permission.'),
+    ).toBeInTheDocument();
   });
 });

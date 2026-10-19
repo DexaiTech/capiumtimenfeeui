@@ -4,6 +4,7 @@ import { FIXED_FEE_WIP_MODES, RATE_MODES, TIME_INCREMENTS } from '@/types/organi
 import { hoursToMinutes } from '@/utils/minutes';
 import { parsePounds } from '@/utils/money';
 
+import { parsePercentToBp } from '../utils/vat';
 import {
   MARKUP_MAX_BP,
   MILEAGE_MAX_PENCE,
@@ -43,6 +44,11 @@ export type TimeSettingsValues = z.infer<typeof timeSettingsSchema>;
 export const billingSettingsSchema = z.object({
   fixed_fee_wip_mode: z.enum(FIXED_FEE_WIP_MODES, 'Choose when a fixed fee counts as WIP'),
   wip_adjustment_approval_threshold: pounds(THRESHOLD_MAX_PENCE, THRESHOLD_MESSAGE),
+  wip_write_off_percent_enabled: z.boolean(),
+  wip_write_off_approval_threshold_percent: z.string().refine((value) => {
+    const bp = parsePercentToBp(value);
+    return bp !== null;
+  }, 'Enter a percentage from 0 to 100, for example 10 or 12.5'),
   invoice_approval_required: z.boolean(),
   invoice_approval_threshold: pounds(THRESHOLD_MAX_PENCE, THRESHOLD_MESSAGE),
   payment_reminders_enabled: z.boolean(),

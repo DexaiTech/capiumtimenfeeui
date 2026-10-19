@@ -278,3 +278,20 @@ export function useImportClients() {
     },
   });
 }
+
+export function useImportOpeningBalanceTime() {
+  const { organization } = useOrg();
+  const refresh = useRefresh(
+    queryKeys.org.time,
+    queryKeys.org.timesheets,
+    queryKeys.org.wip,
+    queryKeys.org.auditLogs,
+  );
+  return useMutation({
+    mutationFn: ({ file, dryRun }: { file: File; dryRun: boolean }) =>
+      adminApi.importOpeningBalanceTime(organization.id, file, dryRun),
+    onSuccess: (result) => {
+      if (!result.dry_run) refresh();
+    },
+  });
+}
