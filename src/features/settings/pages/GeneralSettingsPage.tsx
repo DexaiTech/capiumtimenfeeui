@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 
-import { Badge } from '@/components/ui';
+import { Badge, Tabs } from '@/components/ui';
 import { ORG_SEGMENTS, modulePath } from '@/constants/routes';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
+import { cn } from '@/utils/cn';
 
 import { BillingSettingsCard } from '../components/general/BillingSettingsCard';
 import { ExpenseSettingsCard } from '../components/general/ExpenseSettingsCard';
@@ -13,15 +15,28 @@ import { RateModeCard } from '../components/general/RateModeCard';
 import { TimeSettingsCard } from '../components/general/TimeSettingsCard';
 import { SettingsSection } from '../components/SettingsSection';
 
+type GeneralTab = 'time' | 'billing' | 'rates' | 'expenses' | 'locale';
+
+const TABS: ReadonlyArray<{ value: GeneralTab; label: string }> = [
+  { value: 'time', label: 'Time recording' },
+  { value: 'billing', label: 'WIP & billing' },
+  { value: 'rates', label: 'Rates' },
+  { value: 'expenses', label: 'Expenses' },
+  { value: 'locale', label: 'Locale' },
+];
+
 /**
  * `/:orgSlug/settings/general`: how time, WIP, billing, rates and expenses behave across the
- * practice. Companion to Practice Settings (name, address, VAT and bank details), which edits
- * the same practice through the same endpoint; each card here saves only its own settings.
+ * practice, one tab each so that reaching any of them never needs scrolling past another.
+ * Companion to Practice Settings (name, address, VAT and bank details), which edits the same
+ * practice through the same endpoint. Each tab is still its own independent form with its own
+ * save, exactly as before; only the five cards are now shown one at a time instead of stacked.
  */
 export default function GeneralSettingsPage() {
   const { organization, can } = useOrg();
   useDocumentTitle('General settings');
   const editable = can(PERMISSIONS.organizationUpdate);
+  const [tab, setTab] = useState<GeneralTab>('time');
 
   return (
     <SettingsSection
@@ -46,11 +61,49 @@ export default function GeneralSettingsPage() {
           Changing these settings needs permission to update the practice.
         </p>
       )}
-      <TimeSettingsCard organization={organization} editable={editable} />
-      <BillingSettingsCard organization={organization} editable={editable} />
-      <RateModeCard organization={organization} editable={editable} />
-      <ExpenseSettingsCard organization={organization} editable={editable} />
-      <LocaleSettingsCard organization={organization} editable={editable} />
+      <Tabs label="General settings section" idBase="general-settings" items={TABS} value={tab} onChange={setTab} />
+      {/* Every card stays mounted (only hidden), so switching tabs never loses an unsaved edit
+          in another card — each card keeps its own independent form state and Save button. */}
+      <div
+        role="tabpanel"
+        id="general-settings-panel-time"
+        aria-labelledby="general-settings-tab-time"
+        className={cn(tab !== 'time' && 'hidden')}
+      >
+        <TimeSettingsCard organization={organization} editable={editable} />
+      </div>
+      <div
+        role="tabpanel"
+        id="general-settings-panel-billing"
+        aria-labelledby="general-settings-tab-billing"
+        className={cn(tab !== 'billing' && 'hidden')}
+      >
+        <BillingSettingsCard organization={organization} editable={editable} />
+      </div>
+      <div
+        role="tabpanel"
+        id="general-settings-panel-rates"
+        aria-labelledby="general-settings-tab-rates"
+        className={cn(tab !== 'rates' && 'hidden')}
+      >
+        <RateModeCard organization={organization} editable={editable} />
+      </div>
+      <div
+        role="tabpanel"
+        id="general-settings-panel-expenses"
+        aria-labelledby="general-settings-tab-expenses"
+        className={cn(tab !== 'expenses' && 'hidden')}
+      >
+        <ExpenseSettingsCard organization={organization} editable={editable} />
+      </div>
+      <div
+        role="tabpanel"
+        id="general-settings-panel-locale"
+        aria-labelledby="general-settings-tab-locale"
+        className={cn(tab !== 'locale' && 'hidden')}
+      >
+        <LocaleSettingsCard organization={organization} editable={editable} />
+      </div>
     </SettingsSection>
   );
 }

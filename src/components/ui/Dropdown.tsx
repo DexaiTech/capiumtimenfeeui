@@ -18,7 +18,12 @@ export interface DropdownSeparator {
   separator: true;
 }
 
-export type DropdownItem = DropdownActionItem | DropdownSeparator;
+export interface DropdownHeading {
+  id: string;
+  heading: string;
+}
+
+export type DropdownItem = DropdownActionItem | DropdownSeparator | DropdownHeading;
 
 export interface DropdownProps {
   /** Visual content of the trigger button. */
@@ -35,7 +40,11 @@ export interface DropdownProps {
 }
 
 function isAction(item: DropdownItem): item is DropdownActionItem {
-  return !('separator' in item);
+  return !('separator' in item) && !('heading' in item);
+}
+
+function isHeading(item: DropdownItem): item is DropdownHeading {
+  return 'heading' in item;
 }
 
 /** Menu button following the WAI-ARIA menu pattern: arrow keys, Home/End, Escape, outside click. */
@@ -174,6 +183,14 @@ export function Dropdown({
                     {item.icon}
                     {item.label}
                   </button>
+                ) : isHeading(item) ? (
+                  <div
+                    key={item.id}
+                    role="presentation"
+                    className="px-2.5 pt-2.5 pb-1 text-[11px] font-semibold tracking-wide text-text-subtle uppercase first:pt-1"
+                  >
+                    {item.heading}
+                  </div>
                 ) : (
                   <div key={item.id} role="separator" className="my-1.5 h-px bg-border" />
                 ),

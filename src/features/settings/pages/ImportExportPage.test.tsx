@@ -56,12 +56,18 @@ afterEach(() => {
 });
 
 describe('what the page offers', () => {
-  it('offers the clients, the reports and logs, and says what is not available yet', async () => {
+  it('offers the clients on its own tab', async () => {
     setup();
 
     const clients = await screen.findByRole('region', { name: 'Clients' });
     expect(within(clients).getByRole('button', { name: 'Export clients' })).toBeEnabled();
     expect(within(clients).getByRole('button', { name: 'Import clients' })).toBeEnabled();
+  });
+
+  it('offers the reports and logs on their own tab', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(await screen.findByRole('tab', { name: 'Reports & logs' }));
 
     const reports = screen.getByRole('region', { name: 'Reports and logs' });
     expect(within(reports).getByRole('link', { name: 'Go to the reports' })).toHaveAttribute(
@@ -72,6 +78,12 @@ describe('what the page offers', () => {
       'href',
       '/acme/settings/audit-logs',
     );
+  });
+
+  it('says what is not available yet, on its own tab', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(await screen.findByRole('tab', { name: 'Staff, rates & jobs' }));
 
     const others = screen.getByRole('region', { name: 'Staff, rates and jobs' });
     expect(within(others).getAllByText('Not available yet')).toHaveLength(3);

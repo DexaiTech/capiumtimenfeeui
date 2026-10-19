@@ -11,6 +11,8 @@ import { orgPath } from '../test/handlers';
 import { renderSettings } from '../test/render';
 import PracticeSettingsPage from './PracticeSettingsPage';
 
+type User = ReturnType<typeof userEvent.setup>;
+
 function capturePatch(respond: (body: Partial<Organization>) => Organization) {
   const bodies: unknown[] = [];
   server.use(
@@ -25,41 +27,69 @@ function capturePatch(respond: (body: Partial<Organization>) => Organization) {
 
 const field = (name: string) => screen.getByRole('textbox', { name });
 
+/** Practice Settings is one form; its sections are tabs. */
+async function openTab(user: User, label: string) {
+  await user.click(screen.getByRole('tab', { name: label }));
+}
+
 describe('PracticeSettingsPage', () => {
-  it('shows every setting, with the rate in pounds and the currency read-only', () => {
+  it('points to General Settings for time recording instead of repeating it', () => {
+    renderSettings(<PracticeSettingsPage />);
+
+    expect(screen.getByText(/Time recording settings have moved to/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'General Settings' })).toHaveAttribute(
+      'href',
+      '/lovelace/settings/general',
+    );
+    expect(screen.queryByRole('combobox', { name: 'Time increment' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Timesheet approval' })).not.toBeInTheDocument();
+  });
+
+  it('shows every setting, one tab at a time, with the rate in pounds and the currency read-only', async () => {
+    const user = userEvent.setup();
     renderSettings(<PracticeSettingsPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Practice' })).toBeInTheDocument();
+    // Details is the default tab.
     expect(field('Practice name')).toHaveValue('Lovelace & Co');
+
+    await openTab(user, 'Address');
+    expect(field('Address line 1')).toHaveValue('1 High Street');
+    expect(field('Postcode')).toHaveValue('EC1A 1AA');
+
+    await openTab(user, 'Billing');
     expect(field('Default charge-out rate (£ per hour)')).toHaveValue('95.00');
     expect(field('Payment terms (days)')).toHaveValue('30');
     expect(field('VAT number')).toHaveValue('GB123456789');
     expect(field('Currency')).toHaveValue('GBP · British Pound (£)');
     expect(field('Currency')).toBeDisabled();
-    expect(screen.getByRole('combobox', { name: 'Time increment' })).toHaveValue('6');
     expect(screen.getByRole('switch', { name: 'VAT registered' })).toBeChecked();
-    expect(screen.getByRole('switch', { name: 'Timesheet approval' })).not.toBeChecked();
-    expect(field('Address line 1')).toHaveValue('1 High Street');
-    expect(field('Postcode')).toHaveValue('EC1A 1AA');
+
+    await openTab(user, 'Invoices');
     expect(field('Bank details')).toHaveValue('');
     expect(field('Invoice footer')).toHaveValue('');
+
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 
-  it('sends only what changed, the rate as pence and the increment as a number', async () => {
+  it('sends only what changed, the rate as pence, across tabs', async () => {
     const bodies = capturePatch((body) => ({ ...testOrganization, ...body }));
     const user = userEvent.setup();
     renderSettings(<PracticeSettingsPage />);
 
+    await openTab(user, 'Address');
+    await user.clear(field('Address line 1'));
+
+    await openTab(user, 'Billing');
     const rate = field('Default charge-out rate (£ per hour)');
     await user.clear(rate);
     await user.type(rate, '1,234.5');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Time increment' }), '15');
-    await user.click(screen.getByRole('switch', { name: 'Timesheet approval' }));
     await user.clear(field('Payment terms (days)'));
     await user.type(field('Payment terms (days)'), '14');
+
+    await openTab(user, 'Invoices');
     await user.type(field('Bank details'), 'Sort code 00-00-00');
-    await user.clear(field('Address line 1'));
+
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(await screen.findByText('Practice settings saved')).toBeInTheDocument();
@@ -69,11 +99,8 @@ describe('PracticeSettingsPage', () => {
         bank_details: 'Sort code 00-00-00',
         payment_terms_days: 14,
         default_charge_rate: 123450,
-        time_increment_minutes: 15,
-        require_timesheet_approval: true,
       },
     ]);
-    // The saved values become the new baseline.
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled(),
     );
@@ -83,6 +110,7 @@ describe('PracticeSettingsPage', () => {
     const bodies = capturePatch((body) => ({ ...testOrganization, ...body }));
     const user = userEvent.setup();
     renderSettings(<PracticeSettingsPage />);
+    await openTab(user, 'Billing');
 
     await user.click(screen.getByRole('switch', { name: 'VAT registered' }));
     expect(screen.queryByRole('textbox', { name: 'VAT number' })).not.toBeInTheDocument();
@@ -95,22 +123,28 @@ describe('PracticeSettingsPage', () => {
     const user = userEvent.setup();
     renderSettings(<PracticeSettingsPage />);
 
+    await user.clear(field('Email'));
+    await user.type(field('Email'), 'not-an-email');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Enter a valid email')).toBeInTheDocument();
+
+    await openTab(user, 'Address');
+    await user.clear(field('Country'));
+    await user.type(field('Country'), 'G1');
+
+    await openTab(user, 'Billing');
     const rate = field('Default charge-out rate (£ per hour)');
     await user.clear(rate);
     await user.type(rate, '95.555');
     await user.clear(field('Payment terms (days)'));
     await user.type(field('Payment terms (days)'), '400');
-    await user.clear(field('Email'));
-    await user.type(field('Email'), 'not-an-email');
-    await user.clear(field('Country'));
-    await user.type(field('Country'), 'G1');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(
       await screen.findByText('Enter an hourly rate in pounds, for example 95.00'),
     ).toBeInTheDocument();
     expect(screen.getByText('Enter a number of days from 0 to 365')).toBeInTheDocument();
-    expect(screen.getByText('Enter a valid email')).toBeInTheDocument();
+    await openTab(user, 'Address');
     expect(field('Country')).toHaveAttribute('aria-invalid', 'true');
     expect(bodies).toEqual([]);
   });
@@ -125,6 +159,7 @@ describe('PracticeSettingsPage', () => {
     );
     const user = userEvent.setup();
     renderSettings(<PracticeSettingsPage />);
+    await openTab(user, 'Billing');
 
     const rate = field('Default charge-out rate (£ per hour)');
     await user.clear(rate);
@@ -134,16 +169,19 @@ describe('PracticeSettingsPage', () => {
     expect(rate).toHaveAttribute('aria-invalid', 'true');
   });
 
-  it('is read-only without organization.update', () => {
+  it('is read-only without organization.update', async () => {
+    const user = userEvent.setup();
     renderSettings(<PracticeSettingsPage />, {
       context: orgContext({ role: staffRole, permissions: ['organization.read'] }),
     });
     const form = screen.getByRole('form', { name: 'Practice settings' });
     expect(within(form).getByRole('textbox', { name: 'Practice name' })).toBeDisabled();
-    expect(within(form).getByRole('switch', { name: 'VAT registered' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
     expect(screen.getByText('Read only')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete practice' })).not.toBeInTheDocument();
+
+    await openTab(user, 'Billing');
+    expect(within(form).getByRole('switch', { name: 'VAT registered' })).toBeDisabled();
   });
 
   it('offers deleting the practice to an Owner', () => {

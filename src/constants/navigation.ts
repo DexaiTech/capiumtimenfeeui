@@ -96,6 +96,8 @@ export interface SubPage extends AccessRule {
   segment: string;
   /** Also current below the module for paths that no other page claims (detail pages). */
   detail?: boolean;
+  /** Groups the page under a heading in the "More" overflow menu; ungrouped pages get none. */
+  group?: string;
   to: (slug: string) => string;
 }
 
@@ -118,6 +120,8 @@ interface PageDef {
   /** Defaults to the id; '' for the module's index page. */
   segment?: string;
   detail?: boolean;
+  /** Groups the page under a heading in the "More" overflow menu; ungrouped pages get none. */
+  group?: string;
 }
 
 function pagesOf(moduleSegment: ModuleSegment, defs: ReadonlyArray<PageDef>): SubPage[] {
@@ -129,6 +133,7 @@ function pagesOf(moduleSegment: ModuleSegment, defs: ReadonlyArray<PageDef>): Su
       icon: def.icon,
       segment,
       detail: def.detail,
+      group: def.group,
       anyOf: def.anyOf ?? [],
       to: (slug: string) => modulePath(slug, moduleSegment, segment),
     };
@@ -437,32 +442,61 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.settings,
     [P.settingsManage, P.organizationUpdate, P.organizationRead, P.roleRead, P.auditLogRead],
     [
-      { id: 'general', label: 'General Settings', icon: Settings, anyOf: [P.organizationRead] },
-      { id: 'practice', label: 'Practice Settings', icon: Landmark, anyOf: [P.organizationRead] },
-      { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck, anyOf: [P.roleRead] },
+      {
+        id: 'general',
+        label: 'General Settings',
+        icon: Settings,
+        anyOf: [P.organizationRead],
+        group: 'Practice',
+      },
+      {
+        id: 'practice',
+        label: 'Practice Settings',
+        icon: Landmark,
+        anyOf: [P.organizationRead],
+        group: 'Practice',
+      },
+      {
+        id: 'roles',
+        label: 'Roles & Permissions',
+        icon: ShieldCheck,
+        anyOf: [P.roleRead],
+        group: 'Access control',
+      },
       {
         id: 'period-lock',
         label: 'Period Lock',
         icon: Lock,
         anyOf: [P.settingsManage, P.organizationUpdate],
+        group: 'Access control',
       },
-      { id: 'vat-codes', label: 'VAT Codes', icon: Percent },
-      { id: 'invoice-numbering', label: 'Invoice Numbering', icon: Hash },
-      { id: 'credit-note-numbering', label: 'Credit Note Numbering', icon: Hash },
-      { id: 'estimate-numbering', label: 'Estimate Numbering', icon: Hash },
-      { id: 'invoice-templates', label: 'Invoice Templates', icon: FileText },
-      { id: 'notifications', label: 'Notifications', icon: Bell },
+      { id: 'vat-codes', label: 'VAT Codes', icon: Percent, group: 'Money & tax' },
+      {
+        id: 'document-numbering',
+        label: 'Document Numbering',
+        icon: Hash,
+        group: 'Money & tax',
+      },
+      {
+        id: 'invoice-templates',
+        label: 'Invoice Templates',
+        icon: FileText,
+        group: 'Billing presentation',
+      },
+      { id: 'notifications', label: 'Notifications', icon: Bell, group: 'Communication' },
       {
         id: 'email-templates',
         label: 'Email Templates',
         icon: MailPlus,
         anyOf: [P.settingsManage, P.organizationUpdate],
+        group: 'Communication',
       },
       {
         id: 'integrations',
         label: 'Integrations',
         icon: Plug,
         anyOf: [P.settingsManage, P.organizationUpdate],
+        group: 'Connections',
       },
       {
         id: 'import-export',
@@ -470,14 +504,22 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         icon: ArrowUpDown,
         segment: 'import-export',
         anyOf: [P.settingsManage, P.organizationUpdate],
+        group: 'Data',
+      },
+      {
+        id: 'audit-logs',
+        label: 'Audit Logs',
+        icon: ScrollText,
+        anyOf: [P.auditLogRead],
+        group: 'Data',
       },
       {
         id: 'onboarding',
         label: 'Onboarding Checklist',
         icon: ClipboardCheck,
         anyOf: [P.organizationUpdate],
+        group: 'Setup',
       },
-      { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText, anyOf: [P.auditLogRead] },
     ],
   ),
 ];

@@ -15,7 +15,7 @@ export default function PracticeSettingsPage() {
   return (
     <SettingsSection
       title="Practice"
-      description="Details, address, billing, time recording and invoice settings of the practice."
+      description="Details, address, billing and invoice settings of the practice."
     >
       {/* Remount when the saved values change elsewhere, so the form never shows stale defaults. */}
       <PracticeSettingsForm

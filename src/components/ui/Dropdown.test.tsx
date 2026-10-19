@@ -47,6 +47,27 @@ describe('Dropdown', () => {
     expect(trigger).toHaveFocus();
   });
 
+  it('shows a group heading among the items that is not one of them', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderDropdown({
+      items: [
+        { id: 'group-money', heading: 'Money & tax' },
+        { id: 'vat-codes', label: 'VAT Codes', onSelect },
+        { id: 'group-data', heading: 'Data' },
+        { id: 'import-export', label: 'Import/Export', onSelect },
+      ],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Actions' }));
+    const menu = screen.getByRole('menu', { name: 'Actions' });
+    expect(within(menu).getByText('Money & tax')).toBeInTheDocument();
+    expect(within(menu).getByText('Data')).toBeInTheDocument();
+    expect(within(menu).getAllByRole('menuitem')).toHaveLength(2);
+    // A heading is not a menu item: it does not take a role or react to a click.
+    expect(within(menu).queryByRole('menuitem', { name: 'Money & tax' })).not.toBeInTheDocument();
+  });
+
   it('shows a header above the items that is not one of them', async () => {
     const user = userEvent.setup();
     renderDropdown({ header: <span>Application Testing</span> });

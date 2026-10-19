@@ -23,6 +23,7 @@ export function SubNav() {
             label: entry.label,
             icon: entry.icon,
             to: entry.to(slug),
+            group: entry.group,
           }))
         : [],
     [slug, module],

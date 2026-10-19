@@ -247,7 +247,10 @@ describe('practice route (/:orgSlug)', () => {
     ['/acme/settings/services', '/acme/team/services'],
     ['/acme/settings/activity-codes', '/acme/team/activity-types'],
     ['/acme/settings/vat-rates', '/acme/settings/vat-codes'],
-    ['/acme/settings/numbering', '/acme/settings/invoice-numbering'],
+    ['/acme/settings/numbering', '/acme/settings/document-numbering'],
+    ['/acme/settings/invoice-numbering', '/acme/settings/document-numbering'],
+    ['/acme/settings/credit-note-numbering', '/acme/settings/document-numbering'],
+    ['/acme/settings/estimate-numbering', '/acme/settings/document-numbering'],
     ['/acme/settings/audit', '/acme/settings/audit-logs'],
     ['/acme/billing/wip', '/acme/wip'],
   ])('redirects the old address %s to %s', async (from, to) => {

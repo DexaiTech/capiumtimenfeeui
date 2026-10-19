@@ -11,6 +11,8 @@ import { orgPath } from '../test/handlers';
 import { renderSettings } from '../test/render';
 import GeneralSettingsPage from './GeneralSettingsPage';
 
+type User = ReturnType<typeof userEvent.setup>;
+
 function capturePatch(
   respond: (body: Partial<Organization>) => Organization = (body) => ({
     ...testOrganization,
@@ -33,8 +35,14 @@ const box = (form: string, name: string) => within(card(form)).getByRole('textbo
 const save = (form: string, label: string) =>
   within(card(form)).getByRole('button', { name: label });
 
+/** The five cards are tab panels now: open the one that holds the card wanted. */
+async function openTab(user: User, label: string) {
+  await user.click(screen.getByRole('tab', { name: label }));
+}
+
 describe('GeneralSettingsPage', () => {
-  it('shows every general setting in a card of its own', () => {
+  it('shows every general setting, one tab at a time', async () => {
+    const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'General' })).toBeInTheDocument();
@@ -43,6 +51,7 @@ describe('GeneralSettingsPage', () => {
       '/lovelace/settings/practice',
     );
 
+    // Time recording is the default tab.
     const time = within(card('Time recording'));
     expect(time.getByRole('combobox', { name: 'Time increment' })).toHaveValue('6');
     expect(time.getByRole('textbox', { name: 'Daily target (hours)' })).toHaveValue('7.5');
@@ -50,7 +59,9 @@ describe('GeneralSettingsPage', () => {
     expect(time.getByRole('button', { name: 'Monday' })).toHaveAttribute('aria-pressed', 'true');
     expect(time.getByRole('button', { name: 'Saturday' })).toHaveAttribute('aria-pressed', 'false');
     expect(time.getByRole('switch', { name: 'Timesheet approval' })).not.toBeChecked();
+    expect(save('Time recording', 'Save time settings')).toBeDisabled();
 
+    await openTab(user, 'WIP & billing');
     const billing = within(card('WIP and billing'));
     expect(billing.getByRole('combobox', { name: 'Fixed-fee WIP' })).toHaveValue('on_completion');
     expect(
@@ -62,11 +73,15 @@ describe('GeneralSettingsPage', () => {
     );
     expect(billing.getByRole('switch', { name: 'Automatic payment reminders' })).not.toBeChecked();
     expect(billing.getByRole('textbox', { name: 'Days after the due date' })).toHaveValue('7');
+    expect(save('WIP and billing', 'Save billing settings')).toBeDisabled();
 
+    await openTab(user, 'Rates');
     expect(within(card('Rates')).getByRole('combobox', { name: 'Rate mode' })).toHaveValue(
       'staff_first',
     );
+    expect(save('Rates', 'Save rate settings')).toBeDisabled();
 
+    await openTab(user, 'Expenses');
     const expenses = within(card('Expenses'));
     expect(expenses.getByRole('textbox', { name: 'Mileage rate (£ per mile)' })).toHaveValue(
       '0.45',
@@ -75,21 +90,14 @@ describe('GeneralSettingsPage', () => {
     expect(expenses.getByRole('textbox', { name: 'Receipt required above (£)' })).toHaveValue(
       '25.00',
     );
+    expect(save('Expenses', 'Save expense settings')).toBeDisabled();
 
+    await openTab(user, 'Locale');
     const locale = within(card('Locale'));
     expect(locale.getByRole('combobox', { name: 'Timezone' })).toHaveValue('Europe/London');
     expect(locale.getByText('dd/MM/yyyy, for example 31/12/2026')).toBeInTheDocument();
     expect(locale.getByText(/GBP \(£\), set when the practice was created/)).toBeInTheDocument();
-
-    for (const label of [
-      'Save time settings',
-      'Save billing settings',
-      'Save rate settings',
-      'Save expense settings',
-      'Save locale',
-    ]) {
-      expect(screen.getByRole('button', { name: label })).toBeDisabled();
-    }
+    expect(save('Locale', 'Save locale')).toBeDisabled();
   });
 
   it('saves the time card with only what changed, in minutes and numbers', async () => {
@@ -121,21 +129,25 @@ describe('GeneralSettingsPage', () => {
     await waitFor(() => expect(save('Time recording', 'Save time settings')).toBeDisabled());
   });
 
-  it('keeps the unsaved changes of the other cards when one card is saved', async () => {
+  it('keeps the unsaved changes of a tab when another tab is saved', async () => {
     const bodies = capturePatch();
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
 
+    await openTab(user, 'Expenses');
     await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
     await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '0.55');
+
+    await openTab(user, 'Rates');
     await user.selectOptions(
       within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }),
       'grade_only',
     );
     await user.click(save('Rates', 'Save rate settings'));
-
     expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
     expect(bodies).toEqual([{ rate_mode: 'grade_only' }]);
+
+    await openTab(user, 'Expenses');
     expect(box('Expenses', 'Mileage rate (£ per mile)')).toHaveValue('0.55');
     expect(save('Expenses', 'Save expense settings')).toBeEnabled();
   });
@@ -144,6 +156,7 @@ describe('GeneralSettingsPage', () => {
     const bodies = capturePatch();
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'WIP & billing');
 
     const billing = within(card('WIP and billing'));
     await user.selectOptions(
@@ -182,6 +195,7 @@ describe('GeneralSettingsPage', () => {
   it('leaves the invoice threshold and the reminder delay off until their switches are on', async () => {
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'WIP & billing');
 
     const billing = within(card('WIP and billing'));
     const threshold = billing.getByRole('textbox', { name: 'Invoice approval threshold (£)' });
@@ -200,6 +214,7 @@ describe('GeneralSettingsPage', () => {
     const bodies = capturePatch();
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Rates');
 
     expect(
       screen.getByText(/A person's own charge-out rate prices their time/),
@@ -219,6 +234,7 @@ describe('GeneralSettingsPage', () => {
     const bodies = capturePatch();
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Expenses');
 
     await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
     await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '£0.55');
@@ -238,6 +254,7 @@ describe('GeneralSettingsPage', () => {
     const bodies = capturePatch();
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Locale');
 
     await user.selectOptions(
       within(card('Locale')).getByRole('combobox', { name: 'Timezone' }),
@@ -266,6 +283,7 @@ describe('GeneralSettingsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Choose at least one working day')).toBeInTheDocument();
 
+    await openTab(user, 'Expenses');
     await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
     await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '10.01');
     await user.clear(box('Expenses', 'Expense mark-up (%)'));
@@ -287,6 +305,7 @@ describe('GeneralSettingsPage', () => {
       screen.getByText('Enter an amount in pounds from 0 to 1,000,000.00, for example 500.00'),
     ).toBeInTheDocument();
 
+    await openTab(user, 'WIP & billing');
     await user.click(
       within(card('WIP and billing')).getByRole('switch', { name: 'Automatic payment reminders' }),
     );
@@ -326,6 +345,7 @@ describe('GeneralSettingsPage', () => {
     );
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Expenses');
 
     await user.clear(box('Expenses', 'Mileage rate (£ per mile)'));
     await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '0.50');
@@ -338,9 +358,10 @@ describe('GeneralSettingsPage', () => {
     expect(box('Expenses', 'Mileage rate (£ per mile)')).toHaveValue('0.50');
   });
 
-  it('discards the changes of a card', async () => {
+  it('discards the changes of a tab', async () => {
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Expenses');
 
     const rate = box('Expenses', 'Mileage rate (£ per mile)');
     await user.clear(rate);
@@ -355,6 +376,7 @@ describe('GeneralSettingsPage', () => {
   it('asks the browser to confirm closing the tab only while a card has unsaved changes', async () => {
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Rates');
 
     const closing = () => {
       const event = new Event('beforeunload', { cancelable: true });
@@ -373,7 +395,8 @@ describe('GeneralSettingsPage', () => {
     await waitFor(() => expect(closing()).toBe(false));
   });
 
-  it('is read-only without organization.update', () => {
+  it('is read-only without organization.update', async () => {
+    const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />, {
       context: orgContext({ role: staffRole, permissions: ['organization.read'] }),
     });
@@ -383,13 +406,17 @@ describe('GeneralSettingsPage', () => {
     expect(
       within(card('Time recording')).getByRole('combobox', { name: 'Time increment' }),
     ).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^Save / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Discard changes' })).not.toBeInTheDocument();
+
+    await openTab(user, 'WIP & billing');
     expect(
       within(card('WIP and billing')).getByRole('switch', { name: 'Invoice approval' }),
     ).toBeDisabled();
+
+    await openTab(user, 'Expenses');
     expect(
       within(card('Expenses')).getByRole('textbox', { name: 'Mileage rate (£ per mile)' }),
     ).toBeDisabled();
-    expect(screen.queryByRole('button', { name: /^Save / })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Discard changes' })).not.toBeInTheDocument();
   });
 });

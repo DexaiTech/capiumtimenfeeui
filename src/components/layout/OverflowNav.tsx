@@ -10,6 +10,8 @@ export interface OverflowNavItem {
   label: string;
   to: string;
   icon?: LucideIcon;
+  /** Groups the item under a heading once it falls into the "More" menu. */
+  group?: string;
 }
 
 export interface OverflowNavProps {
@@ -117,15 +119,23 @@ export function OverflowNav({ label, items, activeId, variant, className }: Over
     );
   };
 
-  const moreItems: DropdownItem[] = hidden.map((item) => {
+  // Hidden items are grouped under a heading when they carry one (Settings does; other
+  // modules' items have no `group` and render exactly as before, flat with no headings).
+  const moreItems: DropdownItem[] = [];
+  let lastGroup: string | undefined;
+  for (const item of hidden) {
+    if (item.group !== lastGroup) {
+      if (item.group) moreItems.push({ id: `group-${item.group}`, heading: item.group });
+      lastGroup = item.group;
+    }
     const Icon = item.icon;
-    return {
+    moreItems.push({
       id: item.id,
       label: item.label,
       icon: Icon ? <Icon aria-hidden="true" className="size-4 text-text-muted" /> : undefined,
       onSelect: () => void navigate(item.to),
-    };
-  });
+    });
+  }
 
   const hiddenStyle: CSSProperties = {
     position: 'absolute',
