@@ -3,15 +3,7 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import {
-  Button,
-  Input,
-  Select,
-  Skeleton,
-  Textarea,
-  useToast,
-  type SelectOption,
-} from '@/components/ui';
+import { Input, Select, Skeleton, Textarea, useToast, type SelectOption } from '@/components/ui';
 import { isApiError } from '@/services/api';
 import { formatBasisPoints } from '@/utils/money';
 
@@ -25,6 +17,7 @@ import {
 import type { ClientDetail } from '../../types';
 import type { ClientAbilities } from '../abilities';
 import { SettingsCard } from './SettingsCard';
+import { SettingsFormFooter } from './SettingsFormFooter';
 import {
   BILLING_FORM_FIELDS,
   billingFlagChanges,
@@ -33,6 +26,9 @@ import {
   toBillingPatch,
   type BillingFormValues,
 } from './schemas';
+
+/** An explicit reset replaces everything, unlike the reset that follows the saved values. */
+const RESET_ALL = { keepDirtyValues: false, keepErrors: false } as const;
 
 export interface BillingCardProps {
   client: ClientDetail;
@@ -158,11 +154,11 @@ function BillingForm({ client, abilities }: BillingCardProps) {
   const busy = isSubmitting || update.isPending || updateContact.isPending;
 
   return (
-    <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
+    <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-5">
       {submitError ? (
         <FormAlert message={submitError.message} requestId={submitError.requestId} />
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
         <Input
           label="Invoice email"
           type="email"
@@ -224,11 +220,16 @@ function BillingForm({ client, abilities }: BillingCardProps) {
         />
       </div>
       {canEdit ? (
-        <div className="flex justify-end">
-          <Button type="submit" variant="primary" loading={busy} disabled={!isDirty || retryIn > 0}>
-            Save billing settings
-          </Button>
-        </div>
+        <SettingsFormFooter
+          saveLabel="Save billing settings"
+          dirty={isDirty}
+          saving={busy}
+          retryIn={retryIn}
+          onDiscard={() => {
+            clearSubmitError();
+            reset(initial, RESET_ALL);
+          }}
+        />
       ) : null}
     </form>
   );
@@ -247,7 +248,7 @@ export function BillingCard({ client, abilities }: BillingCardProps) {
       description="How this client is invoiced: who receives the invoice, the terms and the defaults."
     >
       {loading ? (
-        <div aria-busy="true" className="grid gap-4 sm:grid-cols-2">
+        <div aria-busy="true" className="grid max-w-3xl gap-5 sm:grid-cols-2">
           {Array.from({ length: 6 }, (_, index) => (
             <Skeleton key={index} shape="rect" className="h-9" />
           ))}

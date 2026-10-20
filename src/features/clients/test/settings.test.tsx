@@ -70,6 +70,31 @@ describe('BillingCard', () => {
     expect(billing.getByRole('button', { name: 'Save billing settings' })).toBeDisabled();
   });
 
+  it('says so while there are unsaved changes, and Discard puts the saved values back', async () => {
+    const bodies: unknown[] = [];
+    const user = userEvent.setup();
+    await openSettings({ handlers: [patchClient(bodies)] });
+    await billingEmail();
+
+    const billing = region('Billing');
+    const discard = billing.getByRole('button', { name: 'Discard changes' });
+    expect(discard).toBeDisabled();
+    expect(billing.queryByText('You have unsaved changes.')).not.toBeInTheDocument();
+
+    const terms = billing.getByRole('textbox', { name: 'Payment terms (days)' });
+    await user.clear(terms);
+    await user.type(terms, '14');
+    expect(billing.getByRole('status')).toHaveTextContent('You have unsaved changes.');
+    expect(discard).toBeEnabled();
+    expect(billing.getByRole('button', { name: 'Save billing settings' })).toBeEnabled();
+
+    await user.click(discard);
+    expect(terms).toHaveValue('30');
+    expect(billing.queryByText('You have unsaved changes.')).not.toBeInTheDocument();
+    expect(billing.getByRole('button', { name: 'Save billing settings' })).toBeDisabled();
+    expect(bodies).toEqual([]);
+  });
+
   it('offers the VAT codes, services and templates of the practice', async () => {
     await openSettings();
     await billingEmail();
@@ -353,6 +378,21 @@ describe('TeamCard', () => {
       expect(bodies).toEqual([{ partner_user_id: ADA_ID, manager_user_id: null }]),
     );
     expect(await screen.findByText('Team saved')).toBeInTheDocument();
+  });
+
+  it('Discard puts the partner and the manager back', async () => {
+    const user = userEvent.setup();
+    await openSettings();
+    const team = await findRegion('Team');
+
+    const partner = await team.findByRole('combobox', { name: 'Partner' });
+    expect(team.getByRole('button', { name: 'Discard changes' })).toBeDisabled();
+    await user.selectOptions(partner, 'Ada Lovelace');
+    expect(team.getByRole('status')).toHaveTextContent('You have unsaved changes.');
+
+    await user.click(team.getByRole('button', { name: 'Discard changes' }));
+    expect(partner).toHaveDisplayValue('Nobody');
+    expect(team.getByRole('button', { name: 'Save team' })).toBeDisabled();
   });
 
   it('sends one field when only one changed', async () => {

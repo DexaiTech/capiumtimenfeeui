@@ -3,12 +3,13 @@ import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Select, Skeleton, useToast, type SelectOption } from '@/components/ui';
+import { Select, Skeleton, useToast, type SelectOption } from '@/components/ui';
 
 import { useStaffDirectory, useUpdateClient } from '../../api';
 import type { ClientDetail, MemberRead } from '../../types';
 import type { ClientAbilities } from '../abilities';
 import { SettingsCard } from './SettingsCard';
+import { SettingsFormFooter } from './SettingsFormFooter';
 import {
   TEAM_FORM_FIELDS,
   teamFormSchema,
@@ -16,6 +17,9 @@ import {
   toTeamPatch,
   type TeamFormValues,
 } from './schemas';
+
+/** An explicit reset replaces everything, unlike the reset that follows the saved values. */
+const RESET_ALL = { keepDirtyValues: false, keepErrors: false } as const;
 
 export interface TeamCardProps {
   client: ClientDetail;
@@ -71,11 +75,11 @@ function TeamForm({ client, abilities, members }: TeamCardProps & { members: Mem
   });
 
   return (
-    <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
+    <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-5">
       {submitError ? (
         <FormAlert message={submitError.message} requestId={submitError.requestId} />
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
         <Select
           label="Partner"
           options={memberOptions(members, client.partner_user_id)}
@@ -94,16 +98,16 @@ function TeamForm({ client, abilities, members }: TeamCardProps & { members: Mem
         />
       </div>
       {canEdit ? (
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            variant="primary"
-            loading={isSubmitting || update.isPending}
-            disabled={!isDirty || retryIn > 0}
-          >
-            Save team
-          </Button>
-        </div>
+        <SettingsFormFooter
+          saveLabel="Save team"
+          dirty={isDirty}
+          saving={isSubmitting || update.isPending}
+          retryIn={retryIn}
+          onDiscard={() => {
+            clearSubmitError();
+            reset(initial, RESET_ALL);
+          }}
+        />
       ) : null}
     </form>
   );
@@ -120,7 +124,7 @@ export function TeamCard({ client, abilities }: TeamCardProps) {
           or changed here.
         </p>
       ) : staff.isPending ? (
-        <div aria-busy="true" className="grid gap-4 sm:grid-cols-2">
+        <div aria-busy="true" className="grid max-w-3xl gap-5 sm:grid-cols-2">
           <Skeleton shape="rect" className="h-9" />
           <Skeleton shape="rect" className="h-9" />
         </div>

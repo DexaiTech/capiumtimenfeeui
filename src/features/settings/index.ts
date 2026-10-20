@@ -9,3 +9,5 @@ export type { Member, MemberStatus, Role } from './types';
 // The invoice templates a client's billing settings can choose from (`GET /invoice-templates`).
 export { useInvoiceTemplates } from './api/billingHooks';
 export type { InvoiceLayout, InvoiceTemplate } from './billingTypes';
+// Asks the browser to confirm closing the tab while a form has unsaved changes.
+export { useBeforeUnload } from './hooks/useBeforeUnload';

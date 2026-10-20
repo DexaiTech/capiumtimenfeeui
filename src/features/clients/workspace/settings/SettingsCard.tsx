@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { Card, CardHeader } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { cn } from '@/utils/cn';
 
 export interface SettingsCardProps {
@@ -14,7 +14,10 @@ export interface SettingsCardProps {
   children: ReactNode;
 }
 
-/** A section of the Settings tab: a white card with a heading and, at the foot, its own buttons. */
+/**
+ * A section of the Settings tab, laid out like the cards of Settings → General: a heading with no
+ * divider, the fields, and (for a form) a footer from `SettingsFormFooter`.
+ */
 export function SettingsCard({
   title,
   description,
@@ -29,8 +32,14 @@ export function SettingsCard({
       aria-label={title}
       className={cn(danger && 'ring-1 ring-danger/40')}
     >
-      <CardHeader title={title} description={description} actions={actions} />
-      <div className="px-5 py-4">{children}</div>
+      <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="text-base font-semibold text-text">{title}</h2>
+          {description ? <p className="text-sm text-text-muted">{description}</p> : null}
+        </div>
+        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      </div>
+      <div className="px-5 py-5">{children}</div>
     </Card>
   );
 }
