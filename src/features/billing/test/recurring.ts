@@ -1,4 +1,4 @@
-import { http, HttpResponse, type HttpHandler } from 'msw';
+import { http, type HttpHandler } from 'msw';
 
 import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
@@ -315,7 +315,7 @@ export function recurringHandlers(backend: RecurringBackend): HttpHandler[] {
         );
       }
       backend.schedules = backend.schedules.filter((schedule) => schedule.id !== found.id);
-      return new HttpResponse(null, { status: 204 });
+      return ok(null);
     }),
     ...(['pause', 'resume'] as const).map((action) =>
       http.post(orgApiPath(`/recurring/:scheduleId/${action}`), ({ params }) => {

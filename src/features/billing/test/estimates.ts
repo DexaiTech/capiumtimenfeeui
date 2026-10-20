@@ -1,4 +1,4 @@
-import { http, HttpResponse, type HttpHandler } from 'msw';
+import { http, type HttpHandler } from 'msw';
 
 import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
@@ -339,7 +339,7 @@ export function estimateHandlers(backend: EstimateBackend): HttpHandler[] {
         return fail(409, 'ESTIMATE_NOT_DRAFT', 'Only a draft estimate can be deleted.');
       }
       backend.estimates = backend.estimates.filter((estimate) => estimate.id !== found.id);
-      return new HttpResponse(null, { status: 204 });
+      return ok(null);
     }),
     http.post(orgApiPath('/estimates/:estimateId/send'), async ({ request, params }) => {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;

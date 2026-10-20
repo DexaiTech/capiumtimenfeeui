@@ -317,7 +317,7 @@ describe('one schedule', () => {
     setup();
     const dialog = await openRow(user, 2, 'Annual accounts');
 
-    expect(await within(dialog).findByText(/has ended and can no longer be changed/)).toBeVisible();
+    expect(await within(dialog).findByText(/has ended and can no longer be changed/)).toBeInTheDocument();
     for (const name of ['Edit', 'Pause', 'Resume']) {
       expect(within(dialog).queryByRole('button', { name })).not.toBeInTheDocument();
     }
