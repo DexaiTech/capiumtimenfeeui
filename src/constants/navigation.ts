@@ -112,7 +112,16 @@ export interface NavModule extends AccessRule {
 }
 
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
-export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing', 'wip', 'expenses', 'jobs'];
+export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = [
+  'settings',
+  'team',
+  'reports',
+  'billing',
+  'wip',
+  'expenses',
+  'jobs',
+  'time',
+];
 
 interface PageDef {
   id: string;
@@ -231,30 +240,41 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.time,
     [P.timeLog, P.timeReadAll, P.timesheetApprove],
     [
-      { id: 'my-timesheet', label: 'My Timesheet', icon: Clock, segment: '', anyOf: [P.timeLog] },
       {
-        id: 'team',
-        label: 'Team Timesheets',
-        icon: UsersRound,
-        anyOf: [P.timeReadAll, P.timesheetApprove],
-      },
-      {
-        id: 'approvals',
-        label: 'Timesheet Approvals',
-        icon: BadgeCheck,
-        anyOf: [P.timesheetApprove],
+        id: 'my-timesheet',
+        label: 'My Timesheet',
+        icon: Clock,
+        segment: '',
+        anyOf: [P.timeLog],
+        group: 'My time',
       },
       {
         id: 'entries',
         label: 'Time Entries',
         icon: ClipboardList,
         anyOf: [P.timeLog, P.timeReadAll],
+        group: 'My time',
+      },
+      {
+        id: 'team',
+        label: 'Team Timesheets',
+        icon: UsersRound,
+        anyOf: [P.timeReadAll, P.timesheetApprove],
+        group: 'Team & review',
+      },
+      {
+        id: 'approvals',
+        label: 'Timesheet Approvals',
+        icon: BadgeCheck,
+        anyOf: [P.timesheetApprove],
+        group: 'Team & review',
       },
       {
         id: 'analysis',
         label: 'Time Analysis',
         icon: ChartColumn,
         anyOf: [P.reportRead, P.timeReadAll],
+        group: 'Team & review',
       },
     ],
   ),

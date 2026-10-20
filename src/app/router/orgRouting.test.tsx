@@ -288,6 +288,24 @@ describe('practice route (/:orgSlug)', () => {
     );
   });
 
+  it('shows the time pages of the caller in a grouped sidebar', async () => {
+    mockOrganizations([contextWith(['time.log'])]);
+    renderApp('/acme/time/entries');
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Time pages' });
+    expect(within(sidebar).getByRole('link', { name: 'Time Entries' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(sidebar).getByRole('link', { name: 'My Timesheet' })).not.toHaveAttribute(
+      'aria-current',
+    );
+    // Approving timesheets needs timesheet.approve, which this role does not hold.
+    expect(
+      within(sidebar).queryByRole('link', { name: 'Timesheet Approvals' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('opens the practice settings from the practice menu', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/clients');
