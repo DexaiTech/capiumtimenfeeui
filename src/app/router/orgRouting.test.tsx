@@ -231,6 +231,21 @@ describe('practice route (/:orgSlug)', () => {
     expect(screen.getAllByRole('navigation', { name: 'Reports pages' })).toHaveLength(1);
   });
 
+  it('shows the billing pages of the caller in a grouped sidebar', async () => {
+    mockOrganizations([contextWith(['invoice.read'])]);
+    const { router } = renderApp('/acme/billing');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/acme/billing/invoices'));
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Billing & Fees pages' });
+    expect(within(sidebar).getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(sidebar).getByRole('link', { name: 'Credit Notes' })).toBeInTheDocument();
+    // Preparing an invoice needs invoice.create, which this role does not hold.
+    expect(within(sidebar).queryByRole('link', { name: 'Prepare Invoice' })).not.toBeInTheDocument();
+  });
+
   it('opens the practice settings from the practice menu', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/clients');

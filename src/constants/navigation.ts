@@ -112,7 +112,7 @@ export interface NavModule extends AccessRule {
 }
 
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
-export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports'];
+export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing'];
 
 interface PageDef {
   id: string;
@@ -355,18 +355,61 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.billing,
     [P.invoiceRead, P.invoiceCreate, P.paymentRead],
     [
-      { id: 'prepare', label: 'Prepare Invoice', icon: FilePlus2, anyOf: [P.invoiceCreate] },
-      { id: 'invoices', label: 'Invoices', icon: FileText, anyOf: [P.invoiceRead] },
-      { id: 'credit-notes', label: 'Credit Notes', icon: FileMinus2, anyOf: [P.invoiceRead] },
-      { id: 'recurring', label: 'Recurring Invoices', icon: Repeat, anyOf: [P.invoiceRead] },
-      { id: 'estimates', label: 'Estimates', icon: FileSignature, anyOf: [P.invoiceRead] },
-      { id: 'payments', label: 'Payments', icon: CreditCard, anyOf: [P.paymentRead] },
-      { id: 'debtors', label: 'Debtors', icon: Banknote, anyOf: [P.paymentRead, P.invoiceRead] },
+      {
+        id: 'prepare',
+        label: 'Prepare Invoice',
+        icon: FilePlus2,
+        anyOf: [P.invoiceCreate],
+        group: 'Invoicing',
+      },
+      {
+        id: 'invoices',
+        label: 'Invoices',
+        icon: FileText,
+        anyOf: [P.invoiceRead],
+        group: 'Invoicing',
+      },
+      {
+        id: 'credit-notes',
+        label: 'Credit Notes',
+        icon: FileMinus2,
+        anyOf: [P.invoiceRead],
+        group: 'Invoicing',
+      },
+      {
+        id: 'recurring',
+        label: 'Recurring Invoices',
+        icon: Repeat,
+        anyOf: [P.invoiceRead],
+        group: 'Invoicing',
+      },
+      {
+        id: 'estimates',
+        label: 'Estimates',
+        icon: FileSignature,
+        anyOf: [P.invoiceRead],
+        group: 'Invoicing',
+      },
+      {
+        id: 'payments',
+        label: 'Payments',
+        icon: CreditCard,
+        anyOf: [P.paymentRead],
+        group: 'Receivables',
+      },
+      {
+        id: 'debtors',
+        label: 'Debtors',
+        icon: Banknote,
+        anyOf: [P.paymentRead, P.invoiceRead],
+        group: 'Receivables',
+      },
       {
         id: 'statements',
         label: 'Client Statements',
         icon: ScrollText,
         anyOf: [P.paymentRead, P.invoiceRead],
+        group: 'Receivables',
       },
     ],
   ),
