@@ -112,7 +112,7 @@ export interface NavModule extends AccessRule {
 }
 
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
-export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team'];
+export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports'];
 
 interface PageDef {
   id: string;
@@ -378,30 +378,75 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.reports,
     [P.reportRead, P.reportFinancial],
     [
-      { id: 'time-analysis', label: 'Time Analysis', icon: Clock, anyOf: [P.reportRead] },
-      { id: 'utilisation', label: 'Utilisation', icon: Gauge, anyOf: [P.reportRead] },
       {
-        id: 'job-profitability',
-        label: 'Job Profitability',
-        icon: Scale,
-        anyOf: [P.reportFinancial],
+        id: 'time-analysis',
+        label: 'Time Analysis',
+        icon: Clock,
+        anyOf: [P.reportRead],
+        group: 'Time & people',
       },
-      { id: 'wip-ageing', label: 'WIP & Ageing', icon: Hourglass, anyOf: [P.reportFinancial] },
-      { id: 'recovery', label: 'Recovery', icon: Target, anyOf: [P.reportFinancial] },
-      { id: 'billing', label: 'Billing', icon: ChartLine, anyOf: [P.reportFinancial] },
       {
-        id: 'expenses',
-        label: 'Expenses',
-        icon: Receipt,
-        anyOf: [P.reportRead, P.reportFinancial],
+        id: 'utilisation',
+        label: 'Utilisation',
+        icon: Gauge,
+        anyOf: [P.reportRead],
+        group: 'Time & people',
       },
-      { id: 'aged-debtors', label: 'Aged Debtors', icon: Banknote, anyOf: [P.reportFinancial] },
-      { id: 'payments', label: 'Payments', icon: CreditCard, anyOf: [P.reportFinancial] },
       {
         id: 'missing-timesheets',
         label: 'Missing Timesheets',
         icon: CalendarX2,
         anyOf: [P.reportRead],
+        group: 'Time & people',
+      },
+      {
+        id: 'job-profitability',
+        label: 'Job Profitability',
+        icon: Scale,
+        anyOf: [P.reportFinancial],
+        group: 'Jobs & WIP',
+      },
+      {
+        id: 'wip-ageing',
+        label: 'WIP & Ageing',
+        icon: Hourglass,
+        anyOf: [P.reportFinancial],
+        group: 'Jobs & WIP',
+      },
+      {
+        id: 'recovery',
+        label: 'Recovery',
+        icon: Target,
+        anyOf: [P.reportFinancial],
+        group: 'Jobs & WIP',
+      },
+      {
+        id: 'expenses',
+        label: 'Expenses',
+        icon: Receipt,
+        anyOf: [P.reportRead, P.reportFinancial],
+        group: 'Jobs & WIP',
+      },
+      {
+        id: 'billing',
+        label: 'Billing',
+        icon: ChartLine,
+        anyOf: [P.reportFinancial],
+        group: 'Billing & cash',
+      },
+      {
+        id: 'payments',
+        label: 'Payments',
+        icon: CreditCard,
+        anyOf: [P.reportFinancial],
+        group: 'Billing & cash',
+      },
+      {
+        id: 'aged-debtors',
+        label: 'Aged Debtors',
+        icon: Banknote,
+        anyOf: [P.reportFinancial],
+        group: 'Billing & cash',
       },
     ],
   ),

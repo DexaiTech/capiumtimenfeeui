@@ -213,6 +213,24 @@ describe('practice route (/:orgSlug)', () => {
     );
   });
 
+  it('shows the reports of the caller in a grouped sidebar instead of the secondary bar', async () => {
+    mockOrganizations([contextWith(['report.read'])]);
+    const { router } = renderApp('/acme/reports');
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/acme/reports/time-analysis'),
+    );
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Reports pages' });
+    expect(within(sidebar).getByRole('link', { name: 'Time Analysis' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(sidebar).getByRole('link', { name: 'Utilisation' })).toBeInTheDocument();
+    // Financial reports need report.financial, which this role does not hold.
+    expect(within(sidebar).queryByRole('link', { name: 'Billing' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('navigation', { name: 'Reports pages' })).toHaveLength(1);
+  });
+
   it('opens the practice settings from the practice menu', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/clients');
