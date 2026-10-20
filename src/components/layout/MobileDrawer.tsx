@@ -69,7 +69,6 @@ function DrawerPanel({ onClose }: { onClose: () => void }) {
             <LogoMark tone="inverse" />
             <span className="flex min-w-0 flex-col leading-tight">
               <span className="truncate text-sm font-bold">{practice?.name ?? 'Capium'}</span>
-              <span className="eyebrow text-topbar-subtle">Practice management</span>
             </span>
           </span>
           <Button

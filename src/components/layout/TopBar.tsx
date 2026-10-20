@@ -33,7 +33,7 @@ export const barIconClasses =
   'transition-colors duration-fast ease-standard hover:bg-topbar-pill md:size-[30px]';
 
 /**
- * The full-width violet bar (60 px): the practice (logo mark, name, "PRACTICE MANAGEMENT"),
+ * The full-width violet bar (60 px): the practice (logo mark, name),
  * the modules the caller may open, and on the right the Application Testing menu, search, quick
  * create, the practice logo, help, notifications and the user menu. Modules that do not fit fold
  * into "More".
@@ -79,7 +79,6 @@ export function TopBar({ user, onLogout }: TopBarProps) {
             <span className="max-w-44 truncate text-[13px] font-semibold xl:max-w-56">
               {practice?.name ?? 'Capium'}
             </span>
-            <span className="eyebrow text-topbar-subtle">Practice management</span>
           </span>
         </Link>
 

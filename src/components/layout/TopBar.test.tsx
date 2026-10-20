@@ -78,11 +78,11 @@ function labelOf(element: HTMLElement): string {
 const menuItems = (menu: HTMLElement) => within(menu).queryAllByRole('menuitem').map(labelOf);
 
 describe('TopBar', () => {
-  it('shows the practice name over "Practice management" and leads the logo to the dashboard', () => {
+  it('shows the practice name and leads the logo to the dashboard', () => {
     renderShell(ownerContext.permissions);
     const banner = screen.getByRole('banner');
     expect(within(banner).getByText('Acme Accountants')).toBeInTheDocument();
-    expect(within(banner).getByText('Practice management')).toBeInTheDocument();
+    expect(within(banner).queryByText('Practice management')).not.toBeInTheDocument();
     expect(within(banner).getByRole('link', { name: 'Acme Accountants home' })).toHaveAttribute(
       'href',
       '/acme/dashboard',

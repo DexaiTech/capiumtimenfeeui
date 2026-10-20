@@ -152,7 +152,7 @@ export function IntegrationCardView({
         {card.key === 'practice_management' ? (
           <Switch
             label="Keep statuses in step"
-            description="Job and task statuses follow practice management, both ways."
+            description="Job and task statuses follow the linked system, both ways."
             checked={card.config.sync_statuses === true}
             disabled={!canManage || !card.enabled || busy}
             onChange={(checked) => change({ config: { sync_statuses: checked } }, 'Setting saved')}

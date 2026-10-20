@@ -6,7 +6,7 @@ import { IntegrationsView } from '../components/integrations/IntegrationsView';
 import { NoAccess, SettingsSection } from '../components/SettingsSection';
 
 /**
- * `/:orgSlug/settings/integrations`: the central client and user directories, practice management
+ * `/:orgSlug/settings/integrations`: the central client and user directories, jobs and tasks
  * and bookkeeping. `integration.read` shows them; `integration.manage` runs and changes them.
  */
 export default function IntegrationsPage() {
@@ -15,7 +15,7 @@ export default function IntegrationsPage() {
   return (
     <SettingsSection
       title="Integrations"
-      description="Central client and user, practice management and bookkeeping connections."
+      description="Central client and user, jobs and tasks, and bookkeeping connections."
     >
       {can(P.integrationRead) ? <IntegrationsView /> : <NoAccess what="the integrations" />}
     </SettingsSection>
