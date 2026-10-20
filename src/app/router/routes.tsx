@@ -61,6 +61,7 @@ const SIDEBAR_LAYOUTS: Partial<Record<ModuleId, Loader>> = {
   team: () => import('@/features/team/pages/TeamLayoutPage'),
   reports: () => import('@/features/reports/pages/ReportsLayoutPage'),
   billing: () => import('@/features/billing/pages/BillingLayoutPage'),
+  wip: () => import('@/features/wip/pages/WipLayoutPage'),
 };
 
 /** The routes of one module: its index, every page of its secondary bar and its detail pages. */
@@ -89,8 +90,9 @@ function moduleRoutes(moduleId: ModuleId): RouteObject {
       guardPage(moduleId, detail.pageId, { path: detail.path, lazy: page(detail.load) }),
     );
   }
-  // Settings, Team & Rates, Reports and Billing & Fees have their own grouped sidebar instead of
-  // the shared secondary bar; their pages sit one level deeper, under that layout.
+  // Settings, Team & Rates, Reports, Billing & Fees and Work in Progress have their own grouped
+  // sidebar instead of the shared secondary bar; their pages sit one level deeper,
+  // under that layout.
   const sidebarLayout = SIDEBAR_LAYOUTS[moduleId];
   const routed: RouteObject[] = sidebarLayout
     ? [{ lazy: page(sidebarLayout), children }]

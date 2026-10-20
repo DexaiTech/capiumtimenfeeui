@@ -112,7 +112,7 @@ export interface NavModule extends AccessRule {
 }
 
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
-export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing'];
+export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing', 'wip'];
 
 interface PageDef {
   id: string;
@@ -339,12 +339,49 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.wip,
     [P.wipRead],
     [
-      { id: 'summary', label: 'WIP Summary', icon: Hourglass, segment: '', anyOf: [P.wipRead] },
-      { id: 'details', label: 'WIP Details', icon: ClipboardList, anyOf: [P.wipRead] },
-      { id: 'ageing', label: 'WIP Ageing', icon: ChartColumn, anyOf: [P.wipRead] },
-      { id: 'adjustments', label: 'WIP Adjustments', icon: SlidersHorizontal, anyOf: [P.wipRead] },
-      { id: 'transfers', label: 'WIP Transfers', icon: ArrowLeftRight, anyOf: [P.wipRead] },
-      { id: 'historic', label: 'Historic WIP', icon: History, anyOf: [P.wipRead] },
+      {
+        id: 'summary',
+        label: 'WIP Summary',
+        icon: Hourglass,
+        segment: '',
+        anyOf: [P.wipRead],
+        group: 'Current WIP',
+      },
+      {
+        id: 'details',
+        label: 'WIP Details',
+        icon: ClipboardList,
+        anyOf: [P.wipRead],
+        group: 'Current WIP',
+      },
+      {
+        id: 'ageing',
+        label: 'WIP Ageing',
+        icon: ChartColumn,
+        anyOf: [P.wipRead],
+        group: 'Current WIP',
+      },
+      {
+        id: 'adjustments',
+        label: 'WIP Adjustments',
+        icon: SlidersHorizontal,
+        anyOf: [P.wipRead],
+        group: 'Changes & history',
+      },
+      {
+        id: 'transfers',
+        label: 'WIP Transfers',
+        icon: ArrowLeftRight,
+        anyOf: [P.wipRead],
+        group: 'Changes & history',
+      },
+      {
+        id: 'historic',
+        label: 'Historic WIP',
+        icon: History,
+        anyOf: [P.wipRead],
+        group: 'Changes & history',
+      },
     ],
   ),
 

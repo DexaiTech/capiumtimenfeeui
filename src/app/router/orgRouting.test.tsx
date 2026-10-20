@@ -246,6 +246,21 @@ describe('practice route (/:orgSlug)', () => {
     expect(within(sidebar).queryByRole('link', { name: 'Prepare Invoice' })).not.toBeInTheDocument();
   });
 
+  it('shows the work in progress pages in a grouped sidebar with only the current page marked', async () => {
+    mockOrganizations([contextWith(['wip.read'])]);
+    renderApp('/acme/wip/details');
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Work in Progress pages' });
+    expect(within(sidebar).getByRole('link', { name: 'WIP Details' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    // The index page (/wip) must not stay marked on its sibling pages.
+    expect(within(sidebar).getByRole('link', { name: 'WIP Summary' })).not.toHaveAttribute(
+      'aria-current',
+    );
+  });
+
   it('opens the practice settings from the practice menu', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/clients');

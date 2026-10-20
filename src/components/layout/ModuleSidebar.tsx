@@ -52,6 +52,7 @@ export function ModuleSidebar({ moduleId }: { moduleId: ModuleId }) {
                   <li key={page.id} className="flex-1 lg:flex-none">
                     <NavLink
                       to={page.to(slug)}
+                      end={page.segment === ''}
                       className={({ isActive }) => linkClasses(isActive)}
                     >
                       <Icon aria-hidden="true" className="size-4 shrink-0" />
