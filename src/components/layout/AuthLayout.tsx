@@ -16,7 +16,6 @@ export function AuthLayout() {
             <LogoMark tone="inverse" />
             <span className="flex flex-col leading-tight">
               <span className="text-sm font-bold">Capium Time &amp; Fees</span>
-              <span className="eyebrow text-topbar-muted">Practice management</span>
             </span>
           </span>
           <ThemeToggle className="text-topbar-fg hover:bg-topbar-hover hover:text-topbar-fg" />

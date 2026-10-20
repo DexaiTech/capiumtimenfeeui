@@ -353,7 +353,7 @@ describe('editing, copying and deleting the job', () => {
     expect(callsOf(backend, 'PATCH')[0]?.body).toEqual({ description: 'Statutory accounts' });
   });
 
-  it('shows what practice management owns and locks those fields', async () => {
+  it('shows what the linked job owns and locks those fields', async () => {
     const user = userEvent.setup();
     setup({
       jobs: [makeJob({ pm_job_id: 'pm-9', pm_linked_at: '2026-10-05T09:00:00Z' })],
@@ -361,7 +361,7 @@ describe('editing, copying and deleting the job', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
     const form = await dialog('Edit job');
 
-    expect(within(form).getByText(/linked to practice management/)).toBeInTheDocument();
+    expect(within(form).getByText(/linked to an external job/)).toBeInTheDocument();
     expect(within(form).getByLabelText('Job name')).toBeDisabled();
     expect(within(form).getByLabelText('Due date')).toBeDisabled();
     expect(within(form).getByLabelText('Description')).toBeEnabled();

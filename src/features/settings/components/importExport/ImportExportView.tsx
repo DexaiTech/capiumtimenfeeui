@@ -200,7 +200,7 @@ export function ImportExportView() {
               />
               <NotYet
                 title="Jobs"
-                where="Jobs can be imported from practice management through its integration."
+                where="Jobs can be imported through an integration."
                 to={routes.org.module(slug, 'settings', 'integrations')}
               />
             </ul>

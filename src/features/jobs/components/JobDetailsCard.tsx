@@ -89,7 +89,7 @@ export function JobDetailsCard({ job }: { job: Job }) {
           <Row label="Closed">{formatUkDateTime(job.closed_at, organization.timezone)}</Row>
         ) : null}
         {job.pm_job_id ? (
-          <Row label="Practice management">
+          <Row label="Linked job">
             Linked since {formatUkDate(job.pm_linked_at)}: its name, service, manager, partner and
             dates are managed there.
           </Row>

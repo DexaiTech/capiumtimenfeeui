@@ -177,7 +177,7 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
       >
         {managed ? (
           <p className="rounded-md bg-surface-sunken px-3 py-2 text-xs text-text-muted">
-            This job is linked to practice management: its name, service, manager, partner and dates
+            This job is linked to an external job: its name, service, manager, partner and dates
             are managed there.
           </p>
         ) : null}
