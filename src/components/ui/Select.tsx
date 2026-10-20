@@ -23,6 +23,8 @@ export interface SelectProps<TValue extends string = string> extends Omit<
   hideLabel?: boolean;
   error?: string;
   hint?: ReactNode;
+  /** Extra classes for the select element itself (a tint), not its wrapper. */
+  selectClassName?: string;
   ref?: Ref<HTMLSelectElement>;
 }
 
@@ -40,6 +42,7 @@ export function Select<TValue extends string = string>({
   hint,
   id,
   className,
+  selectClassName,
   ref,
   ...rest
 }: SelectProps<TValue>) {
@@ -61,7 +64,7 @@ export function Select<TValue extends string = string>({
           id={ids.inputId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(ids, hint, error)}
-          className={cn(controlClasses, 'h-11 appearance-none pr-10 pl-3 md:h-8')}
+          className={cn(controlClasses, 'h-11 appearance-none pr-10 pl-3 md:h-8', selectClassName)}
           {...rest}
         >
           {placeholder ? (

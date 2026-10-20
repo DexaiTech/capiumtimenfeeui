@@ -449,22 +449,17 @@ describe('the new ticket dialog', () => {
       await screen.findByRole('button', { name: 'Application Testing: new ticket' }),
     );
     expect(where()).toBe(`${LIST}?new=1`);
-    const dialog = await screen.findByRole('dialog', { name: 'New ticket' });
-    expect(dialog).toHaveTextContent('Report a bug or suggest an enhancement.');
-    expect(within(dialog).getByLabelText('Subject')).toHaveFocus();
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    expect(within(dialog).getByLabelText(/Subject/)).toHaveFocus();
     // The defaults of the API.
     expect(within(dialog).getByLabelText('Status')).toHaveValue('open');
-    expect(within(dialog).getByLabelText('Priority')).toHaveValue('not_set');
+    expect(within(dialog).getByLabelText('Priority')).toHaveValue('low');
 
-    await user.type(within(dialog).getByLabelText('Subject'), '  Report totals disagree  ');
-    await user.type(within(dialog).getByLabelText('Description'), 'Seen on the VAT report.');
+    await user.type(within(dialog).getByLabelText(/Subject/), '  Report totals disagree  ');
+    await user.type(within(dialog).getByLabelText(/Description/), 'Seen on the VAT report.');
     await user.selectOptions(within(dialog).getByLabelText('Status'), 'hold');
     await user.selectOptions(within(dialog).getByLabelText('Priority'), 'high');
-    await user.click(within(dialog).getByRole('button', { name: 'Choose tags' }));
-    await user.click(screen.getByRole('option', { name: 'Bug' }));
-    await user.keyboard('{Escape}');
-    expect(within(dialog).getByText('Bug')).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Create ticket' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
 
     await waitFor(() =>
       expect(bodies).toEqual([
@@ -473,18 +468,17 @@ describe('the new ticket dialog', () => {
           description: 'Seen on the VAT report.',
           status: 'hold',
           priority: 'high',
-          tag_ids: [bugTag.id],
         },
       ]),
     );
     expect(await screen.findByText('Ticket APT3 created')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'New ticket' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('dialog', { name: 'Application Testing' })).not.toBeInTheDocument(),
     );
     expect(where()).toBe(LIST);
   });
 
-  it('opens from ?new=1 and sends no description or tags when none were entered', async () => {
+  it('opens from ?new=1 and sends the defaults with a subject and description', async () => {
     const user = userEvent.setup();
     const bodies: unknown[] = [];
     server.use(
@@ -496,12 +490,15 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'New ticket' });
-    await user.type(within(dialog).getByLabelText('Subject'), 'Title only');
-    await user.click(within(dialog).getByRole('button', { name: 'Create ticket' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    await user.type(within(dialog).getByLabelText(/Subject/), 'Title only');
+    await user.type(within(dialog).getByLabelText(/Description/), 'Some detail');
+    await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
 
     await waitFor(() =>
-      expect(bodies).toEqual([{ subject: 'Title only', status: 'open', priority: 'not_set' }]),
+      expect(bodies).toEqual([
+        { subject: 'Title only', description: 'Some detail', status: 'open', priority: 'low' },
+      ]),
     );
   });
 
@@ -517,15 +514,16 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'New ticket' });
-    await user.type(within(dialog).getByLabelText('Subject'), '   ');
-    await user.click(within(dialog).getByRole('button', { name: 'Create ticket' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    await user.type(within(dialog).getByLabelText(/Subject/), '   ');
+    await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
     expect(await within(dialog).findByText('Enter a subject')).toBeInTheDocument();
+    expect(within(dialog).getByText('Enter a description')).toBeInTheDocument();
     expect(bodies).toEqual([]);
 
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'New ticket' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('dialog', { name: 'Application Testing' })).not.toBeInTheDocument(),
     );
     expect(where()).toBe(LIST);
   });
@@ -542,13 +540,14 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'New ticket' });
-    await user.type(within(dialog).getByLabelText('Subject'), 'A long one');
-    await user.click(within(dialog).getByRole('button', { name: 'Create ticket' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    await user.type(within(dialog).getByLabelText(/Subject/), 'A long one');
+    await user.type(within(dialog).getByLabelText(/Description/), 'Detail');
+    await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
 
     expect(await within(dialog).findByText('Use at most 200 characters.')).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('Subject')).toHaveValue('A long one');
-    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Subject/)).toHaveValue('A long one');
+    expect(screen.getByRole('dialog', { name: 'Application Testing' })).toBeInTheDocument();
   });
 
   it('shows a refusal that names no field above the buttons', async () => {
@@ -561,9 +560,10 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'New ticket' });
-    await user.type(within(dialog).getByLabelText('Subject'), 'Anything');
-    await user.click(within(dialog).getByRole('button', { name: 'Create ticket' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    await user.type(within(dialog).getByLabelText(/Subject/), 'Anything');
+    await user.type(within(dialog).getByLabelText(/Description/), 'Detail');
+    await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'You may not raise tickets.',

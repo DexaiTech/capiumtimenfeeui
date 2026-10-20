@@ -18,3 +18,12 @@ export type TicketValues = z.infer<typeof ticketSchema>;
 /** A text edited in place (subject or description): the same limits as the form. */
 export const subjectText = ticketSchema.shape.subject;
 export const descriptionText = ticketSchema.shape.description;
+
+/** The "new ticket" form: as the edit form, but the description is required. */
+export const createTicketSchema = ticketSchema.extend({
+  description: z
+    .string()
+    .trim()
+    .min(1, 'Enter a description')
+    .max(DESCRIPTION_MAX_LENGTH, 'Use at most 10,000 characters'),
+});

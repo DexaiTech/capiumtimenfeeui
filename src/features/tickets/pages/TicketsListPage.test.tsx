@@ -339,7 +339,7 @@ describe('TicketsListPage', () => {
       server.use(...ticketHandlers());
       renderList(['ticket.read'], `${LIST}?new=1`);
       await screen.findByRole('link', { name: 'APT1' });
-      expect(screen.queryByRole('dialog', { name: 'New ticket' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: 'Application Testing' })).not.toBeInTheDocument();
     });
 
     it('lets Staff create, tick and edit but not delete', async () => {
