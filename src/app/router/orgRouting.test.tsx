@@ -261,6 +261,19 @@ describe('practice route (/:orgSlug)', () => {
     );
   });
 
+  it('shows the expense pages of the caller in a grouped sidebar', async () => {
+    mockOrganizations([contextWith(['expense.log'])]);
+    renderApp('/acme/expenses/mine');
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Expenses pages' });
+    expect(within(sidebar).getByRole('link', { name: 'My Expenses' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    // Approving claims needs expense.approve, which this role does not hold.
+    expect(within(sidebar).queryByRole('link', { name: 'Expense Approvals' })).not.toBeInTheDocument();
+  });
+
   it('opens the practice settings from the practice menu', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/clients');

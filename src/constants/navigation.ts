@@ -112,7 +112,7 @@ export interface NavModule extends AccessRule {
 }
 
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
-export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing', 'wip'];
+export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing', 'wip', 'expenses'];
 
 interface PageDef {
   id: string;
@@ -298,36 +298,47 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ],
     [
       {
+        id: 'mine',
+        label: 'My Expenses',
+        icon: Wallet,
+        anyOf: [P.expenseLog],
+        group: 'My expenses',
+      },
+      {
         id: 'claims',
         label: 'Expense Claims',
         icon: ReceiptText,
         segment: '',
         anyOf: [P.expenseReadAll, P.expenseManage],
+        group: 'Review',
       },
-      {
-        id: 'disbursements',
-        label: 'Disbursements',
-        icon: HandCoins,
-        anyOf: [P.disbursementLog, P.disbursementManage, P.wipRead],
-      },
-      {
-        id: 'types',
-        label: 'Expense Types',
-        icon: Tags,
-        anyOf: [P.expenseLog, P.expenseReadAll, P.expenseManage],
-      },
-      { id: 'mine', label: 'My Expenses', icon: Wallet, anyOf: [P.expenseLog] },
       {
         id: 'approvals',
         label: 'Expense Approvals',
         icon: BadgeCheck,
         anyOf: [P.expenseApprove],
+        group: 'Review',
       },
       {
         id: 'receipts',
         label: 'Receipts',
         icon: Paperclip,
         anyOf: [P.expenseLog, P.expenseReadAll, P.expenseApprove, P.expenseManage],
+        group: 'Review',
+      },
+      {
+        id: 'disbursements',
+        label: 'Disbursements',
+        icon: HandCoins,
+        anyOf: [P.disbursementLog, P.disbursementManage, P.wipRead],
+        group: 'Costs & set-up',
+      },
+      {
+        id: 'types',
+        label: 'Expense Types',
+        icon: Tags,
+        anyOf: [P.expenseLog, P.expenseReadAll, P.expenseManage],
+        group: 'Costs & set-up',
       },
     ],
   ),
