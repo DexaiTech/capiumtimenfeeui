@@ -81,7 +81,18 @@ function moduleRoutes(moduleId: ModuleId): RouteObject {
       guardPage(moduleId, detail.pageId, { path: detail.path, lazy: page(detail.load) }),
     );
   }
-  return { path: module.segment, children: [guardModule(moduleId, children)] };
+  // Settings has its own grouped sidebar instead of the shared secondary bar; its pages sit one
+  // level deeper, under that layout.
+  const routed: RouteObject[] =
+    moduleId === 'settings'
+      ? [
+          {
+            lazy: page(() => import('@/features/settings/pages/SettingsLayoutPage')),
+            children,
+          },
+        ]
+      : children;
+  return { path: module.segment, children: [guardModule(moduleId, routed)] };
 }
 
 /** The file behind each page of Application Testing; a ticket opens below "All Tickets". */

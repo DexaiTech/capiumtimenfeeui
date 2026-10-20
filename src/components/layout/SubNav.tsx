@@ -29,7 +29,8 @@ export function SubNav() {
     [slug, module],
   );
 
-  if (!module || items.length < 2) return null;
+  // Settings has its own grouped sidebar (SettingsLayoutPage) instead of this bar.
+  if (!module || module.id === 'settings' || items.length < 2) return null;
 
   return (
     <div className="sticky top-15 z-20 hidden border-b border-border bg-surface lg:block">
