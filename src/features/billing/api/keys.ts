@@ -4,9 +4,11 @@ import type {
   CreditNoteListFilters,
   DebtorFilters,
   DebtorSort,
+  EstimateListFilters,
   InvoiceListFilters,
   PaymentListFilters,
   ReminderLogFilters,
+  ScheduleListFilters,
   StatementListFilters,
   StatementSort,
 } from '../types';
@@ -54,6 +56,18 @@ export const billingKeys = {
     [...queryKeys.org.wip(organizationId), 'billing-items', clientId, jobId] as const,
   clientBilling: (organizationId: string, clientId: string) =>
     [...queryKeys.org.clients(organizationId), 'billing-defaults', clientId] as const,
+  estimateList: (organizationId: string, filters: EstimateListFilters) =>
+    [...queryKeys.org.estimates(organizationId), 'list', filters] as const,
+  estimateSummary: (organizationId: string, filters: EstimateListFilters) =>
+    [...queryKeys.org.estimates(organizationId), 'summary', filters] as const,
+  estimate: (organizationId: string, estimateId: string) =>
+    [...queryKeys.org.estimates(organizationId), 'detail', estimateId] as const,
+  scheduleList: (organizationId: string, filters: ScheduleListFilters) =>
+    [...queryKeys.org.recurring(organizationId), 'list', filters] as const,
+  schedule: (organizationId: string, scheduleId: string) =>
+    [...queryKeys.org.recurring(organizationId), 'detail', scheduleId] as const,
+  scheduleRuns: (organizationId: string, scheduleId: string) =>
+    [...queryKeys.org.recurring(organizationId), 'runs', scheduleId] as const,
   vatOptions: (organizationId: string) =>
     [...queryKeys.org.vatRates(organizationId), 'billing'] as const,
 };

@@ -23,7 +23,7 @@ feature teams replace.
 | Notifications: the bell in the top bar (unread count, list, mark read), Settings → Notifications (your choices, the practice's switches and defaults), Settings → Email Templates (merge fields, preview, reset)                                                                    | Built                                         |
 | Application Testing: the bug button in the top bar (Dashboard, All Tickets, New ticket), the ticket dashboard, the ticket list (filters, bulk actions, inline status and priority, tags), one ticket with its comments and files                                                    | Built                                         |
 | Clients: the list (central column and filter, sync, central clients dialog), Client 360 landing (search, recently viewed), the client workspace (Overview, Jobs, Time, Expenses, WIP, Invoices, Payments, Contacts, Settings), `ClientPicker` ([design](docs/design/client-360.md)) | Built                                         |
-| Dashboard, Jobs, Time (timesheet, timer, approvals), Billing (WIP, invoices, credit notes, payments, debtors), Reports, Settings → Rates, Services, Activity codes, VAT rates, Numbering                                                                                            | Placeholder page ("Coming in the next build") |
+| Dashboard, Jobs, Time (timesheet, timer, approvals), Billing (prepare invoice, invoices, credit notes, payments, debtors, statements, **Estimates** and **Recurring invoices**), Reports, Settings (VAT codes, document numbering and the rest)                                     | Built                                         |
 
 ## Stack
 

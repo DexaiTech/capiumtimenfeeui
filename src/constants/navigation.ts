@@ -505,14 +505,14 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         id: 'recurring',
         label: 'Recurring Invoices',
         icon: Repeat,
-        anyOf: [P.invoiceRead],
+        anyOf: [P.recurringRead],
         group: 'Invoicing',
       },
       {
         id: 'estimates',
         label: 'Estimates',
         icon: FileSignature,
-        anyOf: [P.invoiceRead],
+        anyOf: [P.estimateRead],
         group: 'Invoicing',
       },
       {

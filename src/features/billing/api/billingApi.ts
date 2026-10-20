@@ -12,6 +12,14 @@ import type {
   DebtorInvoices,
   DebtorsPage,
   DebtorSort,
+  Estimate,
+  EstimateConverted,
+  EstimateCreate,
+  EstimateListFilters,
+  EstimateListSummary,
+  EstimateSendBody,
+  EstimateSummary,
+  EstimateUpdate,
   InvoiceCreate,
   InvoiceDetail,
   InvoiceHeaderUpdate,
@@ -29,6 +37,12 @@ import type {
   ReminderLogFilters,
   ReminderRequest,
   ReminderResult,
+  Schedule,
+  ScheduleCreate,
+  ScheduleListFilters,
+  ScheduleRun,
+  ScheduleSummary,
+  ScheduleUpdate,
   Statement,
   StatementListFilters,
   StatementSendBody,
@@ -271,4 +285,72 @@ export const billingApi = {
     api.get<ClientBillingDefaults>(`${org(organizationId)}/clients/${seg(clientId)}`, { signal }),
   listVatRates: (organizationId: string, signal?: AbortSignal) =>
     api.get<VatOption[]>(`${org(organizationId)}/vat-rates`, { signal }),
+
+  /* ------------------------------- Estimates ------------------------------- */
+  listEstimates: (
+    organizationId: string,
+    filters: EstimateListFilters,
+    options: ListOptions = {},
+  ) =>
+    api.list<EstimateSummary>(`${org(organizationId)}/estimates`, {
+      query: { ...filters, limit: options.limit, cursor: options.cursor },
+      signal: options.signal,
+    }),
+  /** The counts of the status tabs and the value still open, for the client and search filters. */
+  estimateSummary: (
+    organizationId: string,
+    filters: Pick<EstimateListFilters, 'client_id' | 'q'>,
+    signal?: AbortSignal,
+  ) =>
+    api.get<EstimateListSummary>(`${org(organizationId)}/estimates/summary`, {
+      query: { client_id: filters.client_id, q: filters.q },
+      signal,
+    }),
+  getEstimate: (organizationId: string, estimateId: string, signal?: AbortSignal) =>
+    api.get<Estimate>(`${org(organizationId)}/estimates/${seg(estimateId)}`, { signal }),
+  createEstimate: (organizationId: string, body: EstimateCreate) =>
+    api.post<Estimate>(`${org(organizationId)}/estimates`, body),
+  updateEstimate: (organizationId: string, estimateId: string, body: EstimateUpdate) =>
+    api.patch<Estimate>(`${org(organizationId)}/estimates/${seg(estimateId)}`, body),
+  deleteEstimate: (organizationId: string, estimateId: string) =>
+    api.delete<null>(`${org(organizationId)}/estimates/${seg(estimateId)}`),
+  sendEstimate: (organizationId: string, estimateId: string, body: EstimateSendBody = {}) =>
+    api.post<Estimate>(`${org(organizationId)}/estimates/${seg(estimateId)}/send`, body),
+  acceptEstimate: (organizationId: string, estimateId: string) =>
+    api.post<Estimate>(`${org(organizationId)}/estimates/${seg(estimateId)}/accept`),
+  declineEstimate: (organizationId: string, estimateId: string) =>
+    api.post<Estimate>(`${org(organizationId)}/estimates/${seg(estimateId)}/decline`),
+  convertEstimate: (organizationId: string, estimateId: string) =>
+    api.post<EstimateConverted>(`${org(organizationId)}/estimates/${seg(estimateId)}/convert`),
+
+  /* ------------------------- Recurring invoice schedules ------------------------- */
+  listSchedules: (
+    organizationId: string,
+    filters: ScheduleListFilters,
+    options: ListOptions = {},
+  ) =>
+    api.list<ScheduleSummary>(`${org(organizationId)}/recurring`, {
+      query: { ...filters, limit: options.limit, cursor: options.cursor },
+      signal: options.signal,
+    }),
+  getSchedule: (organizationId: string, scheduleId: string, signal?: AbortSignal) =>
+    api.get<Schedule>(`${org(organizationId)}/recurring/${seg(scheduleId)}`, { signal }),
+  createSchedule: (organizationId: string, body: ScheduleCreate) =>
+    api.post<Schedule>(`${org(organizationId)}/recurring`, body),
+  updateSchedule: (organizationId: string, scheduleId: string, body: ScheduleUpdate) =>
+    api.patch<Schedule>(`${org(organizationId)}/recurring/${seg(scheduleId)}`, body),
+  deleteSchedule: (organizationId: string, scheduleId: string) =>
+    api.delete<null>(`${org(organizationId)}/recurring/${seg(scheduleId)}`),
+  pauseSchedule: (organizationId: string, scheduleId: string) =>
+    api.post<Schedule>(`${org(organizationId)}/recurring/${seg(scheduleId)}/pause`),
+  resumeSchedule: (organizationId: string, scheduleId: string) =>
+    api.post<Schedule>(`${org(organizationId)}/recurring/${seg(scheduleId)}/resume`),
+  listScheduleRuns: (organizationId: string, scheduleId: string, options: ListOptions = {}) =>
+    api.list<ScheduleRun>(`${org(organizationId)}/recurring/${seg(scheduleId)}/runs`, {
+      query: { limit: options.limit, cursor: options.cursor },
+      signal: options.signal,
+    }),
+  /** Tries a failed run again; answers 200 even when it fails again (read `status`). */
+  retryRun: (organizationId: string, runId: string) =>
+    api.post<ScheduleRun>(`${org(organizationId)}/recurring/runs/${seg(runId)}/retry`),
 };

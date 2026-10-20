@@ -64,5 +64,8 @@ export const queryKeys = {
     // Expenses: types, claims (lists, details, summary), receipts and the cached bytes of their files.
     expenses: (organizationId: string) => ['org', organizationId, 'expenses'] as const,
     disbursements: (organizationId: string) => ['org', organizationId, 'disbursements'] as const,
+    // Billing: estimates and recurring invoice schedules (lists, details, runs).
+    estimates: (organizationId: string) => ['org', organizationId, 'estimates'] as const,
+    recurring: (organizationId: string) => ['org', organizationId, 'recurring'] as const,
   },
 };

@@ -3,6 +3,7 @@ import type { BadgeTone } from '@/components/ui';
 
 import type {
   AgeingBucket,
+  EstimateDisplayStatus,
   GroupBy,
   InvoiceDisplayStatus,
   InvoiceLineKind,
@@ -11,6 +12,8 @@ import type {
   ReminderSkipReason,
   ReminderStatus,
   ReminderTemplate,
+  ScheduleFrequency,
+  ScheduleStatus,
   StatementEntryType,
   WipItemKind,
 } from './types';
@@ -140,3 +143,40 @@ export const VAT_KIND_LABELS: Record<string, string> = {
 };
 
 export const MAX_PENCE = 1_000_000_000_000;
+
+/** Status text and colour of an estimate (never colour alone). */
+export const ESTIMATE_STATUS_LABELS: Record<EstimateDisplayStatus, LabelTone> = {
+  draft: { label: 'Draft', tone: 'grey' },
+  sent: { label: 'Sent', tone: 'blue' },
+  accepted: { label: 'Accepted', tone: 'green' },
+  declined: { label: 'Declined', tone: 'red' },
+  expired: { label: 'Expired', tone: 'amber' },
+};
+
+/** The order of the status tabs of the estimate list. */
+export const ESTIMATE_TAB_ORDER: ReadonlyArray<EstimateDisplayStatus> = [
+  'draft',
+  'sent',
+  'accepted',
+  'declined',
+  'expired',
+];
+
+export const SCHEDULE_FREQUENCY_LABELS: Record<ScheduleFrequency, string> = {
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  quarterly: 'Quarterly',
+  annually: 'Annually',
+};
+
+export const SCHEDULE_STATUS_LABELS: Record<ScheduleStatus, LabelTone> = {
+  active: { label: 'Active', tone: 'green' },
+  paused: { label: 'Paused', tone: 'amber' },
+  ended: { label: 'Ended', tone: 'grey' },
+};
+
+/** The order of the status tabs of the schedule list. */
+export const SCHEDULE_TAB_ORDER: ReadonlyArray<ScheduleStatus> = ['active', 'paused', 'ended'];
+
+/** The most lines the API takes on one estimate or schedule. */
+export const MAX_DOCUMENT_LINES = 200;

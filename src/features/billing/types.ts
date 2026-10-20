@@ -696,3 +696,186 @@ export interface VatOption {
   is_default: boolean;
   is_archived: boolean;
 }
+
+/* -------------------------------- Estimates --------------------------------- */
+
+/** What is stored; the list shows `display_status`, which adds `expired` for a lapsed offer. */
+export const ESTIMATE_STATUSES = ['draft', 'sent', 'accepted', 'declined'] as const;
+export type EstimateStatus = (typeof ESTIMATE_STATUSES)[number];
+
+export const ESTIMATE_DISPLAY_STATUSES = [...ESTIMATE_STATUSES, 'expired'] as const;
+export type EstimateDisplayStatus = (typeof ESTIMATE_DISPLAY_STATUSES)[number];
+
+/** One line of an estimate or of a recurring schedule, as the forms send it. */
+export interface LineInput {
+  description: string;
+  /** A decimal string with two places. */
+  quantity: string;
+  unit_amount: Pence;
+  vat_rate_id?: string | null;
+  service_id?: string | null;
+  job_id?: string | null;
+}
+
+export interface EstimateLine {
+  id: string;
+  position: number;
+  description: string;
+  job_id: string | null;
+  service_id: string | null;
+  quantity: string;
+  unit_amount: Pence;
+  net_amount: Pence;
+  vat_rate_id: string | null;
+  vat_rate_bp: BasisPoints;
+  vat_amount: Pence;
+}
+
+export interface EstimateSummary {
+  id: string;
+  /** Null until the estimate is sent. */
+  number: string | null;
+  status: EstimateStatus;
+  display_status: EstimateDisplayStatus;
+  client: ClientRef | null;
+  job_id: string | null;
+  issue_date: IsoDate | null;
+  expiry_date: IsoDate | null;
+  reference: string | null;
+  currency: string;
+  net_total: Pence;
+  vat_total: Pence;
+  gross_total: Pence;
+  sent_at: IsoDateTime | null;
+  responded_at: IsoDateTime | null;
+  converted_invoice_id: string | null;
+  created_at: IsoDateTime;
+}
+
+export interface Estimate extends EstimateSummary {
+  notes: string | null;
+  lines: EstimateLine[];
+}
+
+export interface EstimateListFilters {
+  client_id?: string;
+  status?: ReadonlyArray<EstimateDisplayStatus>;
+  q?: string;
+}
+
+export interface EstimateListSummary {
+  counts: Record<EstimateDisplayStatus | 'total', number>;
+  /** Gross value of the estimates still open (sent, not yet answered or expired). */
+  open_gross: Pence;
+}
+
+export interface EstimateCreate {
+  client_id: string;
+  job_id?: string | null;
+  expiry_date?: IsoDate | null;
+  reference?: string | null;
+  notes?: string | null;
+  lines: LineInput[];
+}
+
+/** Any of the fields; a null clears the optional ones and `lines` replaces every line. */
+export interface EstimateUpdate {
+  job_id?: string | null;
+  expiry_date?: IsoDate | null;
+  reference?: string | null;
+  notes?: string | null;
+  lines?: LineInput[];
+}
+
+export interface EstimateSendBody {
+  issue_date?: IsoDate;
+  expiry_date?: IsoDate;
+}
+
+export interface EstimateConverted {
+  estimate: Estimate;
+  invoice_id: string;
+}
+
+/* ----------------------------- Recurring invoices ---------------------------- */
+
+export const SCHEDULE_FREQUENCIES = ['weekly', 'monthly', 'quarterly', 'annually'] as const;
+export type ScheduleFrequency = (typeof SCHEDULE_FREQUENCIES)[number];
+
+export const SCHEDULE_STATUSES = ['active', 'paused', 'ended'] as const;
+export type ScheduleStatus = (typeof SCHEDULE_STATUSES)[number];
+
+export interface ScheduleLine {
+  id: string;
+  position: number;
+  description: string;
+  job_id: string | null;
+  service_id: string | null;
+  quantity: string;
+  unit_amount: Pence;
+  vat_rate_id: string | null;
+}
+
+export interface ScheduleSummary {
+  id: string;
+  name: string;
+  client: ClientRef | null;
+  frequency: ScheduleFrequency;
+  status: ScheduleStatus;
+  start_date: IsoDate;
+  end_date: IsoDate | null;
+  /** Null once the schedule has ended. */
+  next_run_date: IsoDate | null;
+  last_run_on: IsoDate | null;
+  reference: string | null;
+  /** Net of one invoice. */
+  net_estimate: Pence;
+  /** Runs that failed and wait for a retry. */
+  failed_runs: number;
+  created_at: IsoDateTime;
+}
+
+export interface Schedule extends ScheduleSummary {
+  notes: string | null;
+  lines: ScheduleLine[];
+}
+
+export interface ScheduleListFilters {
+  client_id?: string;
+  status?: ReadonlyArray<ScheduleStatus>;
+  q?: string;
+}
+
+export interface ScheduleCreate {
+  client_id: string;
+  name: string;
+  frequency: ScheduleFrequency;
+  start_date: IsoDate;
+  end_date?: IsoDate | null;
+  reference?: string | null;
+  notes?: string | null;
+  lines: LineInput[];
+}
+
+/** The client and the start date cannot change once the schedule exists. */
+export interface ScheduleUpdate {
+  name?: string;
+  frequency?: ScheduleFrequency;
+  end_date?: IsoDate | null;
+  reference?: string | null;
+  notes?: string | null;
+  lines?: LineInput[];
+}
+
+export interface ScheduleRun {
+  id: string;
+  schedule_id: string;
+  run_date: IsoDate;
+  status: 'succeeded' | 'failed';
+  invoice_id: string | null;
+  /** Null while the drafted invoice has not been issued. */
+  invoice_number: string | null;
+  error: string | null;
+  attempts: number;
+  ran_at: IsoDateTime;
+}

@@ -24,5 +24,10 @@ export function useBillingInvalidation() {
       refresh(k.creditNotes(id), k.invoices(id), k.wip(id), ...money, k.auditLogs(id)),
     payments: () => refresh(k.payments(id), k.invoices(id), ...money, k.auditLogs(id)),
     statements: () => refresh(k.statements(id), k.auditLogs(id)),
+    estimates: () => refresh(k.estimates(id), k.auditLogs(id)),
+    /** Converting an estimate drafts an invoice, so the invoice lists change too. */
+    estimateConverted: () => refresh(k.estimates(id), k.invoices(id), k.auditLogs(id)),
+    /** A run drafts an invoice, and a retry can draft one, so the invoice lists change too. */
+    recurring: () => refresh(k.recurring(id), k.invoices(id), k.auditLogs(id)),
   };
 }

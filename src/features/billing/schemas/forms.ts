@@ -2,8 +2,8 @@ import * as z from 'zod';
 
 import { parsePounds } from '@/utils/money';
 
-import { MAX_PENCE, PAYMENT_METHOD_LABELS } from '../constants';
-import { PAYMENT_METHODS } from '../types';
+import { MAX_DOCUMENT_LINES, MAX_PENCE, PAYMENT_METHOD_LABELS } from '../constants';
+import { PAYMENT_METHODS, SCHEDULE_FREQUENCIES } from '../types';
 import { parseQuantity } from '../utils/lineMaths';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -198,3 +198,53 @@ export const reversalSchema = z.object({
   bounced: z.boolean(),
 });
 export type ReversalValues = z.infer<typeof reversalSchema>;
+
+/* ------------------------ Estimates and recurring schedules ------------------------ */
+
+/** One line of an estimate or schedule; the service and job of a saved line ride along unseen. */
+export const documentLineSchema = z.object({
+  description,
+  quantity: z
+    .string()
+    .refine((value) => parseQuantity(value) !== null, 'Enter a quantity such as 1 or 2.5'),
+  unit_amount: signedMoneyText('Enter an amount such as 120.00 (negative for a discount)'),
+  vat_rate_id: z.string(),
+  service_id: z.string(),
+  job_id: z.string(),
+});
+export type DocumentLineValues = z.infer<typeof documentLineSchema>;
+
+const documentLines = z
+  .array(documentLineSchema)
+  .min(1, 'Add at least one line')
+  .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`);
+
+/** An optional calendar date: empty or `YYYY-MM-DD`. */
+const optionalDate = (message: string) =>
+  z.string().refine((value) => value === '' || ISO_DATE.test(value), message);
+
+export const estimateSchema = z.object({
+  client_id: z.string().min(1, 'Choose the client'),
+  expiry_date: optionalDate('Enter a valid expiry date'),
+  reference: textMax(100),
+  notes: textMax(2000),
+  lines: documentLines,
+});
+export type EstimateValues = z.infer<typeof estimateSchema>;
+
+export const scheduleSchema = z
+  .object({
+    client_id: z.string().min(1, 'Choose the client'),
+    name: z.string().trim().min(1, 'Enter a name').max(200, 'Use at most 200 characters'),
+    frequency: z.enum(SCHEDULE_FREQUENCIES, 'Choose how often to invoice'),
+    start_date: isoDateText('Enter the start date'),
+    end_date: optionalDate('Enter a valid end date'),
+    reference: textMax(100),
+    notes: textMax(2000),
+    lines: documentLines,
+  })
+  .refine((values) => values.end_date === '' || values.end_date >= values.start_date, {
+    path: ['end_date'],
+    message: 'The end date cannot be before the start date',
+  });
+export type ScheduleValues = z.infer<typeof scheduleSchema>;

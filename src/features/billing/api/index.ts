@@ -44,6 +44,29 @@ export {
   type DebtorSortState,
   type StatementSortState,
 } from './debtors';
+export {
+  useAcceptEstimate,
+  useConvertEstimate,
+  useCreateEstimate,
+  useDeclineEstimate,
+  useDeleteEstimate,
+  useEstimate,
+  useEstimateList,
+  useEstimateSummary,
+  useSendEstimate,
+  useUpdateEstimate,
+} from './estimates';
+export {
+  useCreateSchedule,
+  useDeleteSchedule,
+  usePauseSchedule,
+  useResumeSchedule,
+  useRetryRun,
+  useSchedule,
+  useScheduleList,
+  useScheduleRuns,
+  useUpdateSchedule,
+} from './recurring';
 export { useClientBilling, useClientWip, useStatement, useVatOptions } from './lookups';
 export { useBillingInvalidation } from './invalidation';
 export { billingKeys } from './keys';
