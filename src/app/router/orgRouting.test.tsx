@@ -138,8 +138,8 @@ describe('practice route (/:orgSlug)', () => {
       'aria-current',
       'page',
     );
-    // The secondary bar lists the pages of the module.
-    expect(screen.getByRole('navigation', { name: 'Clients pages' })).toBeInTheDocument();
+    // Clients opens straight on its list: no secondary bar.
+    expect(screen.queryByRole('navigation', { name: 'Clients pages' })).not.toBeInTheDocument();
   });
 
   it('opens a client inside the Clients module', async () => {

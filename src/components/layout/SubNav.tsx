@@ -1,7 +1,12 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router';
 
-import { activePageId, moduleIdForPath, SIDEBAR_MODULES } from '@/constants/navigation';
+import {
+  activePageId,
+  moduleIdForPath,
+  NO_SUBNAV_MODULES,
+  SIDEBAR_MODULES,
+} from '@/constants/navigation';
 
 import { OverflowNav } from './OverflowNav';
 import { useShell } from './shellContext';
@@ -29,8 +34,15 @@ export function SubNav() {
     [slug, module],
   );
 
-  // Modules with their own grouped sidebar (SIDEBAR_MODULES) do not use this bar.
-  if (!module || SIDEBAR_MODULES.includes(module.id) || items.length < 2) return null;
+  // Modules with their own grouped sidebar (SIDEBAR_MODULES) or none (NO_SUBNAV_MODULES) skip it.
+  if (
+    !module ||
+    SIDEBAR_MODULES.includes(module.id) ||
+    NO_SUBNAV_MODULES.includes(module.id) ||
+    items.length < 2
+  ) {
+    return null;
+  }
 
   return (
     <div className="sticky top-15 z-20 hidden border-b border-border bg-surface lg:block">

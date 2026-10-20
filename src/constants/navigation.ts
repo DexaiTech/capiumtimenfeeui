@@ -111,6 +111,9 @@ export interface NavModule extends AccessRule {
   pages: ReadonlyArray<SubPage>;
 }
 
+/** Modules that show no secondary bar: the module opens straight on its list (Clients). */
+export const NO_SUBNAV_MODULES: ReadonlyArray<ModuleId> = ['clients'];
+
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
 export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = [
   'settings',

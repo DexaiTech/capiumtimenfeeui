@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useShellStore } from '@/app/store';
 import { buildShellData } from '@/app/router/shellData';
+import { visibleModules } from '@/constants/navigation';
 import { testUser } from '@/test/fixtures';
 import { contextWith, memberContext, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderWithProviders } from '@/test/render';
@@ -134,14 +135,29 @@ describe('TopBar', () => {
     expect(current.map((link) => link.textContent)).toEqual([name]);
   });
 
-  it('shows the pages of the current module in the secondary bar and marks the current one', () => {
-    renderShell(ownerContext.permissions, '/acme/billing/invoices');
-    const bar = screen.getByRole('navigation', { name: 'Billing & Fees pages' });
-    expect(
-      within(bar)
-        .getAllByRole('link')
-        .map((link) => link.textContent),
-    ).toEqual([
+  it.each([
+    ['/acme/clients', 'Clients pages'],
+    ['/acme/billing/invoices', 'Billing & Fees pages'],
+    ['/acme/time', 'Time pages'],
+  ])('shows no secondary bar for %s (the module has its own sidebar or none)', (route, name) => {
+    renderShell(ownerContext.permissions, route);
+    expect(screen.queryByRole('navigation', { name })).not.toBeInTheDocument();
+  });
+
+  it('lists the pages of a module in the order of its sidebar, for the pages the role may open', () => {
+    const labels = (permissions: string[], moduleId: string) =>
+      visibleModules('acme', (code) => permissions.includes(code))
+        .find((entry) => entry.id === moduleId)
+        ?.pages.map((page) => page.label);
+
+    expect(labels(['time.log'], 'time')).toEqual(['My Timesheet', 'Time Entries']);
+    expect(labels(['time.log', 'timesheet.approve'], 'time')).toEqual([
+      'My Timesheet',
+      'Time Entries',
+      'Team Timesheets',
+      'Timesheet Approvals',
+    ]);
+    expect(labels(ownerContext.permissions, 'billing')).toEqual([
       'Prepare Invoice',
       'Invoices',
       'Credit Notes',
@@ -151,52 +167,6 @@ describe('TopBar', () => {
       'Debtors',
       'Client Statements',
     ]);
-    expect(within(bar).getByRole('link', { name: 'Invoices' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(within(bar).getByRole('link', { name: 'Payments' })).toHaveAttribute(
-      'href',
-      '/acme/billing/payments',
-    );
-  });
-
-  it('treats the index page of a module as its first page and a client as Client 360', () => {
-    renderShell(ownerContext.permissions, '/acme/clients');
-    expect(
-      within(screen.getByRole('navigation', { name: 'Clients pages' })).getByRole('link', {
-        name: 'Client List',
-      }),
-    ).toHaveAttribute('aria-current', 'page');
-  });
-
-  it('keeps Client 360 current on a client page', () => {
-    renderShell(ownerContext.permissions, '/acme/clients/c-1');
-    expect(
-      within(screen.getByRole('navigation', { name: 'Clients pages' })).getByRole('link', {
-        name: 'Client 360',
-      }),
-    ).toHaveAttribute('aria-current', 'page');
-  });
-
-  it('lists only the pages the role may open', () => {
-    renderShell(['time.log'], '/acme/time');
-    const timeBar = screen.getAllByRole('navigation', { name: 'Time pages' })[0];
-    expect(
-      within(timeBar as HTMLElement)
-        .getAllByRole('link')
-        .map((link) => link.textContent),
-    ).toEqual(['My Timesheet', 'Time Entries']);
-  });
-
-  it('adds the approval pages for a role that approves timesheets', () => {
-    renderShell(['time.log', 'timesheet.approve'], '/acme/time');
-    const bar = screen.getAllByRole('navigation', { name: 'Time pages' })[0];
-    expect(
-      within(bar as HTMLElement)
-        .getAllByRole('link')
-        .map((link) => link.textContent),
-    ).toEqual(['My Timesheet', 'Team Timesheets', 'Timesheet Approvals', 'Time Entries']);
   });
 
   it('has no secondary bar off the modules (the account page)', () => {
