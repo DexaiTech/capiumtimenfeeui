@@ -112,7 +112,7 @@ export interface NavModule extends AccessRule {
 }
 
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
-export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing', 'wip', 'expenses'];
+export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team', 'reports', 'billing', 'wip', 'expenses', 'jobs'];
 
 interface PageDef {
   id: string;
@@ -266,7 +266,14 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.jobs,
     [P.jobRead],
     [
-      { id: 'list', label: 'Job List', icon: Briefcase, segment: '', anyOf: [P.jobRead] },
+      {
+        id: 'list',
+        label: 'Job List',
+        icon: Briefcase,
+        segment: '',
+        anyOf: [P.jobRead],
+        group: 'Jobs',
+      },
       {
         id: 'job-details',
         label: 'Job Details',
@@ -274,11 +281,36 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         segment: 'details',
         detail: true,
         anyOf: [P.jobRead],
+        group: 'Jobs',
       },
-      { id: 'tasks', label: 'Tasks', icon: ListTodo, anyOf: [P.jobRead] },
-      { id: 'assignments', label: 'Assignments', icon: UserCheck, anyOf: [P.jobRead] },
-      { id: 'calendar', label: 'Job Calendar', icon: CalendarDays, anyOf: [P.jobRead] },
-      { id: 'budgets', label: 'Budget Tracking', icon: Gauge, anyOf: [P.jobRead] },
+      {
+        id: 'budgets',
+        label: 'Budget Tracking',
+        icon: Gauge,
+        anyOf: [P.jobRead],
+        group: 'Jobs',
+      },
+      {
+        id: 'tasks',
+        label: 'Tasks',
+        icon: ListTodo,
+        anyOf: [P.jobRead],
+        group: 'Planning',
+      },
+      {
+        id: 'assignments',
+        label: 'Assignments',
+        icon: UserCheck,
+        anyOf: [P.jobRead],
+        group: 'Planning',
+      },
+      {
+        id: 'calendar',
+        label: 'Job Calendar',
+        icon: CalendarDays,
+        anyOf: [P.jobRead],
+        group: 'Planning',
+      },
     ],
   ),
 

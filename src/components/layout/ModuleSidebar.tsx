@@ -1,7 +1,7 @@
-import { NavLink } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import { useShell } from '@/components/layout/shellContext';
-import type { ModuleId, SubPage } from '@/constants/navigation';
+import { activePageId, type ModuleId, type SubPage } from '@/constants/navigation';
 import { cn } from '@/utils/cn';
 
 const linkClasses = (active: boolean) =>
@@ -23,6 +23,9 @@ export function ModuleSidebar({ moduleId }: { moduleId: ModuleId }) {
   const slug = practice?.slug ?? '';
   const module = modules.find((entry) => entry.id === moduleId);
   const pages = module?.pages ?? [];
+  const { pathname } = useLocation();
+  // The module's own rule for the current page, so a detail page (a job) keeps its page marked.
+  const activeId = module ? activePageId(module, pathname) : null;
 
   const groups: Array<{ name: string | null; pages: SubPage[] }> = [];
   for (const page of pages) {
@@ -50,14 +53,14 @@ export function ModuleSidebar({ moduleId }: { moduleId: ModuleId }) {
                 const Icon = page.icon;
                 return (
                   <li key={page.id} className="flex-1 lg:flex-none">
-                    <NavLink
+                    <Link
                       to={page.to(slug)}
-                      end={page.segment === ''}
-                      className={({ isActive }) => linkClasses(isActive)}
+                      aria-current={page.id === activeId ? 'page' : undefined}
+                      className={linkClasses(page.id === activeId)}
                     >
                       <Icon aria-hidden="true" className="size-4 shrink-0" />
                       {page.label}
-                    </NavLink>
+                    </Link>
                   </li>
                 );
               })}

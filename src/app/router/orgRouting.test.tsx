@@ -274,6 +274,20 @@ describe('practice route (/:orgSlug)', () => {
     expect(within(sidebar).queryByRole('link', { name: 'Expense Approvals' })).not.toBeInTheDocument();
   });
 
+  it('keeps Job Details marked in the jobs sidebar while a job is open', async () => {
+    mockOrganizations([contextWith(['job.read'])]);
+    renderApp('/acme/jobs/6f1c2b9e-0000-4000-8000-000000000001');
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Jobs pages' });
+    expect(within(sidebar).getByRole('link', { name: 'Job Details' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(sidebar).getByRole('link', { name: 'Job List' })).not.toHaveAttribute(
+      'aria-current',
+    );
+  });
+
   it('opens the practice settings from the practice menu', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/clients');
