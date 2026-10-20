@@ -335,7 +335,7 @@ export function Table<TRow>({
               const cellBorder = last && !expanded ? null : 'border-b border-border';
               return (
                 <Fragment key={key}>
-                  <tr className="transition-colors duration-fast ease-standard hover:bg-surface-hover/50">
+                  <tr className="transition-colors duration-fast ease-standard hover:bg-brand/5">
                     {columns.map((column) => (
                       <td
                         key={column.id}

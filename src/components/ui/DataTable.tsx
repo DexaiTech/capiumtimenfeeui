@@ -286,7 +286,7 @@ export function DataTable<TRow>({
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
                       onKeyDown={onRowClick ? onRowKeyDown(row) : undefined}
                       className={cn(
-                        'transition-colors duration-fast ease-standard hover:bg-surface-hover/60',
+                        'transition-colors duration-fast ease-standard hover:bg-brand/5',
                         isSelected && 'bg-brand/5',
                         onRowClick && 'cursor-pointer',
                       )}
