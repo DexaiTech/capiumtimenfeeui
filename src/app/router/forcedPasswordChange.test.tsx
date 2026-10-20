@@ -120,10 +120,12 @@ describe('the screen without a temporary password', () => {
 
 describe('403 PASSWORD_CHANGE_REQUIRED from any request', () => {
   it('sends the person to the screen, whatever page they were on', async () => {
+    // The API refuses every request of such an account: the practice list (which the by-slug
+    // lookup now shares) as well as the lookup itself.
+    const refuse = () => fail(403, 'PASSWORD_CHANGE_REQUIRED', 'Change your password to continue.');
     server.use(
-      http.get(apiPath('/organizations/by-slug/:slug'), () =>
-        fail(403, 'PASSWORD_CHANGE_REQUIRED', 'Change your password to continue.'),
-      ),
+      http.get(apiPath('/users/me/organizations'), refuse),
+      http.get(apiPath('/organizations/by-slug/:slug'), refuse),
     );
     const { router } = renderApp('/acme/clients');
 

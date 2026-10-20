@@ -49,12 +49,30 @@ export function useMyOrganizations(options: { enabled?: boolean } = {}) {
   });
 }
 
-/** Resolves the slug of the URL to the organization and the caller's access. 404 for a non-member. */
+/**
+ * Resolves the slug of the URL to the organization and the caller's access. 404 for a non-member.
+ *
+ * The caller's list already holds the same shape, and the shell asks for it on every cold load:
+ * the slug is looked up in that list (sharing its request when it is still on its way), so a page
+ * load costs one request instead of two. A slug that is not in the list (a practice created a
+ * moment ago, or one the caller does not belong to) is asked for by itself.
+ */
 export function useOrganizationBySlug(slug: string | undefined) {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.organizationBySlug(slug ?? ''),
-    queryFn: ({ signal }) => organizationsApi.getBySlug(slug ?? '', signal),
+    queryFn: async ({ signal }) => {
+      const mine = await queryClient
+        .query({
+          queryKey: queryKeys.myOrganizations(),
+          queryFn: ({ signal: listSignal }) => organizationsApi.listMine(listSignal),
+        })
+        .catch(() => undefined);
+      return (
+        mine?.find((entry) => entry.organization.slug === slug) ??
+        organizationsApi.getBySlug(slug ?? '', signal)
+      );
+    },
     enabled: Boolean(slug),
     // The list already holds the same shape: use it so switching organization is instant.
     initialData: () =>
