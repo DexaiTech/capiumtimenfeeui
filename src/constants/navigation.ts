@@ -121,6 +121,7 @@ export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = [
   'expenses',
   'jobs',
   'time',
+  'dashboard',
 ];
 
 interface PageDef {
@@ -178,38 +179,59 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.dashboard,
     [],
     [
-      { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-      { id: 'my-actions', label: 'My Actions', icon: ListChecks },
-      { id: 'my-timesheet', label: 'My Timesheet', icon: Clock, anyOf: [P.timeLog] },
+      {
+        id: 'overview',
+        label: 'Overview',
+        icon: LayoutDashboard,
+        group: 'Overview',
+      },
+      {
+        id: 'my-actions',
+        label: 'My Actions',
+        icon: ListChecks,
+        group: 'Overview',
+      },
+      {
+        id: 'my-timesheet',
+        label: 'My Timesheet',
+        icon: Clock,
+        anyOf: [P.timeLog],
+        group: 'Time & approvals',
+      },
       {
         id: 'pending-approvals',
         label: 'Pending Approvals',
         icon: BadgeCheck,
         anyOf: [P.timesheetApprove, P.expenseApprove],
+        group: 'Time & approvals',
       },
       {
         id: 'missing-timesheets',
         label: 'Missing Timesheets',
         icon: CalendarX2,
         anyOf: [P.timesheetApprove, P.timeReadAll],
+        group: 'Time & approvals',
       },
       {
         id: 'top-clients-by-wip',
         label: 'Top Clients by WIP',
         icon: Trophy,
         anyOf: [P.wipRead, P.reportFinancial],
+        group: 'Practice insight',
       },
       {
         id: 'billing-trend',
         label: 'Billing Trend',
         icon: TrendingUp,
         anyOf: [P.reportFinancial, P.invoiceRead],
+        group: 'Practice insight',
       },
       {
         id: 'debtor-ageing',
         label: 'Debtor Ageing',
         icon: ChartPie,
         anyOf: [P.reportFinancial, P.paymentRead, P.invoiceRead],
+        group: 'Practice insight',
       },
     ],
   ),

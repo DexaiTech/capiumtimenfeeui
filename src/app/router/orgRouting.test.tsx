@@ -306,6 +306,20 @@ describe('practice route (/:orgSlug)', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows the dashboard pages of the caller in a grouped sidebar', async () => {
+    mockOrganizations([contextWith(['time.log'])]);
+    renderApp('/acme/dashboard/my-timesheet');
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Dashboard pages' });
+    expect(within(sidebar).getByRole('link', { name: 'My Timesheet' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(sidebar).getByRole('link', { name: 'Overview' })).toBeInTheDocument();
+    // Billing trend needs report.financial or invoice.read, which this role does not hold.
+    expect(within(sidebar).queryByRole('link', { name: 'Billing Trend' })).not.toBeInTheDocument();
+  });
+
   it('opens the practice settings from the practice menu', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/clients');
