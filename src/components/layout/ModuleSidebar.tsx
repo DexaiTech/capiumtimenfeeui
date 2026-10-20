@@ -2,16 +2,7 @@ import { Link, useLocation } from 'react-router';
 
 import { useShell } from '@/components/layout/shellContext';
 import { activePageId, type ModuleId, type SubPage } from '@/constants/navigation';
-import { cn } from '@/utils/cn';
-
-const linkClasses = (active: boolean) =>
-  cn(
-    'flex h-9 items-center gap-2.5 rounded-md px-3 text-sm font-medium whitespace-nowrap',
-    'transition-colors duration-fast ease-standard',
-    active
-      ? 'bg-brand-soft text-brand-text'
-      : 'text-text-muted hover:bg-surface-hover hover:text-text',
-  );
+import { SIDEBAR_PANEL_CLASSES, sidebarLinkClasses } from './sidebarClasses';
 
 /**
  * A module's own left sidebar (Settings, Team & Rates): its pages grouped under headings, the
@@ -38,7 +29,7 @@ export function ModuleSidebar({ moduleId }: { moduleId: ModuleId }) {
   return (
     <nav
       aria-label={`${module?.label ?? 'Module'} pages`}
-      className="shrink-0 overflow-x-auto rounded-xl border border-border bg-surface p-1.5 shadow-card lg:sticky lg:top-20 lg:w-64 lg:self-start lg:p-2"
+      className={`${SIDEBAR_PANEL_CLASSES} lg:w-64`}
     >
       <ul className="flex gap-1 lg:flex-col">
         {groups.map((group, index) => (
@@ -56,7 +47,7 @@ export function ModuleSidebar({ moduleId }: { moduleId: ModuleId }) {
                     <Link
                       to={page.to(slug)}
                       aria-current={page.id === activeId ? 'page' : undefined}
-                      className={linkClasses(page.id === activeId)}
+                      className={sidebarLinkClasses(page.id === activeId)}
                     >
                       <Icon aria-hidden="true" className="size-4 shrink-0" />
                       {page.label}

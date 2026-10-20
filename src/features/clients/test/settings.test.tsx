@@ -28,15 +28,42 @@ const PAYROLL = testServices[1];
 const STANDARD = vatRates[0];
 const MODERN = invoiceTemplates[1];
 
+type SettingsOptions = RenderWorkspaceOptions & {
+  /** The section of the left menu to open (`?section=`); Billing when left out. */
+  section?: string;
+};
+
 /** The client's settings page, once the heading is up. */
-async function openSettings(options: RenderWorkspaceOptions = {}) {
-  const view = renderWorkspace(SETTINGS, options);
+async function openSettings({ section, ...options }: SettingsOptions = {}) {
+  const view = renderWorkspace(section ? `${SETTINGS}?section=${section}` : SETTINGS, options);
   await heading(NAME);
   return view;
 }
 
+/** The sections other than Billing each open on their own page of the menu. */
+const openTeam = (options: RenderWorkspaceOptions = {}) =>
+  openSettings({ ...options, section: 'team' });
+const openServices = (options: RenderWorkspaceOptions = {}) =>
+  openSettings({ ...options, section: 'services' });
+const openRates = (options: RenderWorkspaceOptions = {}) =>
+  openSettings({ ...options, section: 'rates' });
+const openCentral = (options: RenderWorkspaceOptions = {}) =>
+  openSettings({ ...options, section: 'central' });
+const openDanger = (options: RenderWorkspaceOptions = {}) =>
+  openSettings({ ...options, section: 'danger' });
+
 const region = (name: string) => within(screen.getByRole('region', { name }));
 const findRegion = async (name: string) => within(await screen.findByRole('region', { name }));
+
+/** An item of the left menu of sections, or null when it is not offered. */
+const menuItem = (name: string) =>
+  within(screen.getByRole('navigation', { name: 'Settings sections' })).queryByRole('link', {
+    name,
+  });
+
+/** The same item, for a click: it must be there. */
+const menuLink = (name: string) =>
+  within(screen.getByRole('navigation', { name: 'Settings sections' })).getByRole('link', { name });
 
 /** The billing form shows once the lookups (VAT codes, services, templates) have loaded. */
 const billingEmail = () => screen.findByRole('textbox', { name: 'Invoice email' });
@@ -361,7 +388,7 @@ describe('TeamCard', () => {
   it('saves the partner and the manager, sending only what changed', async () => {
     const bodies: unknown[] = [];
     const user = userEvent.setup();
-    await openSettings({ handlers: [patchClient(bodies)] });
+    await openTeam({ handlers: [patchClient(bodies)] });
     const team = await findRegion('Team');
 
     expect(await team.findByRole('combobox', { name: 'Manager' })).toHaveDisplayValue(
@@ -382,7 +409,7 @@ describe('TeamCard', () => {
 
   it('Discard puts the partner and the manager back', async () => {
     const user = userEvent.setup();
-    await openSettings();
+    await openTeam();
     const team = await findRegion('Team');
 
     const partner = await team.findByRole('combobox', { name: 'Partner' });
@@ -398,7 +425,7 @@ describe('TeamCard', () => {
   it('sends one field when only one changed', async () => {
     const bodies: unknown[] = [];
     const user = userEvent.setup();
-    await openSettings({ handlers: [patchClient(bodies)] });
+    await openTeam({ handlers: [patchClient(bodies)] });
     const team = await findRegion('Team');
 
     await user.selectOptions(
@@ -411,7 +438,7 @@ describe('TeamCard', () => {
   });
 
   it('says why the team cannot be shown without the staff list', async () => {
-    await openSettings({
+    await openTeam({
       permissions: OWNER_PERMISSIONS.filter((permission) => permission !== 'member.read'),
     });
     const team = await findRegion('Team');
@@ -421,7 +448,7 @@ describe('TeamCard', () => {
   });
 
   it('cannot be saved by a role that may not update clients', async () => {
-    await openSettings({ permissions: STAFF_PERMISSIONS });
+    await openTeam({ permissions: STAFF_PERMISSIONS });
     const team = await findRegion('Team');
     expect(await team.findByRole('combobox', { name: 'Partner' })).toBeDisabled();
     expect(team.queryByRole('button', { name: 'Save team' })).toBeNull();
@@ -433,7 +460,7 @@ describe('ServicesCard', () => {
   const engagement = techwaveDetail.engagements[0];
 
   it('lists the services the client takes', async () => {
-    await openSettings();
+    await openServices();
     const row = within(await screen.findByRole('table', { name: caption })).getByRole('row', {
       name: /Accounts/,
     });
@@ -447,7 +474,7 @@ describe('ServicesCard', () => {
   it('adds a service with the fee in pounds sent as pence', async () => {
     const posted: unknown[] = [];
     const user = userEvent.setup();
-    await openSettings({
+    await openServices({
       handlers: [
         http.post(orgApiPath('/clients/:clientId/services'), async ({ request }) => {
           posted.push(await request.json());
@@ -487,7 +514,7 @@ describe('ServicesCard', () => {
   it('removes a service after a confirmation', async () => {
     const removed: string[] = [];
     const user = userEvent.setup();
-    await openSettings({
+    await openServices({
       handlers: [
         http.delete(orgApiPath('/clients/:clientId/services/:engagementId'), ({ params }) => {
           removed.push(String(params.engagementId));
@@ -508,7 +535,7 @@ describe('ServicesCard', () => {
 
   it('explains a refused removal inside the dialog', async () => {
     const user = userEvent.setup();
-    await openSettings({
+    await openServices({
       handlers: [
         http.delete(orgApiPath('/clients/:clientId/services/:engagementId'), () =>
           fail(409, 'CLIENT_SERVICE_IN_USE', 'Jobs still use this service.'),
@@ -527,7 +554,7 @@ describe('ServicesCard', () => {
   });
 
   it('shows no edit actions to a read-only role', async () => {
-    await openSettings({ permissions: STAFF_PERMISSIONS });
+    await openServices({ permissions: STAFF_PERMISSIONS });
     expect(await screen.findByRole('table', { name: caption })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add service' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit Accounts' })).toBeNull();
@@ -535,7 +562,7 @@ describe('ServicesCard', () => {
   });
 
   it('invites a client without services to add one', async () => {
-    await openSettings({ clients: [{ ...techwaveDetail, engagements: [] }] });
+    await openServices({ clients: [{ ...techwaveDetail, engagements: [] }] });
     expect(await screen.findByText('This client takes no services yet')).toBeInTheDocument();
   });
 });
@@ -573,7 +600,7 @@ describe('RatesCard', () => {
   const open = (
     rates: ClientRateRead[] = [everyone, later, ended],
     options: RenderWorkspaceOptions = {},
-  ) => openSettings({ clients: [withRates(rates)], ...options });
+  ) => openRates({ clients: [withRates(rates)], ...options });
   const rowOf = (name: RegExp) =>
     within(screen.getByRole('table', { name: caption })).getByRole('row', { name });
 
@@ -856,12 +883,14 @@ describe('RatesCard', () => {
   });
 
   it('is left out for a role without rate.read', async () => {
-    await openSettings({
+    await openRates({
       permissions: STAFF_PERMISSIONS,
       clients: [{ ...techwaveDetail, rates: null }],
     });
-    await screen.findByRole('region', { name: 'Team' });
+    // The section is not in the menu, so its address shows Billing instead.
+    await billingEmail();
     expect(screen.queryByRole('region', { name: 'Rate overrides' })).toBeNull();
+    expect(menuItem('Rate overrides')).toBeNull();
   });
 
   it('is read-only without rate.manage', async () => {
@@ -877,7 +906,7 @@ describe('RatesCard', () => {
 
 describe('CentralCard', () => {
   it('says a local client is not linked and offers to link it', async () => {
-    await openSettings();
+    await openCentral();
     const central = await findRegion('Central client');
     expect(central.getByText('Local')).toBeInTheDocument();
     expect(central.getByRole('button', { name: 'Link to a central client' })).toBeInTheDocument();
@@ -887,7 +916,7 @@ describe('CentralCard', () => {
   });
 
   it('shows the central id and when it was last confirmed for a linked client', async () => {
-    await openSettings({ clients: [linkedDetail] });
+    await openCentral({ clients: [linkedDetail] });
     const central = await findRegion('Central client');
     expect(central.getByText('Synced 12/05/2026')).toBeInTheDocument();
     expect(central.getByText('cen-0001')).toBeInTheDocument();
@@ -898,7 +927,7 @@ describe('CentralCard', () => {
   });
 
   it('says it was never confirmed when the client has not been synchronised yet', async () => {
-    await openSettings({
+    await openCentral({
       clients: [{ ...linkedDetail, central_synced_at: null, central_sync_state: 'stale' }],
     });
     const central = await findRegion('Central client');
@@ -909,7 +938,7 @@ describe('CentralCard', () => {
   it('synchronises now', async () => {
     const calls: string[] = [];
     const user = userEvent.setup();
-    await openSettings({
+    await openCentral({
       clients: [linkedDetail],
       handlers: [
         http.post(orgApiPath('/clients/:clientId/central-sync'), ({ params }) => {
@@ -939,7 +968,7 @@ describe('CentralCard', () => {
   it('unlinks after a confirmation', async () => {
     const calls: string[] = [];
     const user = userEvent.setup();
-    await openSettings({
+    await openCentral({
       clients: [linkedDetail],
       handlers: [
         http.delete(orgApiPath('/clients/:clientId/central-link'), ({ params }) => {
@@ -962,7 +991,7 @@ describe('CentralCard', () => {
 
   it('explains a refused unlink inside the dialog', async () => {
     const user = userEvent.setup();
-    await openSettings({
+    await openCentral({
       clients: [linkedDetail],
       handlers: [
         http.delete(orgApiPath('/clients/:clientId/central-link'), () =>
@@ -982,7 +1011,7 @@ describe('CentralCard', () => {
   it('links a local client to the central client picked', async () => {
     const bodies: unknown[] = [];
     const user = userEvent.setup();
-    await openSettings({
+    await openCentral({
       handlers: [
         http.get(orgApiPath('/central-clients'), () =>
           ok({ items: centralClients, source: 'live', stale: false }),
@@ -1012,7 +1041,7 @@ describe('CentralCard', () => {
 
   it('explains a refused link inside the dialog', async () => {
     const user = userEvent.setup();
-    await openSettings({
+    await openCentral({
       handlers: [
         http.get(orgApiPath('/central-clients'), () =>
           ok({ items: centralClients, source: 'live', stale: false }),
@@ -1036,7 +1065,7 @@ describe('CentralCard', () => {
   });
 
   it('offers neither link nor unlink to a role that may not create clients', async () => {
-    await openSettings({ permissions: STAFF_PERMISSIONS, clients: [linkedDetail] });
+    await openCentral({ permissions: STAFF_PERMISSIONS, clients: [linkedDetail] });
     const central = await findRegion('Central client');
     expect(central.queryByRole('button', { name: 'Unlink' })).toBeNull();
     expect(central.queryByRole('button', { name: 'Sync with central' })).toBeNull();
@@ -1049,7 +1078,7 @@ describe('DangerCard', () => {
   it('archives the client after a confirmation', async () => {
     const archived: string[] = [];
     const user = userEvent.setup();
-    await openSettings({
+    await openDanger({
       handlers: [
         http.post(orgApiPath('/clients/:clientId/archive'), ({ params }) => {
           archived.push(String(params.clientId));
@@ -1071,7 +1100,7 @@ describe('DangerCard', () => {
   it('restores an archived client after a confirmation', async () => {
     const bodies: unknown[] = [];
     const user = userEvent.setup();
-    await openSettings({
+    await openDanger({
       clients: [{ ...techwaveDetail, status: 'archived' }],
       handlers: [patchClient(bodies)],
     });
@@ -1086,10 +1115,68 @@ describe('DangerCard', () => {
   });
 
   it('is left out for a role without client.delete', async () => {
-    await openSettings({
+    await openDanger({
       permissions: OWNER_PERMISSIONS.filter((permission) => permission !== 'client.delete'),
     });
-    await findRegion('Team');
+    await billingEmail();
     expect(screen.queryByRole('region', { name: 'Danger zone' })).toBeNull();
+    expect(menuItem('Danger zone')).toBeNull();
+  });
+});
+
+describe('the left menu of sections', () => {
+  const sectionNames = () =>
+    within(screen.getByRole('navigation', { name: 'Settings sections' }))
+      .getAllByRole('link')
+      .map((link) => link.textContent);
+
+  it('lists the sections in order and starts on Billing', async () => {
+    await openSettings();
+    await billingEmail();
+
+    expect(sectionNames()).toEqual([
+      'Billing',
+      'Team',
+      'Services',
+      'Rate overrides',
+      'Central client',
+      'Danger zone',
+    ]);
+    expect(menuItem('Billing')).toHaveAttribute('aria-current', 'page');
+    expect(menuItem('Team')).not.toHaveAttribute('aria-current');
+    // One section at a time: the others are not on the page.
+    expect(screen.queryByRole('region', { name: 'Team' })).toBeNull();
+  });
+
+  it('shows the section that is picked and marks it as the current one', async () => {
+    const user = userEvent.setup();
+    await openSettings();
+    await billingEmail();
+
+    await user.click(menuLink('Team'));
+    expect(await screen.findByRole('region', { name: 'Team' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Billing' })).toBeNull();
+    expect(menuItem('Team')).toHaveAttribute('aria-current', 'page');
+    expect(menuItem('Billing')).not.toHaveAttribute('aria-current');
+
+    await user.click(menuLink('Billing'));
+    expect(await billingEmail()).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Team' })).toBeNull();
+    expect(menuItem('Billing')).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('falls back to Billing for a section it does not know', async () => {
+    await openSettings({ section: 'nonsense' });
+    await billingEmail();
+    expect(menuItem('Billing')).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('leaves out the rates and the danger zone for a role that may not see them', async () => {
+    await openSettings({
+      permissions: STAFF_PERMISSIONS,
+      clients: [{ ...techwaveDetail, rates: null }],
+    });
+    await billingEmail();
+    expect(sectionNames()).toEqual(['Billing', 'Team', 'Services', 'Central client']);
   });
 });
