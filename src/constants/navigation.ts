@@ -111,6 +111,9 @@ export interface NavModule extends AccessRule {
   pages: ReadonlyArray<SubPage>;
 }
 
+/** Modules with their own grouped left sidebar instead of the shared secondary bar. */
+export const SIDEBAR_MODULES: ReadonlyArray<ModuleId> = ['settings', 'team'];
+
 interface PageDef {
   id: string;
   label: string;
@@ -410,20 +413,45 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     ORG_SEGMENTS.team,
     [P.memberRead, P.rateRead, P.settingsManage],
     [
-      { id: 'staff', label: 'Staff Members', icon: UsersRound, anyOf: [P.memberRead] },
-      { id: 'grades', label: 'Grades', icon: Award, anyOf: [P.memberRead] },
-      { id: 'cost-rates', label: 'Cost Rates', icon: Coins, anyOf: [P.rateRead] },
+      {
+        id: 'staff',
+        label: 'Staff Members',
+        icon: UsersRound,
+        anyOf: [P.memberRead],
+        group: 'People',
+      },
+      { id: 'grades', label: 'Grades', icon: Award, anyOf: [P.memberRead], group: 'People' },
+      { id: 'cost-rates', label: 'Cost Rates', icon: Coins, anyOf: [P.rateRead], group: 'Rates' },
       {
         id: 'charge-out-rates',
         label: 'Charge-out Rates',
         icon: PoundSterling,
         anyOf: [P.rateRead],
+        group: 'Rates',
       },
-      { id: 'services', label: 'Services', icon: Layers },
-      { id: 'activity-types', label: 'Activity Types', icon: Activity },
-      { id: 'rate-history', label: 'Rate History', icon: History, anyOf: [P.rateRead] },
-      { id: 'rate-preview', label: 'Rate Preview', icon: ScanSearch, anyOf: [P.rateRead] },
-      { id: 're-rate', label: 'Re-rate Time', icon: RefreshCcw, anyOf: [P.rateManage] },
+      {
+        id: 'rate-history',
+        label: 'Rate History',
+        icon: History,
+        anyOf: [P.rateRead],
+        group: 'Rates',
+      },
+      {
+        id: 'rate-preview',
+        label: 'Rate Preview',
+        icon: ScanSearch,
+        anyOf: [P.rateRead],
+        group: 'Rates',
+      },
+      {
+        id: 're-rate',
+        label: 'Re-rate Time',
+        icon: RefreshCcw,
+        anyOf: [P.rateManage],
+        group: 'Rates',
+      },
+      { id: 'services', label: 'Services', icon: Layers, group: 'Catalogue' },
+      { id: 'activity-types', label: 'Activity Types', icon: Activity, group: 'Catalogue' },
     ],
   ),
 

@@ -55,6 +55,12 @@ const guardPage = (moduleId: ModuleId, pageId: string, route: RouteObject): Rout
   children: [route],
 });
 
+/** The layout file of each module with its own sidebar (see SIDEBAR_MODULES). */
+const SIDEBAR_LAYOUTS: Partial<Record<ModuleId, Loader>> = {
+  settings: () => import('@/features/settings/pages/SettingsLayoutPage'),
+  team: () => import('@/features/team/pages/TeamLayoutPage'),
+};
+
 /** The routes of one module: its index, every page of its secondary bar and its detail pages. */
 function moduleRoutes(moduleId: ModuleId): RouteObject {
   const module = findModule(moduleId);
@@ -81,17 +87,12 @@ function moduleRoutes(moduleId: ModuleId): RouteObject {
       guardPage(moduleId, detail.pageId, { path: detail.path, lazy: page(detail.load) }),
     );
   }
-  // Settings has its own grouped sidebar instead of the shared secondary bar; its pages sit one
-  // level deeper, under that layout.
-  const routed: RouteObject[] =
-    moduleId === 'settings'
-      ? [
-          {
-            lazy: page(() => import('@/features/settings/pages/SettingsLayoutPage')),
-            children,
-          },
-        ]
-      : children;
+  // Settings and Team & Rates have their own grouped sidebar instead of the shared secondary
+  // bar; their pages sit one level deeper, under that layout.
+  const sidebarLayout = SIDEBAR_LAYOUTS[moduleId];
+  const routed: RouteObject[] = sidebarLayout
+    ? [{ lazy: page(sidebarLayout), children }]
+    : children;
   return { path: module.segment, children: [guardModule(moduleId, routed)] };
 }
 
