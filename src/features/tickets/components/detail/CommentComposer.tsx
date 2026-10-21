@@ -2,7 +2,9 @@ import { Plus, Send } from 'lucide-react';
 import { useState, type ClipboardEvent, type KeyboardEvent, type SubmitEvent } from 'react';
 
 import { Button } from '@/components/ui';
+import { useFileIntake } from '@/hooks';
 import { isApiError } from '@/services/api';
+import { cn } from '@/utils/cn';
 
 import { useAddComment, useDeleteAttachment } from '../../api';
 import { COMMENT_MAX_LENGTH } from '../../constants';
@@ -27,6 +29,8 @@ export function CommentComposer({ ticketId }: CommentComposerProps) {
   const add = useAddComment(ticketId);
   const removeFile = useDeleteAttachment(ticketId);
   const uploads = useUploads(ticketId, { refresh: false });
+  // Files can also be dropped anywhere on the composer (a paste goes into the comment box).
+  const { dragging, intakeProps } = useFileIntake({ onFiles: uploads.add });
 
   const attachmentIds = uploads.items.flatMap((item) =>
     item.status === 'done' && item.attachment ? [item.attachment.id] : [],
@@ -83,7 +87,17 @@ export function CommentComposer({ ticketId }: CommentComposerProps) {
   };
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3">
+    <form
+      onSubmit={onSubmit}
+      onDragEnter={intakeProps.onDragEnter}
+      onDragOver={intakeProps.onDragOver}
+      onDragLeave={intakeProps.onDragLeave}
+      onDrop={intakeProps.onDrop}
+      className={cn(
+        'flex flex-col gap-3 rounded-xl transition-colors duration-fast ease-standard',
+        dragging ? 'bg-brand-soft ring-2 ring-brand ring-offset-4 ring-offset-brand-soft' : '',
+      )}
+    >
       <LiveRegion message={note} />
       <div className="flex items-end gap-2">
         <textarea
@@ -138,7 +152,7 @@ export function CommentComposer({ ticketId }: CommentComposerProps) {
           Add Comment
         </Button>
         <p className="flex flex-wrap items-center gap-1 text-xs text-text-muted">
-          e.g. paste a screenshot or file into the comment box
+          e.g. drop a file here, or paste a screenshot or file into the comment box
           <span className="inline-flex items-center gap-1">
             <kbd className="rounded-sm border border-border bg-surface-sunken px-1.5 font-mono text-2xs text-text">
               Ctrl

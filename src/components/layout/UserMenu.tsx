@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 
 import { useThemeStore } from '@/app/store';
 import { nextTheme, THEME_ICONS, THEME_LABELS } from '@/components/common/theme';
-import { Dropdown, type DropdownItem } from '@/components/ui';
+import { Dropdown, PersonAvatar, type DropdownItem } from '@/components/ui';
 import type { User } from '@/types/models';
 import { initialsOf } from '@/utils/format';
 
@@ -55,12 +55,23 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
       label="Account menu"
       align="end"
       trigger={
-        <span
-          aria-hidden="true"
-          className="inline-flex size-[30px] items-center justify-center rounded-full bg-topbar-pill text-[11px] font-semibold text-topbar-fg ring-2 ring-topbar-pill"
-        >
-          {initialsOf(user.full_name)}
-        </span>
+        user.avatar_updated_at ? (
+          <PersonAvatar
+            userId={user.id}
+            name={user.full_name}
+            colorKey={user.id}
+            pictureVersion={user.avatar_updated_at}
+            size="sm"
+            className="size-[30px] ring-2 ring-topbar-pill"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="inline-flex size-[30px] items-center justify-center rounded-full bg-topbar-pill text-[11px] font-semibold text-topbar-fg ring-2 ring-topbar-pill"
+          >
+            {initialsOf(user.full_name)}
+          </span>
+        )
       }
       header={
         <div className="flex min-w-0 flex-col">

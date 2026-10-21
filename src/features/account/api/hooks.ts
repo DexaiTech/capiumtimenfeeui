@@ -30,6 +30,14 @@ export function useUpdateProfile() {
   return useUserMutation((values: Partial<ProfileValues>) => accountApi.updateProfile(values));
 }
 
+export function useUploadAvatar() {
+  return useUserMutation((file: File) => accountApi.uploadAvatar(file));
+}
+
+export function useRemoveAvatar() {
+  return useUserMutation(() => accountApi.removeAvatar());
+}
+
 export function useChangePassword() {
   const queryClient = useQueryClient();
   return useMutation({

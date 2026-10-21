@@ -9,6 +9,8 @@ export interface User {
   /** True after an administrator created the account or reset its password. */
   must_change_password?: boolean;
   created_at: string;
+  /** When the profile picture was set; null when the person has none. */
+  avatar_updated_at?: string | null;
 }
 
 export interface Session {

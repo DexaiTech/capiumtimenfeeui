@@ -1,7 +1,7 @@
 import { Search, X } from 'lucide-react';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
-import { InitialsAvatar, Spinner } from '@/components/ui';
+import { PersonAvatar, Spinner } from '@/components/ui';
 import { Field } from '@/components/ui/Field';
 import { controlClasses, describedBy, fieldIds } from '@/components/ui/fieldUtils';
 import { cn } from '@/utils/cn';
@@ -206,7 +206,9 @@ export function MemberPicker({
                       active ? 'bg-surface-hover' : 'hover:bg-surface-hover',
                     )}
                   >
-                    <InitialsAvatar
+                    <PersonAvatar
+                      userId={member.user_id}
+                      pictureVersion={member.avatar_updated_at}
                       name={member.full_name}
                       initials={member.initials}
                       colorKey={member.user_id}

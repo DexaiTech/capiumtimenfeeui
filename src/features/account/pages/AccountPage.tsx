@@ -9,6 +9,7 @@ import { isApiError } from '@/services/api';
 import { useProfile } from '../api/hooks';
 import { ChangePasswordForm } from '../components/ChangePasswordForm';
 import { LogoutEverywhere } from '../components/LogoutEverywhere';
+import { ProfilePicture } from '../components/ProfilePicture';
 import { ProfileForm } from '../components/ProfileForm';
 import { SessionsList } from '../components/SessionsList';
 
@@ -54,8 +55,11 @@ function ProfileSection() {
     <SectionCard
       id="profile"
       title="Profile"
-      description="Your name and the timezone used for dates and timesheets."
+      description="Your picture, your name and the timezone used for dates and timesheets."
     >
+      <div className="mb-5 border-b border-border pb-5">
+        <ProfilePicture user={user} />
+      </div>
       {/* Remount when the saved values change elsewhere, so the form never shows stale defaults. */}
       <ProfileForm key={`${user.full_name}|${user.timezone}`} user={user} />
     </SectionCard>

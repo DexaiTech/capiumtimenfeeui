@@ -11,6 +11,8 @@ export function usePasteFiles(onFiles: (files: File[]) => void, enabled: boolean
   useEffect(() => {
     if (!enabled) return;
     const onPaste = (event: ClipboardEvent) => {
+      // A drop zone or the comment box that has the focus handled this paste itself.
+      if (event.defaultPrevented) return;
       const target = event.target;
       if (
         target instanceof Element &&

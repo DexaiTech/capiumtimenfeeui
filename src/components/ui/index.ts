@@ -1,5 +1,6 @@
 export { AnchoredPanel, type AnchoredPanelProps } from './AnchoredPanel';
 export { Avatar, type AvatarProps, type AvatarSize } from './Avatar';
+export { PersonAvatar, type PersonAvatarProps } from './PersonAvatar';
 export { AvatarStack, type AvatarStackProps, type AvatarStackUser } from './AvatarStack';
 export { Badge, type BadgeProps, type BadgeSize, type BadgeTone } from './Badge';
 export { Button, type ButtonProps } from './Button';

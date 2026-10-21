@@ -6,3 +6,10 @@ export { useMediaQuery } from './useMediaQuery';
 export { createPermissions, usePermissions, type Permissions } from './usePermissions';
 export { useReducedMotion } from './useReducedMotion';
 export { useUrlParams } from './useUrlParams';
+export {
+  filesOfClipboard,
+  useFileIntake,
+  type FileIntake,
+  type FileIntakeOptions,
+} from './useFileIntake';
+export { useObjectUrl } from './useObjectUrl';

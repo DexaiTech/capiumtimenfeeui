@@ -1,15 +1,14 @@
 import { CloudUpload, X } from 'lucide-react';
-import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useRef, type ChangeEvent } from 'react';
 
 import { ProgressBar } from '@/components/ui';
+import { useFileIntake } from '@/hooks';
 import { cn } from '@/utils/cn';
 
 import { MAX_RECEIPT_LABEL, MAX_RECEIPTS_PER_LINE } from '../../constants';
 import { useReceiptUploads, type UploadItem } from '../../hooks/useReceiptUploads';
 import { RECEIPT_ACCEPT, RECEIPT_KINDS } from '../../utils/files';
 import { formatFileSize } from '../../utils/format';
-
-const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files');
 
 function UploadRow({ item, onRemove }: { item: UploadItem; onRemove: (item: UploadItem) => void }) {
   const failed = item.status === 'failed';
@@ -66,20 +65,13 @@ export interface UploadZoneProps {
 export function UploadZone({ claimId, lineId, count }: UploadZoneProps) {
   const uploads = useReceiptUploads(claimId, lineId);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
   const full = count >= MAX_RECEIPTS_PER_LINE;
+  const { dragging, intakeProps } = useFileIntake({ onFiles: uploads.add, disabled: full });
 
   const onChoose = (event: ChangeEvent<HTMLInputElement>) => {
     uploads.add(Array.from(event.target.files ?? []));
     // The same file can be chosen again.
     event.target.value = '';
-  };
-
-  const onDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (!carriesFiles(event)) return;
-    event.preventDefault();
-    setDragging(false);
-    uploads.add(Array.from(event.dataTransfer.files));
   };
 
   return (
@@ -91,18 +83,11 @@ export function UploadZone({ claimId, lineId, count }: UploadZoneProps) {
         </p>
       ) : (
         <div
-          onDragEnter={(event) => {
-            if (carriesFiles(event)) setDragging(true);
-          }}
-          onDragOver={(event) => {
-            if (!carriesFiles(event)) return;
-            event.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
+          {...intakeProps}
+          aria-label="Receipt drop zone"
           className={cn(
-            'flex flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-6 text-center transition-colors duration-fast ease-standard',
+            'flex flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-6 text-center outline-none transition-colors duration-fast ease-standard',
+            'focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30',
             dragging ? 'border-brand bg-brand-soft' : 'border-border-strong bg-surface-sunken',
           )}
         >
@@ -119,8 +104,8 @@ export function UploadZone({ claimId, lineId, count }: UploadZoneProps) {
               className="rounded-sm font-semibold text-brand-text hover:underline"
             >
               Choose a receipt
-            </button>{' '}
-            or drag it here.
+            </button>
+            , drag it here, or click here and paste it (Ctrl+V).
           </p>
           <p className="text-xs text-text-subtle">
             Max file size: {MAX_RECEIPT_LABEL}. Up to {String(MAX_RECEIPTS_PER_LINE)} receipts per

@@ -29,6 +29,8 @@ export interface Member {
   /** True until the person replaces the temporary password they were given. */
   must_change_password: boolean;
   joined_at: string;
+  /** When the profile picture was set; null when the person has none. */
+  avatar_updated_at?: string | null;
 }
 
 export interface Role {

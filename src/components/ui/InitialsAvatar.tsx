@@ -3,7 +3,7 @@ import { initialsOf } from '@/utils/format';
 
 import { avatarColorIndex } from './avatarColor';
 
-export type InitialsAvatarSize = 'xs' | 'sm' | 'md' | 'lg';
+export type InitialsAvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface InitialsAvatarProps {
   /** The full name; also the accessible name and the seed of the colour. */
@@ -34,6 +34,7 @@ const sizes: Record<InitialsAvatarSize, string> = {
   sm: 'size-8 text-[10px]',
   md: 'size-9 text-xs',
   lg: 'size-12 text-sm',
+  xl: 'size-24 text-2xl',
 };
 
 /** Initials in a coloured circle: people, clients, the practice. */
