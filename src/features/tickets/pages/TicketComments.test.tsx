@@ -28,6 +28,13 @@ afterEach(() => {
 /** A thread the handlers serve and change the way the API would. */
 const thread = (): TicketComment[] => structuredClone(testComments);
 
+/** The edit box opens with the caret at its end once it has the focus: type when it has. */
+const typeInEditBox = async (user: ReturnType<typeof userEvent.setup>, keys: string) => {
+  const field = await screen.findByRole('textbox', { name: 'Comment text' });
+  await waitFor(() => expect(field).toHaveFocus());
+  await user.keyboard(keys);
+};
+
 const commentOf = (author: string): HTMLElement => {
   const item = screen.getByText(author, { selector: 'span' }).closest('li');
   if (!item) throw new Error(`No comment by ${author}`);
@@ -79,6 +86,24 @@ describe('the comments of a ticket', () => {
     expect(second.querySelector('time')).toHaveAttribute('datetime', bobComment.created_at);
   });
 
+  it('shows the formatting of a comment, and a plain one as it was written', async () => {
+    const comments = thread();
+    Object.assign(comments[0] as TicketComment, {
+      body: 'Steps\n\n- one\n- two',
+      body_html: '<p>Steps <strong>now</strong></p><ul><li>one</li><li>two</li></ul>',
+    });
+    server.use(...ticketHandlers({ comments }));
+    renderDetail();
+
+    const formatted = await waitFor(() => commentOf('Ada Lovelace'));
+    expect(formatted.querySelector('strong')).toHaveTextContent('now');
+    // (The file of this comment is a list item of its own, outside the formatted text.)
+    expect(formatted.querySelector('.rich-text')?.querySelectorAll('li')).toHaveLength(2);
+    // The other comment has no html: its text, line breaks kept, as before.
+    expect(commentOf('Bob Brown')).toHaveTextContent(bobComment.body);
+    expect(commentOf('Bob Brown').querySelector('strong')).toBeNull();
+  });
+
   it('shows a skeleton while the thread loads', async () => {
     server.use(
       http.get(orgApiPath('/tickets/:ticketId/comments'), () => new Promise(() => undefined)),
@@ -125,7 +150,7 @@ describe('the comments of a ticket', () => {
   });
 
   describe('adding a comment', () => {
-    it('sends the text with Enter, trimmed, empties the box and says so', async () => {
+    it('sends the text with Ctrl+Enter, empties the box and says so', async () => {
       const user = userEvent.setup();
       const detail = freshDetail();
       const comments = thread();
@@ -153,18 +178,26 @@ describe('the comments of a ticket', () => {
       const send = screen.getByRole('button', { name: 'Send comment' });
       expect(send).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Add Comment' })).toBeDisabled();
-      await user.type(box, '  Fixed by the 18 October build  {Enter}');
+      await user.click(box);
+      await user.keyboard('Fixed by the 18 October build{Control>}{Enter}{/Control}');
 
-      await waitFor(() => expect(bodies).toEqual([{ body: 'Fixed by the 18 October build' }]));
+      await waitFor(() =>
+        expect(bodies).toEqual([
+          {
+            body: 'Fixed by the 18 October build',
+            body_html: '<p>Fixed by the 18 October build</p>',
+          },
+        ]),
+      );
       expect(await screen.findByText('Fixed by the 18 October build')).toBeInTheDocument();
-      expect(box).toHaveValue('');
+      await waitFor(() => expect(box).not.toHaveTextContent('Fixed by the 18 October build'));
       expect(screen.getByText('Comment added')).toBeInTheDocument();
       expect(
         await screen.findByRole('heading', { level: 2, name: 'Comments (3)' }),
       ).toBeInTheDocument();
     });
 
-    it('sends with the Add Comment button, and starts a new line with Shift+Enter', async () => {
+    it('sends with the Add Comment button, and starts a new paragraph with Enter', async () => {
       const user = userEvent.setup();
       const comments = thread();
       const bodies: unknown[] = [];
@@ -172,12 +205,14 @@ describe('the comments of a ticket', () => {
       renderDetail();
 
       const box = await screen.findByRole('textbox', { name: 'Comment' });
-      await user.type(box, 'First{Shift>}{Enter}{/Shift}Second');
-      expect(box).toHaveValue('First\nSecond');
+      await user.click(box);
+      await user.keyboard('First{Enter}Second');
       expect(bodies).toEqual([]);
       await user.click(screen.getByRole('button', { name: 'Add Comment' }));
 
-      await waitFor(() => expect(bodies).toEqual([{ body: 'First\nSecond' }]));
+      await waitFor(() =>
+        expect(bodies).toEqual([{ body: 'First\nSecond', body_html: '<p>First</p><p>Second</p>' }]),
+      );
     });
 
     it('does not send text that is only white space', async () => {
@@ -187,7 +222,8 @@ describe('the comments of a ticket', () => {
       renderDetail();
 
       const box = await screen.findByRole('textbox', { name: 'Comment' });
-      await user.type(box, '   {Enter}');
+      await user.click(box);
+      await user.keyboard('   {Enter}{Control>}{Enter}{/Control}');
       expect(screen.getByRole('button', { name: 'Send comment' })).toBeDisabled();
       expect(bodies).toEqual([]);
     });
@@ -203,12 +239,13 @@ describe('the comments of a ticket', () => {
       renderDetail();
 
       const box = await screen.findByRole('textbox', { name: 'Comment' });
-      await user.type(box, 'Something{Enter}');
+      await user.click(box);
+      await user.keyboard('Something{Control>}{Enter}{/Control}');
 
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'The comment may not contain control characters.',
       );
-      expect(box).toHaveValue('Something');
+      expect(box).toHaveTextContent('Something');
     });
 
     it('attaches a pasted screenshot: uploaded at once, sent with the comment, even without text', async () => {
@@ -273,7 +310,7 @@ describe('the comments of a ticket', () => {
         clipboardData: {
           files: [pngFile('range.png')],
           types: ['Files', 'text/plain'],
-          getData: () => '1\t2',
+          getData: (type: string) => (type === 'text/plain' ? '1\t2' : ''),
         },
       });
 
@@ -389,15 +426,18 @@ describe('the comments of a ticket', () => {
         within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }),
       );
       const field = screen.getByRole('textbox', { name: 'Comment text' });
-      expect(field).toHaveValue('Reproduced on the demo practice.');
-      await user.type(field, ' Also on the Globex practice.');
+      expect(field).toHaveTextContent('Reproduced on the demo practice.');
+      await typeInEditBox(user, ' Also on the Globex practice.');
       await user.click(screen.getByRole('button', { name: 'Save' }));
 
       await waitFor(() =>
         expect(bodies).toEqual([
           [
             adaComment.id,
-            { body: 'Reproduced on the demo practice. Also on the Globex practice.' },
+            {
+              body: 'Reproduced on the demo practice. Also on the Globex practice.',
+              body_html: '<p>Reproduced on the demo practice. Also on the Globex practice.</p>',
+            },
           ],
         ]),
       );
@@ -422,7 +462,7 @@ describe('the comments of a ticket', () => {
       const edit = () =>
         user.click(within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }));
       await edit();
-      await user.type(screen.getByRole('textbox', { name: 'Comment text' }), ' more{Escape}');
+      await typeInEditBox(user, ' more{Escape}');
       expect(screen.queryByRole('textbox', { name: 'Comment text' })).not.toBeInTheDocument();
 
       await edit();
@@ -431,11 +471,15 @@ describe('the comments of a ticket', () => {
       expect(bodies).toEqual([]);
 
       await edit();
-      await user.type(
-        screen.getByRole('textbox', { name: 'Comment text' }),
-        '!{Control>}{Enter}{/Control}',
+      await typeInEditBox(user, '!{Control>}{Enter}{/Control}');
+      await waitFor(() =>
+        expect(bodies).toEqual([
+          {
+            body: 'Reproduced on the demo practice.!',
+            body_html: '<p>Reproduced on the demo practice.!</p>',
+          },
+        ]),
       );
-      await waitFor(() => expect(bodies).toEqual([{ body: 'Reproduced on the demo practice.!' }]));
     });
 
     it("shows the API's refusal of an edit under the field", async () => {
@@ -452,7 +496,7 @@ describe('the comments of a ticket', () => {
       await user.click(
         within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }),
       );
-      await user.type(screen.getByRole('textbox', { name: 'Comment text' }), '!');
+      await typeInEditBox(user, '!');
       await user.click(screen.getByRole('button', { name: 'Save' }));
 
       expect(await screen.findByText('Only the author may edit a comment.')).toBeInTheDocument();

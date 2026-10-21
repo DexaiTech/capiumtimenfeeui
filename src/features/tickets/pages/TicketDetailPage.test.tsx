@@ -24,6 +24,13 @@ afterEach(() => {
   urls.restore();
 });
 
+/** The description box is a rich text editor: it takes the focus once it is made, then keys. */
+const typeInDescription = async (user: ReturnType<typeof userEvent.setup>, keys: string) => {
+  const field = await screen.findByRole('textbox', { name: 'Description' });
+  await waitFor(() => expect(field).toHaveFocus());
+  await user.keyboard(keys);
+};
+
 describe('TicketDetailPage', () => {
   it('shows the code, the category, the four fields, the texts and the way back', async () => {
     server.use(...ticketHandlers());
@@ -81,6 +88,21 @@ describe('TicketDetailPage', () => {
       expect(document.title).toBe('APT1 Trial balance is out by 12.50 · Capium Time & Fees');
     });
 
+    it('shows a formatted description with its formatting', async () => {
+      const detail = freshDetail();
+      Object.assign(detail, {
+        description: 'Totals\n\n- one\n- two',
+        description_html: '<p><strong>Totals</strong></p><ul><li>one</li><li>two</li></ul>',
+      });
+      server.use(...ticketHandlers({ detail }));
+      renderDetail();
+
+      const heading = await screen.findByRole('heading', { name: 'Description' });
+      const section = heading.closest('section');
+      expect(section?.querySelector('strong')).toHaveTextContent('Totals');
+      expect(section?.querySelectorAll('li')).toHaveLength(2);
+    });
+
     it('saves a description with Ctrl+Enter, keeping its lines, and clears it to null', async () => {
       const user = userEvent.setup();
       const detail = freshDetail();
@@ -89,14 +111,22 @@ describe('TicketDetailPage', () => {
       renderDetail();
 
       await user.click(await screen.findByRole('button', { name: 'Edit description' }));
-      const field = screen.getByRole('textbox', { name: 'Description' });
-      await user.clear(field);
-      await user.type(field, 'First line{Enter}Second line{Control>}{Enter}{/Control}');
-      await waitFor(() => expect(bodies).toEqual([{ description: 'First line\nSecond line' }]));
+      await typeInDescription(
+        user,
+        '{Control>}a{/Control}{Backspace}First line{Enter}Second line{Control>}{Enter}{/Control}',
+      );
+      await waitFor(() =>
+        expect(bodies).toEqual([
+          {
+            description: 'First line\nSecond line',
+            description_html: '<p>First line</p><p>Second line</p>',
+          },
+        ]),
+      );
       expect(await screen.findAllByText('Description saved')).toHaveLength(2);
 
       await user.click(screen.getByRole('button', { name: 'Edit description' }));
-      await user.clear(screen.getByRole('textbox', { name: 'Description' }));
+      await typeInDescription(user, '{Control>}a{/Control}{Backspace}');
       await user.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() => expect(bodies.at(-1)).toEqual({ description: null }));
       expect(await screen.findByText('No description')).toBeInTheDocument();
@@ -178,7 +208,7 @@ describe('TicketDetailPage', () => {
       renderDetail();
 
       await user.click(await screen.findByRole('button', { name: 'Edit description' }));
-      await user.type(screen.getByRole('textbox', { name: 'Description' }), ' More.');
+      await typeInDescription(user, ' More.');
       await user.click(screen.getByRole('button', { name: 'Save' }));
 
       expect(await screen.findByText('You may not edit tickets.')).toBeInTheDocument();

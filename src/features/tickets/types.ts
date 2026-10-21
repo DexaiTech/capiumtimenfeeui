@@ -61,6 +61,8 @@ export interface TicketListItem {
 
 export interface TicketDetail extends Omit<TicketListItem, 'description_excerpt'> {
   description: string | null;
+  /** Sanitised HTML of the description; null for a plain-text one. */
+  description_html?: string | null;
   /** Every file of the ticket (the comments' too), oldest first. */
   attachments: TicketAttachment[];
 }
@@ -70,6 +72,8 @@ export interface TicketComment {
   ticket_id: string;
   author: Person;
   body: string;
+  /** Sanitised HTML of the comment; null for a plain-text one. */
+  body_html?: string | null;
   edited_at: IsoDateTime | null;
   created_at: IsoDateTime;
   attachments: TicketAttachment[];
@@ -100,6 +104,8 @@ export interface TicketFilters {
 export interface TicketCreate {
   subject: string;
   description?: string | null;
+  /** The editor's HTML; the API sanitises it and derives `description` from it. */
+  description_html?: string | null;
   status?: TicketStatus;
   priority?: TicketPriority;
   tag_ids?: string[];
@@ -110,6 +116,7 @@ export interface TicketCreate {
 export interface TicketUpdate {
   subject?: string;
   description?: string | null;
+  description_html?: string | null;
   status?: TicketStatus;
   priority?: TicketPriority;
   assignee_id?: string | null;

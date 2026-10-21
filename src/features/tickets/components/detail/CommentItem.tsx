@@ -1,12 +1,20 @@
 import { Pencil, Trash2 } from 'lucide-react';
-import { useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 
-import { Button, ConfirmDialog, InitialsAvatar, Textarea, useToast } from '@/components/ui';
+import {
+  Button,
+  ConfirmDialog,
+  InitialsAvatar,
+  plainTextToHtml,
+  RichText,
+  RichTextEditor,
+  useToast,
+  type RichTextValue,
+} from '@/components/ui';
 import { formatUkDateTime } from '@/utils/dates';
 import { isApiError } from '@/services/api';
 
 import { useDeleteComment, useUpdateComment } from '../../api';
-import { COMMENT_MAX_LENGTH } from '../../constants';
 import type { TicketComment } from '../../types';
 import { dialogError, fieldDetails } from '../../utils/errors';
 import { relativeTime } from '../../utils/format';
@@ -39,7 +47,9 @@ export function CommentItem({
   const update = useUpdateComment(ticketId);
   const remove = useDeleteComment(ticketId);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
+  // The edit box: the HTML it holds and its text, and the HTML it started with.
+  const [draft, setDraft] = useState<RichTextValue>({ html: '', text: '' });
+  const [startedWith, setStartedWith] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [confirming, setConfirming] = useState(false);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
@@ -54,14 +64,14 @@ export function CommentItem({
   };
 
   const save = () => {
-    const text = draft.trim();
-    if (text === comment.body) {
+    // Nothing changed (the HTML is compared: a change of formatting alone is an edit).
+    if (draft.html === startedWith) {
       cancel();
       return;
     }
     setError(undefined);
     update.mutate(
-      { commentId: comment.id, body: text },
+      { commentId: comment.id, body: draft.text, body_html: draft.html || null },
       {
         onSuccess: () => {
           setEditing(false);
@@ -76,17 +86,6 @@ export function CommentItem({
         },
       },
     );
-  };
-
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      cancel();
-    } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-      event.preventDefault();
-      save();
-    }
   };
 
   const confirmDelete = () => {
@@ -127,7 +126,9 @@ export function CommentItem({
                 size="icon-sm"
                 aria-label="Edit comment"
                 onClick={() => {
-                  setDraft(comment.body);
+                  const html = comment.body_html ?? plainTextToHtml(comment.body);
+                  setStartedWith(html);
+                  setDraft({ html, text: comment.body });
                   setError(undefined);
                   setEditing(true);
                 }}
@@ -152,20 +153,21 @@ export function CommentItem({
         </div>
         {editing ? (
           <div className="flex flex-col gap-2">
-            <Textarea
+            <RichTextEditor
               label="Comment text"
               hideLabel
+              ariaLabel="Comment text"
               autoFocus
-              rows={3}
-              maxLength={COMMENT_MAX_LENGTH}
-              value={draft}
+              value={draft.html}
               error={error}
               hint="Ctrl+Enter saves, Escape cancels."
-              onChange={(event) => {
-                setDraft(event.target.value);
+              areaClassName="min-h-20"
+              onChange={(next) => {
+                setDraft(next);
                 setError(undefined);
               }}
-              onKeyDown={onKeyDown}
+              onSubmitShortcut={save}
+              onEscape={cancel}
             />
             <div className="flex gap-2">
               <Button variant="primary" size="sm" loading={update.isPending} onClick={save}>
@@ -177,7 +179,7 @@ export function CommentItem({
             </div>
           </div>
         ) : comment.body ? (
-          <p className="text-sm break-words whitespace-pre-wrap text-text">{comment.body}</p>
+          <RichText html={comment.body_html} text={comment.body} className="text-sm text-text" />
         ) : null}
         {comment.attachments.length > 0 ? (
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">

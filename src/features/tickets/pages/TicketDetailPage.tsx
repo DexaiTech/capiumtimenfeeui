@@ -86,7 +86,9 @@ function TicketDetail({ ticketId }: { ticketId: string }) {
   }
 
   const data = ticket.data;
-  const saveText = async (body: { subject: string } | { description: string | null }) => {
+  const saveText = async (
+    body: { subject: string } | { description: string | null; description_html?: string },
+  ) => {
     await save({ ticketId, body });
     const text = 'subject' in body ? 'Subject saved' : 'Description saved';
     setNote(text);
@@ -107,7 +109,12 @@ function TicketDetail({ ticketId }: { ticketId: string }) {
         onPriorityChange={(priority) => change(data, { priority })}
         onTagResult={setNote}
         onSaveSubject={(subject) => saveText({ subject })}
-        onSaveDescription={(description) => saveText({ description })}
+        onSaveDescription={(description, descriptionHtml) =>
+          saveText({
+            description,
+            ...(descriptionHtml ? { description_html: descriptionHtml } : {}),
+          })
+        }
       />
       <div className="grid gap-4 lg:grid-cols-2">
         <CommentsPanel

@@ -54,7 +54,7 @@ export function useAddComment(ticketId: string) {
   const { organization } = useOrg();
   const invalidate = useTicketInvalidation();
   return useMutation({
-    mutationFn: (body: { body: string; attachment_ids?: string[] }) =>
+    mutationFn: (body: { body: string; body_html?: string; attachment_ids?: string[] }) =>
       ticketsApi.addComment(organization.id, ticketId, body),
     onSettled: () => invalidate.comments(ticketId),
   });
@@ -64,8 +64,14 @@ export function useUpdateComment(ticketId: string) {
   const { organization } = useOrg();
   const invalidate = useTicketInvalidation();
   return useMutation({
-    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
-      ticketsApi.updateComment(organization.id, ticketId, commentId, body),
+    mutationFn: ({
+      commentId,
+      ...body
+    }: {
+      commentId: string;
+      body: string;
+      body_html?: string | null;
+    }) => ticketsApi.updateComment(organization.id, ticketId, commentId, body),
     onSettled: () => invalidate.comments(ticketId),
   });
 }

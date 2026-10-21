@@ -56,7 +56,7 @@ export interface TicketCardProps {
   onPriorityChange: (priority: TicketPriority) => void;
   onTagResult: (message: string) => void;
   onSaveSubject: (subject: string) => Promise<void>;
-  onSaveDescription: (description: string | null) => Promise<void>;
+  onSaveDescription: (description: string | null, descriptionHtml?: string) => Promise<void>;
 }
 
 /**
@@ -142,7 +142,9 @@ export function TicketCard({
           label="Description"
           icon={AlignLeft}
           value={ticket.description}
+          valueHtml={ticket.description_html}
           multiline
+          rich
           canEdit={canUpdate}
           emptyText="No description"
           validate={(text) => {
@@ -151,7 +153,7 @@ export function TicketCard({
               ? null
               : (parsed.error.issues[0]?.message ?? 'Check the description');
           }}
-          onSave={(text) => onSaveDescription(text === '' ? null : text)}
+          onSave={(text, html) => onSaveDescription(text === '' ? null : text, html)}
         />
         <section aria-labelledby="ticket-files-title" className="flex flex-col gap-3">
           <h2

@@ -1,16 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CloudUpload, X } from 'lucide-react';
 import { useCallback, useId, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
+import { Button, Modal, RichTextEditor, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { cn } from '@/utils/cn';
 
 import { useCreateTicket } from '../../api';
 import { ticketsApi } from '../../api/ticketsApi';
-import { PRIORITY_META, STATUS_META, TICKET_PRIORITIES, TICKET_STATUSES } from '../../constants';
+import {
+  PRIORITY_META,
+  STATUS_META,
+  SUBJECT_MAX_LENGTH,
+  TICKET_PRIORITIES,
+  TICKET_STATUSES,
+} from '../../constants';
 import { usePasteFiles } from '../../hooks/usePasteFiles';
 import { createTicketSchema, type TicketValues } from '../../schemas/ticket';
 import type { TicketCreate } from '../../types';
@@ -56,6 +62,8 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // The description is written in a rich text box: its HTML is kept here, its text in the form.
+  const [descriptionHtml, setDescriptionHtml] = useState('');
   const {
     register,
     handleSubmit,
@@ -122,6 +130,7 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
     const body: TicketCreate = {
       subject: values.subject,
       description: values.description,
+      ...(descriptionHtml ? { description_html: descriptionHtml } : {}),
       status: values.status,
       priority: values.priority,
     };
@@ -146,11 +155,18 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
         className="flex flex-col gap-4"
       >
         <div className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr]">
-          <Input
+          <Textarea
             label={required('Subject')}
+            rows={2}
+            maxLength={SUBJECT_MAX_LENGTH}
             autoComplete="off"
             data-autofocus
+            className="min-w-0"
             error={errors.subject?.message}
+            // A subject is one line of text: Enter does not start a new one.
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.preventDefault();
+            }}
             {...register('subject')}
           />
           <Select
@@ -176,11 +192,24 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
             {...register('status')}
           />
         </div>
-        <Textarea
-          label={required('Description')}
-          rows={6}
-          error={errors.description?.message}
-          {...register('description')}
+        <Controller
+          control={control}
+          name="description"
+          render={({ field }) => (
+            <RichTextEditor
+              label={required('Description')}
+              ariaLabel="Description"
+              placeholder="Describe the problem: what happened, what you expected, how to repeat it…"
+              value={descriptionHtml}
+              error={errors.description?.message}
+              areaClassName="min-h-36"
+              onChange={({ html, text }) => {
+                setDescriptionHtml(html);
+                field.onChange(text);
+              }}
+              onFiles={addFiles}
+            />
+          )}
         />
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-text">Attachments</span>

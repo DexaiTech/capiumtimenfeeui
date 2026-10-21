@@ -24,6 +24,19 @@ if (!window.matchMedia) {
   });
 }
 
+// jsdom has no layout. ProseMirror (the rich text editor) asks for client rects and for the
+// element under a point while it handles a selection: an empty answer is enough for the tests.
+const noRects = (): DOMRectList => {
+  const list = Object.assign([] as DOMRect[], { item: () => null });
+  return list;
+};
+if (!Range.prototype.getClientRects) Range.prototype.getClientRects = noRects;
+if (!Range.prototype.getBoundingClientRect) {
+  Range.prototype.getBoundingClientRect = () => new DOMRect(0, 0, 0, 0);
+}
+if (!Element.prototype.getClientRects) Element.prototype.getClientRects = noRects;
+if (!document.elementFromPoint) document.elementFromPoint = () => null;
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
 afterEach(() => {

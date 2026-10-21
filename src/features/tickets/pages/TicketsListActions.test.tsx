@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -466,6 +466,7 @@ describe('the new ticket dialog', () => {
         {
           subject: 'Report totals disagree',
           description: 'Seen on the VAT report.',
+          description_html: '<p>Seen on the VAT report.</p>',
           status: 'hold',
           priority: 'high',
         },
@@ -476,6 +477,67 @@ describe('the new ticket dialog', () => {
       expect(screen.queryByRole('dialog', { name: 'Application Testing' })).not.toBeInTheDocument(),
     );
     expect(where()).toBe(LIST);
+  });
+
+  it('takes the subject in a text area that never starts a second line', async () => {
+    const user = userEvent.setup();
+    renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const subject = within(dialog).getByRole('textbox', { name: /Subject/ });
+    expect(subject.tagName).toBe('TEXTAREA');
+    await user.type(subject, 'First{Enter}second');
+    expect(subject).toHaveValue('Firstsecond');
+  });
+
+  it('formats the description and sends the formatting with its text', async () => {
+    const user = userEvent.setup();
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(orgApiPath('/tickets'), async ({ request }) => {
+        bodies.push(await request.json());
+        return ok(detailOf({ ...apt2, id: 'new-id', code: 'APT3', number: 3 }), { status: 201 });
+      }),
+      ...ticketHandlers(),
+    );
+    renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    await user.type(within(dialog).getByRole('textbox', { name: /Subject/ }), 'Formatted');
+    const box = within(dialog).getByRole('textbox', { name: /Description/ });
+    await user.click(box);
+    await user.keyboard('Steps{Enter}one');
+    expect(within(dialog).getByRole('toolbar', { name: 'Text formatting' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
+
+    await waitFor(() =>
+      expect(bodies).toEqual([
+        {
+          subject: 'Formatted',
+          description: 'Steps\none',
+          description_html: '<p>Steps</p><p>one</p>',
+          status: 'open',
+          priority: 'low',
+        },
+      ]),
+    );
+  });
+
+  it('attaches a screenshot pasted into the description instead of pasting it as text', async () => {
+    renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const box = within(dialog).getByRole('textbox', { name: /Description/ });
+    fireEvent.paste(box, {
+      clipboardData: {
+        files: [new File([new Uint8Array([1, 2, 3])], 'screenshot.png', { type: 'image/png' })],
+        types: ['Files'],
+        getData: () => '',
+      },
+    });
+
+    const staged = await within(dialog).findByRole('list', { name: 'Files to attach' });
+    expect(within(staged).getByText('screenshot.png')).toBeInTheDocument();
   });
 
   it('opens from ?new=1 and sends the defaults with a subject and description', async () => {
@@ -497,7 +559,13 @@ describe('the new ticket dialog', () => {
 
     await waitFor(() =>
       expect(bodies).toEqual([
-        { subject: 'Title only', description: 'Some detail', status: 'open', priority: 'low' },
+        {
+          subject: 'Title only',
+          description: 'Some detail',
+          description_html: '<p>Some detail</p>',
+          status: 'open',
+          priority: 'low',
+        },
       ]),
     );
   });

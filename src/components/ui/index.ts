@@ -1,5 +1,13 @@
 export { AnchoredPanel, type AnchoredPanelProps } from './AnchoredPanel';
 export { Avatar, type AvatarProps, type AvatarSize } from './Avatar';
+export { RichText, type RichTextProps } from './RichText';
+export {
+  RichTextEditor,
+  type RichTextEditorProps,
+  type RichTextValue,
+} from './RichTextEditor';
+export { normaliseLink } from './richTextLink';
+export { plainTextToHtml } from './richTextPlain';
 export { PersonAvatar, type PersonAvatarProps } from './PersonAvatar';
 export { AvatarStack, type AvatarStackProps, type AvatarStackUser } from './AvatarStack';
 export { Badge, type BadgeProps, type BadgeSize, type BadgeTone } from './Badge';

@@ -71,12 +71,17 @@ export const ticketsApi = {
   addComment: (
     organizationId: string,
     ticketId: string,
-    body: { body: string; attachment_ids?: string[] },
+    body: { body: string; body_html?: string; attachment_ids?: string[] },
   ) => api.post<TicketComment>(`${org(organizationId)}/tickets/${seg(ticketId)}/comments`, body),
-  updateComment: (organizationId: string, ticketId: string, commentId: string, body: string) =>
+  updateComment: (
+    organizationId: string,
+    ticketId: string,
+    commentId: string,
+    body: { body: string; body_html?: string | null },
+  ) =>
     api.patch<TicketComment>(
       `${org(organizationId)}/tickets/${seg(ticketId)}/comments/${seg(commentId)}`,
-      { body },
+      body,
     ),
   removeComment: (organizationId: string, ticketId: string, commentId: string) =>
     api.delete<null>(`${org(organizationId)}/tickets/${seg(ticketId)}/comments/${seg(commentId)}`),

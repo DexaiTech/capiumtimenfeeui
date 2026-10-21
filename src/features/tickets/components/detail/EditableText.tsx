@@ -1,7 +1,14 @@
 import { Pencil, type LucideIcon } from 'lucide-react';
 import { useId, useState, type KeyboardEvent } from 'react';
 
-import { Button, Input, Textarea } from '@/components/ui';
+import {
+  Button,
+  Input,
+  plainTextToHtml,
+  RichText,
+  RichTextEditor,
+  type RichTextValue,
+} from '@/components/ui';
 import { isApiError } from '@/services/api';
 
 import { fieldDetails } from '../../utils/errors';
@@ -11,7 +18,11 @@ export interface EditableTextProps {
   label: string;
   icon: LucideIcon;
   value: string | null;
+  /** Rich text: the sanitised HTML of `value`, null for a plain text written before formatting. */
+  valueHtml?: string | null;
   multiline: boolean;
+  /** Edit with the rich text box (bold, lists, links…); `onSave` gets the HTML as well. */
+  rich?: boolean;
   /** `ticket.update`: the pencil is offered. */
   canEdit: boolean;
   /** Shown in the box while the text is empty. */
@@ -19,7 +30,7 @@ export interface EditableTextProps {
   /** A message for text that cannot be saved, or null. */
   validate: (text: string) => string | null;
   /** Saves the new text; rejects with the API's error. */
-  onSave: (text: string) => Promise<void>;
+  onSave: (text: string, html?: string) => Promise<void>;
 }
 
 /**
@@ -31,7 +42,9 @@ export function EditableText({
   label,
   icon: Icon,
   value,
+  valueHtml,
   multiline,
+  rich = false,
   canEdit,
   emptyText,
   validate,
@@ -40,10 +53,18 @@ export function EditableText({
   const headingId = useId();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  // The rich text box: its HTML and text, and the HTML it started with.
+  const [richDraft, setRichDraft] = useState<RichTextValue>({ html: '', text: '' });
+  const [startedWith, setStartedWith] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 
   const start = () => {
+    if (rich) {
+      const html = valueHtml ?? plainTextToHtml(value ?? '');
+      setStartedWith(html);
+      setRichDraft({ html, text: value ?? '' });
+    }
     setDraft(value ?? '');
     setError(undefined);
     setEditing(true);
@@ -54,8 +75,9 @@ export function EditableText({
   };
 
   const save = async () => {
-    const next = draft.trim();
-    if (next === (value ?? '').trim()) {
+    const next = (rich ? richDraft.text : draft).trim();
+    // Nothing changed (for rich text the HTML is compared: formatting alone is an edit).
+    if (rich ? richDraft.html === startedWith : next === (value ?? '').trim()) {
       cancel();
       return;
     }
@@ -67,7 +89,7 @@ export function EditableText({
     setSaving(true);
     setError(undefined);
     try {
-      await onSave(next);
+      await onSave(next, rich ? richDraft.html : undefined);
       setEditing(false);
     } catch (failure) {
       const named = fieldDetails(failure).find((detail) => detail.field === label.toLowerCase());
@@ -115,20 +137,22 @@ export function EditableText({
       </div>
       {editing ? (
         <div className="flex flex-col gap-2">
-          {multiline ? (
-            <Textarea
+          {rich ? (
+            <RichTextEditor
               label={label}
               hideLabel
+              ariaLabel={label}
               autoFocus
-              rows={6}
-              value={draft}
+              value={richDraft.html}
               error={error}
               hint="Ctrl+Enter saves, Escape cancels."
-              onChange={(event) => {
-                setDraft(event.target.value);
+              areaClassName="min-h-36"
+              onChange={(next) => {
+                setRichDraft(next);
                 setError(undefined);
               }}
-              onKeyDown={onKeyDown}
+              onSubmitShortcut={() => void save()}
+              onEscape={cancel}
             />
           ) : (
             <Input
@@ -155,8 +179,12 @@ export function EditableText({
           </div>
         </div>
       ) : (
-        <div className="min-h-10 rounded-md border border-border bg-surface-sunken px-3 py-2.5 text-sm break-words whitespace-pre-wrap text-text">
-          {value ? value : <span className="text-text-subtle">{emptyText}</span>}
+        <div className="min-h-10 rounded-md border border-border bg-surface-sunken px-3 py-2.5 text-sm break-words text-text">
+          {value ? (
+            <RichText html={valueHtml} text={value} />
+          ) : (
+            <span className="text-text-subtle">{emptyText}</span>
+          )}
         </div>
       )}
     </section>

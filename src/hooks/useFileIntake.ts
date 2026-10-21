@@ -64,13 +64,14 @@ export function useFileIntake({ onFiles, disabled = false }: FileIntakeOptions):
   const onDrop = (event: DragEvent<HTMLElement>) => {
     depth.current = 0;
     setDragging(false);
-    if (disabled || !carriesFiles(event)) return;
+    // An editor inside the zone may have taken the drop itself.
+    if (disabled || event.defaultPrevented || !carriesFiles(event)) return;
     event.preventDefault();
     const files = Array.from(event.dataTransfer.files);
     if (files.length > 0) onFiles(files);
   };
   const onPaste = (event: ClipboardEvent<HTMLElement>) => {
-    if (disabled) return;
+    if (disabled || event.defaultPrevented) return;
     const files = filesOfClipboard(event.clipboardData);
     if (files.length === 0) return;
     event.preventDefault();
