@@ -1,20 +1,13 @@
 import { SearchX, Ticket as TicketIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import {
-  Button,
-  ConfirmDialog,
-  EmptyState,
-  Pagination,
-  useToast,
-  type DataTableSort,
-} from '@/components/ui';
+import { Button, EmptyState, Pagination, useToast, type DataTableSort } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
 
-import { flattenPages, useBulkTickets, useDeleteTicket, useTickets, useTicketTags } from '../api';
+import { flattenPages, useBulkTickets, useTickets, useTicketTags } from '../api';
 import { LiveRegion } from '../components/LiveRegion';
 import { BulkBar } from '../components/list/BulkBar';
 import { CreateTicketDialog } from '../components/list/CreateTicketDialog';
@@ -25,14 +18,11 @@ import { NEW_TICKET_BUTTON_NAME } from '../constants';
 import { useTicketFieldChange } from '../hooks/useTicketFieldChange';
 import { useTicketFilters } from '../hooks/useTicketFilters';
 import type { BulkAction, TicketListItem } from '../types';
-import { describeFailure, dialogError } from '../utils/errors';
+import { describeFailure } from '../utils/errors';
 import { isFiltered } from '../utils/filters';
 import { pluralize } from '../utils/format';
 
 const NO_ROWS: ReadonlySet<string> = new Set();
-
-/** What the delete dialog is about: one ticket (the row menu) or the ticked ones. */
-type DeleteTarget = TicketListItem | 'selected' | null;
 
 function TicketList() {
   const { organization, can } = useOrg();
@@ -40,12 +30,10 @@ function TicketList() {
   const { filters, update, clear, search, creating, setCreating } = useTicketFilters();
   const canCreate = can(PERMISSIONS.ticketCreate);
   const canUpdate = can(PERMISSIONS.ticketUpdate);
-  const canDelete = can(PERMISSIONS.ticketDelete);
 
   const tickets = useTickets(filters);
   const tags = useTicketTags();
   const bulk = useBulkTickets();
-  const remove = useDeleteTicket();
   const { change, announcement } = useTicketFieldChange();
   const [note, setNote] = useState('');
 
@@ -58,18 +46,11 @@ function TicketList() {
   const selected = selection.key === filterKey ? selection.ids : NO_ROWS;
   const select = (ids: ReadonlySet<string>) => setSelection({ key: filterKey, ids });
 
-  const [target, setTarget] = useState<DeleteTarget>(null);
-  const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
-  const closeDelete = () => {
-    setTarget(null);
-    setRefusal(null);
-  };
-
   const rows = flattenPages(tickets.data);
   const filtered = isFiltered(filters);
   const sort: DataTableSort = { columnId: filters.sort, direction: filters.order };
 
-  const runBulk = (action: Exclude<BulkAction, 'delete'>, value: string) => {
+  const runBulk = (action: BulkAction, value: string) => {
     bulk.mutate(
       { ticket_ids: [...selected], action, value },
       {
@@ -85,38 +66,6 @@ function TicketList() {
           toast({ tone: 'error', ...describeFailure(error, 'Could not update the tickets') }),
       },
     );
-  };
-
-  const confirmDelete = () => {
-    if (!target) return;
-    if (target === 'selected') {
-      const ids = [...selected];
-      bulk.mutate(
-        { ticket_ids: ids, action: 'delete' },
-        {
-          onSuccess: () => {
-            const text = `${pluralize(ids.length, 'ticket')} deleted`;
-            setNote(text);
-            toast({ tone: 'success', title: text });
-            select(NO_ROWS);
-            closeDelete();
-          },
-          onError: (error) => setRefusal(dialogError(error)),
-        },
-      );
-      return;
-    }
-    const ticket = target;
-    remove.mutate(ticket.id, {
-      onSuccess: () => {
-        const text = `${ticket.code} deleted`;
-        setNote(text);
-        toast({ tone: 'success', title: text });
-        select(new Set([...selected].filter((id) => id !== ticket.id)));
-        closeDelete();
-      },
-      onError: (error) => setRefusal(dialogError(error)),
-    });
   };
 
   const copyLink = (ticket: TicketListItem) => {
@@ -145,18 +94,13 @@ function TicketList() {
       <LiveRegion message={announcement} />
       <LiveRegion message={note} />
       {toolbar}
-      {selected.size > 0 && (canUpdate || canDelete) ? (
+      {selected.size > 0 && canUpdate ? (
         <BulkBar
           count={selected.size}
           tags={tags.data ?? []}
           canUpdate={canUpdate}
-          canDelete={canDelete}
           busy={bulk.isPending}
           onAction={runBulk}
-          onDelete={() => {
-            setRefusal(null);
-            setTarget('selected');
-          }}
           onClear={() => select(NO_ROWS)}
         />
       ) : null}
@@ -173,21 +117,16 @@ function TicketList() {
           loading={tickets.isPending}
           sort={sort}
           onSortChange={(next) => update({ sort: next.columnId, order: next.direction })}
-          selectable={canUpdate || canDelete}
+          selectable={canUpdate}
           selected={selected}
           onSelectedChange={select}
           slug={organization.slug}
           timeZone={organization.timezone}
           canEdit={canUpdate}
-          canDelete={canDelete}
           onStatusChange={(ticket, status) => change(ticket, { status })}
           onPriorityChange={(ticket, priority) => change(ticket, { priority })}
           onTagResult={setNote}
           onCopyLink={copyLink}
-          onDelete={(ticket) => {
-            setRefusal(null);
-            setTarget(ticket);
-          }}
           empty={
             filtered ? (
               <EmptyState
@@ -231,29 +170,6 @@ function TicketList() {
         />
       )}
       <CreateTicketDialog open={creating && canCreate} onClose={() => setCreating(false)} />
-      <ConfirmDialog
-        open={target !== null}
-        onClose={closeDelete}
-        onConfirm={confirmDelete}
-        title={
-          target === 'selected' ? `Delete ${pluralize(selected.size, 'ticket')}?` : 'Delete ticket?'
-        }
-        confirmLabel={target === 'selected' ? 'Delete tickets' : 'Delete ticket'}
-        loading={bulk.isPending || remove.isPending}
-        error={refusal}
-      >
-        {target === 'selected' ? (
-          <p>
-            The selected tickets will be deleted together with their comments and files. This cannot
-            be undone.
-          </p>
-        ) : target ? (
-          <p>
-            <strong className="font-medium text-text">{target.code}</strong> “{target.subject}” will
-            be deleted with its comments and files. This cannot be undone.
-          </p>
-        ) : null}
-      </ConfirmDialog>
     </section>
   );
 }

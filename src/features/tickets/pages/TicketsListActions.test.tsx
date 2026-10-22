@@ -212,7 +212,7 @@ describe('bulk actions', () => {
       within(bar)
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['Set status', 'Set priority', 'Add tag', 'Remove tag', 'Delete', 'Clear selection']);
+    ).toEqual(['Set status', 'Set priority', 'Add tag', 'Remove tag', 'Clear selection']);
 
     await user.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
     expect(bar).toHaveTextContent('3 selected');
@@ -284,61 +284,6 @@ describe('bulk actions', () => {
     ]);
   });
 
-  it('deletes the ticked tickets after a confirmation, and lets go of the selection', async () => {
-    const user = userEvent.setup();
-    const calls: unknown[] = [];
-    server.use(
-      http.post(orgApiPath('/tickets/bulk'), async ({ request }) => {
-        calls.push(await request.json());
-        return ok({ action: 'delete', affected: 2, changed: 2 }, { message: '2 tickets deleted' });
-      }),
-      ...ticketHandlers(),
-    );
-    renderList();
-    const bar = await tick(user, 'APT2', 'APT1');
-
-    await user.click(within(bar).getByRole('button', { name: 'Delete' }));
-    const dialog = screen.getByRole('dialog', { name: 'Delete 2 tickets?' });
-    expect(dialog).toHaveTextContent(
-      'The selected tickets will be deleted together with their comments and files. This cannot be undone.',
-    );
-    await user.click(within(dialog).getByRole('button', { name: 'Delete tickets' }));
-
-    // No `value` for a delete.
-    await waitFor(() =>
-      expect(calls).toEqual([{ ticket_ids: [apt2.id, apt1.id], action: 'delete' }]),
-    );
-    expect(await screen.findAllByText('2 tickets deleted')).toHaveLength(2);
-    await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Bulk actions' })).not.toBeInTheDocument(),
-    );
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  });
-
-  it('keeps the dialog open with the reason when the API refuses the delete', async () => {
-    const user = userEvent.setup();
-    server.use(
-      http.post(orgApiPath('/tickets/bulk'), () =>
-        fail(404, 'RESOURCE_NOT_FOUND', 'One of the tickets no longer exists.'),
-      ),
-      ...ticketHandlers(),
-    );
-    renderList();
-    const bar = await tick(user, 'APT2');
-
-    await user.click(within(bar).getByRole('button', { name: 'Delete' }));
-    const dialog = screen.getByRole('dialog', { name: 'Delete 1 ticket?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Delete tickets' }));
-
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'One of the tickets no longer exists.',
-    );
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    // The selection is still there.
-    expect(screen.getByRole('region', { name: 'Bulk actions' })).toHaveTextContent('1 selected');
-  });
-
   it('starts afresh when the filters change', async () => {
     const user = userEvent.setup();
     server.use(...ticketHandlers());
@@ -357,7 +302,7 @@ describe('bulk actions', () => {
 });
 
 describe('the menu of a row', () => {
-  it('offers Open, Copy link and, to a role that may delete, Delete', async () => {
+  it('offers Open and Copy link, even to a role that may otherwise delete', async () => {
     const user = userEvent.setup();
     server.use(...ticketHandlers());
     renderList(OWNER_PERMISSIONS);
@@ -368,8 +313,8 @@ describe('the menu of a row', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((item) => item.textContent),
-    ).toEqual(['Open', 'Copy link', 'Delete']);
-    expect(within(menu).getByRole('separator')).toBeInTheDocument();
+    ).toEqual(['Open', 'Copy link']);
+    expect(within(menu).queryByRole('separator')).not.toBeInTheDocument();
   });
 
   it('copies the link of the ticket', async () => {
@@ -386,50 +331,6 @@ describe('the menu of a row', () => {
     );
   });
 
-  it('deletes a ticket after a confirmation that names it', async () => {
-    const user = userEvent.setup();
-    const deleted: unknown[] = [];
-    server.use(
-      http.delete(orgApiPath('/tickets/:ticketId'), ({ params }) => {
-        deleted.push(params.ticketId);
-        return ok(null, { message: 'Ticket deleted' });
-      }),
-      ...ticketHandlers(),
-    );
-    renderList();
-
-    await user.click(await screen.findByRole('button', { name: 'Actions for APT1' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    const dialog = screen.getByRole('dialog', { name: 'Delete ticket?' });
-    expect(dialog).toHaveTextContent(
-      'APT1 “Trial balance does not agree” will be deleted with its comments and files. This cannot be undone.',
-    );
-    await user.click(within(dialog).getByRole('button', { name: 'Delete ticket' }));
-
-    await waitFor(() => expect(deleted).toEqual([apt1.id]));
-    expect(await screen.findAllByText('APT1 deleted')).toHaveLength(2);
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  });
-
-  it('keeps the dialog open with the reason when the API refuses', async () => {
-    const user = userEvent.setup();
-    server.use(
-      http.delete(orgApiPath('/tickets/:ticketId'), () =>
-        fail(403, 'PERMISSION_DENIED', 'You may not delete tickets.'),
-      ),
-      ...ticketHandlers(),
-    );
-    renderList();
-
-    await user.click(await screen.findByRole('button', { name: 'Actions for APT1' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
-    const dialog = screen.getByRole('dialog', { name: 'Delete ticket?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Delete ticket' }));
-
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'You may not delete tickets.',
-    );
-  });
 });
 
 describe('the new ticket dialog', () => {

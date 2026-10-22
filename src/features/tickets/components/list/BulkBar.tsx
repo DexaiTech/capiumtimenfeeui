@@ -1,11 +1,9 @@
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 import { Button, OptionPicker, buttonClasses, type PickerOption } from '@/components/ui';
 
 import type { BulkAction, TicketTag } from '../../types';
 import { PRIORITY_PICKER_OPTIONS, STATUS_PICKER_OPTIONS, tagPickerOptions } from './options';
-
-type ChoiceAction = Exclude<BulkAction, 'delete'>;
 
 interface BulkPickerProps {
   label: string;
@@ -41,11 +39,9 @@ export interface BulkBarProps {
   count: number;
   tags: ReadonlyArray<TicketTag>;
   canUpdate: boolean;
-  canDelete: boolean;
   /** A bulk call is running. */
   busy: boolean;
-  onAction: (action: ChoiceAction, value: string) => void;
-  onDelete: () => void;
+  onAction: (action: BulkAction, value: string) => void;
   onClear: () => void;
 }
 
@@ -53,16 +49,7 @@ export interface BulkBarProps {
  * Above the table while rows are ticked: how many, and what to do with them (`POST /tickets/bulk`).
  * The buttons a role may not use are not offered.
  */
-export function BulkBar({
-  count,
-  tags,
-  canUpdate,
-  canDelete,
-  busy,
-  onAction,
-  onDelete,
-  onClear,
-}: BulkBarProps) {
+export function BulkBar({ count, tags, canUpdate, busy, onAction, onClear }: BulkBarProps) {
   const tagOptions = tagPickerOptions(tags);
   return (
     <div
@@ -102,17 +89,6 @@ export function BulkBar({
             searchable
           />
         </>
-      ) : null}
-      {canDelete ? (
-        <Button
-          size="sm"
-          disabled={busy}
-          onClick={onDelete}
-          leftIcon={<Trash2 aria-hidden="true" className="size-3.5" />}
-          className="text-danger! hover:text-danger!"
-        >
-          Delete
-        </Button>
       ) : null}
       <Button variant="ghost" size="sm" onClick={onClear}>
         Clear selection

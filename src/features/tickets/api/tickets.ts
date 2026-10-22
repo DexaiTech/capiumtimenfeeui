@@ -205,32 +205,12 @@ export function useToggleTicketTag() {
   });
 }
 
-export function useDeleteTicket() {
-  const { organization } = useOrg();
-  const queryClient = useQueryClient();
-  const invalidate = useTicketInvalidation();
-  return useMutation({
-    mutationFn: (ticketId: string) => ticketsApi.remove(organization.id, ticketId),
-    onSuccess: (_result, ticketId) => {
-      queryClient.removeQueries({ queryKey: ticketKeys.detail(organization.id, ticketId) });
-      invalidate.tickets();
-    },
-  });
-}
-
 /** One action on the selected tickets: all or nothing (the API's bulk endpoint). */
 export function useBulkTickets() {
   const { organization } = useOrg();
-  const queryClient = useQueryClient();
   const invalidate = useTicketInvalidation();
   return useMutation({
     mutationFn: (body: BulkRequest) => ticketsApi.bulk(organization.id, body),
-    onSuccess: (_result, body) => {
-      if (body.action !== 'delete') return;
-      for (const ticketId of body.ticket_ids) {
-        queryClient.removeQueries({ queryKey: ticketKeys.detail(organization.id, ticketId) });
-      }
-    },
     onSettled: () => invalidate.tickets(),
   });
 }

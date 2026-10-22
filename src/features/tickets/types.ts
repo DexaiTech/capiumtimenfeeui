@@ -123,13 +123,13 @@ export interface TicketUpdate {
   tag_ids?: string[];
 }
 
-export type BulkAction = 'set_status' | 'set_priority' | 'add_tag' | 'remove_tag' | 'delete';
+export type BulkAction = 'set_status' | 'set_priority' | 'add_tag' | 'remove_tag';
 
 export interface BulkRequest {
   ticket_ids: string[];
   action: BulkAction;
-  /** A status, a priority or a tag id; absent for `delete`. */
-  value?: string;
+  /** A status, a priority or a tag id. */
+  value: string;
 }
 
 export interface BulkResult {

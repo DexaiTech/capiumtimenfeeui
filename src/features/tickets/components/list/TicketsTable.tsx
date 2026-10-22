@@ -29,13 +29,10 @@ export interface TicketsTableProps {
   timeZone: string;
   /** `ticket.update`: the select pills and the tag picker are live. */
   canEdit: boolean;
-  /** `ticket.delete`: the row menu offers Delete. */
-  canDelete: boolean;
   onStatusChange: (ticket: TicketListItem, status: TicketStatus) => void;
   onPriorityChange: (ticket: TicketListItem, priority: TicketPriority) => void;
   onTagResult: (message: string) => void;
   onCopyLink: (ticket: TicketListItem) => void;
-  onDelete: (ticket: TicketListItem) => void;
   empty: ReactNode;
   footer: ReactNode;
 }
@@ -56,12 +53,10 @@ export function TicketsTable({
   slug,
   timeZone,
   canEdit,
-  canDelete,
   onStatusChange,
   onPriorityChange,
   onTagResult,
   onCopyLink,
-  onDelete,
   empty,
   footer,
 }: TicketsTableProps) {
@@ -179,17 +174,6 @@ export function TicketsTable({
       onSelect: () => void navigate(routes.org.ticket(slug, ticket.id)),
     },
     { id: 'copy', label: 'Copy link', onSelect: () => onCopyLink(ticket) },
-    ...(canDelete
-      ? [
-          { id: 'separator', separator: true } as const,
-          {
-            id: 'delete',
-            label: 'Delete',
-            tone: 'danger' as const,
-            onSelect: () => onDelete(ticket),
-          },
-        ]
-      : []),
   ];
 
   return (

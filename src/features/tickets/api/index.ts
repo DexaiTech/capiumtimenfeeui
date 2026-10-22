@@ -13,7 +13,6 @@ export { flattenPages, nextCursor, type ListData, type ListPage } from './pages'
 export {
   useBulkTickets,
   useCreateTicket,
-  useDeleteTicket,
   useTicket,
   useTicketDashboard,
   useTickets,

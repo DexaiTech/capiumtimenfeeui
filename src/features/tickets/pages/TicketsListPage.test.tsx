@@ -342,7 +342,7 @@ describe('TicketsListPage', () => {
       expect(screen.queryByRole('dialog', { name: 'Application Testing' })).not.toBeInTheDocument();
     });
 
-    it('lets Staff create, tick and edit but not delete', async () => {
+    it('lets Staff create, tick and edit; there is no delete for anyone', async () => {
       const user = userEvent.setup();
       server.use(...ticketHandlers());
       renderList(STAFF_PERMISSIONS);

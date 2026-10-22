@@ -52,8 +52,6 @@ export const ticketsApi = {
     api.post<TicketDetail>(`${org(organizationId)}/tickets`, body),
   update: (organizationId: string, ticketId: string, body: TicketUpdate) =>
     api.patch<TicketDetail>(`${org(organizationId)}/tickets/${seg(ticketId)}`, body),
-  remove: (organizationId: string, ticketId: string) =>
-    api.delete<null>(`${org(organizationId)}/tickets/${seg(ticketId)}`),
   bulk: (organizationId: string, body: BulkRequest) =>
     api.post<BulkResult>(`${org(organizationId)}/tickets/bulk`, body),
   dashboard: (organizationId: string, range: DashboardRange, signal?: AbortSignal) =>
