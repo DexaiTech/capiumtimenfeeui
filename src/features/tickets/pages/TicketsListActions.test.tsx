@@ -330,7 +330,6 @@ describe('the menu of a row', () => {
       `${window.location.origin}/acme/application-testing/tickets/${apt1.id}`,
     );
   });
-
 });
 
 describe('the new ticket dialog', () => {
@@ -358,7 +357,7 @@ describe('the new ticket dialog', () => {
 
     await user.type(within(dialog).getByLabelText(/Subject/), '  Report totals disagree  ');
     await user.type(within(dialog).getByLabelText(/Description/), 'Seen on the VAT report.');
-    await user.selectOptions(within(dialog).getByLabelText('Status'), 'hold');
+    await user.selectOptions(within(dialog).getByLabelText('Status'), 'on_hold');
     await user.selectOptions(within(dialog).getByLabelText('Priority'), 'high');
     await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
 
@@ -368,7 +367,7 @@ describe('the new ticket dialog', () => {
           subject: 'Report totals disagree',
           description: 'Seen on the VAT report.',
           description_html: '<p>Seen on the VAT report.</p>',
-          status: 'hold',
+          status: 'on_hold',
           priority: 'high',
         },
       ]),

@@ -1,4 +1,17 @@
-import { Bug, Check, Cog, Pause, RotateCcw, Target, type LucideIcon } from 'lucide-react';
+import {
+  Ban,
+  Bug,
+  Check,
+  ClipboardCheck,
+  ClipboardList,
+  Cog,
+  MessageCircleQuestion,
+  OctagonX,
+  Pause,
+  RotateCcw,
+  Target,
+  type LucideIcon,
+} from 'lucide-react';
 
 import type { ChartColor } from '@/components/charts';
 import type { BadgeTone } from '@/components/ui';
@@ -15,10 +28,15 @@ import type {
 /** Statuses in the order lists, charts and menus use. Any status may follow any other. */
 export const TICKET_STATUSES: ReadonlyArray<TicketStatus> = [
   'open',
-  'hold',
   'in_progress',
-  'reopen',
+  'requirement_pending',
+  'clarification_required',
+  'blocked',
+  'ready_for_ba_review',
+  'reopened',
   'closed',
+  'invalid',
+  'on_hold',
 ];
 
 /** Priorities in the order charts and menus use. */
@@ -62,11 +80,6 @@ const ORANGE: ToneClasses = {
   soft: 'bg-tag-orange/10',
   strong: 'bg-tag-orange/15',
 };
-const CYAN: ToneClasses = {
-  text: 'text-accent',
-  soft: 'bg-accent-soft',
-  strong: 'bg-accent/15',
-};
 const RED: ToneClasses = {
   text: 'text-badge-red',
   soft: 'bg-badge-red-soft',
@@ -82,6 +95,21 @@ const VIOLET: ToneClasses = {
   soft: 'bg-badge-violet-soft',
   strong: 'bg-badge-violet/15',
 };
+const BLUE: ToneClasses = {
+  text: 'text-badge-blue',
+  soft: 'bg-badge-blue-soft',
+  strong: 'bg-badge-blue/15',
+};
+const INDIGO: ToneClasses = {
+  text: 'text-tag-indigo',
+  soft: 'bg-tag-indigo/10',
+  strong: 'bg-tag-indigo/15',
+};
+const BRONZE: ToneClasses = {
+  text: 'text-badge-bronze',
+  soft: 'bg-badge-bronze-soft',
+  strong: 'bg-badge-bronze/15',
+};
 const GREY: ToneClasses = {
   text: 'text-badge-grey',
   soft: 'bg-badge-grey-soft',
@@ -96,11 +124,30 @@ export interface StatusMeta {
 }
 
 export const STATUS_META: Record<TicketStatus, StatusMeta> = {
-  open: { label: 'Open', tone: AMBER, chart: 'warning' },
-  hold: { label: 'Hold', tone: ORANGE, chart: 'orange' },
-  in_progress: { label: 'In Progress', tone: CYAN, chart: 'accent' },
-  reopen: { label: 'Reopen', tone: RED, chart: 'danger' },
+  open: { label: 'Open', tone: ORANGE, chart: 'orange' },
+  in_progress: { label: 'In Progress', tone: BLUE, chart: 'blue' },
+  requirement_pending: { label: 'Requirement Pending', tone: AMBER, chart: 'amber' },
+  clarification_required: { label: 'Clarification Required', tone: VIOLET, chart: 'violet' },
+  blocked: { label: 'Blocked', tone: RED, chart: 'danger' },
+  ready_for_ba_review: { label: 'Ready for BA Review', tone: INDIGO, chart: 'indigo' },
+  reopened: { label: 'Reopened', tone: RED, chart: 'pink' },
   closed: { label: 'Closed', tone: GREEN, chart: 'success' },
+  invalid: { label: 'Invalid', tone: GREY, chart: 'muted' },
+  on_hold: { label: 'On Hold', tone: BRONZE, chart: 'slate' },
+};
+
+/** What each status is for, shown as a hint where a person picks one. */
+export const STATUS_HINTS: Record<TicketStatus, string> = {
+  open: 'Newly created ticket',
+  in_progress: 'Developer is working on it',
+  requirement_pending: 'Waiting for BA to provide requirements or acceptance criteria',
+  clarification_required: 'A question needs an answer from BA or developer',
+  blocked: 'Work cannot proceed due to a dependency',
+  ready_for_ba_review: 'Development completed; BA verification is pending',
+  reopened: 'Issue returned for further work',
+  closed: 'Work completed and accepted',
+  invalid: 'Incorrect, duplicate, or out-of-scope ticket',
+  on_hold: 'Work intentionally paused',
 };
 
 export interface PriorityMeta {
@@ -116,7 +163,7 @@ export const PRIORITY_META: Record<TicketPriority, PriorityMeta> = {
   not_set: { label: 'Not Set', tone: GREY, chart: 'muted' },
 };
 
-/** The six cards of the dashboard, in order, with their tint and icon. */
+/** The cards of the dashboard, in order: the total, then one per status. */
 export const KPI_CARDS: ReadonlyArray<{
   key: KpiKey;
   label: string;
@@ -124,11 +171,51 @@ export const KPI_CARDS: ReadonlyArray<{
   icon: LucideIcon;
 }> = [
   { key: 'total', label: 'Total Tickets', tone: VIOLET, icon: Bug },
-  { key: 'open', label: 'Open', tone: AMBER, icon: Target },
-  { key: 'hold', label: 'Hold', tone: ORANGE, icon: Pause },
-  { key: 'in_progress', label: 'In Progress', tone: CYAN, icon: Cog },
-  { key: 'reopen', label: 'Reopen', tone: RED, icon: RotateCcw },
-  { key: 'closed', label: 'Closed', tone: GREEN, icon: Check },
+  { key: 'open', label: STATUS_META.open.label, tone: STATUS_META.open.tone, icon: Target },
+  {
+    key: 'in_progress',
+    label: STATUS_META.in_progress.label,
+    tone: STATUS_META.in_progress.tone,
+    icon: Cog,
+  },
+  {
+    key: 'requirement_pending',
+    label: STATUS_META.requirement_pending.label,
+    tone: STATUS_META.requirement_pending.tone,
+    icon: ClipboardList,
+  },
+  {
+    key: 'clarification_required',
+    label: STATUS_META.clarification_required.label,
+    tone: STATUS_META.clarification_required.tone,
+    icon: MessageCircleQuestion,
+  },
+  {
+    key: 'blocked',
+    label: STATUS_META.blocked.label,
+    tone: STATUS_META.blocked.tone,
+    icon: OctagonX,
+  },
+  {
+    key: 'ready_for_ba_review',
+    label: STATUS_META.ready_for_ba_review.label,
+    tone: STATUS_META.ready_for_ba_review.tone,
+    icon: ClipboardCheck,
+  },
+  {
+    key: 'reopened',
+    label: STATUS_META.reopened.label,
+    tone: STATUS_META.reopened.tone,
+    icon: RotateCcw,
+  },
+  { key: 'closed', label: STATUS_META.closed.label, tone: STATUS_META.closed.tone, icon: Check },
+  { key: 'invalid', label: STATUS_META.invalid.label, tone: STATUS_META.invalid.tone, icon: Ban },
+  {
+    key: 'on_hold',
+    label: STATUS_META.on_hold.label,
+    tone: STATUS_META.on_hold.tone,
+    icon: Pause,
+  },
 ];
 
 /** A tag's colour name is the badge tone of the same name. */

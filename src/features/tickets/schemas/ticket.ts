@@ -10,7 +10,18 @@ export const ticketSchema = z.object({
     .min(1, 'Enter a subject')
     .max(SUBJECT_MAX_LENGTH, `Use at most ${String(SUBJECT_MAX_LENGTH)} characters`),
   description: z.string().max(DESCRIPTION_MAX_LENGTH, 'Use at most 10,000 characters'),
-  status: z.enum(['open', 'hold', 'in_progress', 'reopen', 'closed']),
+  status: z.enum([
+    'open',
+    'in_progress',
+    'requirement_pending',
+    'clarification_required',
+    'blocked',
+    'ready_for_ba_review',
+    'reopened',
+    'closed',
+    'invalid',
+    'on_hold',
+  ]),
   priority: z.enum(['high', 'medium', 'low', 'not_set']),
 });
 export type TicketValues = z.infer<typeof ticketSchema>;

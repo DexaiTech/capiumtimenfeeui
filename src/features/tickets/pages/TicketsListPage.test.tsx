@@ -167,13 +167,13 @@ describe('TicketsListPage', () => {
     server.use(...ticketHandlers({ onTicketList: (params) => queries.push(params) }));
     renderList(
       OWNER_PERMISSIONS,
-      `${LIST}?q=trial&status=open&status=reopen&priority=high&tag=${bugTag.id}&sort=subject&order=asc`,
+      `${LIST}?q=trial&status=open&status=reopened&priority=high&tag=${bugTag.id}&sort=subject&order=asc`,
     );
 
     await waitFor(() => expect(queries.length).toBeGreaterThan(0));
     const first = queries[0];
     expect(first?.get('q')).toBe('trial');
-    expect(first?.getAll('status')).toEqual(['open', 'reopen']);
+    expect(first?.getAll('status')).toEqual(['open', 'reopened']);
     expect(first?.getAll('priority')).toEqual(['high']);
     expect(first?.getAll('tag_id')).toEqual([bugTag.id]);
     expect(first?.get('sort')).toBe('subject');
@@ -228,7 +228,7 @@ describe('TicketsListPage', () => {
       renderList();
 
       await user.click(await screen.findByRole('button', { name: 'Status of APT2: Open' }));
-      await user.click(screen.getByRole('option', { name: 'Closed' }));
+      await user.click(screen.getByRole('option', { name: /^Closed/ }));
 
       expect(
         await screen.findByRole('button', { name: 'Status of APT2: Closed' }),

@@ -74,24 +74,26 @@ describe('TicketsDashboardPage', () => {
     expect(await loaded()).toBeInTheDocument();
   });
 
-  it('shows the six cards with their numbers and how each moved against the last period', async () => {
+  it('shows a card for the total and each status with their numbers and how each moved against the last period', async () => {
     server.use(...ticketHandlers());
     renderDashboard();
     const totals = await screen.findByRole('list', { name: 'Ticket totals' });
     await within(totals).findByText('16');
 
     const items = within(totals).getAllByRole('listitem');
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(11);
     expect(items[0]).toHaveTextContent('16Total TicketsUp60% vs last period');
     expect(items[1]).toHaveTextContent('6OpenUp50% vs last period');
     // Nothing before: "New", not a percentage of zero.
-    expect(items[2]).toHaveTextContent('2HoldUpNew vs last period');
-    expect(items[3]).toHaveTextContent('3In ProgressUp0% vs last period');
+    expect(items[10]).toHaveTextContent('2On HoldUpNew vs last period');
+    expect(items[2]).toHaveTextContent('3In ProgressUp0% vs last period');
+    // The statuses nobody used yet show a zero, not a gap.
+    expect(items[3]).toHaveTextContent('0Requirement PendingUp0% vs last period');
     // A fall: a red down arrow and the size of the fall (the sign is the arrow and the word).
-    expect(items[4]).toHaveTextContent('1ReopenDown50% vs last period');
-    expect(within(items[4] as HTMLElement).getByText(/vs last period/)).toHaveClass('text-danger');
-    expect(items[5]).toHaveTextContent('4ClosedUp300% vs last period');
-    expect(within(items[5] as HTMLElement).getByText(/vs last period/)).toHaveClass('text-success');
+    expect(items[7]).toHaveTextContent('1ReopenedDown50% vs last period');
+    expect(within(items[7] as HTMLElement).getByText(/vs last period/)).toHaveClass('text-danger');
+    expect(items[8]).toHaveTextContent('4ClosedUp300% vs last period');
+    expect(within(items[8] as HTMLElement).getByText(/vs last period/)).toHaveClass('text-success');
   });
 
   it('draws the status ring with the total in the middle and a legend of count and share', async () => {
@@ -103,10 +105,15 @@ describe('TicketsDashboardPage', () => {
     expect(await within(status).findByTestId('donut')).toHaveTextContent('16 Total');
     expect(itemTexts(within(status).getByRole('list', { name: 'Legend' }))).toEqual([
       'Open6 (37.5%)',
-      'Hold2 (12.5%)',
       'In Progress3 (18.8%)',
-      'Reopen1 (6.3%)',
+      'Requirement Pending0 (0.0%)',
+      'Clarification Required0 (0.0%)',
+      'Blocked0 (0.0%)',
+      'Ready for BA Review0 (0.0%)',
+      'Reopened1 (6.3%)',
       'Closed4 (25.0%)',
+      'Invalid0 (0.0%)',
+      'On Hold2 (12.5%)',
     ]);
   });
 
@@ -165,14 +172,19 @@ describe('TicketsDashboardPage', () => {
 
     const trend = card('Status Trend (Last 14 Days)');
     expect(await within(trend).findByTestId('lines')).toHaveTextContent(
-      'open,hold,in_progress,reopen,closed over 14 days',
+      'open,in_progress,requirement_pending,clarification_required,blocked,ready_for_ba_review,reopened,closed,invalid,on_hold over 14 days',
     );
     expect(itemTexts(within(trend).getByRole('list', { name: 'Legend' }))).toEqual([
       'Open',
-      'Hold',
       'In Progress',
-      'Reopen',
+      'Requirement Pending',
+      'Clarification Required',
+      'Blocked',
+      'Ready for BA Review',
+      'Reopened',
       'Closed',
+      'Invalid',
+      'On Hold',
     ]);
     await user.click(within(trend).getByRole('button', { name: 'View as table' }));
     const grid = within(trend).getByRole('table');
@@ -180,7 +192,19 @@ describe('TicketsDashboardPage', () => {
       within(grid)
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent),
-    ).toEqual(['Date', 'Open', 'Hold', 'In Progress', 'Reopen', 'Closed']);
+    ).toEqual([
+      'Date',
+      'Open',
+      'In Progress',
+      'Requirement Pending',
+      'Clarification Required',
+      'Blocked',
+      'Ready for BA Review',
+      'Reopened',
+      'Closed',
+      'Invalid',
+      'On Hold',
+    ]);
     expect(within(grid).getAllByRole('row')).toHaveLength(15);
   });
 
@@ -300,23 +324,23 @@ describe('TicketsDashboardPage', () => {
       http.patch(orgApiPath('/tickets/:ticketId'), async ({ request }) => {
         bodies.push(await request.json());
         await pending.promise;
-        current = { ...apt15, status: 'hold' };
+        current = { ...apt15, status: 'on_hold' };
         return ok(detailOf(current));
       }),
     );
     renderDashboard();
 
     await user.click(await screen.findByRole('button', { name: 'Status of APT15: Open' }));
-    await user.click(screen.getByRole('option', { name: 'Hold' }));
+    await user.click(screen.getByRole('option', { name: /^On Hold/ }));
 
-    // At once: the pill already says Hold while the request is still on its way.
+    // At once: the pill already says On Hold while the request is still on its way.
     expect(
-      await screen.findByRole('button', { name: 'Status of APT15: Hold' }),
+      await screen.findByRole('button', { name: 'Status of APT15: On Hold' }),
     ).toBeInTheDocument();
-    await waitFor(() => expect(bodies).toEqual([{ status: 'hold' }]));
+    await waitFor(() => expect(bodies).toEqual([{ status: 'on_hold' }]));
     pending.open();
-    expect(await screen.findByText('Status of APT15 set to Hold')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Status of APT15: Hold' })).toBeInTheDocument();
+    expect(await screen.findByText('Status of APT15 set to On Hold')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Status of APT15: On Hold' })).toBeInTheDocument();
   });
 
   it('puts the status back and says why when the API refuses the change', async () => {
@@ -330,7 +354,7 @@ describe('TicketsDashboardPage', () => {
     renderDashboard();
 
     await user.click(await screen.findByRole('button', { name: 'Status of APT15: Open' }));
-    await user.click(screen.getByRole('option', { name: 'Hold' }));
+    await user.click(screen.getByRole('option', { name: /^On Hold/ }));
 
     expect(await screen.findByText('Could not change APT15')).toBeInTheDocument();
     expect(screen.getByText('That status is not allowed.')).toBeInTheDocument();

@@ -5,6 +5,7 @@ import { cn } from '@/utils/cn';
 
 import {
   PRIORITY_META,
+  STATUS_HINTS,
   STATUS_META,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
@@ -16,6 +17,8 @@ interface PillOption<TValue extends string> {
   value: TValue;
   label: string;
   tone: ToneClasses;
+  /** What the choice means, a second line in the menu. */
+  description?: string;
 }
 
 interface SelectPillProps<TValue extends string> {
@@ -70,6 +73,7 @@ function SelectPill<TValue extends string>({
   const choices: PickerOption[] = options.map((option) => ({
     value: option.value,
     label: option.label,
+    description: option.description,
     icon:
       lead === 'dot' ? (
         <span
@@ -101,6 +105,7 @@ const STATUS_OPTIONS: ReadonlyArray<PillOption<TicketStatus>> = TICKET_STATUSES.
   value: status,
   label: STATUS_META[status].label,
   tone: STATUS_META[status].tone,
+  description: STATUS_HINTS[status],
 }));
 
 const PRIORITY_OPTIONS: ReadonlyArray<PillOption<TicketPriority>> = TICKET_PRIORITIES.map(
@@ -118,7 +123,7 @@ export interface TicketSelectProps<TValue extends string> {
   size?: 'sm' | 'md';
 }
 
-/** The status of a ticket as a select pill: Open amber, Hold orange, In Progress cyan, Reopen red, Closed green. */
+/** The status of a ticket as a select pill in the status's colour; the menu says what each status is for. */
 export function StatusSelect({
   ticket,
   editable,

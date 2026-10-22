@@ -234,7 +234,7 @@ describe('TicketDetailPage', () => {
       renderDetail();
 
       await user.click(await screen.findByRole('button', { name: 'Status of APT1: In Progress' }));
-      await user.click(screen.getByRole('option', { name: 'Closed' }));
+      await user.click(screen.getByRole('option', { name: /^Closed/ }));
 
       expect(
         await screen.findByRole('button', { name: 'Status of APT1: Closed' }),

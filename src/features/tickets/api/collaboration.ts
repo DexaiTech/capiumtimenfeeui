@@ -101,3 +101,15 @@ export function useDeleteAttachment(ticketId: string) {
     onSettled: () => invalidate.attachments(ticketId),
   });
 }
+
+/** What happened to a ticket, newest first, a page at a time. */
+export function useTicketTimeline(ticketId: string) {
+  const { organization } = useOrg();
+  return useInfiniteQuery({
+    queryKey: ticketKeys.timeline(organization.id, ticketId),
+    queryFn: ({ pageParam, signal }) =>
+      ticketsApi.timeline(organization.id, ticketId, { cursor: pageParam, signal }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: nextCursor,
+  });
+}

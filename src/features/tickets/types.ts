@@ -5,7 +5,17 @@ import type { IsoDate, IsoDateTime } from '@/types/api';
  * the practice's tracker for bugs and enhancements found while using the application.
  */
 
-export type TicketStatus = 'open' | 'hold' | 'in_progress' | 'reopen' | 'closed';
+export type TicketStatus =
+  | 'open'
+  | 'in_progress'
+  | 'requirement_pending'
+  | 'clarification_required'
+  | 'blocked'
+  | 'ready_for_ba_review'
+  | 'reopened'
+  | 'closed'
+  | 'invalid'
+  | 'on_hold';
 export type TicketPriority = 'high' | 'medium' | 'low' | 'not_set';
 /** Names of design-system tones: each maps to the badge tone of the same name. */
 export type TagColor = 'violet' | 'blue' | 'green' | 'red' | 'orange' | 'grey';
@@ -207,4 +217,38 @@ export interface TicketDashboard {
 export interface DashboardRange {
   date_from?: IsoDate;
   date_to?: IsoDate;
+}
+
+export type TimelineKind =
+  | 'created'
+  | 'status_changed'
+  | 'priority_changed'
+  | 'assignee_changed'
+  | 'tags_changed'
+  | 'subject_changed'
+  | 'description_changed'
+  | 'comment_added'
+  | 'comment_edited'
+  | 'comment_deleted'
+  | 'file_added'
+  | 'file_removed';
+
+/** One thing that happened to a ticket (`GET /tickets/{id}/timeline`), newest first. */
+export interface TimelineEvent {
+  id: string;
+  kind: TimelineKind;
+  at: IsoDateTime;
+  /** Null for what the system did. */
+  actor: Person | null;
+  /** A status or priority code, a person's name ("Unassigned" for none) or the old subject. */
+  before: string | null;
+  after: string | null;
+  /** The tags added and removed (`tags_changed`). */
+  added: string[];
+  removed: string[];
+  /** An excerpt of the comment, or the name of the file. */
+  detail: string | null;
+  comment_id: string | null;
+  /** True when a bulk action on several tickets made the change. */
+  bulk: boolean;
 }

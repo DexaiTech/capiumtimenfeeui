@@ -17,6 +17,8 @@ export const ticketKeys = {
     [...queryKeys.org.tickets(organizationId), 'detail'] as const,
   comments: (organizationId: string, ticketId: string) =>
     [...queryKeys.org.tickets(organizationId), 'comments', ticketId] as const,
+  timeline: (organizationId: string, ticketId: string) =>
+    [...queryKeys.org.tickets(organizationId), 'timeline', ticketId] as const,
   file: (organizationId: string, ticketId: string, attachmentId: string) =>
     [...queryKeys.org.tickets(organizationId), 'file', ticketId, attachmentId] as const,
   dashboards: (organizationId: string) =>

@@ -5,6 +5,7 @@ export {
   useCreateTicketTag,
   useTicketComments,
   useTicketTags,
+  useTicketTimeline,
   useUpdateComment,
 } from './collaboration';
 export { useTicketInvalidation } from './invalidation';

@@ -148,12 +148,12 @@ describe('filters', () => {
   it('reads the filters from the address and drops what is not a status, a priority or a sort', () => {
     const filters = filtersFromParams(
       new URLSearchParams(
-        'q=%20trial%20&status=open&status=done&status=reopen&priority=high&priority=urgent&tag=t1&tag=&sort=subject&order=asc',
+        'q=%20trial%20&status=open&status=done&status=reopened&priority=high&priority=urgent&tag=t1&tag=&sort=subject&order=asc',
       ),
     );
     expect(filters).toEqual({
       q: 'trial',
-      status: ['open', 'reopen'],
+      status: ['open', 'reopened'],
       priority: ['high'],
       tag_id: ['t1'],
       sort: 'subject',
@@ -337,13 +337,29 @@ describe('errors', () => {
 
 describe('constants', () => {
   it('has a label, a tone and a chart colour for every status and priority, in the order of the API', () => {
-    expect(TICKET_STATUSES).toEqual(['open', 'hold', 'in_progress', 'reopen', 'closed']);
+    expect(TICKET_STATUSES).toEqual([
+      'open',
+      'in_progress',
+      'requirement_pending',
+      'clarification_required',
+      'blocked',
+      'ready_for_ba_review',
+      'reopened',
+      'closed',
+      'invalid',
+      'on_hold',
+    ]);
     expect(TICKET_STATUSES.map((status) => STATUS_META[status].label)).toEqual([
       'Open',
-      'Hold',
       'In Progress',
-      'Reopen',
+      'Requirement Pending',
+      'Clarification Required',
+      'Blocked',
+      'Ready for BA Review',
+      'Reopened',
       'Closed',
+      'Invalid',
+      'On Hold',
     ]);
     expect(TICKET_PRIORITIES).toEqual(['high', 'medium', 'low', 'not_set']);
     expect(TICKET_PRIORITIES.map((priority) => PRIORITY_META[priority].label)).toEqual([

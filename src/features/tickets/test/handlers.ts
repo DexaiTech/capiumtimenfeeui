@@ -9,8 +9,16 @@ import type {
   TicketDetail,
   TicketListItem,
   TicketTag,
+  TimelineEvent,
 } from '../types';
-import { apt1Detail, testComments, testDashboard, testTags, testTickets } from './fixtures';
+import {
+  apt1Detail,
+  testComments,
+  testDashboard,
+  testTags,
+  testTickets,
+  testTimeline,
+} from './fixtures';
 
 export { orgApiPath };
 
@@ -33,6 +41,8 @@ export interface TicketData {
   /** The one ticket `GET /tickets/{id}` knows. */
   detail?: TicketDetail;
   comments?: TicketComment[];
+  /** The events `GET /tickets/{id}/timeline` answers, newest first. */
+  timeline?: TimelineEvent[];
   /** Tickets per page; everything at once when absent. */
   pageSize?: number;
   /** Comments per page; everything at once when absent. */
@@ -94,6 +104,7 @@ export function ticketHandlers(data: TicketData = {}): HttpHandler[] {
   const tags = data.tags ?? testTags;
   const detail = data.detail ?? apt1Detail;
   const comments = data.comments ?? testComments;
+  const timeline = data.timeline ?? testTimeline;
 
   return [
     http.get(orgApiPath('/tickets/dashboard'), ({ request }) => {
@@ -128,6 +139,10 @@ export function ticketHandlers(data: TicketData = {}): HttpHandler[] {
         ? ok(detail)
         : fail(404, 'RESOURCE_NOT_FOUND', 'Ticket not found.'),
     ),
+    http.get(orgApiPath('/tickets/:ticketId/timeline'), ({ request }) => {
+      const result = pageOf(timeline, new URL(request.url).searchParams, data.commentPageSize);
+      return ok(result.rows, { meta: result.meta });
+    }),
     http.get(orgApiPath('/tickets/:ticketId/comments'), ({ request }) => {
       const result = pageOf(comments, new URL(request.url).searchParams, data.commentPageSize);
       return ok(result.rows, { meta: result.meta });

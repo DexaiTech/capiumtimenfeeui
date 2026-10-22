@@ -1,6 +1,8 @@
 import { testUser } from '@/test/fixtures';
 
+import { TICKET_STATUSES } from '../constants';
 import type {
+  Kpi,
   Person,
   TagRef,
   TicketAttachment,
@@ -9,6 +11,7 @@ import type {
   TicketDetail,
   TicketListItem,
   TicketTag,
+  TimelineEvent,
   TrendPoint,
 } from '../types';
 
@@ -239,6 +242,43 @@ export const bobComment: TicketComment = {
 
 export const testComments: TicketComment[] = [adaComment, bobComment];
 
+const timelineEvent = (
+  id: string,
+  kind: TimelineEvent['kind'],
+  at: string,
+  rest: Partial<TimelineEvent> = {},
+): TimelineEvent => ({
+  id,
+  kind,
+  at,
+  actor: userOne,
+  before: null,
+  after: null,
+  added: [],
+  removed: [],
+  detail: null,
+  comment_id: null,
+  bulk: false,
+  ...rest,
+});
+
+/** The timeline of APT1, newest first: created, a status, a tag and a comment. */
+export const testTimeline: TimelineEvent[] = [
+  timelineEvent('e4', 'comment_added', '2026-10-21T10:30:00Z', {
+    detail: 'Looks like the opening balance.',
+    comment_id: adaComment.id,
+  }),
+  timelineEvent('e3:tags', 'tags_changed', '2026-10-21T10:00:00Z', {
+    added: ['Reporting'],
+    removed: ['Docs'],
+  }),
+  timelineEvent('e2', 'status_changed', '2026-10-20T15:00:00Z', {
+    before: 'open',
+    after: 'requirement_pending',
+  }),
+  timelineEvent('e1', 'created', '2026-10-20T09:00:00Z', { after: 'open' }),
+];
+
 /* ---------------------------------- Detail --------------------------------- */
 
 /** The detail of a ticket: its list item without the excerpt, with the full text and the files. */
@@ -271,19 +311,26 @@ export const apt2Detail: TicketDetail = detailOf(apt2, { description: null });
 const point = (
   date: string,
   open: number,
-  hold: number,
+  onHold: number,
   inProgress: number,
-  reopen: number,
+  reopened: number,
   closed: number,
 ): TrendPoint => ({
   date,
   open,
-  hold,
   in_progress: inProgress,
-  reopen,
+  requirement_pending: 0,
+  clarification_required: 0,
+  blocked: 0,
+  ready_for_ba_review: 0,
+  reopened,
   closed,
-  total: open + hold + inProgress + reopen + closed,
+  invalid: 0,
+  on_hold: onHold,
+  total: open + onHold + inProgress + reopened + closed,
 });
+
+const NO_CHANGE: Kpi = { value: 0, previous: 0, change: { kind: 'none', percent: null } };
 
 /** The dataset of the API document: the 30 days 1 to 30 September (16 tickets, 10 before). */
 export const testDashboard: TicketDashboard = {
@@ -295,17 +342,27 @@ export const testDashboard: TicketDashboard = {
   kpis: {
     total: { value: 16, previous: 10, change: { kind: 'percent', percent: 60 } },
     open: { value: 6, previous: 4, change: { kind: 'percent', percent: 50 } },
-    hold: { value: 2, previous: 0, change: { kind: 'new', percent: null } },
     in_progress: { value: 3, previous: 3, change: { kind: 'percent', percent: 0 } },
-    reopen: { value: 1, previous: 2, change: { kind: 'percent', percent: -50 } },
+    requirement_pending: NO_CHANGE,
+    clarification_required: NO_CHANGE,
+    blocked: NO_CHANGE,
+    ready_for_ba_review: NO_CHANGE,
+    reopened: { value: 1, previous: 2, change: { kind: 'percent', percent: -50 } },
     closed: { value: 4, previous: 1, change: { kind: 'percent', percent: 300 } },
+    invalid: NO_CHANGE,
+    on_hold: { value: 2, previous: 0, change: { kind: 'new', percent: null } },
   },
   by_status: [
     { status: 'open', count: 6, percent: 37.5 },
-    { status: 'hold', count: 2, percent: 12.5 },
     { status: 'in_progress', count: 3, percent: 18.8 },
-    { status: 'reopen', count: 1, percent: 6.3 },
+    { status: 'requirement_pending', count: 0, percent: 0 },
+    { status: 'clarification_required', count: 0, percent: 0 },
+    { status: 'blocked', count: 0, percent: 0 },
+    { status: 'ready_for_ba_review', count: 0, percent: 0 },
+    { status: 'reopened', count: 1, percent: 6.3 },
     { status: 'closed', count: 4, percent: 25.0 },
+    { status: 'invalid', count: 0, percent: 0 },
+    { status: 'on_hold', count: 2, percent: 12.5 },
   ],
   by_priority: [
     { priority: 'high', count: 4, percent: 25.0 },
@@ -401,18 +458,17 @@ export const emptyDashboard: TicketDashboard = {
   kpis: {
     total: { value: 0, previous: 0, change: { kind: 'none', percent: null } },
     open: { value: 0, previous: 0, change: { kind: 'none', percent: null } },
-    hold: { value: 0, previous: 0, change: { kind: 'none', percent: null } },
-    in_progress: { value: 0, previous: 0, change: { kind: 'none', percent: null } },
-    reopen: { value: 0, previous: 0, change: { kind: 'none', percent: null } },
-    closed: { value: 0, previous: 0, change: { kind: 'none', percent: null } },
+    in_progress: NO_CHANGE,
+    requirement_pending: NO_CHANGE,
+    clarification_required: NO_CHANGE,
+    blocked: NO_CHANGE,
+    ready_for_ba_review: NO_CHANGE,
+    reopened: NO_CHANGE,
+    closed: NO_CHANGE,
+    invalid: NO_CHANGE,
+    on_hold: NO_CHANGE,
   },
-  by_status: [
-    { status: 'open', count: 0, percent: null },
-    { status: 'hold', count: 0, percent: null },
-    { status: 'in_progress', count: 0, percent: null },
-    { status: 'reopen', count: 0, percent: null },
-    { status: 'closed', count: 0, percent: null },
-  ],
+  by_status: TICKET_STATUSES.map((status) => ({ status, count: 0, percent: null })),
   by_priority: [
     { priority: 'high', count: 0, percent: null },
     { priority: 'medium', count: 0, percent: null },

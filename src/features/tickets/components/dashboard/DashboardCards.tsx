@@ -96,11 +96,7 @@ export function TagCard({ data, className }: DashboardCardProps) {
 export function TrendCard({ data }: DashboardCardProps) {
   const rows = (data?.trend ?? []).map((point) => ({
     date: point.date,
-    open: point.open,
-    hold: point.hold,
-    in_progress: point.in_progress,
-    reopen: point.reopen,
-    closed: point.closed,
+    ...Object.fromEntries(TICKET_STATUSES.map((status) => [status, point[status]])),
   }));
   const empty = data ? data.kpis.total.value === 0 : false;
   return (

@@ -15,6 +15,7 @@ import type {
   TicketListItem,
   TicketTag,
   TicketUpdate,
+  TimelineEvent,
 } from '../types';
 
 const org = (organizationId: string) => `/organizations/${encodeURIComponent(organizationId)}`;
@@ -58,6 +59,12 @@ export const ticketsApi = {
     api.get<TicketDashboard>(`${org(organizationId)}/tickets/dashboard`, {
       query: { date_from: range.date_from, date_to: range.date_to },
       signal,
+    }),
+
+  timeline: (organizationId: string, ticketId: string, page: PageRequest = {}) =>
+    api.list<TimelineEvent>(`${org(organizationId)}/tickets/${seg(ticketId)}/timeline`, {
+      query: { limit: page.limit ?? PAGE_SIZE, cursor: page.cursor },
+      signal: page.signal,
     }),
 
   /* ---------------------------------- Comments -------------------------------- */

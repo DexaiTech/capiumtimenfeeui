@@ -26,6 +26,7 @@ export function useTicketInvalidation() {
         refresh(
           ticketKeys.lists(id),
           ticketKeys.detail(id, ticketId),
+          ticketKeys.timeline(id, ticketId),
           ticketKeys.dashboards(id),
           ticketKeys.tags(id),
           audit,
@@ -35,6 +36,7 @@ export function useTicketInvalidation() {
         refresh(
           ticketKeys.lists(id),
           ticketKeys.details(id),
+          [...queryKeys.org.tickets(id), 'timeline'],
           ticketKeys.dashboards(id),
           ticketKeys.tags(id),
           audit,
@@ -44,6 +46,7 @@ export function useTicketInvalidation() {
         refresh(
           ticketKeys.comments(id, ticketId),
           ticketKeys.detail(id, ticketId),
+          ticketKeys.timeline(id, ticketId),
           ticketKeys.lists(id),
           audit,
         ),
@@ -52,6 +55,7 @@ export function useTicketInvalidation() {
         refresh(
           ticketKeys.detail(id, ticketId),
           ticketKeys.comments(id, ticketId),
+          ticketKeys.timeline(id, ticketId),
           ticketKeys.lists(id),
           audit,
         ),

@@ -11,6 +11,7 @@ import { useDocumentTitle } from '@/hooks';
 import { useTicket, useUpdateTicket } from '../api';
 import { CommentsPanel } from '../components/detail/CommentsPanel';
 import { TicketCard } from '../components/detail/TicketCard';
+import { TimelinePanel } from '../components/detail/TimelinePanel';
 import { UploadPanel } from '../components/detail/UploadPanel';
 import { LiveRegion } from '../components/LiveRegion';
 import { LoadError, NoAccess } from '../components/Notices';
@@ -126,11 +127,12 @@ function TicketDetail({ ticketId }: { ticketId: string }) {
         />
         <UploadPanel ticketId={ticketId} canUpdate={canUpdate} />
       </div>
+      <TimelinePanel ticketId={ticketId} timeZone={organization.timezone} />
     </div>
   );
 }
 
-/** `/:orgSlug/application-testing/tickets/:ticketId`: one ticket, with its comments and files (`ticket.read`). */
+/** `/:orgSlug/application-testing/tickets/:ticketId`: one ticket, with its comments, files and timeline (`ticket.read`). */
 export default function TicketDetailPage() {
   const { ticketId } = useParams();
   const { can } = useOrg();

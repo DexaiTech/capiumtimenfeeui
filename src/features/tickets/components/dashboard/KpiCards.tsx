@@ -13,12 +13,15 @@ export interface KpiCardsProps {
 }
 
 /**
- * The six cards of the dashboard: an icon badge, the number, the label and how the number moved
+ * The cards of the dashboard (the total and one per status): an icon badge, the number, the label and how the number moved
  * against the previous period of the same length (green up arrow, red down arrow).
  */
 export function KpiCards({ kpis }: KpiCardsProps) {
   return (
-    <ul aria-label="Ticket totals" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <ul
+      aria-label="Ticket totals"
+      className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6"
+    >
       {KPI_CARDS.map((card) => {
         const Icon = card.icon;
         const kpi = kpis?.[card.key];
