@@ -269,6 +269,27 @@ export interface ImportResult {
   clients: ImportedClient[];
 }
 
+/** One row of a staff, rate or job import: `code` is the staff code or job number (null for rates). */
+export interface ImportedRecord {
+  row: number;
+  code: string | null;
+  name: string;
+  id: string | null;
+}
+
+/** What `POST /imports/{staff,rates,jobs}` answers (`counts`: `rates`, or `cost` and `charge`). */
+export interface BulkImportResult {
+  dry_run: boolean;
+  total_rows: number;
+  valid_rows: number;
+  created: number;
+  columns: string[];
+  ignored_columns: string[];
+  errors: ImportRowError[];
+  items: ImportedRecord[];
+  counts: Record<string, number>;
+}
+
 export interface ImportedOpeningBalanceTime {
   row: number;
   client_code: string;

@@ -5,7 +5,6 @@ import { formatActivity, initialsOf } from '../format';
 import type { ClientListItem } from '../types';
 import { ActionMenu, type MenuAction } from './ActionMenu';
 import {
-  AmlPill,
   CentralCell,
   DeadlineCell,
   HealthCell,
@@ -164,10 +163,6 @@ export function ClientsGrid({
                 <dt>Deadlines</dt>
                 <dd>
                   <DeadlineCell deadlines={client.deadlines} today={today} />
-                </dd>
-                <dt>AML</dt>
-                <dd>
-                  <AmlPill status={client.aml_status} />
                 </dd>
                 <dt>Activity</dt>
                 <dd>{formatActivity(client.last_activity_at, timeZone)}</dd>

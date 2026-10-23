@@ -7,8 +7,8 @@ import { NoAccess, SettingsSection } from '../components/SettingsSection';
 
 /**
  * `/:orgSlug/settings/import-export`: what can be moved in and out of the application in bulk.
- * Clients can be exported (`client.read`) and imported (`client.create`); the rest is not
- * available from the API yet.
+ * Clients can be exported (`client.read`) and imported (`client.create`); staff, rates and jobs
+ * are exported and imported with `data.import_export` and the permission of each.
  */
 export default function ImportExportPage() {
   const { can } = useOrg();

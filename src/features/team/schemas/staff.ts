@@ -8,6 +8,7 @@ import {
   optionalCodeText,
   optionalEmailText,
   optionalPercentText,
+  optionalRateText,
   textMax,
 } from './common';
 
@@ -48,6 +49,11 @@ const shape = {
   login_email: optionalEmailText,
   role_id: z.string(),
   send_email: z.boolean(),
+  /** Add only, with `rate.manage`: the person's own rates, in pounds per hour; empty: none. */
+  cost_rate: optionalRateText('Enter the cost rate in pounds per hour, for example 48.00'),
+  charge_rate: optionalRateText('Enter the charge-out rate in pounds per hour, for example 95.00'),
+  /** Add only: when those rates start; empty means the start date. */
+  rate_effective_from: z.string(),
 };
 
 const LEAVING_BEFORE_START = "The leaving date can't be before the start date";

@@ -28,13 +28,6 @@ afterEach(() => {
 /** A thread the handlers serve and change the way the API would. */
 const thread = (): TicketComment[] => structuredClone(testComments);
 
-/** The edit box opens with the caret at its end once it has the focus: type when it has. */
-const typeInEditBox = async (user: ReturnType<typeof userEvent.setup>, keys: string) => {
-  const field = await screen.findByRole('textbox', { name: 'Comment text' });
-  await waitFor(() => expect(field).toHaveFocus());
-  await user.keyboard(keys);
-};
-
 const commentOf = (author: string): HTMLElement => {
   const item = screen.getByText(author, { selector: 'span' }).closest('li');
   if (!item) throw new Error(`No comment by ${author}`);
@@ -399,208 +392,25 @@ describe('the comments of a ticket', () => {
     });
   });
 
-  describe('editing and deleting', () => {
-    it('lets the author edit her comment with Save, and marks it edited', async () => {
-      const user = userEvent.setup();
-      const comments = thread();
-      const bodies: unknown[] = [];
-      server.use(
-        http.patch(
-          orgApiPath('/tickets/:ticketId/comments/:commentId'),
-          async ({ request, params }) => {
-            const body = (await request.json()) as { body: string };
-            bodies.push([params.commentId, body]);
-            Object.assign(comments[0] as TicketComment, {
-              body: body.body,
-              edited_at: '2026-10-18T12:00:00Z',
-            });
-            return ok(comments[0]);
-          },
-        ),
-        ...ticketHandlers({ comments }),
-      );
-      renderDetail();
-      await screen.findByText('Reproduced on the demo practice.');
-
-      await user.click(
-        within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }),
-      );
-      const field = screen.getByRole('textbox', { name: 'Comment text' });
-      expect(field).toHaveTextContent('Reproduced on the demo practice.');
-      await typeInEditBox(user, ' Also on the Globex practice.');
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-
-      await waitFor(() =>
-        expect(bodies).toEqual([
-          [
-            adaComment.id,
-            {
-              body: 'Reproduced on the demo practice. Also on the Globex practice.',
-              body_html: '<p>Reproduced on the demo practice. Also on the Globex practice.</p>',
-            },
-          ],
-        ]),
-      );
-      expect(await screen.findByText('Comment saved')).toBeInTheDocument();
-      await waitFor(() => expect(commentOf('Ada Lovelace')).toHaveTextContent('(edited)'));
-      expect(screen.queryByRole('textbox', { name: 'Comment text' })).not.toBeInTheDocument();
-    });
-
-    it('saves with Ctrl+Enter, cancels with Escape and sends nothing for unchanged text', async () => {
-      const user = userEvent.setup();
-      const bodies: unknown[] = [];
-      server.use(
-        http.patch(orgApiPath('/tickets/:ticketId/comments/:commentId'), async ({ request }) => {
-          bodies.push(await request.json());
-          return ok(adaComment);
-        }),
-        ...ticketHandlers(),
-      );
-      renderDetail();
-      await screen.findByText('Reproduced on the demo practice.');
-
-      const edit = () =>
-        user.click(within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }));
-      await edit();
-      await typeInEditBox(user, ' more{Escape}');
-      expect(screen.queryByRole('textbox', { name: 'Comment text' })).not.toBeInTheDocument();
-
-      await edit();
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-      expect(screen.queryByRole('textbox', { name: 'Comment text' })).not.toBeInTheDocument();
-      expect(bodies).toEqual([]);
-
-      await edit();
-      await typeInEditBox(user, '!{Control>}{Enter}{/Control}');
-      await waitFor(() =>
-        expect(bodies).toEqual([
-          {
-            body: 'Reproduced on the demo practice.!',
-            body_html: '<p>Reproduced on the demo practice.!</p>',
-          },
-        ]),
-      );
-    });
-
-    it("shows the API's refusal of an edit under the field", async () => {
-      const user = userEvent.setup();
-      server.use(
-        http.patch(orgApiPath('/tickets/:ticketId/comments/:commentId'), () =>
-          fail(403, 'PERMISSION_DENIED', 'Only the author may edit a comment.'),
-        ),
-        ...ticketHandlers(),
-      );
-      renderDetail();
-      await screen.findByText('Reproduced on the demo practice.');
-
-      await user.click(
-        within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }),
-      );
-      await typeInEditBox(user, '!');
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-
-      expect(await screen.findByText('Only the author may edit a comment.')).toBeInTheDocument();
-      expect(screen.getByRole('textbox', { name: 'Comment text' })).toBeInTheDocument();
-    });
-
-    it('offers editing only to the author, and deleting to the author and to a moderator', async () => {
+  describe('a comment is a record', () => {
+    it.each([
+      ['Owner', OWNER_PERMISSIONS],
+      ['Staff', STAFF_PERMISSIONS],
+      ['a reader', ['ticket.read']],
+    ])('offers %s no way to edit or delete a comment', async (_who, permissions) => {
       server.use(...ticketHandlers());
-      renderDetail(OWNER_PERMISSIONS);
+      renderDetail(permissions);
       await screen.findByText('Reproduced on the demo practice.');
 
-      expect(
-        within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }),
-      ).toBeInTheDocument();
-      expect(
-        within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Delete comment' }),
-      ).toBeInTheDocument();
-      // Someone else's: not editable, but a person with ticket.delete may remove it.
-      expect(
-        within(commentOf('Bob Brown')).queryByRole('button', { name: 'Edit comment' }),
-      ).not.toBeInTheDocument();
-      expect(
-        within(commentOf('Bob Brown')).getByRole('button', { name: 'Delete comment' }),
-      ).toBeInTheDocument();
-    });
-
-    it('gives Staff the buttons of their own comments only', async () => {
-      server.use(...ticketHandlers());
-      renderDetail(STAFF_PERMISSIONS);
-      await screen.findByText('Reproduced on the demo practice.');
-
-      expect(
-        within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Edit comment' }),
-      ).toBeInTheDocument();
-      expect(
-        within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Delete comment' }),
-      ).toBeInTheDocument();
-      expect(within(commentOf('Bob Brown')).queryByRole('button')).not.toBeInTheDocument();
-    });
-
-    it('shows a role that may only read the thread without any button', async () => {
-      server.use(...ticketHandlers());
-      renderDetail(['ticket.read']);
-      await screen.findByText('Reproduced on the demo practice.');
-
-      expect(
-        within(commentOf('Ada Lovelace')).queryByRole('button', { name: /comment$/ }),
-      ).not.toBeInTheDocument();
-      expect(screen.queryByRole('textbox', { name: 'Comment' })).not.toBeInTheDocument();
-    });
-
-    it('deletes a comment after a confirmation that names its author', async () => {
-      const user = userEvent.setup();
-      const comments = thread();
-      const deleted: unknown[] = [];
-      server.use(
-        http.delete(orgApiPath('/tickets/:ticketId/comments/:commentId'), ({ params }) => {
-          deleted.push(params.commentId);
-          comments.splice(1, 1);
-          return ok(null, { message: 'Comment deleted' });
-        }),
-        ...ticketHandlers({ comments }),
-      );
-      renderDetail();
-      await screen.findByText('Same difference after the second client is selected.');
-
-      await user.click(
-        within(commentOf('Bob Brown')).getByRole('button', { name: 'Delete comment' }),
-      );
-      const dialog = screen.getByRole('dialog', { name: 'Delete comment?' });
-      expect(dialog).toHaveTextContent(
-        'The comment by Bob Brown will be deleted with its files. This cannot be undone.',
-      );
-      await user.click(within(dialog).getByRole('button', { name: 'Delete comment' }));
-
-      await waitFor(() => expect(deleted).toEqual([bobComment.id]));
-      expect(await screen.findByText('Comment deleted')).toBeInTheDocument();
-      await waitFor(() =>
+      for (const author of ['Ada Lovelace', 'Bob Brown']) {
+        const item = commentOf(author);
         expect(
-          screen.queryByText('Same difference after the second client is selected.'),
-        ).not.toBeInTheDocument(),
-      );
-    });
-
-    it('keeps the dialog open with the reason when the API refuses the delete', async () => {
-      const user = userEvent.setup();
-      server.use(
-        http.delete(orgApiPath('/tickets/:ticketId/comments/:commentId'), () =>
-          fail(403, 'PERMISSION_DENIED', 'You may not delete this comment.'),
-        ),
-        ...ticketHandlers(),
-      );
-      renderDetail();
-      await screen.findByText('Reproduced on the demo practice.');
-
-      await user.click(
-        within(commentOf('Ada Lovelace')).getByRole('button', { name: 'Delete comment' }),
-      );
-      const dialog = screen.getByRole('dialog', { name: 'Delete comment?' });
-      await user.click(within(dialog).getByRole('button', { name: 'Delete comment' }));
-
-      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-        'You may not delete this comment.',
-      );
+          within(item).queryByRole('button', { name: 'Edit comment' }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(item).queryByRole('button', { name: 'Delete comment' }),
+        ).not.toBeInTheDocument();
+      }
     });
   });
 });

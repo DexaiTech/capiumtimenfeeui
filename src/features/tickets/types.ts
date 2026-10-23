@@ -124,9 +124,6 @@ export interface TicketCreate {
 
 /** PATCH body: any subset. */
 export interface TicketUpdate {
-  subject?: string;
-  description?: string | null;
-  description_html?: string | null;
   status?: TicketStatus;
   priority?: TicketPriority;
   assignee_id?: string | null;

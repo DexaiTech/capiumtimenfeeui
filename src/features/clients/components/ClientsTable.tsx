@@ -6,7 +6,6 @@ import type { ToggleableColumnId } from '../constants';
 import type { ClientListItem, ClientSort, SortOrder } from '../types';
 import { ActionMenu, type MenuAction } from './ActionMenu';
 import {
-  AmlPill,
   CentralCell,
   DeadlineCell,
   HealthCell,
@@ -201,16 +200,6 @@ export function ClientsTable({
                   Deadlines
                 </th>
               ) : null}
-              {show('aml') ? (
-                <SortHeader
-                  label="AML"
-                  className="cc-col-aml"
-                  sortKey="aml_status"
-                  sort={sort}
-                  order={order}
-                  onSort={onSort}
-                />
-              ) : null}
               {show('activity') ? (
                 <th scope="col" className="cc-col-activity">
                   Activity
@@ -326,11 +315,6 @@ export function ClientsTable({
                         <DeadlineCell deadlines={client.deadlines} today={today} />
                       </td>
                     ) : null}
-                    {show('aml') ? (
-                      <td>
-                        <AmlPill status={client.aml_status} />
-                      </td>
-                    ) : null}
                     {show('activity') ? (
                       <td>{formatActivity(client.last_activity_at, timeZone)}</td>
                     ) : null}
@@ -382,7 +366,6 @@ const TOGGLE_ORDER: ToggleableColumnId[] = [
   'contact',
   'contact_email',
   'deadlines',
-  'aml',
   'activity',
   'services',
   'central',

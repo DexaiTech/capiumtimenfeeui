@@ -1,5 +1,6 @@
 import { PAGE_SIZE } from '@/constants/limits';
 import { api } from '@/services/api';
+import type { BulkResult } from '@/types';
 
 import type {
   BudgetEvaluation,
@@ -8,6 +9,7 @@ import type {
   Job,
   JobBudgetDetail,
   JobBudgetList,
+  JobBulkRequest,
   JobCalendar,
   JobCopyInput,
   JobFilters,
@@ -66,6 +68,8 @@ export const jobsApi = {
     api.post<Job>(`${org(organizationId)}/jobs`, body),
   updateJob: (organizationId: string, jobId: string, body: JobUpdate) =>
     api.patch<Job>(`${org(organizationId)}/jobs/${seg(jobId)}`, body),
+  bulk: (organizationId: string, body: JobBulkRequest) =>
+    api.post<BulkResult<JobBulkRequest['action']>>(`${org(organizationId)}/jobs/bulk`, body),
   deleteJob: (organizationId: string, jobId: string) =>
     api.delete<null>(`${org(organizationId)}/jobs/${seg(jobId)}`),
   changeStatus: (organizationId: string, jobId: string, status: JobStatus) =>

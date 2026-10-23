@@ -191,6 +191,12 @@ export interface InvoiceCreate {
 }
 
 /** PATCH of the header: a draft takes all four, an issued invoice is not editable. */
+/** `POST /invoices/bulk`: delete 1-200 drafts, all or nothing (the only bulk action). */
+export interface InvoiceBulkRequest {
+  invoice_ids: string[];
+  action: 'delete';
+}
+
 export interface InvoiceHeaderUpdate {
   issue_date?: IsoDate;
   due_date?: IsoDate;
@@ -555,11 +561,7 @@ export type DebtorSort =
 export type ReminderTemplate = 'client_payment_reminder' | 'client_payment_final_notice';
 
 export type ReminderSkipReason =
-  | 'already_reminded_today'
-  | 'not_overdue'
-  | 'no_balance'
-  | 'not_issued'
-  | 'no_recipient';
+  'already_reminded_today' | 'not_overdue' | 'no_balance' | 'not_issued' | 'no_recipient';
 
 /** Exactly one of `client_ids` (every overdue invoice of each) and `invoice_ids`. */
 export type ReminderRequest = {

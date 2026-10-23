@@ -3,6 +3,7 @@ import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from '@tans
 import { useOrg } from '@/features/organizations';
 
 import type {
+  StaffBulkRequest,
   StaffCreate,
   StaffDetail,
   StaffFilters,
@@ -103,6 +104,16 @@ export function useSaveStaff() {
       }
       return saved;
     },
+    onSettled: invalidate.staff,
+  });
+}
+
+/** One action on the selected people: all or nothing (`POST /staff/bulk`). */
+export function useBulkStaff() {
+  const { organization } = useOrg();
+  const invalidate = useTeamInvalidation();
+  return useMutation({
+    mutationFn: (body: StaffBulkRequest) => teamApi.bulkStaff(organization.id, body),
     onSettled: invalidate.staff,
   });
 }

@@ -91,6 +91,17 @@ export interface JobInput {
 /** `JobUpdate`: every field optional; the client and the status have no place here. */
 export type JobUpdate = Partial<Omit<JobInput, 'client_id' | 'status' | 'assignee_user_ids'>>;
 
+/**
+ * `POST /jobs/bulk`: one action on 1-200 jobs, all or nothing. `set_manager` and `set_due_date`
+ * take null to clear; `delete` takes no value.
+ */
+export type JobBulkRequest = { job_ids: string[] } & (
+  | { action: 'set_status'; value: JobStatus }
+  | { action: 'set_manager'; value: string | null }
+  | { action: 'set_due_date'; value: IsoDate | null }
+  | { action: 'delete' }
+);
+
 /** `JobCopy`: what a copy changes; a field left out is copied from the source job. */
 export interface JobCopyInput {
   name?: string;

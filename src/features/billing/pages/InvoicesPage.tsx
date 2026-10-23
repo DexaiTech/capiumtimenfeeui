@@ -1,4 +1,4 @@
-import { Download, Ellipsis, FilePlus2, FileText, Mail, SearchX } from 'lucide-react';
+import { Download, Ellipsis, FilePlus2, FileText, Mail, SearchX, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -15,6 +15,7 @@ import {
   SearchField,
   buttonClasses,
   sortRows,
+  useBulkFlow,
   useToast,
   type DataTableSort,
   type DropdownItem,
@@ -23,12 +24,14 @@ import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { MAX_BULK_IDS } from '@/utils/bulk';
 import { todayInZone } from '@/utils/dates';
 
 import {
   billingApi,
   fetchEverything,
   flattenPages,
+  useBulkInvoices,
   useDeleteInvoice,
   useInvoiceList,
   useInvoiceSummary,
@@ -47,7 +50,12 @@ import { SendInvoiceDialog } from '../components/SendInvoiceDialog';
 import { EXPORT_ROW_LIMIT, INVOICE_STATUS_LABELS, INVOICE_TAB_ORDER } from '../constants';
 import { useFileDownload } from '../hooks/useFileDownload';
 import { isoDateParam, useUrlSearch } from '../hooks/useUrlSearch';
-import type { InvoiceDisplayStatus, InvoiceListFilters, InvoiceSummary } from '../types';
+import type {
+  InvoiceBulkRequest,
+  InvoiceDisplayStatus,
+  InvoiceListFilters,
+  InvoiceSummary,
+} from '../types';
 import { bulkNotice, runEach } from '../utils/bulk';
 import { dialogError, describeFailure } from '../utils/errors';
 import { exportInvoicesCsv } from '../utils/exportInvoices';
@@ -71,6 +79,7 @@ type DialogState =
   | { type: 'bulk-issue' }
   | { type: 'bulk-submit' }
   | { type: 'bulk-send' }
+  | { type: 'bulk-delete' }
   | null;
 
 function InvoiceList() {
@@ -105,6 +114,7 @@ function InvoiceList() {
   const submit = useSubmitInvoice();
   const send = useSendInvoice();
   const remove = useDeleteInvoice();
+  const bulkDelete = useBulkInvoices();
 
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
@@ -113,6 +123,14 @@ function InvoiceList() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
   const close = () => setDialog(null);
+  const deletion = useBulkFlow({
+    run: (body: InvoiceBulkRequest) => bulkDelete.mutateAsync(body),
+    noun: ['draft', 'drafts'],
+    onDone: () => {
+      setSelected(new Set());
+      setDialog(null);
+    },
+  });
 
   const columns = useMemo(
     () => invoiceColumns({ slug, currency: organization.currency, today }),
@@ -136,6 +154,7 @@ function InvoiceList() {
   const submittable = drafts.filter((row) => row.approval_required);
   const sendable = chosen.filter((row) => row.status === 'issued' && row.number !== null);
   const canIssue = can(P.invoiceIssue);
+  const canDelete = can(P.invoiceCreate);
   const canSubmit = can(P.invoiceCreate);
 
   const openPdf = (invoice: InvoiceSummary) =>
@@ -369,9 +388,26 @@ function InvoiceList() {
                         Email {sendable.length}
                       </Button>
                     ) : null}
+                    {canDelete ? (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={chosen.length > MAX_BULK_IDS}
+                        leftIcon={<Trash2 aria-hidden="true" className="size-4" />}
+                        onClick={() => {
+                          deletion.clearRefusal();
+                          setDialog({ type: 'bulk-delete' });
+                        }}
+                      >
+                        Delete {chosen.length}
+                      </Button>
+                    ) : null}
                     <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
                       Clear selection
                     </Button>
+                    <span role="status" className="sr-only">
+                      {deletion.announcement}
+                    </span>
                   </div>
                 ) : null}
                 <FilterPopover
@@ -415,7 +451,10 @@ function InvoiceList() {
             }
             primaryAction={
               can(P.invoiceCreate) ? (
-                <Link to={prepareLink} className={buttonClasses({ variant: 'primary', size: 'sm' })}>
+                <Link
+                  to={prepareLink}
+                  className={buttonClasses({ variant: 'primary', size: 'sm' })}
+                >
                   <FilePlus2 aria-hidden="true" className="size-4" />
                   Prepare invoice
                 </Link>
@@ -509,6 +548,34 @@ function InvoiceList() {
           <strong className="font-medium text-text">{clientLabel(target?.client)}</strong> will be
           removed and the work on it goes back to unbilled WIP.
         </p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={dialog?.type === 'bulk-delete'}
+        onClose={close}
+        onConfirm={() =>
+          void deletion.submit(
+            { invoice_ids: chosen.map((row) => row.id), action: 'delete' },
+            'deleted',
+          )
+        }
+        title={`Delete ${plural(chosen.length, 'draft', 'drafts')}?`}
+        confirmLabel={`Delete ${chosen.length}`}
+        loading={deletion.busy}
+        error={deletion.refusal}
+      >
+        <p>
+          The {plural(chosen.length, 'selected invoice', 'selected invoices')} will be removed and
+          the work on {chosen.length === 1 ? 'it' : 'them'} goes back to unbilled WIP. Only drafts
+          can be deleted: issued, paid and void invoices are locked and are corrected with a credit
+          note.
+        </p>
+        {chosen.length > drafts.length ? (
+          <p className="font-medium text-text">
+            {plural(chosen.length - drafts.length, 'selected invoice is', 'selected invoices are')}{' '}
+            not a draft. Untick {chosen.length - drafts.length === 1 ? 'it' : 'them'} first: if any
+            is included, none is deleted.
+          </p>
+        ) : null}
       </ConfirmDialog>
       <ConfirmDialog
         open={dialog?.type === 'bulk-issue'}

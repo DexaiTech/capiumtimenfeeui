@@ -106,7 +106,6 @@ export const TOGGLEABLE_COLUMNS = [
   { id: 'contact', label: 'Contact' },
   { id: 'contact_email', label: 'Contact Email' },
   { id: 'deadlines', label: 'Deadlines' },
-  { id: 'aml', label: 'AML' },
   { id: 'activity', label: 'Activity' },
   { id: 'services', label: 'Services' },
   { id: 'central', label: 'Central' },
@@ -119,7 +118,6 @@ export const SORT_KEYS = {
   client: 'name',
   segment: 'segment',
   health: 'health_score',
-  aml: 'aml_status',
 } as const satisfies Record<string, ClientSort>;
 
 export const DEFAULT_SORT: ClientSort = 'name';

@@ -1,4 +1,5 @@
 import { api, type ApiResult, type RequestOptions } from '@/services/api';
+import type { BulkResult } from '@/types';
 
 import type {
   AllocateBody,
@@ -10,6 +11,7 @@ import type {
   CreditNoteWipMode,
   DebtorFilters,
   DebtorInvoices,
+  InvoiceBulkRequest,
   DebtorsPage,
   DebtorSort,
   Estimate,
@@ -104,6 +106,8 @@ export const billingApi = {
     api.post<InvoiceDetail>(`${org(organizationId)}/invoices`, body),
   updateInvoice: (organizationId: string, invoiceId: string, body: InvoiceHeaderUpdate) =>
     api.patch<InvoiceDetail>(`${org(organizationId)}/invoices/${seg(invoiceId)}`, body),
+  bulkInvoices: (organizationId: string, body: InvoiceBulkRequest) =>
+    api.post<BulkResult<'delete'>>(`${org(organizationId)}/invoices/bulk`, body),
   deleteInvoice: (organizationId: string, invoiceId: string) =>
     api.delete<null>(`${org(organizationId)}/invoices/${seg(invoiceId)}`),
   addLine: (organizationId: string, invoiceId: string, body: InvoiceLineCreate) =>

@@ -1,10 +1,10 @@
 import '@/styles/capium-clients.css';
 
-import { Archive, Eye, FileDown, Pencil, RefreshCw, Trash2, UserPlus, Users } from 'lucide-react';
+import { Archive, Eye, FileDown, Pencil, RefreshCw, Trash2, UserPlus } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import { ConfirmDialog, useToast } from '@/components/ui';
+import { ConfirmDialog, useBulkFlow, useToast } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -15,14 +15,13 @@ import { downloadText, toCsv } from '@/utils/csv';
 import {
   flattenPages,
   useArchiveClient,
-  useArchiveClients,
+  useBulkClients,
   useClientList,
   useClientSummary,
   useDeleteClient,
   useExportClients,
   useServiceOptions,
   useStaffDirectory,
-  useStaffList,
   useSyncAllClients,
   useSyncClient,
 } from '../api';
@@ -30,12 +29,12 @@ import { CentralClientsDialog } from '../central/CentralClientsDialog';
 import { canSync, describeSync, describeSyncAll } from '../central/format';
 import type { MenuAction } from '../components/ActionMenu';
 import { ClientFormDialog } from '../components/ClientFormDialog';
+import { ClientsBulkBar } from '../components/ClientsBulkBar';
 import { ClientsGrid } from '../components/ClientsGrid';
 import { ClientsTable } from '../components/ClientsTable';
-import { ClientsToolbar, type ClientsTab } from '../components/ClientsToolbar';
+import { ClientsToolbar } from '../components/ClientsToolbar';
 import { ContactFormDialog, type ContactTarget } from '../components/ContactFormDialog';
 import { ImportDialog } from '../components/ImportDialog';
-import { UsersTable } from '../components/UsersTable';
 import {
   countFilters,
   DEFAULT_SORT,
@@ -45,7 +44,14 @@ import {
 } from '../constants';
 import { downloadBlob, todayIn } from '../format';
 import { useClientsPrefs, type FilterPreset } from '../store';
-import type { ClientFilters, ClientListItem, ClientRead, ClientSort, SortOrder } from '../types';
+import type {
+  ClientBulkRequest,
+  ClientFilters,
+  ClientListItem,
+  ClientRead,
+  ClientSort,
+  SortOrder,
+} from '../types';
 
 const NO_PRESETS: FilterPreset[] = [];
 
@@ -81,7 +87,6 @@ export default function ClientsPage() {
   const canDelete = can('client.delete');
   const canReadMembers = can('member.read');
 
-  const [tab, setTab] = useState<ClientsTab>('clients');
   const [search, setSearch] = useState('');
   const q = useDebouncedValue(search, 300);
   const [filters, setFilters] = useState<ClientFilters>(EMPTY_FILTERS);
@@ -112,17 +117,30 @@ export default function ClientsPage() {
   const summary = useClientSummary();
   const services = useServiceOptions();
   const staff = useStaffDirectory();
-  const users = useStaffList(q, tab === 'users' && canReadMembers);
   const archive = useArchiveClient();
-  const archiveMany = useArchiveClients();
+  const bulk = useBulkClients();
   const remove = useDeleteClient();
   const exporter = useExportClients();
   const syncOne = useSyncClient();
   const syncAll = useSyncAllClients();
 
   const rows = useMemo(() => flattenPages(list.data), [list.data]);
-  const userRows = useMemo(() => flattenPages(users.data), [users.data]);
   const today = todayIn(organization.timezone);
+
+  // A bulk action only ever reaches the clients on screen: a ticked row that is no longer listed
+  // (another filter or search, a refresh) is left out.
+  const picked = useMemo(
+    () => rows.filter((row) => selected.has(row.id)).map((row) => row.id),
+    [rows, selected],
+  );
+  const bulkFlow = useBulkFlow<ClientBulkRequest>({
+    run: (body) => bulk.mutateAsync(body),
+    noun: ['client', 'clients'],
+    onDone: () => {
+      setSelected(new Set());
+      setBulkArchiveOpen(false);
+    },
+  });
 
   // The top bar's "+" can open the Add Client dialog with `?new=1`.
   const addRequested = canCreate && searchParams.get('new') === '1';
@@ -306,24 +324,11 @@ export default function ClientsPage() {
     );
   };
 
-  const onBulkArchive = async () => {
-    const ids = Array.from(selected);
-    const failed = await archiveMany.mutateAsync(ids);
-    setBulkArchiveOpen(false);
-    setSelected(new Set(failed));
-    if (failed.length === 0) {
-      toast({
-        tone: 'success',
-        title: `${ids.length} client${ids.length === 1 ? '' : 's'} archived`,
-      });
-    } else {
-      toast({
-        tone: 'warning',
-        title: `${ids.length - failed.length} of ${ids.length} clients archived`,
-        description: 'The clients that could not be archived stay selected.',
-      });
-    }
-  };
+  const onBulkArchive = () =>
+    void bulkFlow.submit(
+      { client_ids: picked, action: 'set_status', value: 'archived' },
+      'archived',
+    );
 
   const onConfirmArchive = async () => {
     if (!archiveTarget) return;
@@ -360,9 +365,6 @@ export default function ClientsPage() {
   const loadMore = useCallback(() => {
     if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
   }, [list]);
-  const loadMoreUsers = useCallback(() => {
-    if (users.hasNextPage && !users.isFetchingNextPage) void users.fetchNextPage();
-  }, [users]);
 
   const filtered = q.trim() !== '' || countFilters(filters) > 0;
 
@@ -439,44 +441,6 @@ export default function ClientsPage() {
     return undefined;
   })();
 
-  const usersPlaceholder = (() => {
-    if (!canReadMembers) {
-      return (
-        <div className="cc-state">
-          <Users aria-hidden="true" width={28} height={28} />
-          <h2>Your role does not include the staff list</h2>
-          <p>Ask a practice administrator for the member.read permission.</p>
-        </div>
-      );
-    }
-    if (users.isError && userRows.length === 0) {
-      return (
-        <div className="cc-state" role="alert">
-          <h2>Could not load the users</h2>
-          <p>{describe(users.error).message}</p>
-          <div className="cc-state-actions">
-            <button
-              type="button"
-              className="cc-btn cc-btn--outline"
-              onClick={() => void users.refetch()}
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      );
-    }
-    if (!users.isPending && userRows.length === 0) {
-      return (
-        <div className="cc-state">
-          <h2>No users match</h2>
-          <p>Try another search.</p>
-        </div>
-      );
-    }
-    return undefined;
-  })();
-
   const tableProps = {
     rows,
     selected,
@@ -497,10 +461,7 @@ export default function ClientsPage() {
     <div className="capium-clients cc-page">
       <h1 className="cc-sr-only">Clients</h1>
       <ClientsToolbar
-        tab={tab}
-        onTabChange={setTab}
         clientCount={summary.data?.total}
-        userCount={summary.data?.users}
         search={search}
         onSearchChange={setSearch}
         hidden={hidden}
@@ -519,9 +480,12 @@ export default function ClientsPage() {
         services={services.data ?? []}
         members={staff.data ?? []}
         canPickPeople={canReadMembers}
-        selectedCount={selected.size}
+        selectedCount={picked.length}
         canArchive={canDelete}
-        onBulkArchive={() => setBulkArchiveOpen(true)}
+        onBulkArchive={() => {
+          bulkFlow.clearRefusal();
+          setBulkArchiveOpen(true);
+        }}
         onBulkExport={onBulkExport}
         draftsActive={isDraftsView(filters)}
         onToggleDrafts={() => setFilters(isDraftsView(filters) ? EMPTY_FILTERS : DRAFT_FILTERS)}
@@ -540,27 +504,27 @@ export default function ClientsPage() {
         linkedCount={summary.data?.by_central.linked}
       />
 
-      {tab === 'clients' ? (
-        view === 'grid' ? (
-          <ClientsGrid {...tableProps} />
-        ) : (
-          <ClientsTable
-            {...tableProps}
-            hidden={hidden}
-            sort={sort}
-            order={order}
-            onSort={onSort}
-            onTogglePage={onTogglePage}
-          />
-        )
+      {picked.length > 0 ? (
+        <ClientsBulkBar
+          ids={picked}
+          members={staff.data ?? []}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+          flow={bulkFlow}
+          onClear={() => setSelected(new Set())}
+        />
+      ) : null}
+
+      {view === 'grid' ? (
+        <ClientsGrid {...tableProps} />
       ) : (
-        <UsersTable
-          rows={userRows}
-          loading={users.isPending && canReadMembers}
-          hasMore={users.hasNextPage}
-          loadingMore={users.isFetchingNextPage}
-          onLoadMore={loadMoreUsers}
-          placeholder={usersPlaceholder}
+        <ClientsTable
+          {...tableProps}
+          hidden={hidden}
+          sort={sort}
+          order={order}
+          onSort={onSort}
+          onTogglePage={onTogglePage}
         />
       )}
 
@@ -603,14 +567,15 @@ export default function ClientsPage() {
       <ConfirmDialog
         open={bulkArchiveOpen}
         onClose={() => setBulkArchiveOpen(false)}
-        onConfirm={() => void onBulkArchive()}
+        onConfirm={onBulkArchive}
         title="Archive selected clients"
-        confirmLabel={`Archive ${selected.size}`}
+        confirmLabel={`Archive ${picked.length}`}
         tone="default"
-        loading={archiveMany.isPending}
+        loading={bulkFlow.busy}
+        error={bulkFlow.refusal}
       >
         <p>
-          {selected.size} client{selected.size === 1 ? '' : 's'} will be archived and hidden from
+          {picked.length} client{picked.length === 1 ? '' : 's'} will be archived and hidden from
           the default list.
         </p>
       </ConfirmDialog>

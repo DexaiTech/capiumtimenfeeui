@@ -78,18 +78,6 @@ export const ticketsApi = {
     ticketId: string,
     body: { body: string; body_html?: string; attachment_ids?: string[] },
   ) => api.post<TicketComment>(`${org(organizationId)}/tickets/${seg(ticketId)}/comments`, body),
-  updateComment: (
-    organizationId: string,
-    ticketId: string,
-    commentId: string,
-    body: { body: string; body_html?: string | null },
-  ) =>
-    api.patch<TicketComment>(
-      `${org(organizationId)}/tickets/${seg(ticketId)}/comments/${seg(commentId)}`,
-      body,
-    ),
-  removeComment: (organizationId: string, ticketId: string, commentId: string) =>
-    api.delete<null>(`${org(organizationId)}/tickets/${seg(ticketId)}/comments/${seg(commentId)}`),
 
   /* --------------------------------- Attachments ------------------------------ */
   uploadAttachment: (

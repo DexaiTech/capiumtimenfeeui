@@ -75,6 +75,9 @@ export const routes = {
     invoice: (slug: string, invoiceId: string) =>
       under(slug, ORG_SEGMENTS.billing, 'invoices', segment(invoiceId)),
     staff: (slug: string) => under(slug, ORG_SEGMENTS.team, 'staff'),
+    /** One staff member: profile, rates, login and activity. */
+    staffMember: (slug: string, staffId: string) =>
+      under(slug, ORG_SEGMENTS.team, 'staff', segment(staffId)),
     account: (slug: string) => under(slug, ORG_SEGMENTS.account),
     /** Application Testing: the dashboard, the ticket list and one ticket. */
     applicationTesting: (slug: string) => under(slug, ORG_SEGMENTS.applicationTesting),

@@ -143,7 +143,8 @@
   white-space: nowrap;
 }
 
-.cc-tab[aria-selected='true'] {
+.cc-tab[aria-selected='true'],
+.cc-tab[aria-current='true'] {
   color: #ffffff;
   background: var(--cc-primary);
 }
@@ -168,7 +169,8 @@
   border-radius: var(--cc-radius-pill);
 }
 
-.cc-tab[aria-selected='true'] .cc-count {
+.cc-tab[aria-selected='true'] .cc-count,
+.cc-tab[aria-current='true'] .cc-count {
   color: #ffffff;
   background: var(--cc-on-primary-20);
 }

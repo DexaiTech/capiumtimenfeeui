@@ -169,6 +169,18 @@ export type ClientCreate = Partial<ClientWritableFields> & {
 /** PATCH body: every field optional; `code, name, client_type, status, country, aml_status` never null. */
 export type ClientUpdate = Partial<ClientWritableFields>;
 
+/**
+ * `POST /clients/bulk`: one action on 1-200 clients, all or nothing. `set_manager`, `set_partner`
+ * and `set_segment` take null to clear; `delete` takes no value. `set_status` with `archived`
+ * archives (there is no separate archive action).
+ */
+export type ClientBulkRequest = { client_ids: string[] } & (
+  | { action: 'set_status'; value: ClientStatus }
+  | { action: 'set_manager' | 'set_partner'; value: string | null }
+  | { action: 'set_segment'; value: string | null }
+  | { action: 'delete' }
+);
+
 export interface ClientRead {
   id: string;
   code: string;

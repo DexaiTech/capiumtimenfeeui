@@ -76,6 +76,9 @@ function EditStaffForm({
       login_email: '',
       role_id: '',
       send_email: false,
+      cost_rate: '',
+      charge_rate: '',
+      rate_effective_from: '',
     },
   });
   const {

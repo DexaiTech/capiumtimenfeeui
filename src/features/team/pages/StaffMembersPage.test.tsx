@@ -20,6 +20,9 @@ import {
   staffRole,
 } from '../test/fixtures';
 import { orgApiPath, page, teamHandlers } from '../test/handlers';
+import { Route, Routes } from 'react-router';
+
+import StaffDetailPage from './StaffDetailPage';
 import StaffMembersPage from './StaffMembersPage';
 
 const TEMP_PASSWORD = 'Tq7-hv2Lp9xZk4Rw';
@@ -55,6 +58,17 @@ async function fillRequired(dialog: HTMLElement, user: User) {
 
 function renderPage(options: Parameters<typeof renderInOrg>[1] = {}) {
   return renderInOrg(<StaffMembersPage />, options);
+}
+
+/** The list and a person's own page, as the router serves them. */
+function renderRouted(options: Parameters<typeof renderInOrg>[1] = {}) {
+  return renderInOrg(
+    <Routes>
+      <Route path="/acme/team/staff" element={<StaffMembersPage />} />
+      <Route path="/acme/team/staff/:staffId" element={<StaffDetailPage />} />
+    </Routes>,
+    { route: '/acme/team/staff', ...options },
+  );
 }
 
 beforeEach(() => {
@@ -503,6 +517,76 @@ describe('AddStaffDialog', () => {
     );
   });
 
+  it('sets the cost and charge-out rate with the person, from the date given', async () => {
+    let body: unknown;
+    server.use(
+      http.post(orgApiPath('/staff'), async ({ request }) => {
+        body = await request.json();
+        return ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    const dialog = await openAddDialog(user);
+    await fillRequired(dialog, user);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Cost rate (£/h)' }), '48');
+    await user.type(
+      within(dialog).getByRole('textbox', { name: 'Charge-out rate (£/h)' }),
+      '95.50',
+    );
+    await user.type(within(dialog).getByLabelText('Rates start'), '2026-11-01');
+    await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
+
+    expect(await screen.findByText('Katherine Johnson added')).toBeInTheDocument();
+    expect(body).toMatchObject({
+      cost_rate: 4800,
+      charge_rate: 9550,
+      rate_effective_from: '2026-11-01',
+    });
+  });
+
+  it('sends no rate when the fields are left empty, and rejects one that is not money', async () => {
+    let body: Record<string, unknown> = {};
+    server.use(
+      http.post(orgApiPath('/staff'), async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    const dialog = await openAddDialog(user);
+    await fillRequired(dialog, user);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Cost rate (£/h)' }), 'free');
+    await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
+    expect(
+      await within(dialog).findByText('Enter the cost rate in pounds per hour, for example 48.00'),
+    ).toBeInTheDocument();
+    expect(body).toEqual({});
+
+    await user.clear(within(dialog).getByRole('textbox', { name: 'Cost rate (£/h)' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
+    await screen.findByText('Katherine Johnson added');
+    expect(body).not.toHaveProperty('cost_rate');
+    expect(body).not.toHaveProperty('charge_rate');
+    expect(body).not.toHaveProperty('rate_effective_from');
+  });
+
+  it('offers the rates only to someone who may manage them', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      context: contextWith(OWNER_PERMISSIONS.filter((code) => code !== 'rate.manage')),
+    });
+
+    const dialog = await openAddDialog(user);
+    expect(
+      within(dialog).queryByRole('textbox', { name: 'Cost rate (£/h)' }),
+    ).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Rates start')).not.toBeInTheDocument();
+  });
+
   it('offers only active grades and only approvers who can sign in', async () => {
     const lookups: URLSearchParams[] = [];
     server.use(...teamHandlers({ onStaffList: (params) => lookups.push(params) }));
@@ -730,8 +814,10 @@ describe('AddStaffDialog', () => {
 
 describe('EditStaffDialog', () => {
   async function openEdit(user: User, name: string) {
+    // "Edit" in the list opens the person's own page; the dialog opens from there.
     await openActions(user, name);
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit details' }));
     const dialog = await screen.findByRole('dialog', { name: 'Edit staff member' });
     await within(dialog).findByRole('combobox', { name: 'Grade' });
     return dialog;
@@ -739,7 +825,7 @@ describe('EditStaffDialog', () => {
 
   it('shows every profile field of the person', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderRouted();
 
     const dialog = await openEdit(user, 'Sam Staff');
     expect(within(dialog).getByRole('textbox', { name: 'Full name' })).toHaveValue('Sam Staff');
@@ -772,7 +858,7 @@ describe('EditStaffDialog', () => {
       }),
     );
     const user = userEvent.setup();
-    renderPage();
+    renderRouted();
 
     const dialog = await openEdit(user, 'Sam Staff');
     const target = within(dialog).getByRole('textbox', { name: 'Chargeable target (%)' });
@@ -804,7 +890,7 @@ describe('EditStaffDialog', () => {
       }),
     );
     const user = userEvent.setup();
-    renderPage();
+    renderRouted();
 
     const dialog = await openEdit(user, 'Sam Staff');
     await user.click(within(dialog).getByRole('combobox', { name: 'Approver' }));
@@ -823,7 +909,7 @@ describe('EditStaffDialog', () => {
 
   it('validates the dates and the hours', async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderRouted();
 
     const dialog = await openEdit(user, 'Sam Staff');
     await user.type(within(dialog).getByLabelText('Leaving date'), '2025-12-31');
@@ -851,7 +937,7 @@ describe('EditStaffDialog', () => {
       }),
     );
     const user = userEvent.setup();
-    renderPage();
+    renderRouted();
 
     const dialog = await openEdit(user, 'Sam Staff');
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Status' }), 'Left');
@@ -878,7 +964,7 @@ describe('EditStaffDialog', () => {
       ),
     );
     const user = userEvent.setup();
-    renderPage();
+    renderRouted();
 
     const dialog = await openEdit(user, 'Sam Staff');
     await user.type(within(dialog).getByRole('textbox', { name: 'Initials' }), 'AL');

@@ -134,3 +134,8 @@ export function describeFailure(error: unknown, fallbackTitle: string): ErrorNot
         : error.message,
   };
 }
+
+/** True when the API answered 404: the person (or record) is gone or never was. */
+export function isNotFound(error: unknown): boolean {
+  return isApiError(error) && error.status === 404;
+}

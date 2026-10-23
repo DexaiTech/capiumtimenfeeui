@@ -10,10 +10,12 @@ import {
 import { queryKeys } from '@/constants/queryKeys';
 import { useOrg } from '@/features/organizations';
 import { api, type ApiResult } from '@/services/api';
+import type { BulkResult } from '@/types';
 import type { PageMeta } from '@/types/api';
 
 import { CLIENT_PAGE_SIZE } from '../constants';
 import type {
+  ClientBulkRequest,
   ClientCreate,
   ClientDetail,
   ClientListItem,
@@ -79,6 +81,8 @@ export const clientsApi = {
     api.patch<ClientDetail>(`${org(organizationId)}/clients/${seg(clientId)}`, body),
   archive: (organizationId: string, clientId: string) =>
     api.post<ClientDetail>(`${org(organizationId)}/clients/${seg(clientId)}/archive`),
+  bulk: (organizationId: string, body: ClientBulkRequest) =>
+    api.post<BulkResult<ClientBulkRequest['action']>>(`${org(organizationId)}/clients/bulk`, body),
   remove: (organizationId: string, clientId: string) =>
     api.delete<null>(`${org(organizationId)}/clients/${seg(clientId)}`),
 
@@ -317,22 +321,12 @@ export function useArchiveClient() {
   });
 }
 
-/** Archives several clients one after the other; resolves to the ids that failed. */
-export function useArchiveClients() {
+/** One action on the selected clients (archive included): all or nothing (`POST /clients/bulk`). */
+export function useBulkClients() {
   const { organization } = useOrg();
   const invalidate = useInvalidateClients();
   return useMutation({
-    mutationFn: async (clientIds: string[]) => {
-      const failed: string[] = [];
-      for (const clientId of clientIds) {
-        try {
-          await clientsApi.archive(organization.id, clientId);
-        } catch {
-          failed.push(clientId);
-        }
-      }
-      return failed;
-    },
+    mutationFn: (body: ClientBulkRequest) => clientsApi.bulk(organization.id, body),
     onSettled: invalidate,
   });
 }

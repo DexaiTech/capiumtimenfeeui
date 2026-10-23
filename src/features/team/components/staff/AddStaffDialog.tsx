@@ -18,6 +18,7 @@ import { roleOptions, useRoles, type Role } from '@/features/settings';
 import { useRoleName } from '@/features/system';
 import { isApiError } from '@/services/api';
 import { parseMinutes, minutesToHours } from '@/utils/minutes';
+import { parsePounds } from '@/utils/money';
 
 import { useCreateStaff, useGradeOptions, useInviteStaff, useLinkLogin } from '../../api';
 import { staffCreateSchema, type StaffFormValues } from '../../schemas/staff';
@@ -44,6 +45,9 @@ const FIELDS = [
   'leaving_date',
   'login_email',
   'role_id',
+  'cost_rate',
+  'charge_rate',
+  'rate_effective_from',
 ] as const;
 /** API field → form field. */
 const FIELD_NAMES = {
@@ -122,6 +126,9 @@ function AddStaffForm({
       login_email: '',
       role_id: roles.find((role) => role.system_key === 'staff')?.id ?? '',
       send_email: true,
+      cost_rate: '',
+      charge_rate: '',
+      rate_effective_from: '',
     },
   });
   const {
@@ -152,6 +159,14 @@ function AddStaffForm({
     const target = values.target_percent ? percentToBp(values.target_percent) : null;
     if (target !== null) body.chargeable_target_bp = target;
     if (values.login !== 'none' && values.role_id) body.role_id = values.role_id;
+    // The person's own rates, set in the same request (the API checks `rate.manage`).
+    const costRate = values.cost_rate.trim() ? parsePounds(values.cost_rate) : null;
+    const chargeRate = values.charge_rate.trim() ? parsePounds(values.charge_rate) : null;
+    if (costRate !== null) body.cost_rate = costRate;
+    if (chargeRate !== null) body.charge_rate = chargeRate;
+    if ((costRate !== null || chargeRate !== null) && values.rate_effective_from) {
+      body.rate_effective_from = values.rate_effective_from;
+    }
 
     let created: StaffDetail;
     try {
@@ -219,6 +234,40 @@ function AddStaffForm({
         className="flex flex-col gap-4"
       >
         <StaffFormFields mode="add" form={form} grades={grades} />
+        {can('rate.manage') ? (
+          <fieldset className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <legend className="px-1 text-sm font-semibold text-text">Rates</legend>
+            <p className="text-xs text-text-muted">
+              Optional. Set what this person costs the practice and what you charge for them, in
+              pounds per hour. They are saved with the person; change them later on their page.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Cost rate (£/h)"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="Grade default"
+                error={errors.cost_rate?.message}
+                {...register('cost_rate')}
+              />
+              <Input
+                label="Charge-out rate (£/h)"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="Grade default"
+                error={errors.charge_rate?.message}
+                {...register('charge_rate')}
+              />
+              <Input
+                label="Rates start"
+                type="date"
+                hint="Empty: the start date."
+                error={errors.rate_effective_from?.message}
+                {...register('rate_effective_from')}
+              />
+            </div>
+          </fieldset>
+        ) : null}
         <Controller
           control={control}
           name="login"

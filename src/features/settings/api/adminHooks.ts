@@ -45,6 +45,13 @@ export const adminKeys = {
     [...queryKeys.org.settings(organizationId), 'integrations', 'mappings'] as const,
 };
 
+/** What the staff, rate and job import hooks take: `closePrevious` is for rates only. */
+export interface BulkImportRequest {
+  file: File;
+  dryRun: boolean;
+  closePrevious?: boolean;
+}
+
 type Page<TItem> = ApiResult<TItem[], PageMeta>;
 type KeyRoot = (organizationId: string) => readonly unknown[];
 
@@ -290,6 +297,69 @@ export function useImportOpeningBalanceTime() {
   return useMutation({
     mutationFn: ({ file, dryRun }: { file: File; dryRun: boolean }) =>
       adminApi.importOpeningBalanceTime(organization.id, file, dryRun),
+    onSuccess: (result) => {
+      if (!result.dry_run) refresh();
+    },
+  });
+}
+
+/* ------------------------- Staff, rates and jobs files ------------------------- */
+
+export function useExportStaff() {
+  const { organization } = useOrg();
+  return useMutation({ mutationFn: () => adminApi.exportStaff(organization.id) });
+}
+
+export function useExportRates() {
+  const { organization } = useOrg();
+  return useMutation({ mutationFn: () => adminApi.exportRates(organization.id) });
+}
+
+export function useExportJobs() {
+  const { organization } = useOrg();
+  return useMutation({ mutationFn: () => adminApi.exportJobs(organization.id) });
+}
+
+export function useImportStaff() {
+  const { organization } = useOrg();
+  const refresh = useRefresh(
+    queryKeys.org.staff,
+    queryKeys.org.members,
+    queryKeys.org.rateRules,
+    queryKeys.org.auditLogs,
+  );
+  return useMutation({
+    mutationFn: ({ file, dryRun }: BulkImportRequest) =>
+      adminApi.importStaff(organization.id, file, dryRun),
+    onSuccess: (result) => {
+      if (!result.dry_run) refresh();
+    },
+  });
+}
+
+export function useImportRates() {
+  const { organization } = useOrg();
+  const refresh = useRefresh(
+    queryKeys.org.rates,
+    queryKeys.org.rateRules,
+    queryKeys.org.staff,
+    queryKeys.org.auditLogs,
+  );
+  return useMutation({
+    mutationFn: ({ file, dryRun, closePrevious = false }: BulkImportRequest) =>
+      adminApi.importRates(organization.id, file, dryRun, closePrevious),
+    onSuccess: (result) => {
+      if (!result.dry_run) refresh();
+    },
+  });
+}
+
+export function useImportJobs() {
+  const { organization } = useOrg();
+  const refresh = useRefresh(queryKeys.org.jobs, queryKeys.org.clients, queryKeys.org.auditLogs);
+  return useMutation({
+    mutationFn: ({ file, dryRun }: BulkImportRequest) =>
+      adminApi.importJobs(organization.id, file, dryRun),
     onSuccess: (result) => {
       if (!result.dry_run) refresh();
     },

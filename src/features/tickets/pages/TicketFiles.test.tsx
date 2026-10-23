@@ -381,8 +381,8 @@ describe('uploading a file', () => {
     );
     renderDetail();
 
-    await user.click(await screen.findByRole('button', { name: 'Edit subject' }));
-    fireEvent.paste(screen.getByRole('textbox', { name: 'Subject' }), {
+    await user.click(await screen.findByRole('button', { name: 'Edit tags of APT1' }));
+    fireEvent.paste(screen.getByRole('textbox', { name: 'Find or create a tag' }), {
       clipboardData: { files: [pngFile()], types: ['Files'], getData: () => '' },
     });
 

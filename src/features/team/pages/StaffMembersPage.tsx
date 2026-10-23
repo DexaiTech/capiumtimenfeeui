@@ -1,11 +1,11 @@
 import { Download, Ellipsis, SearchX, UserPlus, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 
 import {
   Badge,
   Button,
   ColumnVisibilityMenu,
-  ConfirmDialog,
   CountTabs,
   DataTable,
   Dropdown,
@@ -15,12 +15,12 @@ import {
   Pagination,
   SearchField,
   Select,
-  useToast,
+  useBulkFlow,
   type DataTableColumn,
   type DataTableSort,
-  type DropdownItem,
 } from '@/components/ui';
-import { OWNER_ROLE_KEY, PERMISSIONS } from '@/constants/permissions';
+import { PERMISSIONS } from '@/constants/permissions';
+import { routes } from '@/constants/routes';
 import { useAuth } from '@/features/auth';
 import { useOrg } from '@/features/organizations';
 import { useRoles } from '@/features/settings';
@@ -31,33 +31,21 @@ import { formatUkDate, formatWeekdays } from '@/utils/dates';
 import { formatMinutes, minutesToHours } from '@/utils/minutes';
 import { formatBasisPoints, penceToPoundsInput } from '@/utils/money';
 
-import {
-  flattenPages,
-  useGradeOptions,
-  useReactivateStaff,
-  useResetPassword,
-  useStaffList,
-  useUnlinkLogin,
-} from '../api';
+import { flattenPages, useBulkStaff, useGradeOptions, useStaffList } from '../api';
 import { LoginStatusBadge, StaffStatusBadge } from '../components/badges';
 import { FilterPopover } from '../components/FilterPopover';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { StaffPicker } from '../components/pickers/StaffPicker';
+import { StaffBulkBar } from '../components/staff/StaffBulkBar';
 import { AddStaffDialog } from '../components/staff/AddStaffDialog';
-import { ChangeRoleDialog } from '../components/staff/ChangeRoleDialog';
-import { DeactivateStaffDialog } from '../components/staff/DeactivateStaffDialog';
-import { DeleteStaffDialog } from '../components/staff/DeleteStaffDialog';
-import { EditStaffDialog } from '../components/staff/EditStaffDialog';
-import { InviteStaffDialog } from '../components/staff/InviteStaffDialog';
-import { LinkLoginDialog } from '../components/staff/LinkLoginDialog';
 import {
   TemporaryPasswordDialog,
   type TemporaryPassword,
 } from '../components/staff/TemporaryPasswordDialog';
 import { STAFF_STATUS_LABEL } from '../constants';
+import { useStaffActions } from '../hooks/useStaffActions';
 import { useUrlSearch } from '../hooks/useUrlSearch';
-import type { StaffFilters, StaffMember, StaffSort, StaffStatus } from '../types';
-import { dialogError, describeFailure } from '../utils/errors';
+import type { StaffBulkRequest, StaffFilters, StaffMember, StaffSort, StaffStatus } from '../types';
 import { formatRate } from '../utils/format';
 
 type StaffTab = StaffStatus;
@@ -89,13 +77,6 @@ const DEFAULT_HIDDEN: ReadonlySet<string> = new Set([
   'leaving_date',
 ]);
 
-type DialogType =
-  'edit' | 'role' | 'deactivate' | 'invite' | 'link' | 'unlink' | 'reset' | 'delete';
-interface DialogState {
-  type: DialogType;
-  staff: StaffMember;
-}
-
 function StaffList({
   onAdd,
   onSecret,
@@ -103,10 +84,9 @@ function StaffList({
   onAdd: () => void;
   onSecret: (secret: TemporaryPassword) => void;
 }) {
-  const { organization, role: myRole, can } = useOrg();
+  const { organization, can } = useOrg();
   const { user } = useAuth();
   const roleName = useRoleName();
-  const { toast } = useToast();
   const { params, setParam } = useUrlParams();
 
   const { text: searchText, setText: setSearchText, searched: urlQuery } = useUrlSearch();
@@ -128,7 +108,6 @@ function StaffList({
   const canInvite = can(PERMISSIONS.memberInvite);
   const canReadRoles = can(PERMISSIONS.roleRead);
   const canReadRates = can(PERMISSIONS.rateRead);
-  const isOwner = myRole.system_key === OWNER_ROLE_KEY;
 
   const filters = useMemo<StaffFilters>(
     () => ({
@@ -150,111 +129,32 @@ function StaffList({
   const grades = useGradeOptions();
   // The role list needs `role.read`; without it the role filter and "Change role" are not offered.
   const roles = useRoles({ enabled: canReadRoles });
-  const reactivate = useReactivateStaff();
-  const unlink = useUnlinkLogin();
-  const reset = useResetPassword();
 
   const [hidden, setHidden] = useState<ReadonlySet<string>>(DEFAULT_HIDDEN);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
-  const [dialog, setDialog] = useState<DialogState | null>(null);
-  const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
-  const open = (type: DialogType, member: StaffMember) => {
-    setRefusal(null);
-    setDialog({ type, staff: member });
-  };
-  const close = () => setDialog(null);
-
+  const navigate = useNavigate();
+  const bulk = useBulkStaff();
+  // Only people still in the list can be acted on: a ticked row a filter hid is left out.
+  const pickedIds = useMemo(
+    () =>
+      flattenPages(staff.data)
+        .filter((member) => selected.has(member.id))
+        .map((member) => member.id),
+    [staff.data, selected],
+  );
+  const bulkFlow = useBulkFlow<StaffBulkRequest>({
+    run: bulk.mutateAsync,
+    noun: ['person', 'people'],
+    onDone: () => setSelected(new Set()),
+  });
+  // Edit opens the person's own page; every other action opens its dialog from here.
+  const { actionsFor, dialogs } = useStaffActions({
+    onSecret,
+    onEdit: (member) => void navigate(routes.org.staffMember(organization.slug, member.id)),
+  });
   const clearFilters = () => {
     setSearchText('');
     setParam({ q: null, grade: null, approver: null, role: null, login: null });
-  };
-
-  const doReactivate = (member: StaffMember) => {
-    reactivate.mutate(member.id, {
-      onSuccess: () => toast({ tone: 'success', title: `${member.full_name} reactivated` }),
-      onError: (error) =>
-        toast({ tone: 'error', ...describeFailure(error, 'Could not reactivate') }),
-    });
-  };
-
-  const confirmUnlink = () => {
-    if (dialog?.type !== 'unlink') return;
-    const member = dialog.staff;
-    unlink.mutate(member.id, {
-      onSuccess: () => {
-        toast({ tone: 'success', title: `${member.full_name} can no longer sign in` });
-        close();
-      },
-      onError: (error) => setRefusal(dialogError(error)),
-    });
-  };
-
-  const confirmReset = () => {
-    if (dialog?.type !== 'reset') return;
-    const member = dialog.staff;
-    const box: { password: string | null } = { password: null };
-    reset.mutate(
-      { staffId: member.id, onSecret: (password) => (box.password = password) },
-      {
-        onSuccess: () => {
-          close();
-          if (box.password !== null) {
-            onSecret({
-              fullName: member.full_name,
-              email: member.login_email ?? member.email ?? '',
-              password: box.password,
-              kind: 'reset',
-            });
-          }
-        },
-        onError: (error) => setRefusal(dialogError(error)),
-      },
-    );
-  };
-
-  const actionsFor = (member: StaffMember): DropdownItem[] => {
-    const isSelf = member.id === user?.id;
-    // Only an Owner changes another Owner.
-    const ownerLocked = member.role.system_key === OWNER_ROLE_KEY && !isOwner;
-    const left = member.status === 'left';
-    const active = member.status === 'active';
-    const items: DropdownItem[] = [];
-    const add = (id: string, label: string, type: DialogType) =>
-      items.push({ id, label, onSelect: () => open(type, member) });
-
-    if (canUpdate) add('edit', 'Edit', 'edit');
-    if (canUpdate && canReadRoles && member.has_login && !isSelf && !ownerLocked && !left) {
-      add('role', 'Change role', 'role');
-    }
-    if (canInvite && active && (!member.has_login || member.login_status === 'invited')) {
-      add(
-        'invite',
-        member.login_status === 'invited' ? 'Resend invitation' : 'Invite to sign in',
-        'invite',
-      );
-    }
-    if (canInvite && active && !member.has_login) add('link', 'Link login', 'link');
-    if (canRemove && member.has_login && !isSelf && !ownerLocked) {
-      add('unlink', 'Unlink login', 'unlink');
-    }
-    if (canUpdate && member.login_status === 'active' && active && !isSelf && !ownerLocked) {
-      add('reset', 'Reset password', 'reset');
-    }
-    if (canUpdate && !active && !isSelf && !ownerLocked) {
-      items.push({ id: 'reactivate', label: 'Reactivate', onSelect: () => doReactivate(member) });
-    }
-    if (canRemove && !left && !isSelf && !ownerLocked)
-      add('deactivate', 'Deactivate', 'deactivate');
-    if (canRemove && !isSelf && !ownerLocked) {
-      items.push({ id: 'separator', separator: true });
-      items.push({
-        id: 'delete',
-        label: 'Delete',
-        tone: 'danger',
-        onSelect: () => open('delete', member),
-      });
-    }
-    return items;
   };
 
   const columns: DataTableColumn<StaffMember>[] = [
@@ -277,7 +177,12 @@ function StaffList({
           <InitialsAvatar name={member.full_name} initials={member.initials} colorKey={member.id} />
           <div className="flex min-w-0 flex-col">
             <span className="flex flex-wrap items-center gap-1.5">
-              <span className="truncate font-semibold text-text">{member.full_name}</span>
+              <Link
+                to={routes.org.staffMember(organization.slug, member.id)}
+                className="truncate font-semibold text-text hover:text-brand-text hover:underline"
+              >
+                {member.full_name}
+              </Link>
               {member.id === user?.id ? (
                 <Badge size="sm" tone="violet">
                   You
@@ -499,6 +404,16 @@ function StaffList({
 
   return (
     <>
+      {pickedIds.length > 0 && (canUpdate || canRemove) ? (
+        <StaffBulkBar
+          ids={pickedIds}
+          grades={grades.data ?? []}
+          canUpdate={canUpdate}
+          canRemove={canRemove}
+          flow={bulkFlow}
+          onClear={() => setSelected(new Set())}
+        />
+      ) : null}
       <DataTable
         caption="Staff members"
         columns={columns}
@@ -665,66 +580,7 @@ function StaffList({
         }
       />
 
-      <EditStaffDialog staff={dialog?.type === 'edit' ? dialog.staff : null} onClose={close} />
-      <ChangeRoleDialog
-        staff={dialog?.type === 'role' ? dialog.staff : null}
-        roles={roles.data ?? []}
-        onClose={close}
-      />
-      <DeactivateStaffDialog
-        staff={dialog?.type === 'deactivate' ? dialog.staff : null}
-        onClose={close}
-      />
-      <InviteStaffDialog
-        staff={dialog?.type === 'invite' ? dialog.staff : null}
-        roles={roles.data ?? []}
-        onClose={close}
-      />
-      <LinkLoginDialog
-        staff={dialog?.type === 'link' ? dialog.staff : null}
-        roles={roles.data ?? []}
-        onClose={close}
-        onLinked={(linked) => {
-          close();
-          if (linked.secret) onSecret(linked.secret);
-        }}
-      />
-      <DeleteStaffDialog
-        staff={dialog?.type === 'delete' ? dialog.staff : null}
-        onClose={close}
-        onDeactivateInstead={(member) => open('deactivate', member)}
-      />
-      <ConfirmDialog
-        open={dialog?.type === 'unlink'}
-        onClose={close}
-        onConfirm={confirmUnlink}
-        title="Unlink login?"
-        confirmLabel="Unlink login"
-        loading={unlink.isPending}
-        error={refusal}
-      >
-        <p>
-          <strong className="font-medium text-text">{dialog?.staff.full_name}</strong> keeps their
-          record and history but can no longer sign in. Their sessions end and everyone they approve
-          loses their approver.
-        </p>
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={dialog?.type === 'reset'}
-        onClose={close}
-        onConfirm={confirmReset}
-        title="Reset password?"
-        confirmLabel="Reset password"
-        tone="default"
-        loading={reset.isPending}
-        error={refusal}
-      >
-        <p>
-          <strong className="font-medium text-text">{dialog?.staff.full_name}</strong> will be
-          signed out everywhere and get a new temporary password, which you will see once. They must
-          change it at their next sign-in.
-        </p>
-      </ConfirmDialog>
+      {dialogs}
     </>
   );
 }

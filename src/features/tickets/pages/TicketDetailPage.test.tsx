@@ -8,13 +8,7 @@ import { fail, ok, server } from '@/test/server';
 
 import { apt1, apt1Detail, apt2, apt2Detail, uiTag } from '../test/fixtures';
 import { gate, orgApiPath, ticketHandlers } from '../test/handlers';
-import {
-  freshDetail,
-  installObjectUrls,
-  patchTicket,
-  renderDetail,
-  TICKETS,
-} from '../test/detailHelpers';
+import { freshDetail, installObjectUrls, renderDetail, TICKETS } from '../test/detailHelpers';
 
 let urls: ReturnType<typeof installObjectUrls>;
 beforeEach(() => {
@@ -23,13 +17,6 @@ beforeEach(() => {
 afterEach(() => {
   urls.restore();
 });
-
-/** The description box is a rich text editor: it takes the focus once it is made, then keys. */
-const typeInDescription = async (user: ReturnType<typeof userEvent.setup>, keys: string) => {
-  const field = await screen.findByRole('textbox', { name: 'Description' });
-  await waitFor(() => expect(field).toHaveFocus());
-  await user.keyboard(keys);
-};
 
 describe('TicketDetailPage', () => {
   it('shows the code, the category, the four fields, the texts and the way back', async () => {
@@ -65,153 +52,18 @@ describe('TicketDetailPage', () => {
     expect(await screen.findByText('No comments yet.')).toBeInTheDocument();
   });
 
-  describe('editing the texts in place', () => {
-    it('saves a new subject with Enter, trimmed, and shows it', async () => {
-      const user = userEvent.setup();
-      const detail = freshDetail();
-      const bodies: unknown[] = [];
-      server.use(patchTicket(detail, bodies), ...ticketHandlers({ detail }));
-      renderDetail();
+  describe('the subject and the description', () => {
+    it.each([
+      ['Owner', OWNER_PERMISSIONS],
+      ['Staff', STAFF_PERMISSIONS],
+    ])('cannot be edited by %s once the ticket exists', async (_who, permissions) => {
+      server.use(...ticketHandlers());
+      renderDetail(permissions);
 
-      await user.click(await screen.findByRole('button', { name: 'Edit subject' }));
-      const field = screen.getByRole('textbox', { name: 'Subject' });
-      expect(field).toHaveValue('Trial balance does not agree');
-      expect(field).toHaveFocus();
-      await user.clear(field);
-      await user.type(field, '  Trial balance is out by 12.50{Enter}');
-
-      await waitFor(() => expect(bodies).toEqual([{ subject: 'Trial balance is out by 12.50' }]));
-      // The toast and the live region.
-      expect(await screen.findAllByText('Subject saved')).toHaveLength(2);
-      expect(screen.getByText('Trial balance is out by 12.50')).toBeInTheDocument();
-      expect(screen.queryByRole('textbox', { name: 'Subject' })).not.toBeInTheDocument();
-      expect(document.title).toBe('APT1 Trial balance is out by 12.50 · Capium Time & Fees');
-    });
-
-    it('shows a formatted description with its formatting', async () => {
-      const detail = freshDetail();
-      Object.assign(detail, {
-        description: 'Totals\n\n- one\n- two',
-        description_html: '<p><strong>Totals</strong></p><ul><li>one</li><li>two</li></ul>',
-      });
-      server.use(...ticketHandlers({ detail }));
-      renderDetail();
-
-      const heading = await screen.findByRole('heading', { name: 'Description' });
-      const section = heading.closest('section');
-      expect(section?.querySelector('strong')).toHaveTextContent('Totals');
-      expect(section?.querySelectorAll('li')).toHaveLength(2);
-    });
-
-    it('saves a description with Ctrl+Enter, keeping its lines, and clears it to null', async () => {
-      const user = userEvent.setup();
-      const detail = freshDetail();
-      const bodies: unknown[] = [];
-      server.use(patchTicket(detail, bodies), ...ticketHandlers({ detail }));
-      renderDetail();
-
-      await user.click(await screen.findByRole('button', { name: 'Edit description' }));
-      await typeInDescription(
-        user,
-        '{Control>}a{/Control}{Backspace}First line{Enter}Second line{Control>}{Enter}{/Control}',
-      );
-      await waitFor(() =>
-        expect(bodies).toEqual([
-          {
-            description: 'First line\nSecond line',
-            description_html: '<p>First line</p><p>Second line</p>',
-          },
-        ]),
-      );
-      expect(await screen.findAllByText('Description saved')).toHaveLength(2);
-
-      await user.click(screen.getByRole('button', { name: 'Edit description' }));
-      await typeInDescription(user, '{Control>}a{/Control}{Backspace}');
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-      await waitFor(() => expect(bodies.at(-1)).toEqual({ description: null }));
-      expect(await screen.findByText('No description')).toBeInTheDocument();
-    });
-
-    it('cancels with Escape and with Cancel, and sends nothing when the text did not change', async () => {
-      const user = userEvent.setup();
-      const bodies: unknown[] = [];
-      server.use(patchTicket(freshDetail(), bodies), ...ticketHandlers());
-      renderDetail();
-
-      await user.click(await screen.findByRole('button', { name: 'Edit subject' }));
-      await user.type(screen.getByRole('textbox', { name: 'Subject' }), ' and more{Escape}');
-      expect(screen.queryByRole('textbox', { name: 'Subject' })).not.toBeInTheDocument();
+      expect(await screen.findByRole('heading', { level: 2, name: 'Subject' })).toBeInTheDocument();
       expect(screen.getByText('Trial balance does not agree')).toBeInTheDocument();
-
-      await user.click(screen.getByRole('button', { name: 'Edit subject' }));
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-      expect(screen.queryByRole('textbox', { name: 'Subject' })).not.toBeInTheDocument();
-
-      await user.click(screen.getByRole('button', { name: 'Edit description' }));
-      await user.type(screen.getByRole('textbox', { name: 'Description' }), 'x');
-      await user.click(screen.getByRole('button', { name: 'Cancel' }));
-      expect(screen.queryByRole('textbox', { name: 'Description' })).not.toBeInTheDocument();
-      expect(bodies).toEqual([]);
-    });
-
-    it('asks for a subject before it asks the API', async () => {
-      const user = userEvent.setup();
-      const bodies: unknown[] = [];
-      server.use(patchTicket(freshDetail(), bodies), ...ticketHandlers());
-      renderDetail();
-
-      await user.click(await screen.findByRole('button', { name: 'Edit subject' }));
-      await user.clear(screen.getByRole('textbox', { name: 'Subject' }));
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-
-      expect(await screen.findByText('Enter a subject')).toBeInTheDocument();
-      expect(screen.getByRole('textbox', { name: 'Subject' })).toBeInTheDocument();
-      expect(bodies).toEqual([]);
-    });
-
-    it("shows the API's refusal under the field and keeps the editor open", async () => {
-      const user = userEvent.setup();
-      server.use(
-        http.patch(orgApiPath('/tickets/:ticketId'), () =>
-          fail(422, 'VALIDATION_ERROR', 'Check the highlighted fields.', {
-            details: [
-              {
-                field: 'subject',
-                code: 'invalid',
-                message: 'The subject has a control character.',
-              },
-            ],
-          }),
-        ),
-        ...ticketHandlers(),
-      );
-      renderDetail();
-
-      await user.click(await screen.findByRole('button', { name: 'Edit subject' }));
-      await user.type(screen.getByRole('textbox', { name: 'Subject' }), '!');
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-
-      expect(await screen.findByText('The subject has a control character.')).toBeInTheDocument();
-      expect(screen.getByRole('textbox', { name: 'Subject' })).toHaveValue(
-        'Trial balance does not agree!',
-      );
-    });
-
-    it('shows the message of a refusal that names no field', async () => {
-      const user = userEvent.setup();
-      server.use(
-        http.patch(orgApiPath('/tickets/:ticketId'), () =>
-          fail(403, 'PERMISSION_DENIED', 'You may not edit tickets.'),
-        ),
-        ...ticketHandlers(),
-      );
-      renderDetail();
-
-      await user.click(await screen.findByRole('button', { name: 'Edit description' }));
-      await typeInDescription(user, ' More.');
-      await user.click(screen.getByRole('button', { name: 'Save' }));
-
-      expect(await screen.findByText('You may not edit tickets.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit subject' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit description' })).not.toBeInTheDocument();
     });
   });
 
@@ -358,13 +210,12 @@ describe('TicketDetailPage', () => {
       expect(screen.getByText('Accounts')).toBeInTheDocument();
     });
 
-    it('lets Staff edit the ticket', async () => {
+    it('lets Staff change the status and add comments and files', async () => {
       server.use(...ticketHandlers());
       renderDetail(STAFF_PERMISSIONS);
 
-      expect(await screen.findByRole('button', { name: 'Edit subject' })).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: 'Status of APT1: In Progress' }),
+        await screen.findByRole('button', { name: 'Status of APT1: In Progress' }),
       ).toBeInTheDocument();
       expect(screen.getByRole('textbox', { name: 'Comment' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Choose a file' })).toBeInTheDocument();

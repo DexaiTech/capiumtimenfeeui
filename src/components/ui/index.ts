@@ -27,7 +27,9 @@ export {
   type ColumnVisibilityMenuProps,
   type ColumnVisibilityOption,
 } from './ColumnVisibilityMenu';
-export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
+export { ConfirmDialog, type ConfirmDialogError, type ConfirmDialogProps } from './ConfirmDialog';
+export { BulkBar, type BulkBarProps } from './BulkBar';
+export { useBulkFlow, type BulkFlow, type BulkFlowOptions } from './useBulkFlow';
 export { CountTabs, type CountTab, type CountTabsProps } from './CountTabs';
 export {
   DataTable,

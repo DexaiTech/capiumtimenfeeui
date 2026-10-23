@@ -122,6 +122,13 @@ export const DETAIL_ROUTES: Partial<
       load: () => import('@/features/clients/pages/ClientDetailPage'),
     },
   ],
+  team: [
+    {
+      path: 'staff/:staffId',
+      pageId: 'staff',
+      load: () => import('@/features/team/pages/StaffDetailPage'),
+    },
+  ],
   jobs: [
     {
       path: ':jobId',

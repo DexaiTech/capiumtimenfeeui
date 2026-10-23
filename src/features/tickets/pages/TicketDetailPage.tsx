@@ -2,13 +2,13 @@ import { ArrowLeft, FileX2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
-import { buttonClasses, Card, EmptyState, Skeleton, useToast } from '@/components/ui';
+import { buttonClasses, Card, EmptyState, Skeleton } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
 
-import { useTicket, useUpdateTicket } from '../api';
+import { useTicket } from '../api';
 import { CommentsPanel } from '../components/detail/CommentsPanel';
 import { TicketCard } from '../components/detail/TicketCard';
 import { TimelinePanel } from '../components/detail/TimelinePanel';
@@ -49,9 +49,7 @@ function DetailSkeleton() {
 
 function TicketDetail({ ticketId }: { ticketId: string }) {
   const { organization, can } = useOrg();
-  const { toast } = useToast();
   const ticket = useTicket(ticketId);
-  const { mutateAsync: save } = useUpdateTicket();
   const { change, announcement } = useTicketFieldChange();
   const [note, setNote] = useState('');
   const canUpdate = can(PERMISSIONS.ticketUpdate);
@@ -87,15 +85,6 @@ function TicketDetail({ ticketId }: { ticketId: string }) {
   }
 
   const data = ticket.data;
-  const saveText = async (
-    body: { subject: string } | { description: string | null; description_html?: string },
-  ) => {
-    await save({ ticketId, body });
-    const text = 'subject' in body ? 'Subject saved' : 'Description saved';
-    setNote(text);
-    toast({ tone: 'success', title: text, description: data.code });
-  };
-
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <BackLink />
@@ -109,13 +98,6 @@ function TicketDetail({ ticketId }: { ticketId: string }) {
         onStatusChange={(status) => change(data, { status })}
         onPriorityChange={(priority) => change(data, { priority })}
         onTagResult={setNote}
-        onSaveSubject={(subject) => saveText({ subject })}
-        onSaveDescription={(description, descriptionHtml) =>
-          saveText({
-            description,
-            ...(descriptionHtml ? { description_html: descriptionHtml } : {}),
-          })
-        }
       />
       <div className="grid gap-4 lg:grid-cols-2">
         <CommentsPanel

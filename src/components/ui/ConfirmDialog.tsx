@@ -18,7 +18,14 @@ export interface ConfirmDialogProps {
   loading?: boolean;
   confirmDisabled?: boolean;
   /** A refusal explained in place, so the dialog can stay open. */
-  error?: { message: string; requestId?: string } | null;
+  error?: ConfirmDialogError | null;
+}
+
+export interface ConfirmDialogError {
+  message: string;
+  requestId?: string;
+  /** What the refusal is about, one line each (for example the rows a bulk action refused). */
+  items?: ReadonlyArray<{ label: string; reason: string }>;
 }
 
 /** A small confirmation modal for destructive or far-reaching actions. */
@@ -65,6 +72,15 @@ export function ConfirmDialog({
             <CircleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden="true" />
             <div className="flex min-w-0 flex-col gap-1">
               <p>{error.message}</p>
+              {error.items && error.items.length > 0 ? (
+                <ul className="flex max-h-40 list-disc flex-col gap-0.5 overflow-y-auto pl-4 text-xs">
+                  {error.items.map((item) => (
+                    <li key={`${item.label}:${item.reason}`}>
+                      <span className="font-semibold">{item.label}</span>: {item.reason}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {error.requestId ? (
                 <p className="text-xs text-text-muted">
                   Request ID: <code className="font-mono break-all">{error.requestId}</code>

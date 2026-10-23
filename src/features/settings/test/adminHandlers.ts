@@ -4,6 +4,7 @@ import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
 
 import type {
+  BulkImportResult,
   ImportResult,
   IntegrationCard,
   Mappings,
@@ -59,6 +60,8 @@ export interface AdminBackend {
   mappings: Mappings;
   /** What a client import answers (the file itself is not readable under jsdom). */
   importResult: ImportResult;
+  /** What a staff, rates or jobs import answers (the file itself is not readable under jsdom). */
+  bulkResult: BulkImportResult;
   /** What an opening-balance time import answers. */
   openingBalanceResult: OpeningBalanceTimeImportResult;
   /** Rows per page of the lists (everything when 0). */
@@ -77,6 +80,18 @@ const emptyImport = (dryRun: boolean): ImportResult => ({
   ignored_columns: [],
   errors: [],
   clients: [],
+});
+
+const emptyBulkImport = (dryRun: boolean): BulkImportResult => ({
+  dry_run: dryRun,
+  total_rows: 3,
+  valid_rows: 3,
+  created: dryRun ? 0 : 3,
+  columns: ['full_name', 'grade', 'start_date'],
+  ignored_columns: [],
+  errors: [],
+  items: [],
+  counts: {},
 });
 
 const emptyOpeningBalanceImport = (dryRun: boolean): OpeningBalanceTimeImportResult => ({
@@ -100,6 +115,7 @@ export function createBackend(initial: Partial<AdminBackend> = {}): AdminBackend
     logs: logsOf(),
     mappings: mappingsOf(),
     importResult: emptyImport(true),
+    bulkResult: emptyBulkImport(true),
     openingBalanceResult: emptyOpeningBalanceImport(true),
     pageSize: 0,
     calls: [],
@@ -459,6 +475,28 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
         created: dryRun ? 0 : backend.importResult.valid_rows,
       });
     }),
+    ...(['staff', 'rates', 'jobs'] as const).flatMap((kind) => [
+      http.get(orgApiPath(`/${kind}/export`), ({ request }) => {
+        record('GET', `/${kind}/export`, undefined, new URL(request.url).searchParams);
+        const failed = refusal('GET', `/${kind}/export`);
+        if (failed) return failed;
+        return new HttpResponse('code,name\nX001,Example\n', {
+          headers: { 'Content-Type': 'text/csv' },
+        });
+      }),
+      http.post(orgApiPath(`/imports/${kind}`), ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        const dryRun = params.get('dry_run') === 'true';
+        record('POST', `/imports/${kind}`, undefined, params);
+        const failed = refusal('POST', `/imports/${kind}`);
+        if (failed) return failed;
+        return ok({
+          ...backend.bulkResult,
+          dry_run: dryRun,
+          created: dryRun ? 0 : backend.bulkResult.valid_rows,
+        });
+      }),
+    ]),
     http.post(orgApiPath('/imports/opening_balance_time'), ({ request }) => {
       const params = new URL(request.url).searchParams;
       const dryRun = params.get('dry_run') === 'true';

@@ -1,7 +1,13 @@
-export { billingApi, type ClientBillingDefaults, type PagedObject, type SortOrder } from './billingApi';
+export {
+  billingApi,
+  type ClientBillingDefaults,
+  type PagedObject,
+  type SortOrder,
+} from './billingApi';
 export {
   useAddInvoiceLine,
   useApproveInvoice,
+  useBulkInvoices,
   useCreateInvoice,
   useDeleteInvoice,
   useDeleteInvoiceLine,

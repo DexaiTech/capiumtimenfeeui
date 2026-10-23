@@ -46,7 +46,6 @@ describe('ClientsPage list', () => {
       'Contact',
       'Contact Email',
       'Deadlines',
-      'AML',
       'Activity',
       'Services',
       'Central',
@@ -71,7 +70,6 @@ describe('ClientsPage list', () => {
     expect(cells.getByText('Ramya Menon')).toBeInTheDocument();
     expect(cells.getByText('ramya@techwave.example')).toBeInTheDocument();
     expect(cells.getByText('1 Overdue by 1d')).toBeInTheDocument();
-    expect(cells.getByText('Clear')).toBeInTheDocument();
     // 20:23 UTC is 21:23 in London (BST).
     expect(cells.getByText('20/05/2026 - 09:23PM')).toBeInTheDocument();
     expect(cells.getByText('Accounts')).toBeInTheDocument();
@@ -83,17 +81,14 @@ describe('ClientsPage list', () => {
     const second = await clientRow(mutual.name);
     expect(within(second).getByText('Sole Trader')).toBeInTheDocument();
     expect(within(second).getByText('2 Due today')).toBeInTheDocument();
-    expect(within(second).getByText('Pending')).toBeInTheDocument();
     expect(
       within(second).getByRole('button', { name: `Add contact for ${mutual.name}` }),
     ).toHaveTextContent('Add');
 
-    // Count tabs come from the summary.
-    expect(await screen.findByRole('tab', { name: /Clients\s*12/ })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    expect(screen.getByRole('tab', { name: /Users\s*18/ })).toBeInTheDocument();
+    // The client count comes from the summary; there is no Users tab.
+    expect(await screen.findByText('12', { selector: '.cc-count' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Users/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'AML' })).not.toBeInTheDocument();
   });
 
   it('debounces the quick search and sends q once typing stops', async () => {
@@ -134,13 +129,6 @@ describe('ClientsPage list', () => {
     await waitFor(() => expect(sorts).toContain('health_score:asc'));
     expect(healthHeader).toHaveAttribute('aria-sort', 'ascending');
     expect(clientHeader).toHaveAttribute('aria-sort', 'none');
-
-    await user.click(
-      within(screen.getByRole('columnheader', { name: 'AML' })).getByRole('button', {
-        name: 'AML',
-      }),
-    );
-    await waitFor(() => expect(sorts).toContain('aml_status:asc'));
   });
 
   it('hides a column and remembers it after a reload', async () => {
@@ -581,22 +569,6 @@ describe('ClientsPage actions', () => {
         .getAllByRole('menuitem')
         .map((item) => item.textContent),
     ).toEqual(['View']);
-  });
-
-  it('lists the staff on the Users tab', async () => {
-    server.use(...clientsHandlers());
-    const user = userEvent.setup();
-    renderInOrg(<ClientsPage />);
-    await clientRow(techwave.name);
-    await user.click(screen.getByRole('tab', { name: /Users/ }));
-    const users = await screen.findByRole('table', { name: 'Users' });
-    const grace = await within(users).findByRole('row', { name: /Grace Hopper/ });
-    expect(within(grace).getByText('grace@acme.example')).toBeInTheDocument();
-    expect(within(grace).getByText('Manager', { selector: 'td' })).toBeInTheDocument();
-    expect(within(grace).getByText('Active')).toBeInTheDocument();
-    // Ada has no initials of her own: derived from the name.
-    const ada = within(users).getByRole('row', { name: /Ada Lovelace/ });
-    expect(within(ada).getByText('AL', { selector: 'td' })).toBeInTheDocument();
   });
 
   it('shows the same data as cards in the grid view', async () => {

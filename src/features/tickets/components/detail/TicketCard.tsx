@@ -17,13 +17,12 @@ import { useAuth } from '@/features/auth';
 import { formatDayMonthYear } from '@/utils/dates';
 
 import { CATEGORY_LABELS } from '../../constants';
-import { descriptionText, subjectText } from '../../schemas/ticket';
 import type { TicketDetail, TicketPriority, TicketStatus } from '../../types';
 import { PrioritySelect, StatusSelect } from '../SelectPill';
 import { TagChip } from '../TagChip';
 import { TagPopover } from '../TagPopover';
 import { AttachmentCard } from './AttachmentCard';
-import { EditableText } from './EditableText';
+import { ReadOnlyText } from './ReadOnlyText';
 
 function FieldColumn({
   icon: Icon,
@@ -55,8 +54,6 @@ export interface TicketCardProps {
   onStatusChange: (status: TicketStatus) => void;
   onPriorityChange: (priority: TicketPriority) => void;
   onTagResult: (message: string) => void;
-  onSaveSubject: (subject: string) => Promise<void>;
-  onSaveDescription: (description: string | null, descriptionHtml?: string) => Promise<void>;
 }
 
 /**
@@ -72,8 +69,6 @@ export function TicketCard({
   onStatusChange,
   onPriorityChange,
   onTagResult,
-  onSaveSubject,
-  onSaveDescription,
 }: TicketCardProps) {
   const { user } = useAuth();
   const files = ticket.attachments.filter((attachment) => attachment.comment_id === null);
@@ -125,35 +120,13 @@ export function TicketCard({
       </dl>
 
       <div className="flex flex-col gap-6 border-t border-row-border p-5">
-        <EditableText
-          label="Subject"
-          icon={Type}
-          value={ticket.subject}
-          multiline={false}
-          canEdit={canUpdate}
-          emptyText="No subject"
-          validate={(text) => {
-            const parsed = subjectText.safeParse(text);
-            return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Check the subject');
-          }}
-          onSave={onSaveSubject}
-        />
-        <EditableText
+        <ReadOnlyText label="Subject" icon={Type} value={ticket.subject} emptyText="No subject" />
+        <ReadOnlyText
           label="Description"
           icon={AlignLeft}
           value={ticket.description}
           valueHtml={ticket.description_html}
-          multiline
-          rich
-          canEdit={canUpdate}
           emptyText="No description"
-          validate={(text) => {
-            const parsed = descriptionText.safeParse(text);
-            return parsed.success
-              ? null
-              : (parsed.error.issues[0]?.message ?? 'Check the description');
-          }}
-          onSave={(text, html) => onSaveDescription(text === '' ? null : text, html)}
         />
         <section aria-labelledby="ticket-files-title" className="flex flex-col gap-3">
           <h2

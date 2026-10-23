@@ -2,6 +2,7 @@ import { PAGE_SIZE } from '@/constants/limits';
 import { api } from '@/services/api';
 
 import type {
+  BulkImportResult,
   ImportResult,
   IntegrationCard,
   IntegrationKey,
@@ -27,6 +28,13 @@ import type {
 
 const org = (organizationId: string) => `/organizations/${encodeURIComponent(organizationId)}`;
 const id = encodeURIComponent;
+
+/** A CSV upload as a multipart form (`file`) to a bulk import route. */
+function uploadCsv(path: string, file: File, query: Record<string, boolean>) {
+  const body = new FormData();
+  body.append('file', file, file.name);
+  return api.upload<BulkImportResult>(path, body, { query });
+}
 
 interface PageRequest {
   cursor?: string;
@@ -98,6 +106,24 @@ export const adminApi = {
       query: { dry_run: dryRun },
     });
   },
+  /** The CSV of every staff member (rate columns only with `rate.read`). */
+  exportStaff: (organizationId: string) =>
+    api.getBlob(`${org(organizationId)}/staff/export`, { accept: 'text/csv' }),
+  /** The CSV of every rate rule, of every level. */
+  exportRates: (organizationId: string) =>
+    api.getBlob(`${org(organizationId)}/rates/export`, { accept: 'text/csv' }),
+  /** The CSV of every job that is not deleted. */
+  exportJobs: (organizationId: string) =>
+    api.getBlob(`${org(organizationId)}/jobs/export`, { accept: 'text/csv' }),
+  importStaff: (organizationId: string, file: File, dryRun: boolean) =>
+    uploadCsv(`${org(organizationId)}/imports/staff`, file, { dry_run: dryRun }),
+  importRates: (organizationId: string, file: File, dryRun: boolean, closePrevious: boolean) =>
+    uploadCsv(`${org(organizationId)}/imports/rates`, file, {
+      dry_run: dryRun,
+      close_previous: closePrevious,
+    }),
+  importJobs: (organizationId: string, file: File, dryRun: boolean) =>
+    uploadCsv(`${org(organizationId)}/imports/jobs`, file, { dry_run: dryRun }),
   importOpeningBalanceTime: (organizationId: string, file: File, dryRun: boolean) => {
     const body = new FormData();
     body.append('file', file, file.name);

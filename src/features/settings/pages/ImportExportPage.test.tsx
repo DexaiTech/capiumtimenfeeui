@@ -6,13 +6,14 @@ import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { server } from '@/test/server';
 
-import type { ImportResult, OpeningBalanceTimeImportResult } from '../adminTypes';
+import type { BulkImportResult, ImportResult, OpeningBalanceTimeImportResult } from '../adminTypes';
 import { adminHandlers, callsOf, createBackend, type AdminBackend } from '../test/adminHandlers';
 import ImportExportPage from './ImportExportPage';
 
 const READER = ['organization.read', 'client.read'];
 const CREATOR = ['organization.read', 'client.create'];
 const IMPORTER = ['organization.read', 'opening_balance.import'];
+const BULK = 'data.import_export';
 
 async function openTab(user: ReturnType<typeof userEvent.setup>, label: string) {
   await user.click(await screen.findByRole('tab', { name: label }));
@@ -110,25 +111,19 @@ describe('what the page offers', () => {
     );
   });
 
-  it('says what is not available yet, on its own tab', async () => {
+  it('offers staff, rates and jobs on their own tab', async () => {
     const user = userEvent.setup();
     setup();
-    await user.click(await screen.findByRole('tab', { name: 'Staff, rates & jobs' }));
+    await openTab(user, 'Staff, rates & jobs');
 
     const others = screen.getByRole('region', { name: 'Staff, rates and jobs' });
-    expect(within(others).getAllByText('Not available yet')).toHaveLength(3);
-    expect(within(others).getByRole('link', { name: 'Open Staff' })).toHaveAttribute(
-      'href',
-      '/acme/team/staff',
-    );
-    expect(within(others).getByRole('link', { name: 'Open Rates' })).toHaveAttribute(
-      'href',
-      '/acme/team/charge-out-rates',
-    );
-    expect(within(others).getByRole('link', { name: 'Open Jobs' })).toHaveAttribute(
-      'href',
-      '/acme/settings/integrations',
-    );
+    expect(within(others).queryByText('Not available yet')).not.toBeInTheDocument();
+    for (const name of ['Staff', 'Rates', 'Jobs']) {
+      const section = within(others).getByRole('region', { name });
+      const noun = name.toLowerCase();
+      expect(within(section).getByRole('button', { name: `Export ${noun} (CSV)` })).toBeEnabled();
+      expect(within(section).getByRole('button', { name: `Import ${noun}` })).toBeEnabled();
+    }
   });
 });
 
@@ -381,5 +376,277 @@ describe('the permissions', () => {
     expect(
       screen.getByText('Importing opening balances needs the opening balance import permission.'),
     ).toBeInTheDocument();
+  });
+});
+
+const bulkResult = (over: Partial<BulkImportResult> = {}): BulkImportResult => ({
+  dry_run: true,
+  total_rows: 3,
+  valid_rows: 3,
+  created: 0,
+  columns: ['full_name', 'grade', 'start_date'],
+  ignored_columns: [],
+  errors: [],
+  items: [],
+  counts: {},
+  ...over,
+});
+
+const KINDS = [
+  { noun: 'staff', file: 'staff.csv', many: 'staff members' },
+  { noun: 'rates', file: 'rates.csv', many: 'rates' },
+  { noun: 'jobs', file: 'jobs.csv', many: 'jobs' },
+] as const;
+
+async function openBulkImport(user: ReturnType<typeof userEvent.setup>, noun: string) {
+  await openTab(user, 'Staff, rates & jobs');
+  await user.click(await screen.findByRole('button', { name: `Import ${noun}` }));
+  return screen.findByRole('dialog', { name: `Import ${noun}` });
+}
+
+describe.each(KINDS)('exporting and importing $noun', ({ noun, file, many }) => {
+  it('downloads them as a CSV file', async () => {
+    const user = userEvent.setup();
+    const { createObjectURL, names } = stubDownloads();
+    const backend = setup();
+    await openTab(user, 'Staff, rates & jobs');
+
+    await user.click(await screen.findByRole('button', { name: `Export ${noun} (CSV)` }));
+
+    await waitFor(() => expect(names).toEqual([file]));
+    expect(callsOf(backend, 'GET', `/${noun}/export`)).toHaveLength(1);
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells the person when the file could not be made', async () => {
+    const user = userEvent.setup();
+    const { names } = stubDownloads();
+    setup({
+      refusals: {
+        [`GET /${noun}/export`]: {
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'Too many rows.',
+        },
+      },
+    });
+    await openTab(user, 'Staff, rates & jobs');
+
+    await user.click(await screen.findByRole('button', { name: `Export ${noun} (CSV)` }));
+
+    expect(await screen.findByText(`Could not export the ${noun}`)).toBeInTheDocument();
+    expect(names).toEqual([]);
+  });
+
+  it('checks the file first, then imports the rows', async () => {
+    const user = userEvent.setup();
+    const backend = setup({ bulkResult: bulkResult() });
+    const dialog = await openBulkImport(user, noun);
+
+    expect(within(dialog).getByRole('button', { name: 'Check file' })).toBeDisabled();
+    expect(within(dialog).getByText('No file chosen')).toBeInTheDocument();
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv(file));
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+
+    expect(
+      await within(dialog).findByText(/3 rows checked: 3 valid, 0 errors\./),
+    ).toBeInTheDocument();
+    expect(callsOf(backend, 'POST', `/imports/${noun}`)[0]?.params?.get('dry_run')).toBe('true');
+
+    await user.click(within(dialog).getByRole('button', { name: `Import 3 ${many}` }));
+
+    await waitFor(() => expect(callsOf(backend, 'POST', `/imports/${noun}`)).toHaveLength(2));
+    expect(callsOf(backend, 'POST', `/imports/${noun}`)[1]?.params?.get('dry_run')).toBe('false');
+    expect(await screen.findByText(`3 ${many} imported`)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: `Import ${noun}` })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('lists the rows with errors and offers no import until the file is right', async () => {
+    const user = userEvent.setup();
+    setup({
+      bulkResult: bulkResult({
+        valid_rows: 1,
+        errors: [
+          { row: 2, field: 'grade', code: 'unknown_grade', message: 'There is no grade XYZ.' },
+          { row: 3, field: 'start_date', code: 'missing', message: 'This value is required.' },
+        ],
+        ignored_columns: ['favourite_colour'],
+      }),
+    });
+    const dialog = await openBulkImport(user, noun);
+
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv(file));
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+
+    expect(
+      await within(dialog).findByText(/3 rows checked: 1 valid, 2 errors\./),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('Ignored columns: favourite_colour')).toBeInTheDocument();
+    const rows = within(within(dialog).getByRole('table', { name: 'Rows with errors' }))
+      .getAllByRole('row')
+      .slice(1);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('There is no grade XYZ.');
+    expect(rows[1]).toHaveTextContent('This value is required.');
+    expect(within(dialog).queryByRole('button', { name: /^Import \d/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the rows of a file the API refused', async () => {
+    const user = userEvent.setup();
+    setup({
+      refusals: {
+        [`POST /imports/${noun}`]: {
+          status: 422,
+          code: 'IMPORT_INVALID',
+          message: 'The file has errors.',
+          details: [{ row: 4, field: 'grade', code: 'unknown_grade', message: 'Unknown grade.' }],
+        },
+      },
+    });
+    const dialog = await openBulkImport(user, noun);
+
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv(file));
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+
+    expect(await within(dialog).findByText('The file has errors.')).toBeInTheDocument();
+    expect(within(dialog).getByRole('table', { name: 'Rows with errors' })).toHaveTextContent(
+      'Unknown grade.',
+    );
+  });
+
+  it('lists the columns and offers a template with them', async () => {
+    const user = userEvent.setup();
+    const { createObjectURL, names } = stubDownloads();
+    setup();
+    const dialog = await openBulkImport(user, noun);
+
+    expect(within(dialog).getByText(/Required columns:/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Download template' }));
+
+    expect(names).toEqual([`${noun}-import-template.csv`]);
+    const blob = createObjectURL.mock.calls[0]?.[0];
+    const text = (await blob?.text()) ?? '';
+    expect(text.split('\r\n')[0]).toContain(
+      noun === 'jobs'
+        ? 'name,client_code'
+        : noun === 'rates'
+          ? 'kind,staff_code'
+          : 'code,full_name',
+    );
+  });
+
+  it('starts again when another file is chosen', async () => {
+    const user = userEvent.setup();
+    setup({ bulkResult: bulkResult() });
+    const dialog = await openBulkImport(user, noun);
+
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv(file));
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+    await within(dialog).findByText(/3 rows checked/);
+
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv('more.csv'));
+
+    expect(within(dialog).queryByText(/rows checked/)).not.toBeInTheDocument();
+  });
+});
+
+describe('importing staff with rates', () => {
+  it('says how many rates came with the staff', async () => {
+    const user = userEvent.setup();
+    setup({ bulkResult: bulkResult({ valid_rows: 2, counts: { rates: 3 } }) });
+    const dialog = await openBulkImport(user, 'staff');
+
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv('staff.csv'));
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+    await user.click(await within(dialog).findByRole('button', { name: 'Import 2 staff members' }));
+
+    expect(await screen.findByText('2 staff members imported, with 3 rates')).toBeInTheDocument();
+  });
+});
+
+describe('importing rates', () => {
+  it('sends close_previous when asked to end the earlier rate', async () => {
+    const user = userEvent.setup();
+    const backend = setup({ bulkResult: bulkResult() });
+    const dialog = await openBulkImport(user, 'rates');
+
+    await user.click(within(dialog).getByRole('checkbox', { name: /End the earlier rate/ }));
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv('rates.csv'));
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+    await within(dialog).findByText(/3 rows checked/);
+
+    expect(callsOf(backend, 'POST', '/imports/rates')[0]?.params?.get('close_previous')).toBe(
+      'true',
+    );
+  });
+
+  it('does not send it by default', async () => {
+    const user = userEvent.setup();
+    const backend = setup({ bulkResult: bulkResult() });
+    const dialog = await openBulkImport(user, 'rates');
+
+    await user.upload(within(dialog).getByLabelText('CSV file'), csv('rates.csv'));
+    await user.click(within(dialog).getByRole('button', { name: 'Check file' }));
+    await within(dialog).findByText(/3 rows checked/);
+
+    expect(callsOf(backend, 'POST', '/imports/rates')[0]?.params?.get('close_previous')).toBe(
+      'false',
+    );
+  });
+});
+
+describe('the staff, rates and jobs permissions', () => {
+  const only = (...codes: string[]) => ['organization.read', ...codes];
+
+  it.each([
+    ['member.read', 'staff', 'Staff', 'add staff'],
+    ['rate.read', 'rates', 'Rates', 'manage rates'],
+    ['job.read', 'jobs', 'Jobs', 'create jobs'],
+  ])('needs more than %s to import %s', async (read, noun, region, writes) => {
+    const user = userEvent.setup();
+    setup({}, only(BULK, read));
+    await openTab(user, 'Staff, rates & jobs');
+    const section = await screen.findByRole('region', { name: region });
+
+    expect(within(section).getByRole('button', { name: `Export ${noun} (CSV)` })).toBeEnabled();
+    expect(within(section).getByRole('button', { name: `Import ${noun}` })).toBeDisabled();
+    expect(
+      within(section).getByText(`Importing needs permission to ${writes}.`),
+    ).toBeInTheDocument();
+  });
+
+  it('disables a side that lacks its own permission', async () => {
+    const user = userEvent.setup();
+    setup({}, only(BULK, 'member.invite'));
+    await openTab(user, 'Staff, rates & jobs');
+    const section = await screen.findByRole('region', { name: 'Staff' });
+
+    expect(within(section).getByRole('button', { name: 'Export staff (CSV)' })).toBeDisabled();
+    expect(within(section).getByRole('button', { name: 'Import staff' })).toBeEnabled();
+    expect(
+      within(section).getByText('Exporting needs permission to view staff.'),
+    ).toBeInTheDocument();
+  });
+
+  it('disables everything without the import and export permission', async () => {
+    const user = userEvent.setup();
+    setup({}, only('client.read', 'member.read', 'member.invite', 'rate.read', 'job.read'));
+    await openTab(user, 'Staff, rates & jobs');
+
+    for (const noun of ['staff', 'rates', 'jobs']) {
+      expect(screen.getByRole('button', { name: `Export ${noun} (CSV)` })).toBeDisabled();
+      expect(screen.getByRole('button', { name: `Import ${noun}` })).toBeDisabled();
+    }
+    expect(
+      screen.getAllByText('Importing and exporting need the import and export permission.'),
+    ).toHaveLength(3);
+  });
+
+  it('shows the page to someone who only holds the import and export permission', async () => {
+    setup({}, only(BULK));
+
+    expect(await screen.findByRole('tab', { name: 'Staff, rates & jobs' })).toBeInTheDocument();
   });
 });

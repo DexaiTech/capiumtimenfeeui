@@ -60,32 +60,6 @@ export function useAddComment(ticketId: string) {
   });
 }
 
-export function useUpdateComment(ticketId: string) {
-  const { organization } = useOrg();
-  const invalidate = useTicketInvalidation();
-  return useMutation({
-    mutationFn: ({
-      commentId,
-      ...body
-    }: {
-      commentId: string;
-      body: string;
-      body_html?: string | null;
-    }) => ticketsApi.updateComment(organization.id, ticketId, commentId, body),
-    onSettled: () => invalidate.comments(ticketId),
-  });
-}
-
-export function useDeleteComment(ticketId: string) {
-  const { organization } = useOrg();
-  const invalidate = useTicketInvalidation();
-  return useMutation({
-    mutationFn: (commentId: string) =>
-      ticketsApi.removeComment(organization.id, ticketId, commentId),
-    onSettled: () => invalidate.comments(ticketId),
-  });
-}
-
 export function useDeleteAttachment(ticketId: string) {
   const { organization } = useOrg();
   const queryClient = useQueryClient();

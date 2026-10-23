@@ -105,10 +105,10 @@ const INDIGO: ToneClasses = {
   soft: 'bg-tag-indigo/10',
   strong: 'bg-tag-indigo/15',
 };
-const BRONZE: ToneClasses = {
-  text: 'text-badge-bronze',
-  soft: 'bg-badge-bronze-soft',
-  strong: 'bg-badge-bronze/15',
+const PINK: ToneClasses = {
+  text: 'text-tag-pink',
+  soft: 'bg-tag-pink/10',
+  strong: 'bg-tag-pink/15',
 };
 const GREY: ToneClasses = {
   text: 'text-badge-grey',
@@ -130,10 +130,10 @@ export const STATUS_META: Record<TicketStatus, StatusMeta> = {
   clarification_required: { label: 'Clarification Required', tone: VIOLET, chart: 'violet' },
   blocked: { label: 'Blocked', tone: RED, chart: 'danger' },
   ready_for_ba_review: { label: 'Ready for BA Review', tone: INDIGO, chart: 'indigo' },
-  reopened: { label: 'Reopened', tone: RED, chart: 'pink' },
+  reopened: { label: 'Reopened', tone: RED, chart: 'teal' },
   closed: { label: 'Closed', tone: GREEN, chart: 'success' },
   invalid: { label: 'Invalid', tone: GREY, chart: 'muted' },
-  on_hold: { label: 'On Hold', tone: BRONZE, chart: 'slate' },
+  on_hold: { label: 'On Hold', tone: PINK, chart: 'pink' },
 };
 
 /** What each status is for, shown as a hint where a person picks one. */

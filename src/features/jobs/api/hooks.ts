@@ -16,6 +16,7 @@ import type {
   Job,
   JobCopyInput,
   JobFilters,
+  JobBulkRequest,
   JobInput,
   JobStatus,
   JobUpdate,
@@ -181,6 +182,16 @@ export function useDeleteJob() {
     onSettled: (_data, _error, jobId) => {
       invalidate.deleted(jobId);
     },
+  });
+}
+
+/** One action on the selected jobs: all or nothing (`POST /jobs/bulk`). */
+export function useBulkJobs() {
+  const { organization } = useOrg();
+  const invalidate = useJobInvalidation();
+  return useMutation({
+    mutationFn: (body: JobBulkRequest) => jobsApi.bulk(organization.id, body),
+    onSettled: () => invalidate.jobs(),
   });
 }
 

@@ -8,6 +8,7 @@ import type {
   Job,
   JobBudgetDetail,
   JobBudgetRow,
+  JobBulkRequest,
   JobStatus,
   Member,
   Rag,
@@ -397,6 +398,68 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
       );
       backend.jobs.push(created);
       return ok(created, { status: 201, message: 'Job created' });
+    }),
+    /* The bulk endpoint: all or nothing, with the rules of the single operations. */
+    http.post(orgApiPath('/jobs/bulk'), async ({ request }) => {
+      const body = (await request.json()) as JobBulkRequest;
+      record('POST', '/jobs/bulk', body);
+      const targets = body.job_ids.map((id) => find(id));
+      if (targets.some((entry) => entry === undefined)) {
+        return fail(404, 'RESOURCE_NOT_FOUND', 'Some of the jobs were not found.');
+      }
+      const chosen = targets as Job[];
+      const refuse = (code: string, message: string, rows: Job[], reason: string) =>
+        fail(409, code, message, {
+          details: rows.map((entry) => ({ job_id: entry.id, number: entry.number, reason })),
+        });
+      let changed = 0;
+      if (body.action === 'delete') {
+        const blocked = chosen.filter((entry) => backend.inUse.has(entry.id));
+        if (blocked.length > 0) {
+          return refuse(
+            'JOB_IN_USE',
+            `${blocked.length} jobs have time, disbursements, expenses or invoice lines and cannot be deleted. Nothing was deleted.`,
+            blocked,
+            'Has time, disbursements, expenses, invoice lines or write-offs.',
+          );
+        }
+        backend.jobs = backend.jobs.filter((entry) => !chosen.includes(entry));
+        backend.tasks = backend.tasks.filter((entry) => !body.job_ids.includes(entry.job_id));
+        changed = chosen.length;
+      } else if (body.action === 'set_status') {
+        const wanted = body.value;
+        const blocked = chosen.filter(
+          (entry) =>
+            entry.status !== wanted &&
+            !JOB_TRANSITIONS[entry.status].some((transition) => transition.to === wanted),
+        );
+        if (blocked.length > 0) {
+          return refuse(
+            'INVALID_STATUS_TRANSITION',
+            `${blocked.length} jobs cannot be moved to ${wanted}. Nothing was changed.`,
+            blocked,
+            `A job in this status cannot be moved to ${wanted}.`,
+          );
+        }
+        for (const entry of chosen) {
+          if (entry.status !== wanted) changed += 1;
+          entry.status = wanted;
+        }
+      } else if (body.action === 'set_manager') {
+        for (const entry of chosen) {
+          if (entry.manager_user_id !== body.value) changed += 1;
+          entry.manager_user_id = body.value;
+        }
+      } else {
+        for (const entry of chosen) {
+          if (entry.due_date !== body.value) changed += 1;
+          entry.due_date = body.value;
+        }
+      }
+      return ok(
+        { action: body.action, affected: chosen.length, changed },
+        { message: `${changed} jobs updated` },
+      );
     }),
     http.get(orgApiPath('/jobs/:jobId'), ({ params }) => {
       const found = find(params.jobId);

@@ -1,5 +1,6 @@
 import { PAGE_SIZE } from '@/constants/limits';
 import { api } from '@/services/api';
+import type { BulkResult } from '@/types';
 
 import type {
   ActivityType,
@@ -31,6 +32,7 @@ import type {
   ServiceActivityTypes,
   ServiceCreate,
   ServiceUpdate,
+  StaffBulkRequest,
   StaffCreate,
   StaffDeactivate,
   StaffDetail,
@@ -70,6 +72,8 @@ export const teamApi = {
     api.post<StaffDetail>(`${org(organizationId)}/staff`, body),
   updateStaff: (organizationId: string, staffId: string, body: StaffUpdate) =>
     api.patch<StaffDetail>(`${org(organizationId)}/staff/${seg(staffId)}`, body),
+  bulkStaff: (organizationId: string, body: StaffBulkRequest) =>
+    api.post<BulkResult>(`${org(organizationId)}/staff/bulk`, body),
   deleteStaff: (organizationId: string, staffId: string) =>
     api.delete<null>(`${org(organizationId)}/staff/${seg(staffId)}`),
   deactivateStaff: (organizationId: string, staffId: string, body: StaffDeactivate) =>

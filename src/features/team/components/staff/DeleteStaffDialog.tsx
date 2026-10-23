@@ -12,6 +12,8 @@ export interface DeleteStaffDialogProps {
   onClose: () => void;
   /** Offered when the record is in use: the way to take them out of the working lists. */
   onDeactivateInstead?: (staff: StaffMember) => void;
+  /** Called once the person has been deleted (before the dialog closes). */
+  onDeleted?: (staff: StaffMember) => void;
 }
 
 function UsageList({ usage }: { usage: ReadonlyArray<StaffUsage> }) {
@@ -27,7 +29,12 @@ function UsageList({ usage }: { usage: ReadonlyArray<StaffUsage> }) {
   );
 }
 
-function DeleteConfirm({ staff, onClose, onDeactivateInstead }: DeleteStaffDialogProps) {
+function DeleteConfirm({
+  staff,
+  onClose,
+  onDeactivateInstead,
+  onDeleted,
+}: DeleteStaffDialogProps) {
   const detail = useStaffMember(staff?.id ?? null);
   const remove = useDeleteStaff();
   const { toast } = useToast();
@@ -44,6 +51,7 @@ function DeleteConfirm({ staff, onClose, onDeactivateInstead }: DeleteStaffDialo
     remove.mutate(staff.id, {
       onSuccess: () => {
         toast({ tone: 'success', title: `${staff.full_name} deleted` });
+        onDeleted?.(staff);
         onClose();
       },
       onError: (error) => {

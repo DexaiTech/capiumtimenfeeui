@@ -115,6 +115,12 @@ export interface StaffCreate {
   chargeable_target_bp?: BasisPoints;
   leaving_date?: IsoDate;
   role_id?: string;
+  /** Pence per hour: also sets the person's own cost rate (needs `rate.manage`). */
+  cost_rate?: Pence;
+  /** Pence per hour: also sets the person's own charge-out rate (needs `rate.manage`). */
+  charge_rate?: Pence;
+  /** When the rates start; the start date when absent. */
+  rate_effective_from?: IsoDate;
 }
 
 /** Body of `PATCH {org}/staff/{id}`: only what changes; null clears the nullable fields. */
@@ -131,6 +137,16 @@ export interface StaffUpdate {
   chargeable_target_bp?: BasisPoints;
   start_date?: IsoDate | null;
   leaving_date?: IsoDate | null;
+}
+
+/** Body of `POST {org}/staff/bulk`: one action on up to 200 people, all or nothing. */
+export interface StaffBulkRequest {
+  staff_ids: string[];
+  action: 'set_grade' | 'set_approver' | 'clear_approver' | 'deactivate' | 'reactivate' | 'delete';
+  /** A grade id, an approver's staff id, or for `deactivate` `inactive` (default) or `left`. */
+  value?: string;
+  /** For `deactivate` with `left`: the leaving date (default today). */
+  leaving_date?: IsoDate;
 }
 
 export interface StaffDeactivate {

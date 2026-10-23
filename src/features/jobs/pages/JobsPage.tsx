@@ -8,7 +8,7 @@ import {
   SearchX,
   Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import {
@@ -38,6 +38,7 @@ import { flattenPages, useDeleteJob, useJobList, useMemberNames, useMembers } fr
 import { CopyJobDialog } from '../components/CopyJobDialog';
 import { FilterPopover } from '../components/FilterPopover';
 import { JobFormDialog } from '../components/JobFormDialog';
+import { JobsBulkBar } from '../components/JobsBulkBar';
 import { jobColumns, sortOfColumn, tableSort } from '../components/jobColumns';
 import { LoadError, PageShell } from '../components/PageShell';
 import { JOB_STATUS_META } from '../constants';
@@ -97,7 +98,15 @@ export default function JobsPage() {
   const [deleting, setDeleting] = useState<Job | null>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
 
-  const rows = flattenPages(list.data);
+  const rows = useMemo(() => flattenPages(list.data), [list.data]);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  // A bulk action only reaches the jobs on screen: a ticked row that is no longer listed
+  // (another filter or search, a refresh) is left out.
+  const picked = useMemo(
+    () => rows.filter((row) => selected.has(row.id)).map((row) => row.id),
+    [rows, selected],
+  );
+  const selectable = canUpdate || canDelete;
   const activeFilters =
     Number(clientId !== null) +
     Number(manager !== null) +
@@ -225,66 +234,82 @@ export default function JobsPage() {
           }}
           hiddenColumns={hidden}
           loading={list.isPending}
+          selectable={selectable}
+          selected={selected}
+          onSelectedChange={setSelected}
+          selectLabel={(job) => `Select ${jobLabel(job)}`}
           toolbar={
-            <PageToolbar
-              start={
-                <CountTabs
-                  label="Job status"
-                  items={TABS.map((item) => ({ value: item.value, label: item.label }))}
-                  value={tab}
-                  onChange={(value) => setParam({ status: value === 'all' ? null : value })}
-                />
-              }
-              search={
-                <SearchField
-                  label="Search jobs"
-                  placeholder="Name, number or client"
-                  value={searchText}
-                  onChange={setSearchText}
-                />
-              }
-              actions={
-                <>
-                  <FilterPopover
-                    title="Filter jobs"
-                    count={activeFilters}
-                    onClear={() =>
-                      setParam({ client_id: null, manager: null, due_from: null, due_to: null })
-                    }
-                  >
-                    {can(PERMISSIONS.clientRead) ? (
-                      <ClientPicker
-                        label="Client"
-                        clearable
-                        value={clientId}
-                        onChange={(id) => setParam({ client_id: id })}
-                      />
-                    ) : null}
-                    <Select
-                      label="Manager"
-                      options={managerOptions}
-                      value={manager ?? ''}
-                      onChange={(event) => setParam({ manager: event.target.value || null })}
-                    />
-                    <DateRangeField
-                      label="Due date"
-                      value={{ from: dueFrom, to: dueTo }}
-                      onChange={(range) => setParam({ due_from: range.from, due_to: range.to })}
-                    />
-                  </FilterPopover>
-                  <ColumnVisibilityMenu
-                    columns={columns.map((column) => ({
-                      id: column.id,
-                      label: column.header,
-                      locked: column.hideable === false,
-                    }))}
-                    hidden={hidden}
-                    onChange={setHidden}
+            <>
+              <PageToolbar
+                start={
+                  <CountTabs
+                    label="Job status"
+                    items={TABS.map((item) => ({ value: item.value, label: item.label }))}
+                    value={tab}
+                    onChange={(value) => setParam({ status: value === 'all' ? null : value })}
                   />
-                </>
-              }
-              primaryAction={newJobButton}
-            />
+                }
+                search={
+                  <SearchField
+                    label="Search jobs"
+                    placeholder="Name, number or client"
+                    value={searchText}
+                    onChange={setSearchText}
+                  />
+                }
+                actions={
+                  <>
+                    <FilterPopover
+                      title="Filter jobs"
+                      count={activeFilters}
+                      onClear={() =>
+                        setParam({ client_id: null, manager: null, due_from: null, due_to: null })
+                      }
+                    >
+                      {can(PERMISSIONS.clientRead) ? (
+                        <ClientPicker
+                          label="Client"
+                          clearable
+                          value={clientId}
+                          onChange={(id) => setParam({ client_id: id })}
+                        />
+                      ) : null}
+                      <Select
+                        label="Manager"
+                        options={managerOptions}
+                        value={manager ?? ''}
+                        onChange={(event) => setParam({ manager: event.target.value || null })}
+                      />
+                      <DateRangeField
+                        label="Due date"
+                        value={{ from: dueFrom, to: dueTo }}
+                        onChange={(range) => setParam({ due_from: range.from, due_to: range.to })}
+                      />
+                    </FilterPopover>
+                    <ColumnVisibilityMenu
+                      columns={columns.map((column) => ({
+                        id: column.id,
+                        label: column.header,
+                        locked: column.hideable === false,
+                      }))}
+                      hidden={hidden}
+                      onChange={setHidden}
+                    />
+                  </>
+                }
+                primaryAction={newJobButton}
+              />
+              {picked.length > 0 ? (
+                <div className="border-b border-row-border px-4 py-2">
+                  <JobsBulkBar
+                    ids={picked}
+                    canUpdate={canUpdate}
+                    canDelete={canDelete}
+                    onClear={() => setSelected(new Set())}
+                  />
+                </div>
+              ) : null}
+            </>
           }
           rowActions={(job) => (
             <Dropdown

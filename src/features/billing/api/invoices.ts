@@ -10,6 +10,7 @@ import { useOrg } from '@/features/organizations';
 
 import { LIST_PAGE_SIZE } from '../constants';
 import type {
+  InvoiceBulkRequest,
   InvoiceCreate,
   InvoiceDetail,
   InvoiceHeaderUpdate,
@@ -102,6 +103,22 @@ export function useDeleteInvoice() {
     mutationFn: (invoiceId: string) => billingApi.deleteInvoice(organization.id, invoiceId),
     onSuccess: (_result, invoiceId) =>
       queryClient.removeQueries({ queryKey: billingKeys.invoice(organization.id, invoiceId) }),
+    onSettled: invalidate.invoices,
+  });
+}
+
+/** Deletes the selected drafts: all or nothing (`POST /invoices/bulk`). */
+export function useBulkInvoices() {
+  const { organization } = useOrg();
+  const queryClient = useQueryClient();
+  const invalidate = useBillingInvalidation();
+  return useMutation({
+    mutationFn: (body: InvoiceBulkRequest) => billingApi.bulkInvoices(organization.id, body),
+    onSuccess: (_result, body) => {
+      for (const invoiceId of body.invoice_ids) {
+        queryClient.removeQueries({ queryKey: billingKeys.invoice(organization.id, invoiceId) });
+      }
+    },
     onSettled: invalidate.invoices,
   });
 }
