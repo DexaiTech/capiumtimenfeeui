@@ -164,8 +164,8 @@ describe('ClientsPage list', () => {
     const status = within(within(panel).getByRole('group', { name: 'Status' }));
     await user.click(status.getByRole('checkbox', { name: 'Active' }));
     await user.click(status.getByRole('checkbox', { name: 'Inactive' }));
-    const aml = within(within(panel).getByRole('group', { name: 'AML status' }));
-    await user.click(aml.getByRole('checkbox', { name: 'Clear' }));
+    // There is no AML filter any more.
+    expect(within(panel).queryByRole('group', { name: 'AML status' })).not.toBeInTheDocument();
     const segment = within(within(panel).getByRole('group', { name: 'Segment' }));
     await user.click(segment.getByRole('checkbox', { name: 'Gold' }));
     await user.selectOptions(within(panel).getByRole('combobox', { name: 'Service' }), 'Payroll');
@@ -177,12 +177,12 @@ describe('ClientsPage list', () => {
     await waitFor(() => {
       const last = seen.at(-1);
       expect(last?.getAll('status')).toEqual(['active', 'inactive']);
-      expect(last?.getAll('aml_status')).toEqual(['clear']);
+      expect(last?.has('aml_status')).toBe(false);
       expect(last?.getAll('segment')).toEqual(['Gold']);
       expect(last?.get('service_id')).toBe('0198c1f2-0000-7000-8000-00000000e003');
       expect(last?.get('manager_user_id')).toBe('0198c1f2-0000-7000-8000-00000000f001');
     });
-    expect(screen.getByRole('button', { name: /Filter.*6 filters applied/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Filter.*5 filters applied/ })).toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: 'Clear filters' }));
     await user.keyboard('{Escape}');

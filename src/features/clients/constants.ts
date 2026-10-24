@@ -1,11 +1,9 @@
 import {
   ACCOUNTING_SOFTWARE,
-  AML_STATUSES,
   CLIENT_STATUSES,
   CLIENT_TYPES,
   FREQUENCIES,
   type AccountingSoftware,
-  type AmlStatus,
   type CentralFilter,
   type ClientFilters,
   type ClientSort,
@@ -30,14 +28,6 @@ export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
   active: 'Active',
   inactive: 'Inactive',
   archived: 'Archived',
-};
-
-export const AML_LABELS: Record<AmlStatus, string> = {
-  not_started: 'Not started',
-  pending: 'Pending',
-  clear: 'Clear',
-  review: 'Review',
-  failed: 'Failed',
 };
 
 export const SOFTWARE_LABELS: Record<AccountingSoftware, string> = {
@@ -74,7 +64,6 @@ const options = <T extends string>(values: readonly T[], labels: Record<T, strin
 
 export const CLIENT_TYPE_OPTIONS = options(CLIENT_TYPES, CLIENT_TYPE_LABELS);
 export const CLIENT_STATUS_OPTIONS = options(CLIENT_STATUSES, CLIENT_STATUS_LABELS);
-export const AML_OPTIONS = options(AML_STATUSES, AML_LABELS);
 export const SOFTWARE_OPTIONS = options(ACCOUNTING_SOFTWARE, SOFTWARE_LABELS);
 export const FREQUENCY_OPTIONS = options(FREQUENCIES, FREQUENCY_LABELS);
 
@@ -126,7 +115,6 @@ export const EMPTY_FILTERS: ClientFilters = {
   status: [],
   segment: [],
   client_type: [],
-  aml_status: [],
   accounting_software: [],
   service_id: null,
   manager_user_id: null,
@@ -140,7 +128,6 @@ export function countFilters(filters: ClientFilters): number {
     filters.status.length +
     filters.segment.length +
     filters.client_type.length +
-    filters.aml_status.length +
     filters.accounting_software.length +
     (filters.service_id ? 1 : 0) +
     (filters.manager_user_id ? 1 : 0) +
@@ -177,7 +164,6 @@ export const IMPORT_TEMPLATE_COLUMNS = [
   'year_end',
   'payment_terms_days',
   'segment',
-  'aml_status',
   'health_score',
   'accounting_software',
   'contact_name',
@@ -208,7 +194,6 @@ export const IMPORT_TEMPLATE_EXAMPLE: Record<(typeof IMPORT_TEMPLATE_COLUMNS)[nu
   year_end: '31/03',
   payment_terms_days: '30',
   segment: 'Gold',
-  aml_status: 'clear',
   health_score: '80',
   accounting_software: 'xero',
   contact_name: 'Jane Doe',

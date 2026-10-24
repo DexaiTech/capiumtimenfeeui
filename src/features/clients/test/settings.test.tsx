@@ -506,6 +506,7 @@ describe('ServicesCard', () => {
           start_date: null,
           end_date: null,
           is_active: true,
+          auto_create_jobs: false,
         },
       ]),
     );

@@ -4,7 +4,6 @@ import { parsePounds } from '@/utils/money';
 
 import {
   ACCOUNTING_SOFTWARE,
-  AML_STATUSES,
   CLIENT_STATUSES,
   CLIENT_TYPES,
   FREQUENCIES,
@@ -80,7 +79,6 @@ export const clientFormSchema = z
     year_end_month: wholeNumber(1, 12, 'Choose a month'),
     year_end_day: wholeNumber(1, 31, 'Enter a day from 1 to 31'),
     segment: text(40),
-    aml_status: z.enum(AML_STATUSES),
     health_score: wholeNumber(0, 100, 'Enter a whole number from 0 to 100'),
     accounting_software: z.union([z.literal(''), z.enum(ACCOUNTING_SOFTWARE)]),
     manager_user_id: optionalUuid,
@@ -128,7 +126,6 @@ export const CLIENT_FORM_FIELDS = [
   'year_end_month',
   'year_end_day',
   'segment',
-  'aml_status',
   'health_score',
   'accounting_software',
   'manager_user_id',
@@ -160,7 +157,6 @@ export const EMPTY_CLIENT_FORM: ClientFormValues = {
   year_end_month: '',
   year_end_day: '',
   segment: '',
-  aml_status: 'not_started',
   health_score: '',
   accounting_software: '',
   manager_user_id: '',
@@ -194,7 +190,6 @@ export function clientToForm(client: ClientRead): ClientFormValues {
     year_end_month: str(client.year_end_month),
     year_end_day: str(client.year_end_day),
     segment: str(client.segment),
-    aml_status: asEnum(AML_STATUSES, client.aml_status, 'not_started'),
     health_score: str(client.health_score),
     accounting_software: client.accounting_software
       ? asEnum<AccountingSoftware>(ACCOUNTING_SOFTWARE, client.accounting_software, 'other')
@@ -229,7 +224,6 @@ function commonPayload(values: ClientFormValues) {
     year_end_month: intOrNull(values.year_end_month),
     year_end_day: intOrNull(values.year_end_day),
     segment: orNull(values.segment),
-    aml_status: values.aml_status,
     health_score: intOrNull(values.health_score),
     accounting_software: values.accounting_software === '' ? null : values.accounting_software,
     manager_user_id: orNull(values.manager_user_id),
@@ -323,8 +317,26 @@ export const engagementFormSchema = z
     start_date: isoDate,
     end_date: isoDate,
     is_active: z.boolean(),
+    auto_create_jobs: z.boolean(),
+    job_lead_days: z.string().trim(),
   })
   .superRefine((values, ctx) => {
+    if (values.auto_create_jobs) {
+      if (!values.start_date) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['start_date'],
+          message: 'Choose the start date: periods are counted from it',
+        });
+      }
+      if (!/^\d+$/.test(values.job_lead_days) || Number(values.job_lead_days) > 365) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['job_lead_days'],
+          message: 'Enter a whole number of days, 0 to 365',
+        });
+      }
+    }
     if (values.start_date && values.end_date && values.end_date < values.start_date) {
       ctx.addIssue({
         code: 'custom',
@@ -343,6 +355,8 @@ export const ENGAGEMENT_FORM_FIELDS = [
   'start_date',
   'end_date',
   'is_active',
+  'auto_create_jobs',
+  'job_lead_days',
 ] as const satisfies ReadonlyArray<keyof EngagementFormValues>;
 
 export const EMPTY_ENGAGEMENT_FORM: EngagementFormValues = {
@@ -352,6 +366,8 @@ export const EMPTY_ENGAGEMENT_FORM: EngagementFormValues = {
   start_date: '',
   end_date: '',
   is_active: true,
+  auto_create_jobs: false,
+  job_lead_days: '0',
 };
 
 export function engagementToForm(
@@ -365,6 +381,8 @@ export function engagementToForm(
     start_date: engagement.start_date ?? '',
     end_date: engagement.end_date ?? '',
     is_active: engagement.is_active,
+    auto_create_jobs: engagement.auto_create_jobs,
+    job_lead_days: String(engagement.job_lead_days),
   };
 }
 
@@ -377,5 +395,8 @@ export function toEngagementPayload(values: EngagementFormValues): ClientService
     start_date: values.start_date || null,
     end_date: values.end_date || null,
     is_active: values.is_active,
+    auto_create_jobs: values.auto_create_jobs,
+    // The lead days only matter (and only show) while the automation is on.
+    ...(values.auto_create_jobs ? { job_lead_days: Number(values.job_lead_days) } : {}),
   };
 }

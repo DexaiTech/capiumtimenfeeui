@@ -102,8 +102,37 @@ export interface ClientServiceRead {
   start_date: IsoDate | null;
   end_date: IsoDate | null;
   is_active: boolean;
+  /** A daily worker creates the next job before each period starts. */
+  auto_create_jobs: boolean;
+  /** Days before a period starts that its job is created (0-365). */
+  job_lead_days: number;
+  /** The period that will be created next; null when off, ended, inactive or nothing is due. */
+  next_job_period: NextJobPeriod | null;
   created_at: IsoDateTime;
   updated_at: IsoDateTime;
+}
+
+export interface NextJobPeriod {
+  period_start: IsoDate;
+  period_end: IsoDate | null;
+  create_on: IsoDate;
+}
+
+export interface EngagementJobCreated {
+  /** The job created (the jobs feature's `Job`; only what the card needs is typed here). */
+  job: { id: string; number: string; name: string };
+  period_start: IsoDate;
+  period_end: IsoDate | null;
+}
+
+export interface EngagementJobRun {
+  period_start: IsoDate;
+  period_end: IsoDate | null;
+  status: 'created' | 'failed';
+  error: string | null;
+  /** Null when the job was deleted later. */
+  job: { id: string; number: string; name: string } | null;
+  created_at: IsoDateTime;
 }
 
 export interface ClientServiceCreate {
@@ -113,6 +142,8 @@ export interface ClientServiceCreate {
   start_date?: IsoDate | null;
   end_date?: IsoDate | null;
   is_active?: boolean;
+  auto_create_jobs?: boolean;
+  job_lead_days?: number;
 }
 
 export interface ClientServiceUpdate {
@@ -121,6 +152,8 @@ export interface ClientServiceUpdate {
   start_date?: IsoDate | null;
   end_date?: IsoDate | null;
   is_active?: boolean;
+  auto_create_jobs?: boolean;
+  job_lead_days?: number;
 }
 
 /* ---------------------------------- Clients ---------------------------------- */
@@ -427,7 +460,6 @@ export interface ClientFilters {
   status: ClientStatus[];
   segment: string[];
   client_type: ClientType[];
-  aml_status: AmlStatus[];
   accounting_software: AccountingSoftware[];
   service_id: string | null;
   manager_user_id: string | null;

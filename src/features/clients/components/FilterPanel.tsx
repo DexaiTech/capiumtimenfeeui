@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import { Popover } from '@/components/ui';
 
 import {
-  AML_OPTIONS,
   CENTRAL_FILTER_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   CLIENT_TYPE_OPTIONS,
@@ -26,7 +25,7 @@ export interface FilterPanelProps {
   canPickPeople: boolean;
 }
 
-type ListKey = 'status' | 'segment' | 'client_type' | 'aml_status' | 'accounting_software';
+type ListKey = 'status' | 'segment' | 'client_type' | 'accounting_software';
 
 function toggle<T extends string>(values: readonly T[], value: T, on: boolean): T[] {
   return on ? Array.from(new Set([...values, value])) : values.filter((item) => item !== value);
@@ -58,7 +57,7 @@ function CheckGroup({ legend, options, values, onToggle }: CheckGroupProps) {
   );
 }
 
-/** "Filter": status, segment, client type, AML, software, service, manager and partner. */
+/** "Filter": status, segment, client type, software, service, manager and partner. */
 export function FilterPanel({
   filters,
   onChange,
@@ -128,12 +127,6 @@ export function FilterPanel({
               options={CLIENT_TYPE_OPTIONS}
               values={filters.client_type}
               onToggle={(value, on) => setList('client_type', value, on)}
-            />
-            <CheckGroup
-              legend="AML status"
-              options={AML_OPTIONS}
-              values={filters.aml_status}
-              onToggle={(value, on) => setList('aml_status', value, on)}
             />
             <CheckGroup
               legend="Accounting software"

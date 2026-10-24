@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 import { HealthBar } from '@/components/ui';
 import { cn } from '@/utils/cn';
-import { formatUkDate } from '@/utils/dates';
 import { formatMinutesLong } from '@/utils/minutes';
 import { formatMoney } from '@/utils/money';
 
@@ -14,7 +13,7 @@ import {
 } from '../../constants';
 import { formatYearEnd } from '../../format';
 import type { ClientDetail, MemberRead } from '../../types';
-import { AmlBadge, SegmentBadge } from '../badges';
+import { SegmentBadge } from '../badges';
 
 const DASH = '—';
 
@@ -132,16 +131,6 @@ export function DetailPanels({ client, currency, members }: DetailPanelsProps) {
           {client.health_score === null ? null : (
             <HealthBar score={client.health_score} label="Client health" />
           )}
-        </Row>
-        <Row label="AML">
-          <span className="flex flex-wrap items-center gap-1.5">
-            <AmlBadge status={client.aml_status} />
-            {client.aml_checked_on ? (
-              <span className="font-normal text-text-muted">
-                checked {formatUkDate(client.aml_checked_on)}
-              </span>
-            ) : null}
-          </span>
         </Row>
       </Panel>
 

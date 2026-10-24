@@ -1,6 +1,6 @@
 import { Badge, type BadgeTone } from '@/components/ui';
 
-import { AML_LABELS, CLIENT_STATUS_LABELS, CLIENT_TYPE_LABELS, labelOf } from '../constants';
+import { CLIENT_STATUS_LABELS, CLIENT_TYPE_LABELS, labelOf } from '../constants';
 import type { LabelTone } from './constants';
 
 const TYPE_TONES: Record<string, BadgeTone> = {
@@ -18,14 +18,6 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   prospect: 'violet',
   inactive: 'amber',
   archived: 'grey',
-};
-
-const AML_TONES: Record<string, BadgeTone> = {
-  clear: 'green',
-  pending: 'amber',
-  review: 'blue',
-  failed: 'red',
-  not_started: 'grey',
 };
 
 const SEGMENT_TONES: Record<string, BadgeTone> = {
@@ -51,13 +43,6 @@ export function ClientStatusBadge({ status }: { status: string }) {
   );
 }
 
-export function AmlBadge({ status }: { status: string }) {
-  return (
-    <Badge tone={AML_TONES[status] ?? 'grey'} size="sm">
-      {labelOf(AML_LABELS, status)}
-    </Badge>
-  );
-}
 
 export function SegmentBadge({ segment }: { segment: string }) {
   return (

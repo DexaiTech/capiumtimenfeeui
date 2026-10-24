@@ -199,6 +199,30 @@ function InvoiceList() {
         onSelect: () => setDialog({ type: 'send', invoice }),
       });
     }
+    // An issued invoice is locked, not deletable: it is corrected with a credit note, or, when
+    // nothing was paid or credited against it, voided. Both open on the invoice's own page.
+    const correct = (action: 'credit' | 'void') =>
+      void navigate(`${routes.org.invoice(slug, invoice.id)}?action=${action}`);
+    if (invoice.status === 'issued' && invoice.balance > 0 && can(P.creditNoteCreate)) {
+      items.push({
+        id: 'credit',
+        label: 'Raise credit note…',
+        onSelect: () => correct('credit'),
+      });
+    }
+    if (
+      invoice.status === 'issued' &&
+      canIssue &&
+      invoice.paid_total === 0 &&
+      invoice.credited_total === 0
+    ) {
+      items.push({
+        id: 'void',
+        label: 'Void invoice…',
+        tone: 'danger',
+        onSelect: () => correct('void'),
+      });
+    }
     if (invoice.status === 'draft' && can(P.invoiceCreate)) {
       items.push(
         { id: 'separator', separator: true },

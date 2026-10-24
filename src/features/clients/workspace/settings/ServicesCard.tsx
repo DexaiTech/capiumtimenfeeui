@@ -1,5 +1,6 @@
-import { Briefcase, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Briefcase, History, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 
 import {
   Badge,
@@ -7,15 +8,19 @@ import {
   ConfirmDialog,
   DataTable,
   EmptyState,
+  Modal,
+  Spinner,
   PageToolbar,
   useToast,
   type DataTableColumn,
 } from '@/components/ui';
+import { routes } from '@/constants/routes';
+import { PERMISSIONS as P } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
-import { useDeleteEngagement } from '../../api';
+import { useCreateEngagementJob, useDeleteEngagement, useEngagementJobRuns } from '../../api';
 import { EngagementFormDialog, type EngagementTarget } from '../../components/EngagementFormDialog';
 import { FREQUENCY_LABELS, labelOf } from '../../constants';
 import type { ClientDetail, ClientServiceRead } from '../../types';
@@ -33,10 +38,96 @@ const BASIS_LABELS: Record<string, string> = {
   non_billable: 'Non-billable',
 };
 
-/** The services the client takes (its engagements): add, edit, remove. */
+/** The jobs an engagement created, newest first; fetched only while the dialog is open. */
+function JobRunsDialog({
+  clientId,
+  engagement,
+  slug,
+  onClose,
+}: {
+  clientId: string;
+  engagement: ClientServiceRead | null;
+  slug: string;
+  onClose: () => void;
+}) {
+  const runs = useEngagementJobRuns(clientId, engagement?.id ?? '', engagement !== null);
+  return (
+    <Modal
+      open={engagement !== null}
+      onClose={onClose}
+      title={`Created jobs${engagement ? `: ${engagement.service_name}` : ''}`}
+    >
+      {runs.isPending ? (
+        <Spinner label="Loading the created jobs" />
+      ) : runs.isError ? (
+        <p role="alert" className="text-sm text-danger">
+          {describeError(runs.error).message}
+        </p>
+      ) : runs.data.length === 0 ? (
+        <p className="text-sm text-text-muted">No job has been created for this service yet.</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-border text-sm">
+          {runs.data.map((run) => (
+            <li
+              key={`${run.period_start}-${run.created_at}`}
+              className="flex flex-col gap-0.5 py-2"
+            >
+              <span className="font-medium text-text">
+                {formatUkDate(run.period_start)}
+                {run.period_end ? ` to ${formatUkDate(run.period_end)}` : ''}
+              </span>
+              {run.status === 'failed' ? (
+                <span className="text-danger">Failed: {run.error ?? 'No reason given'}</span>
+              ) : run.job ? (
+                <Link
+                  className="text-primary hover:underline"
+                  to={routes.org.job(slug, run.job.id)}
+                >
+                  {run.job.number} {run.job.name}
+                </Link>
+              ) : (
+                <span className="text-text-muted">Job deleted</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
+  );
+}
+
+/** The services the client takes (its engagements): add, edit, remove, create their jobs. */
 export function ServicesCard({ client, abilities }: ServicesCardProps) {
-  const { organization } = useOrg();
+  const { organization, can } = useOrg();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const createJob = useCreateEngagementJob();
+  const [viewingRuns, setViewingRuns] = useState<ClientServiceRead | null>(null);
+  const canCreateJob = abilities.edit && can(P.jobCreate);
+
+  const createNow = async (engagement: ClientServiceRead) => {
+    try {
+      const created = await createJob.mutateAsync({
+        clientId: client.id,
+        engagementId: engagement.id,
+      });
+      toast({
+        tone: 'success',
+        title: `Job ${created.job.number} created`,
+        description: engagement.service_name,
+        action: {
+          label: 'Open job',
+          onClick: () => void navigate(routes.org.job(organization.slug, created.job.id)),
+        },
+      });
+    } catch (error) {
+      toast({
+        tone: 'error',
+        title: 'The job was not created',
+        description: describeError(error).message,
+      });
+    }
+  };
   const [target, setTarget] = useState<EngagementTarget | null>(null);
   const [removing, setRemoving] = useState<ClientServiceRead | null>(null);
   const [refusal, setRefusal] = useState<Failure | null>(null);
@@ -116,9 +207,53 @@ export function ServicesCard({ client, abilities }: ServicesCardProps) {
       id: 'status',
       header: 'Status',
       cell: (engagement) => (
-        <Badge tone={engagement.is_active ? 'success' : 'neutral'} size="sm">
-          {engagement.is_active ? 'Active' : 'Inactive'}
-        </Badge>
+        <span className="inline-flex flex-wrap items-center gap-1">
+          <Badge tone={engagement.is_active ? 'success' : 'neutral'} size="sm">
+            {engagement.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+          {engagement.auto_create_jobs ? (
+            <Badge tone="info" size="sm">
+              Auto jobs
+            </Badge>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      id: 'jobs',
+      header: 'Jobs',
+      cell: (engagement) => (
+        <span className="flex flex-col items-start gap-1">
+          {engagement.next_job_period ? (
+            <span className="text-xs text-text-muted">
+              Next job: {formatUkDate(engagement.next_job_period.period_start)}, created on{' '}
+              {formatUkDate(engagement.next_job_period.create_on)}
+            </span>
+          ) : null}
+          <span className="inline-flex flex-wrap gap-1">
+            {canCreateJob && engagement.auto_create_jobs ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                leftIcon={<Play aria-hidden="true" className="size-4" />}
+                loading={createJob.isPending && createJob.variables?.engagementId === engagement.id}
+                aria-label={`Create this period's job now for ${engagement.service_name}`}
+                onClick={() => void createNow(engagement)}
+              >
+                Create this period&apos;s job now
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              variant="ghost"
+              leftIcon={<History aria-hidden="true" className="size-4" />}
+              aria-label={`Created jobs of ${engagement.service_name}`}
+              onClick={() => setViewingRuns(engagement)}
+            >
+              Created jobs
+            </Button>
+          </span>
+        </span>
       ),
     },
   ];
@@ -185,6 +320,12 @@ export function ServicesCard({ client, abilities }: ServicesCardProps) {
             description="The services decide the default fee and the billing basis of the work recorded for the client."
           />
         }
+      />
+      <JobRunsDialog
+        clientId={client.id}
+        engagement={viewingRuns}
+        slug={organization.slug}
+        onClose={() => setViewingRuns(null)}
       />
       <EngagementFormDialog target={target} onClose={() => setTarget(null)} />
       <ConfirmDialog

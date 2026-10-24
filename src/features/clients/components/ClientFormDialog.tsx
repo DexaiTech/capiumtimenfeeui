@@ -10,7 +10,6 @@ import { ApiError, isApiError } from '@/services/api';
 import { useCreateClient, useStaffDirectory, useUpdateClient } from '../api';
 import { isLinked, MANAGED_MESSAGE, managedFields } from '../central/format';
 import {
-  AML_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   CLIENT_TYPE_OPTIONS,
   KNOWN_SEGMENTS,
@@ -279,12 +278,6 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormDialogProps, 'o
             inputMode="numeric"
             error={errors.payment_terms_days?.message}
             {...register('payment_terms_days')}
-          />
-          <Select
-            label="AML status"
-            options={AML_OPTIONS}
-            error={errors.aml_status?.message}
-            {...register('aml_status')}
           />
           <Input
             label="Health score"

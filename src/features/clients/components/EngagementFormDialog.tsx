@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useId } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, Modal, Select, Switch, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { isApiError } from '@/services/api';
+import { todayInZone } from '@/utils/dates';
 import { currencySymbol, formatMoney, penceToPoundsInput } from '@/utils/money';
 
 import { useCreateEngagement, useServiceOptions, useUpdateEngagement } from '../api';
@@ -18,7 +19,8 @@ import {
   toEngagementPayload,
   type EngagementFormValues,
 } from '../schemas';
-import type { ClientServiceRead } from '../types';
+import type { ClientServiceRead, ClientServiceUpdate } from '../types';
+import { nextJobHint } from '../utils/jobPeriods';
 
 export interface EngagementTarget {
   clientId: string;
@@ -31,6 +33,21 @@ export interface EngagementTarget {
 export interface EngagementFormDialogProps {
   target: EngagementTarget | null;
   onClose: () => void;
+}
+
+/** The automation fields of an edit that differ from what the engagement has. */
+function changedAutomation(
+  engagement: ClientServiceRead,
+  payload: ReturnType<typeof toEngagementPayload>,
+): Pick<ClientServiceUpdate, 'auto_create_jobs' | 'job_lead_days'> {
+  const changes: Pick<ClientServiceUpdate, 'auto_create_jobs' | 'job_lead_days'> = {};
+  if (payload.auto_create_jobs !== engagement.auto_create_jobs) {
+    changes.auto_create_jobs = payload.auto_create_jobs;
+  }
+  if (payload.job_lead_days !== undefined && payload.job_lead_days !== engagement.job_lead_days) {
+    changes.job_lead_days = payload.job_lead_days;
+  }
+  return changes;
 }
 
 function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose: () => void }) {
@@ -59,6 +76,19 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
     useSubmitError<EngagementFormValues>({ setError, fields: ENGAGEMENT_FORM_FIELDS });
 
   const serviceId = useWatch({ control, name: 'service_id' });
+  const [frequency, startDate, endDate, autoCreate, leadDays] = useWatch({
+    control,
+    name: ['frequency', 'start_date', 'end_date', 'auto_create_jobs', 'job_lead_days'],
+  });
+  const hint = autoCreate
+    ? nextJobHint({
+        frequency,
+        startDate,
+        endDate,
+        leadDays: /^\d+$/.test(leadDays.trim()) ? Number(leadDays) : 0,
+        today: todayInZone(organization.timezone),
+      })
+    : null;
   const chosen = (services.data ?? []).find((service) => service.id === serviceId);
 
   const onSubmit = handleSubmit(async (values) => {
@@ -73,6 +103,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
           start_date: payload.start_date,
           end_date: payload.end_date,
           is_active: payload.is_active,
+          ...changedAutomation(editing, payload),
         };
         await update.mutateAsync({ clientId: target.clientId, engagementId: editing.id, body });
         toast({ tone: 'success', title: 'Service updated', description: editing.service_name });
@@ -137,6 +168,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
           <Input
             label="Start date"
             type="date"
+            required={autoCreate}
             error={errors.start_date?.message}
             {...register('start_date')}
           />
@@ -148,6 +180,32 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
           />
         </div>
         <Checkbox label="Active" error={errors.is_active?.message} {...register('is_active')} />
+        <div className="flex flex-col gap-2 rounded-md border border-border p-3">
+          <Controller
+            control={control}
+            name="auto_create_jobs"
+            render={({ field }) => (
+              <Switch
+                label="Create the jobs automatically"
+                description="A job, with the service's default tasks, is created before each period starts."
+                checked={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+          {autoCreate ? (
+            <>
+              <Input
+                label="Create each job N days before its period starts"
+                required
+                inputMode="numeric"
+                error={errors.job_lead_days?.message}
+                {...register('job_lead_days')}
+              />
+              {hint ? <p className="text-xs text-text-muted">{hint}</p> : null}
+            </>
+          ) : null}
+        </div>
       </form>
       <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
         <Button onClick={onClose}>Cancel</Button>

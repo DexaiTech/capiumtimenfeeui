@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 
 import { Popover } from '@/components/ui';
 
-import { AML_LABELS, CLIENT_STATUS_LABELS, labelOf } from '../constants';
+import { CLIENT_STATUS_LABELS, labelOf } from '../constants';
 import type { ClientSummary } from '../types';
 
 export interface AnalyticsPanelProps {
@@ -42,7 +42,7 @@ function Bars({ title, bars }: { title: string; bars: Bar[] }) {
   );
 }
 
-/** "Analytics": the summary counts by status, segment and AML status. */
+/** "Analytics": the summary counts by status and segment. */
 export function AnalyticsPanel({ summary, loading }: AnalyticsPanelProps) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -90,14 +90,6 @@ export function AnalyticsPanel({ summary, loading }: AnalyticsPanelProps) {
                   key: entry.segment ?? '__none',
                   label: entry.segment ?? 'No segment',
                   count: entry.count,
-                }))}
-              />
-              <Bars
-                title="By AML status"
-                bars={Object.entries(summary.by_aml_status).map(([key, count]) => ({
-                  key,
-                  label: labelOf(AML_LABELS, key),
-                  count,
                 }))}
               />
             </>

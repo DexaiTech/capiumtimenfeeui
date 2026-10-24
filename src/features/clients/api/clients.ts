@@ -23,6 +23,8 @@ import type {
   ClientServiceCreate,
   ClientServiceRead,
   ClientServiceUpdate,
+  EngagementJobCreated,
+  EngagementJobRun,
   ClientSummary,
   ClientUpdate,
   ContactCreate,
@@ -49,7 +51,6 @@ export function listQuery(params: ClientListParams) {
     status: filters.status,
     segment: filters.segment,
     client_type: filters.client_type,
-    aml_status: filters.aml_status,
     accounting_software: filters.accounting_software,
     service_id: filters.service_id ?? undefined,
     manager_user_id: filters.manager_user_id ?? undefined,
@@ -127,6 +128,20 @@ export const clientsApi = {
       `${org(organizationId)}/clients/${seg(clientId)}/services/${seg(engagementId)}`,
       body,
     ),
+  createEngagementJob: (organizationId: string, clientId: string, engagementId: string) =>
+    api.post<EngagementJobCreated>(
+      `${org(organizationId)}/clients/${seg(clientId)}/services/${seg(engagementId)}/create-job`,
+    ),
+  listEngagementJobRuns: (
+    organizationId: string,
+    clientId: string,
+    engagementId: string,
+    signal?: AbortSignal,
+  ) =>
+    api.get<EngagementJobRun[]>(
+      `${org(organizationId)}/clients/${seg(clientId)}/services/${seg(engagementId)}/job-runs`,
+      { signal },
+    ),
   deleteEngagement: (organizationId: string, clientId: string, engagementId: string) =>
     api.delete<null>(
       `${org(organizationId)}/clients/${seg(clientId)}/services/${seg(engagementId)}`,
@@ -163,6 +178,8 @@ export const clientKeys = {
     [...queryKeys.org.clients(organizationId), 'detail', clientId] as const,
   services: (organizationId: string) =>
     [...queryKeys.org.clients(organizationId), 'service-options'] as const,
+  jobRuns: (organizationId: string, clientId: string, engagementId: string) =>
+    [...queryKeys.org.clients(organizationId), 'job-runs', clientId, engagementId] as const,
   /** The Client 360 figures behind the tabs and the Overview. */
   overview: (organizationId: string, clientId: string) =>
     [...queryKeys.org.clients(organizationId), 'overview', clientId] as const,
@@ -404,6 +421,33 @@ export function useUpdateEngagement() {
       body: ClientServiceUpdate;
     }) => clientsApi.updateEngagement(organization.id, clientId, engagementId, body),
     onSuccess: invalidate,
+  });
+}
+
+/** Create the job of the engagement's next period now; refreshes the clients, the jobs and the runs. */
+export function useCreateEngagementJob() {
+  const { organization } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, engagementId }: { clientId: string; engagementId: string }) =>
+      clientsApi.createEngagementJob(organization.id, clientId, engagementId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: clientKeys.all(organization.id) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.org.jobs(organization.id) }),
+      ]);
+    },
+  });
+}
+
+/** The jobs an engagement created (newest first); loads only once `enabled`. */
+export function useEngagementJobRuns(clientId: string, engagementId: string, enabled: boolean) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: clientKeys.jobRuns(organization.id, clientId, engagementId),
+    queryFn: ({ signal }) =>
+      clientsApi.listEngagementJobRuns(organization.id, clientId, engagementId, signal),
+    enabled,
   });
 }
 

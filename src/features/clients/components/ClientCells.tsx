@@ -9,7 +9,6 @@ import { cn } from '@/utils/cn';
 import { useClient } from '../api';
 import { centralChip, type CentralTone } from '../central/format';
 import {
-  AML_LABELS,
   CLIENT_STATUS_LABELS,
   CLIENT_TYPE_LABELS,
   labelOf,
@@ -111,18 +110,6 @@ export function HealthCell({ score }: { score: number | null }) {
       </span>
     </span>
   );
-}
-
-const AML_TONES: Record<string, string> = {
-  clear: 'cc-pill--success',
-  pending: 'cc-pill--warning',
-  review: 'cc-pill--info',
-  failed: 'cc-pill--danger',
-  not_started: '',
-};
-
-export function AmlPill({ status }: { status: string }) {
-  return <span className={cn('cc-pill', AML_TONES[status])}>{labelOf(AML_LABELS, status)}</span>;
 }
 
 const STATUS_TONES: Record<string, string> = {

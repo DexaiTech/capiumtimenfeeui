@@ -1,6 +1,6 @@
 import { ArrowLeft, CircleAlert, Ellipsis, FileDown, Info, SearchX } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import {
   Button,
@@ -101,9 +101,8 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const voidInvoice = useVoidInvoice();
   const removeInvoice = useDeleteInvoice();
   const removeLine = useDeleteInvoiceLine(invoice.id);
-  const [dialog, setDialog] = useState<DialogState>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
-  const close = () => setDialog(null);
 
   const slug = organization.slug;
   const today = todayInZone(organization.timezone);
@@ -124,6 +123,25 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
     invoice.credit_notes.length === 0;
   const canSend = isIssued && can(P.invoiceIssue);
   const title = invoice.number ?? 'Draft invoice';
+
+  // The invoice list's "Raise credit note…" and "Void invoice…" open this page with the matching
+  // dialog already showing (`?action=credit` or `?action=void`), when the person may do it.
+  const requested = searchParams.get('action');
+  const [dialog, setDialog] = useState<DialogState>(() =>
+    requested === 'credit' && canCredit
+      ? { type: 'credit' }
+      : requested === 'void' && canVoid
+        ? { type: 'void' }
+        : null,
+  );
+  const close = () => setDialog(null);
+  useEffect(() => {
+    if (!requested) return;
+    // Used once: the address goes back to the plain invoice, so a reload does not reopen it.
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [requested, searchParams, setSearchParams]);
 
   const downloadPdf = () =>
     void download(invoice.id, `${invoice.number ?? 'draft-invoice'}.pdf`, () =>
@@ -250,9 +268,7 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
             note.
           </Notice>
         ) : isDraft && approvalNeeded ? (
-          <Notice tone="warning">
-            This invoice needs approval before it can be issued.
-          </Notice>
+          <Notice tone="warning">This invoice needs approval before it can be issued.</Notice>
         ) : null}
         <InvoiceSummaryStrip invoice={invoice} />
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
