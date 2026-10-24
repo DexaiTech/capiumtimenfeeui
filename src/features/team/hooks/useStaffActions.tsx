@@ -10,7 +10,7 @@ import { useReactivateStaff, useResetPassword, useUnlinkLogin } from '../api';
 import { ChangeRoleDialog } from '../components/staff/ChangeRoleDialog';
 import { DeactivateStaffDialog } from '../components/staff/DeactivateStaffDialog';
 import { DeleteStaffDialog } from '../components/staff/DeleteStaffDialog';
-import { EditStaffDialog } from '../components/staff/EditStaffDialog';
+import { EditStaffPanel } from '../components/staff/EditStaffPanel';
 import { InviteStaffDialog } from '../components/staff/InviteStaffDialog';
 import { LinkLoginDialog } from '../components/staff/LinkLoginDialog';
 import type { TemporaryPassword } from '../components/staff/TemporaryPasswordDialog';
@@ -39,10 +39,12 @@ export interface UseStaffActionsOptions {
 export interface StaffActions {
   /** The menu of one person: what the caller may do with them, by permission and state. */
   actionsFor: (member: StaffMember) => DropdownItem[];
-  /** Opens the edit dialog for a person. */
+  /** Opens the edit panel for a person. */
   edit: (member: StaffMember) => void;
   /** Every dialog the actions open; render it once. */
   dialogs: ReactNode;
+  /** The edit form, an inline panel: render it once, above the content it edits. */
+  editPanel: ReactNode;
 }
 
 /**
@@ -172,9 +174,13 @@ export function useStaffActions({
     return items;
   };
 
+  // An inline panel, not a dialog: the page renders it above its content.
+  const editPanel = (
+    <EditStaffPanel staff={dialog?.type === 'edit' ? dialog.staff : null} onClose={close} />
+  );
+
   const dialogs = (
     <>
-      <EditStaffDialog staff={dialog?.type === 'edit' ? dialog.staff : null} onClose={close} />
       <ChangeRoleDialog
         staff={dialog?.type === 'role' ? dialog.staff : null}
         roles={roles.data ?? []}
@@ -238,5 +244,5 @@ export function useStaffActions({
     </>
   );
 
-  return { actionsFor, edit: (member) => open('edit', member), dialogs };
+  return { actionsFor, edit: (member) => open('edit', member), dialogs, editPanel };
 }

@@ -45,7 +45,7 @@ import { LoadError } from '../PageShell';
 import { ClientPicker } from '../pickers/ClientPicker';
 import { StaffPicker } from '../pickers/StaffPicker';
 import { EndDateDialog } from './EndDateDialog';
-import { RateRuleDialog } from './RateRuleDialog';
+import { RateRulePanel } from './RateRulePanel';
 
 type StatusTab = 'all' | RuleStatus;
 const STATUS_TABS: ReadonlyArray<{ value: StatusTab; label: string }> = [
@@ -296,6 +296,13 @@ export function RateRulesView({ kind }: RateRulesViewProps) {
 
   return (
     <>
+      <RateRulePanel
+        kind={kind}
+        open={dialog?.type === 'form'}
+        rule={dialog?.type === 'form' ? dialog.rule : null}
+        defaultLevel={scope || undefined}
+        onClose={close}
+      />
       <DataTable
         caption={`${RATE_KIND_LABEL[kind]} rates`}
         columns={columns}
@@ -461,13 +468,6 @@ export function RateRulesView({ kind }: RateRulesViewProps) {
             </div>
           ) : null
         }
-      />
-      <RateRuleDialog
-        kind={kind}
-        open={dialog?.type === 'form'}
-        rule={dialog?.type === 'form' ? dialog.rule : null}
-        defaultLevel={scope || undefined}
-        onClose={close}
       />
       <EndDateDialog rule={dialog?.type === 'end' ? dialog.rule : null} onClose={close} />
       <ConfirmDialog

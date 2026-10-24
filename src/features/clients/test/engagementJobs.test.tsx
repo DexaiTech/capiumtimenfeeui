@@ -8,7 +8,7 @@ import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
-import { EngagementFormDialog } from '../components/EngagementFormDialog';
+import { EngagementFormPanel } from '../components/EngagementFormPanel';
 import type { ClientDetail, ClientServiceRead, EngagementJobRun } from '../types';
 import { techwave, techwaveDetail } from './fixtures';
 import { heading, renderWorkspace } from './renderWorkspace';
@@ -34,7 +34,7 @@ const withEngagement = (engagement: ClientServiceRead): ClientDetail => ({
   engagements: [engagement],
 });
 
-describe('EngagementFormDialog: automatic jobs', () => {
+describe('EngagementFormPanel: automatic jobs', () => {
   const quiet = () =>
     server.use(
       http.get(orgApiPath('/services'), () => ok([])),
@@ -43,12 +43,12 @@ describe('EngagementFormDialog: automatic jobs', () => {
   const open = async (engagement: ClientServiceRead | null) => {
     quiet();
     renderInOrg(
-      <EngagementFormDialog
+      <EngagementFormPanel
         target={{ clientId: techwave.id, engagement, takenServiceIds: [] }}
         onClose={() => undefined}
       />,
     );
-    return screen.findByRole('dialog');
+    return screen.findByRole('region');
   };
   const LEAD = 'Create each job N days before its period starts';
 
@@ -125,12 +125,12 @@ describe('EngagementFormDialog: automatic jobs', () => {
       }),
     );
     renderInOrg(
-      <EngagementFormDialog
+      <EngagementFormPanel
         target={{ clientId: techwave.id, engagement: null, takenServiceIds: [] }}
         onClose={() => undefined}
       />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('region', { name: 'Add service' });
     await user.selectOptions(
       within(dialog).getByRole('combobox', { name: 'Service' }),
       await within(dialog).findByRole('option', { name: /Payroll/ }),

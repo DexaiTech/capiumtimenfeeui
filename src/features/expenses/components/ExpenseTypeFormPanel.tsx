@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, Select, useToast } from '@/components/ui';
 import { useVatCodes, type VatCode } from '@/features/team';
 import { formatBasisPoints } from '@/utils/money';
 
@@ -35,7 +35,7 @@ function vatOptions(codes: VatCode[] | undefined, current: string | null) {
   ];
 }
 
-export interface ExpenseTypeFormDialogProps {
+export interface ExpenseTypeFormPanelProps {
   /** The type to change, null to add one. */
   type: ExpenseType | null;
   open: boolean;
@@ -216,9 +216,9 @@ function TypeForm({ type, onClose }: { type: ExpenseType | null; onClose: () => 
 }
 
 /** Add an expense type, or change one: its code, default VAT, mileage pricing and status. */
-export function ExpenseTypeFormDialog({ type, open, onClose }: ExpenseTypeFormDialogProps) {
+export function ExpenseTypeFormPanel({ type, open, onClose }: ExpenseTypeFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={type ? 'Edit expense type' : 'Add expense type'}
@@ -227,9 +227,8 @@ export function ExpenseTypeFormDialog({ type, open, onClose }: ExpenseTypeFormDi
           ? `${type.name} · ${type.code}`
           : 'What an expense is for: travel, mileage, a hotel, postage.'
       }
-      closeOnBackdrop={false}
     >
       {open ? <TypeForm key={type?.id ?? 'new'} type={type} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

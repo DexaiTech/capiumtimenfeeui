@@ -485,7 +485,7 @@ describe('ServicesCard', () => {
     await screen.findByRole('table', { name: caption });
 
     await user.click(screen.getByRole('button', { name: 'Add service' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add service' });
+    const dialog = await screen.findByRole('region', { name: 'Add service' });
     const service = within(dialog).getByRole('combobox', { name: 'Service' });
     // Accounts is already taken: only Payroll is offered.
     expect(within(service).queryByRole('option', { name: /Accounts/ })).toBeNull();
@@ -642,7 +642,7 @@ describe('RatesCard', () => {
     expect(await screen.findByText('No rate overrides')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Add rate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add client rate' });
+    const dialog = await screen.findByRole('region', { name: 'Add client rate' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate per hour (£)' }), '95');
     await user.click(within(dialog).getByRole('button', { name: 'Add rate' }));
 
@@ -664,7 +664,7 @@ describe('RatesCard', () => {
     await screen.findByRole('table', { name: caption });
 
     await user.click(screen.getByRole('button', { name: 'Add rate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add client rate' });
+    const dialog = await screen.findByRole('region', { name: 'Add client rate' });
     await user.selectOptions(
       within(dialog).getByRole('combobox', { name: 'Applies to' }),
       'Grace Hopper',
@@ -702,7 +702,7 @@ describe('RatesCard', () => {
       ],
     });
     await user.click(await screen.findByRole('button', { name: 'Add rate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add client rate' });
+    const dialog = await screen.findByRole('region', { name: 'Add client rate' });
 
     await user.click(within(dialog).getByRole('button', { name: 'Add rate' }));
     expect(
@@ -741,7 +741,7 @@ describe('RatesCard', () => {
       ],
     });
     await user.click(await screen.findByRole('button', { name: 'Add rate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add client rate' });
+    const dialog = await screen.findByRole('region', { name: 'Add client rate' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate per hour (£)' }), '95');
     fireEvent.change(within(dialog).getByLabelText('Effective from'), {
       target: { value: '2026-07-01' },
@@ -768,7 +768,7 @@ describe('RatesCard', () => {
     await screen.findByRole('table', { name: caption });
 
     await user.click(screen.getByRole('button', { name: 'Edit rate of Everyone' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit client rate' });
+    const dialog = await screen.findByRole('region', { name: 'Edit client rate' });
     expect(within(dialog).getByRole('combobox', { name: 'Applies to' })).toBeDisabled();
     expect(within(dialog).getByLabelText('Effective from')).toBeDisabled();
     expect(within(dialog).getByLabelText('Effective to')).toBeDisabled();
@@ -796,7 +796,7 @@ describe('RatesCard', () => {
     await screen.findByRole('table', { name: caption });
 
     await user.click(screen.getByRole('button', { name: 'End-date rate of Everyone' }));
-    const dialog = await screen.findByRole('dialog', { name: 'End-date rate' });
+    const dialog = await screen.findByRole('region', { name: 'End-date rate' });
     // A rate with no end date offers no "remove".
     expect(within(dialog).queryByRole('button', { name: 'Remove end date' })).toBeNull();
     fireEvent.change(within(dialog).getByLabelText('Last day of the rate'), {
@@ -823,7 +823,7 @@ describe('RatesCard', () => {
     await screen.findByRole('table', { name: caption });
 
     await user.click(screen.getByRole('button', { name: 'End-date rate of Everyone' }));
-    const dialog = await screen.findByRole('dialog', { name: 'End-date rate' });
+    const dialog = await screen.findByRole('region', { name: 'End-date rate' });
     await user.click(within(dialog).getByRole('button', { name: 'Remove end date' }));
 
     await waitFor(() => expect(patched).toEqual([[everyone.id, { effective_to: null }]]));

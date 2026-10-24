@@ -34,7 +34,7 @@ import {
   useDisbursementList,
   useJobName,
 } from '../api';
-import { DisbursementFormDialog } from '../components/DisbursementFormDialog';
+import { DisbursementFormPanel } from '../components/DisbursementFormPanel';
 import { FilterPopover } from '../components/FilterPopover';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { BillingBadge } from '../components/StatusBadge';
@@ -273,6 +273,15 @@ export default function DisbursementsPage() {
       title="Disbursements"
       description="Costs paid on a client's behalf, to recharge to them. Billable ones are work in progress until they are invoiced."
     >
+      <DisbursementFormPanel
+        disbursement={editing}
+        names={{
+          client: editClient.data?.name,
+          job: editJob.data ? { number: editJob.data.number, name: editJob.data.name } : undefined,
+        }}
+        open={dialog?.type === 'form'}
+        onClose={close}
+      />
       {list.isError && !list.data ? (
         <LoadError
           title="Could not load the disbursements"
@@ -405,15 +414,6 @@ export default function DisbursementsPage() {
         />
       )}
 
-      <DisbursementFormDialog
-        disbursement={editing}
-        names={{
-          client: editClient.data?.name,
-          job: editJob.data ? { number: editJob.data.number, name: editJob.data.name } : undefined,
-        }}
-        open={dialog?.type === 'form'}
-        onClose={close}
-      />
       <ConfirmDialog
         open={dialog?.type === 'delete'}
         onClose={close}

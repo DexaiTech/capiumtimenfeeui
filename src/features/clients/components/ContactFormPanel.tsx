@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, useToast } from '@/components/ui';
 
 import { useCreateContact, useUpdateContact } from '../api';
 import {
@@ -25,7 +25,7 @@ export interface ContactTarget {
   primary?: boolean;
 }
 
-export interface ContactFormDialogProps {
+export interface ContactFormPanelProps {
   target: ContactTarget | null;
   onClose: () => void;
 }
@@ -136,9 +136,9 @@ function ContactForm({ target, onClose }: { target: ContactTarget; onClose: () =
 }
 
 /** Add a contact (from the list's "+ Add" pill or the Contacts tab) or edit one. */
-export function ContactFormDialog({ target, onClose }: ContactFormDialogProps) {
+export function ContactFormPanel({ target, onClose }: ContactFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={target !== null}
       onClose={onClose}
       title={target?.contact ? 'Edit contact' : 'Add contact'}
@@ -151,6 +151,6 @@ export function ContactFormDialog({ target, onClose }: ContactFormDialogProps) {
           onClose={onClose}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

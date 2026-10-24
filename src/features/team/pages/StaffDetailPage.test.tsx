@@ -73,7 +73,7 @@ describe('StaffDetailPage', () => {
     renderDetail();
 
     await user.click(await screen.findByRole('button', { name: 'Edit details' }));
-    expect(await screen.findByRole('dialog', { name: 'Edit staff member' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Edit staff member' })).toBeInTheDocument();
   });
 
   it('sets a new rate for this person from their page', async () => {
@@ -89,7 +89,7 @@ describe('StaffDetailPage', () => {
     renderDetail();
 
     await user.click(await screen.findByRole('button', { name: 'Set charge-out rate' }));
-    const dialog = await screen.findByRole('dialog', { name: /new charge-out/i });
+    const dialog = await screen.findByRole('region', { name: /new charge-out/i });
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate (£ per hour)' }), '185.50');
     await user.clear(within(dialog).getByLabelText('Starts on'));
     await user.type(within(dialog).getByLabelText('Starts on'), '2026-11-01');
@@ -122,7 +122,7 @@ describe('StaffDetailPage', () => {
     renderDetail();
 
     await user.click(await screen.findByRole('button', { name: 'Set cost rate' }));
-    const dialog = await screen.findByRole('dialog', { name: /new cost/i });
+    const dialog = await screen.findByRole('region', { name: /new cost/i });
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate (£ per hour)' }), '40');
     await user.click(within(dialog).getByRole('button', { name: 'Save rate' }));
 

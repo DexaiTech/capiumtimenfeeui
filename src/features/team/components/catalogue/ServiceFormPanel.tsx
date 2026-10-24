@@ -3,7 +3,7 @@ import { useId, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import {
@@ -51,7 +51,7 @@ const pence = (text: string) => (text.trim() === '' ? null : parsePounds(text));
 const sameSet = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
   a.length === b.length && a.every((id) => b.includes(id));
 
-export interface ServiceFormDialogProps {
+export interface ServiceFormPanelProps {
   /** The service to change, null to add one. */
   service: Service | null;
   open: boolean;
@@ -369,9 +369,9 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
 }
 
 /** Add a service, or change one: its defaults, VAT, invoice wording and the activity types it allows. */
-export function ServiceFormDialog({ service, open, onClose }: ServiceFormDialogProps) {
+export function ServiceFormPanel({ service, open, onClose }: ServiceFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={service ? 'Edit service' : 'Add service'}
@@ -380,10 +380,8 @@ export function ServiceFormDialog({ service, open, onClose }: ServiceFormDialogP
           ? `${service.name} · ${service.code}`
           : 'A kind of work the practice sells. Jobs and engagements take their defaults from it.'
       }
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? <ServiceForm key={service?.id ?? 'new'} service={service} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

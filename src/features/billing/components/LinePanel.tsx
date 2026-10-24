@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, useToast } from '@/components/ui';
+import { Button, Input, FormPanel, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
 
@@ -20,7 +20,7 @@ import { formatQuantity, lineNet, parseQuantity, vatOn } from '../utils/lineMath
 import { DialogActions } from './DialogActions';
 import { VatSelect } from './VatSelect';
 
-export interface LineDialogProps {
+export interface LinePanelProps {
   open: boolean;
   onClose: () => void;
   invoiceId: string;
@@ -28,7 +28,7 @@ export interface LineDialogProps {
   line: InvoiceLine | null;
 }
 
-function ManualLineForm({ invoiceId, line, onClose }: Omit<LineDialogProps, 'open'>) {
+function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open'>) {
   const { organization } = useOrg();
   const { toast } = useToast();
   const { options } = useVatOptions();
@@ -185,7 +185,7 @@ function WipLineForm({
   invoiceId,
   line,
   onClose,
-}: Omit<LineDialogProps, 'open' | 'line'> & { line: InvoiceLine }) {
+}: Omit<LinePanelProps, 'open' | 'line'> & { line: InvoiceLine }) {
   const { organization } = useOrg();
   const { toast } = useToast();
   const { options } = useVatOptions();
@@ -307,15 +307,14 @@ function WipLineForm({
  * billed (the difference from the WIP value is a write-on or write-off) and its VAT code; a manual
  * line also its quantity and unit price.
  */
-export function LineDialog({ open, onClose, invoiceId, line }: LineDialogProps) {
+export function LinePanel({ open, onClose, invoiceId, line }: LinePanelProps) {
   const wip = line !== null && line.kind !== 'manual';
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={line ? 'Edit line' : 'Add a line'}
       description={line ? undefined : 'A line that bills no WIP: a fee, a discount, a correction.'}
-      closeOnBackdrop={false}
     >
       {open ? (
         wip ? (
@@ -329,6 +328,6 @@ export function LineDialog({ open, onClose, invoiceId, line }: LineDialogProps) 
           />
         )
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

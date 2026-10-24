@@ -1,11 +1,11 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { describe, it } from 'vitest';
 
 import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { server } from '@/test/server';
 
-import { EntryDialog } from '../components/EntryDialog';
+import { EntryPanel } from '../components/EntryPanel';
 import { ReasonDialog } from '../components/ReasonDialog';
 import { CopyEntryDialog } from '../components/timesheet/CopyEntryDialog';
 import { entry, TODAY } from './fixtures';
@@ -13,11 +13,19 @@ import { createBackend, timeHandlers } from './handlers';
 
 const backend = () => server.use(...timeHandlers(createBackend()));
 
+// Either a dialog (confirmations, reasons) or the inline panel of a form.
+const panelOrDialog = () =>
+  waitFor(() => {
+    const found = screen.queryByRole('dialog') ?? screen.queryAllByRole('region')[0];
+    if (!found) throw new Error('No dialog or form panel is open');
+    return found;
+  });
+
 describe('mandatory fields of the time forms', () => {
   it('marks the date and the time of a new entry, not the rest', async () => {
     backend();
-    renderInOrg(<EntryDialog open onClose={() => undefined} defaults={{ date: TODAY }} />);
-    const dialog = await screen.findByRole('dialog');
+    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />);
+    const dialog = await panelOrDialog();
     expectRequiredFields(dialog, {
       required: ['Date', 'Time'],
       optional: ['Activity', 'Description', 'Internal note'],
@@ -27,14 +35,14 @@ describe('mandatory fields of the time forms', () => {
   it('marks the reason of a correction as well', async () => {
     backend();
     renderInOrg(
-      <EntryDialog
+      <EntryPanel
         open
         correction
         onClose={() => undefined}
         entry={entry({ id: 'e1', entry_date: TODAY, minutes: 60 })}
       />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await panelOrDialog();
     expectRequiredFields(dialog, {
       required: ['Reason for the correction', 'Date', 'Time'],
       optional: ['Description'],
@@ -52,7 +60,7 @@ describe('mandatory fields of the time forms', () => {
         onSubmit={() => Promise.resolve()}
       />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await panelOrDialog();
     expectRequiredFields(dialog, { required: ['Reason'] });
   });
 
@@ -65,7 +73,7 @@ describe('mandatory fields of the time forms', () => {
         entry={entry({ id: 'e1', entry_date: TODAY, minutes: 60 })}
       />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await panelOrDialog();
     expectRequiredFields(dialog, {
       required: ['Copy to'],
       optional: ['Copy the internal note too'],

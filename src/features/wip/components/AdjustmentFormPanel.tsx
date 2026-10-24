@@ -7,7 +7,7 @@ import {
   Button,
   DateField,
   Input,
-  Modal,
+  FormPanel,
   SegmentedControl,
   Select,
   Textarea,
@@ -45,7 +45,7 @@ const KINDS = [
   { value: 'write_on', label: 'Write on' },
 ] as const;
 
-export interface AdjustmentFormDialogProps {
+export interface AdjustmentFormPanelProps {
   open: boolean;
   onClose: () => void;
 }
@@ -185,18 +185,16 @@ function AdjustmentForm({ onClose, formId }: { onClose: () => void; formId: stri
 }
 
 /** Writes a client's or a job's WIP on or off, with a reason; a large amount waits for approval. */
-export function AdjustmentFormDialog({ open, onClose }: AdjustmentFormDialogProps) {
+export function AdjustmentFormPanel({ open, onClose }: AdjustmentFormPanelProps) {
   const formId = useId();
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title="Adjust WIP"
       description="Add to or take from the work in progress without an invoice."
-      size="md"
-      closeOnBackdrop={false}
     >
       {open ? <AdjustmentForm formId={formId} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

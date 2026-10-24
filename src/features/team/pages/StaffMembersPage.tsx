@@ -37,7 +37,7 @@ import { FilterPopover } from '../components/FilterPopover';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { StaffPicker } from '../components/pickers/StaffPicker';
 import { StaffBulkBar } from '../components/staff/StaffBulkBar';
-import { AddStaffDialog } from '../components/staff/AddStaffDialog';
+import { AddStaffPanel } from '../components/staff/AddStaffPanel';
 import {
   TemporaryPasswordDialog,
   type TemporaryPassword,
@@ -148,7 +148,7 @@ function StaffList({
     onDone: () => setSelected(new Set()),
   });
   // Edit opens the person's own page; every other action opens its dialog from here.
-  const { actionsFor, dialogs } = useStaffActions({
+  const { actionsFor, dialogs, editPanel } = useStaffActions({
     onSecret,
     onEdit: (member) => void navigate(routes.org.staffMember(organization.slug, member.id)),
   });
@@ -404,6 +404,7 @@ function StaffList({
 
   return (
     <>
+      {editPanel}
       {pickedIds.length > 0 && (canUpdate || canRemove) ? (
         <StaffBulkBar
           ids={pickedIds}
@@ -604,12 +605,7 @@ export default function StaffMembersPage() {
       title="Staff Members"
       description="The people you record time for: grade, approver, working hours, chargeable target and whether they can sign in."
     >
-      {can(PERMISSIONS.memberRead) ? (
-        <StaffList onAdd={() => setAdding(true)} onSecret={setSecret} />
-      ) : (
-        <NoAccess what="the staff list" />
-      )}
-      <AddStaffDialog
+      <AddStaffPanel
         open={adding}
         onClose={closeAdding}
         onCreated={({ secret: created }) => {
@@ -617,6 +613,11 @@ export default function StaffMembersPage() {
           if (created) setSecret(created);
         }}
       />
+      {can(PERMISSIONS.memberRead) ? (
+        <StaffList onAdd={() => setAdding(true)} onSecret={setSecret} />
+      ) : (
+        <NoAccess what="the staff list" />
+      )}
       <TemporaryPasswordDialog secret={secret} onClose={() => setSecret(null)} />
     </PageShell>
   );

@@ -30,7 +30,7 @@ import { useDeleteVatRate, useUpdateVatRate, useVatRates } from '../api/billingH
 import type { VatRate, VatRateUpdate } from '../billingTypes';
 import { LoadError } from '../components/LoadError';
 import { SettingsSection } from '../components/SettingsSection';
-import { VatRateFormDialog } from '../components/vat/VatRateFormDialog';
+import { VatRateFormPanel } from '../components/vat/VatRateFormPanel';
 import { useUrlSearch } from '../hooks/useUrlSearch';
 import { dialogError } from '../utils/billingErrors';
 import { describeError } from '../utils/errors';
@@ -255,6 +255,11 @@ function VatCodeList() {
 
   return (
     <>
+      <VatRateFormPanel
+        open={dialog?.type === 'form'}
+        rate={dialog?.type === 'form' ? dialog.rate : null}
+        onClose={close}
+      />
       {organization.vat_registered ? null : (
         <Card padding="sm" className="flex items-start gap-3 text-xs text-text-muted">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
@@ -377,11 +382,6 @@ function VatCodeList() {
             </p>
           ) : null
         }
-      />
-      <VatRateFormDialog
-        open={dialog?.type === 'form'}
-        rate={dialog?.type === 'form' ? dialog.rate : null}
-        onClose={close}
       />
       <ConfirmDialog
         open={dialog?.type === 'archive' && target !== null}

@@ -8,7 +8,7 @@ import { useDocumentTitle } from '@/hooks';
 import { addDays, todayInZone } from '@/utils/dates';
 
 import { useRangeEntries, useTimesheet, useWeek } from '../api';
-import { EntryDialog } from '../components/EntryDialog';
+import { EntryPanel } from '../components/EntryPanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { PeriodNavigator } from '../components/PeriodNavigator';
 import { CalendarView } from '../components/timesheet/CalendarView';
@@ -143,6 +143,11 @@ export default function MyTimesheetPage() {
       description="Record time by day, week or calendar, and submit the week for approval."
       actions={
         <>
+          <EntryPanel
+            open={adding}
+            onClose={() => setAdding(false)}
+            defaults={{ date: defaultDate }}
+          />
           {view === 'week' && weekEditable ? (
             <Button
               leftIcon={<Copy className="size-4" aria-hidden="true" />}
@@ -186,11 +191,6 @@ export default function MyTimesheetPage() {
         <CalendarView date={date} onOpenDay={openDay} />
       )}
 
-      <EntryDialog
-        open={adding}
-        onClose={() => setAdding(false)}
-        defaults={{ date: defaultDate }}
-      />
       <CopyWeekDialog
         open={copying}
         onClose={() => setCopying(false)}

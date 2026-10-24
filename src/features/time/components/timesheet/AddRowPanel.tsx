@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 
 import { FormAlert } from '@/components/forms';
-import { Button, Checkbox, Modal, Select } from '@/components/ui';
+import { Button, Checkbox, FormPanel, Select } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker, useActivityTypes, useServices } from '@/features/team';
@@ -23,7 +23,7 @@ interface PickedJob {
   service_name: string | null;
 }
 
-export interface AddRowDialogProps {
+export interface AddRowPanelProps {
   open: boolean;
   onClose: () => void;
   /** Keys of the rows on the sheet, so the same row is not added twice. */
@@ -31,7 +31,7 @@ export interface AddRowDialogProps {
   onAdd: (row: DraftRow) => void;
 }
 
-function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowDialogProps, 'open'>) {
+function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowPanelProps, 'open'>) {
   const { can } = useOrg();
   const formId = useId();
   const [client, setClient] = useState<{ id: string; code: string | null; name: string } | null>(
@@ -172,16 +172,15 @@ function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowDialogProps, 'o
  * Adds a row to the timesheet: a client, a job (its service is shown) and an activity. The row
  * holds no time until a day is typed in, and then the first entry is created.
  */
-export function AddRowDialog({ open, onClose, existingKeys, onAdd }: AddRowDialogProps) {
+export function AddRowPanel({ open, onClose, existingKeys, onAdd }: AddRowPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title="Add a row"
       description="Choose what the time is for, then type the hours of each day in the grid."
-      closeOnBackdrop={false}
     >
       {open ? <AddRowForm existingKeys={existingKeys} onAdd={onAdd} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

@@ -31,9 +31,9 @@ import {
 import { MAX_CLAIM_LINES } from '../constants';
 import { ApproveDialog, ReturnDialog } from '../components/DecisionDialogs';
 import { ClaimHistory } from '../components/ClaimHistory';
-import { LineFormDialog } from '../components/LineFormDialog';
+import { LineFormPanel } from '../components/LineFormPanel';
 import { LinesTable } from '../components/LinesTable';
-import { ClaimTitleDialog } from '../components/NewClaimDialog';
+import { ClaimTitlePanel } from '../components/NewClaimPanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { ReceiptsDialog } from '../components/receipts/ReceiptsDialog';
 import { ClaimStatusBadge } from '../components/StatusBadge';
@@ -287,6 +287,19 @@ function ClaimView({ claim }: { claim: ExpenseClaimDetail }) {
       }
       actions={headerActions}
     >
+      <LineFormPanel
+        claimId={claim.id}
+        line={lineDialog?.line ?? null}
+        correcting={lineDialog?.correcting ?? false}
+        open={lineDialog !== null}
+        onClose={close}
+      />
+      <ClaimTitlePanel
+        claimId={claim.id}
+        title={claim.title}
+        open={dialog?.type === 'title'}
+        onClose={close}
+      />
       <Link
         to={back.to(organization.slug)}
         className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-brand-text hover:underline"
@@ -342,13 +355,6 @@ function ClaimView({ claim }: { claim: ExpenseClaimDetail }) {
         <ClaimHistory events={claim.events} timeZone={organization.timezone} />
       </Card>
 
-      <LineFormDialog
-        claimId={claim.id}
-        line={lineDialog?.line ?? null}
-        correcting={lineDialog?.correcting ?? false}
-        open={lineDialog !== null}
-        onClose={close}
-      />
       <ReceiptsDialog claimId={claim.id} lineId={receiptLine} onClose={close} />
       <SubmitBlockedDialog
         open={dialog?.type === 'blocked'}
@@ -360,12 +366,6 @@ function ClaimView({ claim }: { claim: ExpenseClaimDetail }) {
       />
       <ReturnDialog claim={claim} open={dialog?.type === 'return'} onClose={close} />
       <ApproveDialog claim={claim} open={dialog?.type === 'approve'} onClose={close} />
-      <ClaimTitleDialog
-        claimId={claim.id}
-        title={claim.title}
-        open={dialog?.type === 'title'}
-        onClose={close}
-      />
       <ConfirmDialog
         open={dialog?.type === 'deleteClaim'}
         onClose={close}

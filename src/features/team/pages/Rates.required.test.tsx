@@ -35,7 +35,7 @@ describe('mandatory fields of the rate dialogs', () => {
     const user = userEvent.setup();
     renderInOrg(<CostRatesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add rate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add cost rate' });
+    const dialog = await screen.findByRole('region', { name: 'Add cost rate' });
     expectRequiredFields(dialog, {
       required: ['Applies to', 'Rate per hour (£)', 'Effective from'],
       optional: ['Effective to'],
@@ -53,7 +53,7 @@ describe('mandatory fields of the rate dialogs', () => {
     renderInOrg(<CostRatesPage />);
     let menu = await openRuleActions(user, 'Sam Staff');
     await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
-    let dialog = await screen.findByRole('dialog', { name: 'Edit rate' });
+    let dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expectRequiredFields(dialog, {
       required: ['Rate per hour (£)', 'Effective from'],
       optional: ['Effective to'],
@@ -76,7 +76,7 @@ describe('mandatory fields of the rate dialogs', () => {
       { context: contextWith(OWNER_PERMISSIONS), route: `/acme/team/staff/${sam.id}` },
     );
     await user.click(await screen.findByRole('button', { name: 'Set charge-out rate' }));
-    const dialog = await screen.findByRole('dialog', { name: /new charge-out/i });
+    const dialog = await screen.findByRole('region', { name: /new charge-out/i });
     expectRequiredFields(dialog, { required: ['Rate (£ per hour)', 'Starts on'] });
   });
 

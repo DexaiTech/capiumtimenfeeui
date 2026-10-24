@@ -22,7 +22,7 @@ import { buildRows, entriesByCell, servicesByJob } from '../../utils/grid';
 import type { TeamRow } from '../../utils/team';
 import { formatWeekRange } from '../../utils/weeks';
 import { BillableBadge, SheetStatusBadge } from '../badges';
-import { EntryDialog } from '../EntryDialog';
+import { EntryPanel } from '../EntryPanel';
 import { LoadError } from '../PageShell';
 import { WeekGridTable } from '../timesheet/WeekGridTable';
 
@@ -117,6 +117,18 @@ function Content({
 
   return (
     <>
+      <EntryPanel
+        open={recording}
+        onClose={() => setRecording(false)}
+        onBehalfOf={{ id: person.userId, name: person.name }}
+        defaults={{
+          date:
+            todayInZone(organization.timezone) >= weekStart &&
+            todayInZone(organization.timezone) <= addDays(weekStart, 6)
+              ? todayInZone(organization.timezone)
+              : weekStart,
+        }}
+      />
       <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="text-base font-semibold text-text">{person.name}</h2>
@@ -212,18 +224,6 @@ function Content({
           </>
         )}
       </div>
-      <EntryDialog
-        open={recording}
-        onClose={() => setRecording(false)}
-        onBehalfOf={{ id: person.userId, name: person.name }}
-        defaults={{
-          date:
-            todayInZone(organization.timezone) >= weekStart &&
-            todayInZone(organization.timezone) <= addDays(weekStart, 6)
-              ? todayInZone(organization.timezone)
-              : weekStart,
-        }}
-      />
     </>
   );
 }

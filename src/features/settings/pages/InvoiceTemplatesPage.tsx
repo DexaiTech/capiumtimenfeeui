@@ -30,7 +30,7 @@ import {
   useUpdateInvoiceTemplate,
 } from '../api/billingHooks';
 import type { InvoiceTemplate, InvoiceTemplateStatus } from '../billingTypes';
-import { InvoiceTemplateFormDialog } from '../components/templates/InvoiceTemplateFormDialog';
+import { InvoiceTemplateFormPanel } from '../components/templates/InvoiceTemplateFormPanel';
 import { LoadError } from '../components/LoadError';
 import { SettingsSection } from '../components/SettingsSection';
 import { useUrlSearch } from '../hooks/useUrlSearch';
@@ -288,6 +288,12 @@ function TemplateList() {
 
   return (
     <>
+      <InvoiceTemplateFormPanel
+        open={dialog?.type === 'form'}
+        template={dialog?.type === 'form' ? dialog.template : null}
+        readOnly={dialog?.type === 'form' ? dialog.readOnly : false}
+        onClose={close}
+      />
       <DataTable
         caption="Invoice templates"
         columns={columns}
@@ -407,12 +413,6 @@ function TemplateList() {
           invoice PDFs still use the practice letterhead and footer.
         </p>
       </Card>
-      <InvoiceTemplateFormDialog
-        open={dialog?.type === 'form'}
-        template={dialog?.type === 'form' ? dialog.template : null}
-        readOnly={dialog?.type === 'form' ? dialog.readOnly : false}
-        onClose={close}
-      />
       <ConfirmDialog
         open={target !== null}
         onClose={close}

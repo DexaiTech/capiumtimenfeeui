@@ -8,7 +8,7 @@ import {
   DateField,
   DurationInput,
   Input,
-  Modal,
+  FormPanel,
   SegmentedControl,
   Select,
   Textarea,
@@ -38,7 +38,7 @@ const STATUS_OPTIONS: ReadonlyArray<SelectOption> = TASK_STATUSES.map((status) =
   label: TASK_STATUS_META[status].label,
 }));
 
-export interface TaskFormDialogProps {
+export interface TaskFormPanelProps {
   open: boolean;
   onClose: () => void;
   job: Job;
@@ -46,7 +46,7 @@ export interface TaskFormDialogProps {
   task: Task | null;
 }
 
-interface TaskFormProps extends Omit<TaskFormDialogProps, 'open'> {
+interface TaskFormProps extends Omit<TaskFormPanelProps, 'open'> {
   formId: string;
 }
 
@@ -193,7 +193,7 @@ function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
 }
 
 /** Add a task to a job, or change the title, description, due date and budget of one. */
-export function TaskFormDialog({ open, onClose, ...rest }: TaskFormDialogProps) {
+export function TaskFormPanel({ open, onClose, ...rest }: TaskFormPanelProps) {
   const formId = useId();
   const [several, setSeveral] = useState(false);
   const adding = rest.task === null;
@@ -202,13 +202,11 @@ export function TaskFormDialog({ open, onClose, ...rest }: TaskFormDialogProps) 
     onClose();
   };
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={close}
       title={adding ? (several ? 'Add several tasks' : 'Add task') : 'Edit task'}
       description={rest.job.name}
-      size="md"
-      closeOnBackdrop={false}
     >
       {open ? (
         <div className="flex flex-col gap-4">
@@ -231,6 +229,6 @@ export function TaskFormDialog({ open, onClose, ...rest }: TaskFormDialogProps) 
           )}
         </div>
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

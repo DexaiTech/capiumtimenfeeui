@@ -15,7 +15,7 @@ import { useOrg } from '@/features/organizations';
 
 import { useStaffDirectory } from '../api';
 import { CentralChip } from '../central/CentralChip';
-import { ClientFormDialog } from '../components/ClientFormDialog';
+import { ClientFormPanel } from '../components/ClientFormPanel';
 import type { ClientDetail } from '../types';
 import { clientAbilities } from './abilities';
 import { ClientStatusBadge, ClientTypeBadge, SegmentBadge } from './badges';
@@ -68,6 +68,7 @@ export function ClientHeader({ client }: ClientHeaderProps) {
 
   return (
     <header className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 shadow-card sm:p-5">
+      <ClientFormPanel open={editing} client={client} onClose={() => setEditing(false)} />
       <div className="flex flex-wrap items-start gap-4">
         <InitialsAvatar
           name={client.name}
@@ -170,7 +171,6 @@ export function ClientHeader({ client }: ClientHeaderProps) {
         </p>
       ) : null}
 
-      <ClientFormDialog open={editing} client={client} onClose={() => setEditing(false)} />
       {lifecycle.dialog}
     </header>
   );

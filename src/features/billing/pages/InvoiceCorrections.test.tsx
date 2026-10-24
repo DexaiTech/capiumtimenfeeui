@@ -149,7 +149,7 @@ describe('an invoice opened to correct it', () => {
 
   it('shows the credit note dialog at once', async () => {
     setupDetail('credit');
-    expect(await screen.findByRole('dialog', { name: 'Raise a credit note' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Raise a credit note' })).toBeInTheDocument();
   });
 
   it('shows no dialog to someone who may not do it', async () => {

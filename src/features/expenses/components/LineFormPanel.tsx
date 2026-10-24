@@ -7,7 +7,7 @@ import {
   Button,
   DateField,
   Input,
-  Modal,
+  FormPanel,
   Select,
   Switch,
   Textarea,
@@ -47,7 +47,7 @@ const FIELDS = [
   'reason',
 ] as const;
 
-export interface LineFormDialogProps {
+export interface LineFormPanelProps {
   claimId: string;
   /** The line to change; null to add one. */
   line: ExpenseLine | null;
@@ -76,7 +76,7 @@ function LineForm({
   line,
   correcting,
   onClose,
-}: Omit<LineFormDialogProps, 'open'> & { correcting: boolean }) {
+}: Omit<LineFormPanelProps, 'open'> & { correcting: boolean }) {
   const { organization, can } = useOrg();
   const { toast } = useToast();
   const formId = useId();
@@ -504,15 +504,15 @@ function LineForm({
  * Add an expense to a claim, change one, or (on an approved claim) correct one with a reason.
  * The amounts are linked as they are typed; the API works them out again and has the last word.
  */
-export function LineFormDialog({
+export function LineFormPanel({
   claimId,
   line,
   correcting = false,
   open,
   onClose,
-}: LineFormDialogProps) {
+}: LineFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={line ? (correcting ? 'Correct expense' : 'Edit expense') : 'Add expense'}
@@ -521,8 +521,6 @@ export function LineFormDialog({
           ? 'The claim is approved: the correction needs a reason and is kept in its history.'
           : undefined
       }
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? (
         <LineForm
@@ -533,6 +531,6 @@ export function LineFormDialog({
           onClose={onClose}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

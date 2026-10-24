@@ -27,7 +27,7 @@ import { addDays, formatUkDate, formatUkDateTime, todayInZone } from '@/utils/da
 import { formatMinutes } from '@/utils/minutes';
 
 import { useMissingTimesheets, useRunReminders, useStaffDirectory, useTimesheetList } from '../api';
-import { EntryDialog } from '../components/EntryDialog';
+import { EntryPanel } from '../components/EntryPanel';
 import { FilterPopover } from '../components/FilterPopover';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { PeriodNavigator } from '../components/PeriodNavigator';
@@ -275,6 +275,14 @@ function Page() {
 
   return (
     <>
+      <EntryPanel
+        open={recording !== null}
+        onClose={() => setRecording(null)}
+        onBehalfOf={recording ? { id: recording.userId, name: recording.name } : null}
+        defaults={{
+          date: today >= weekStart && today <= addDays(weekStart, 6) ? today : weekStart,
+        }}
+      />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PeriodNavigator
           label={formatWeekRange(weekStart)}
@@ -428,14 +436,6 @@ function Page() {
         weekStart={weekStart}
         staff={staff.data}
         onClose={() => setViewing(null)}
-      />
-      <EntryDialog
-        open={recording !== null}
-        onClose={() => setRecording(null)}
-        onBehalfOf={recording ? { id: recording.userId, name: recording.name } : null}
-        defaults={{
-          date: today >= weekStart && today <= addDays(weekStart, 6) ? today : weekStart,
-        }}
       />
       <ConfirmDialog
         open={reminding}

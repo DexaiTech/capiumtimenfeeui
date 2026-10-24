@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, Textarea, useToast } from '@/components/ui';
+import { Button, Input, FormPanel, Textarea, useToast } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
@@ -30,7 +30,7 @@ const FIELD_NAMES = { default_chargeable_target_bp: 'target_percent' };
 /** Pounds as typed → pence, or null for an empty field. */
 const pence = (text: string) => (text.trim() === '' ? null : parsePounds(text));
 
-export interface GradeFormDialogProps {
+export interface GradeFormPanelProps {
   /** The grade to change, null to add one. */
   grade: Grade | null;
   open: boolean;
@@ -211,9 +211,9 @@ function GradeForm({ grade, onClose }: { grade: Grade | null; onClose: () => voi
 }
 
 /** Add a grade, or change one: name, code, default rates and chargeable target. */
-export function GradeFormDialog({ grade, open, onClose }: GradeFormDialogProps) {
+export function GradeFormPanel({ grade, open, onClose }: GradeFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={grade ? 'Edit grade' : 'Add grade'}
@@ -222,10 +222,8 @@ export function GradeFormDialog({ grade, open, onClose }: GradeFormDialogProps) 
           ? `${grade.name} · ${grade.code}`
           : 'A level of staff with default rates. Changing a default never rewrites recorded time.'
       }
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? <GradeForm key={grade?.id ?? 'new'} grade={grade} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

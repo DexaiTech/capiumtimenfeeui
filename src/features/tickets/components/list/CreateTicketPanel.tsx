@@ -4,7 +4,7 @@ import { useCallback, useId, useRef, useState, type ChangeEvent, type DragEvent 
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Modal, RichTextEditor, Select, Textarea, useToast } from '@/components/ui';
+import { Button, FormPanel, RichTextEditor, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { cn } from '@/utils/cn';
 
@@ -299,22 +299,16 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-export interface CreateTicketDialogProps {
+export interface CreateTicketPanelProps {
   open: boolean;
   onClose: () => void;
 }
 
 /** Raises a ticket: subject, priority, status, description and attachments. */
-export function CreateTicketDialog({ open, onClose }: CreateTicketDialogProps) {
+export function CreateTicketPanel({ open, onClose }: CreateTicketPanelProps) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Application Testing"
-      size="lg"
-      closeOnBackdrop={false}
-    >
+    <FormPanel open={open} onClose={onClose} title="Application Testing">
       {open ? <CreateTicketForm onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

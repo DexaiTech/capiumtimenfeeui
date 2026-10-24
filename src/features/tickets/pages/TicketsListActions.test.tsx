@@ -349,7 +349,7 @@ describe('the new ticket dialog', () => {
       await screen.findByRole('button', { name: 'Application Testing: new ticket' }),
     );
     expect(where()).toBe(`${LIST}?new=1`);
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     expect(within(dialog).getByLabelText(/Subject/)).toHaveFocus();
     // The defaults of the API.
     expect(within(dialog).getByLabelText('Status')).toHaveValue('open');
@@ -374,7 +374,7 @@ describe('the new ticket dialog', () => {
     );
     expect(await screen.findByText('Ticket APT3 created')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Application Testing' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Application Testing' })).not.toBeInTheDocument(),
     );
     expect(where()).toBe(LIST);
   });
@@ -383,7 +383,7 @@ describe('the new ticket dialog', () => {
     const user = userEvent.setup();
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     const subject = within(dialog).getByRole('textbox', { name: /Subject/ });
     expect(subject.tagName).toBe('TEXTAREA');
     await user.type(subject, 'First{Enter}second');
@@ -402,7 +402,7 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     await user.type(within(dialog).getByRole('textbox', { name: /Subject/ }), 'Formatted');
     const box = within(dialog).getByRole('textbox', { name: /Description/ });
     await user.click(box);
@@ -426,7 +426,7 @@ describe('the new ticket dialog', () => {
   it('attaches a screenshot pasted into the description instead of pasting it as text', async () => {
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     const box = within(dialog).getByRole('textbox', { name: /Description/ });
     fireEvent.paste(box, {
       clipboardData: {
@@ -452,7 +452,7 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     await user.type(within(dialog).getByLabelText(/Subject/), 'Title only');
     await user.type(within(dialog).getByLabelText(/Description/), 'Some detail');
     await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
@@ -482,7 +482,7 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     await user.type(within(dialog).getByLabelText(/Subject/), '   ');
     await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
     expect(await within(dialog).findByText('Enter a subject')).toBeInTheDocument();
@@ -491,7 +491,7 @@ describe('the new ticket dialog', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Application Testing' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Application Testing' })).not.toBeInTheDocument(),
     );
     expect(where()).toBe(LIST);
   });
@@ -508,14 +508,14 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     await user.type(within(dialog).getByLabelText(/Subject/), 'A long one');
     await user.type(within(dialog).getByLabelText(/Description/), 'Detail');
     await user.click(within(dialog).getByRole('button', { name: 'Submit' }));
 
     expect(await within(dialog).findByText('Use at most 200 characters.')).toBeInTheDocument();
     expect(within(dialog).getByLabelText(/Subject/)).toHaveValue('A long one');
-    expect(screen.getByRole('dialog', { name: 'Application Testing' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Application Testing' })).toBeInTheDocument();
   });
 
   it('shows a refusal that names no field above the buttons', async () => {
@@ -528,7 +528,7 @@ describe('the new ticket dialog', () => {
     );
     renderList(OWNER_PERMISSIONS, `${LIST}?new=1`);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     await user.type(within(dialog).getByLabelText(/Subject/), 'Anything');
     await user.type(within(dialog).getByLabelText(/Description/), 'Detail');
     await user.click(within(dialog).getByRole('button', { name: 'Submit' }));

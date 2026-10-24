@@ -39,7 +39,7 @@ const menuItems = (menu: HTMLElement) =>
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add rate' }));
-  return screen.findByRole('dialog', { name: 'Add cost rate' });
+  return screen.findByRole('region', { name: 'Add cost rate' });
 }
 
 const setDate = (dialog: HTMLElement, label: string, value: string) =>
@@ -327,7 +327,7 @@ describe('CostRatesPage add rate', () => {
       effective_from: '2026-11-01',
     });
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Add cost rate' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Add cost rate' })).not.toBeInTheDocument(),
     );
   });
 
@@ -441,7 +441,7 @@ describe('CostRatesPage add rate', () => {
       '01/01/2026 – open-ended',
       '01/06/2025 – 31/12/2025',
     ]);
-    expect(screen.getByRole('dialog', { name: 'Add cost rate' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Add cost rate' })).toBeInTheDocument();
   });
 
   it('explains a refusal that names a field, on that field', async () => {
@@ -476,7 +476,7 @@ describe('CostRatesPage add rate', () => {
     const user = userEvent.setup();
     renderPage({ context: contextWith(['rate.read', 'rate.manage']) });
     await user.click(await screen.findByRole('button', { name: 'Add rate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add cost rate' });
+    const dialog = await screen.findByRole('region', { name: 'Add cost rate' });
     expect(
       within(dialog).getByText(/need permission to view staff and grades/),
     ).toBeInTheDocument();
@@ -498,7 +498,7 @@ describe('CostRatesPage edit, end-date and delete', () => {
 
     const menu = await openActions(user, 'Sam Staff');
     await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit rate' });
+    const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expect(within(dialog).getByText('Sam Staff')).toBeInTheDocument();
     const amount = within(dialog).getByRole('textbox', { name: 'Rate per hour (£)' });
     expect(amount).toHaveValue('35.00');
@@ -535,7 +535,7 @@ describe('CostRatesPage edit, end-date and delete', () => {
 
     const menu = await openActions(user, 'Sam Staff');
     await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit rate' });
+    const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expect(within(dialog).getByLabelText('Effective to')).toHaveValue('2026-12-31');
     setDate(dialog, 'Effective to', '');
     await user.click(within(dialog).getByRole('button', { name: 'Save rate' }));
@@ -550,7 +550,7 @@ describe('CostRatesPage edit, end-date and delete', () => {
 
     const menu = await openActions(user, 'Senior grade');
     await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit rate' });
+    const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expect(within(dialog).getByLabelText('Effective from')).toBeDisabled();
     expect(
       within(dialog).getByText(
@@ -575,7 +575,7 @@ describe('CostRatesPage edit, end-date and delete', () => {
 
     const menu = await openActions(user, 'Sam Staff');
     await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit rate' });
+    const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     setDate(dialog, 'Effective to', '2026-12-31');
     await user.click(within(dialog).getByRole('button', { name: 'Save rate' }));
 

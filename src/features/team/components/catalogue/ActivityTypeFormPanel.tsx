@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
 
 import { useCreateActivityType, useUpdateActivityType, useVatCodes } from '../../api';
 import { activityTypeSchema, type ActivityTypeValues } from '../../schemas/catalogue';
@@ -14,7 +14,7 @@ import { DialogActions } from '../DialogActions';
 
 const FIELDS = ['code', 'name', 'is_chargeable', 'vat_rate_id', 'invoice_description'] as const;
 
-export interface ActivityTypeFormDialogProps {
+export interface ActivityTypeFormPanelProps {
   /** The activity type to change, null to add one. */
   activityType: ActivityType | null;
   /** Names of the services that limit time to this type, shown while editing. */
@@ -188,14 +188,14 @@ function ActivityTypeForm({
 }
 
 /** Add an activity type, or change one: whether its time is billable by default, VAT and invoice wording. */
-export function ActivityTypeFormDialog({
+export function ActivityTypeFormPanel({
   activityType,
   linkedServices,
   open,
   onClose,
-}: ActivityTypeFormDialogProps) {
+}: ActivityTypeFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={activityType ? 'Edit activity type' : 'Add activity type'}
@@ -204,8 +204,6 @@ export function ActivityTypeFormDialog({
           ? `${activityType.name} · ${activityType.code}`
           : 'What a piece of time was spent on. It decides whether the time is billable by default.'
       }
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? (
         <ActivityTypeForm
@@ -215,6 +213,6 @@ export function ActivityTypeFormDialog({
           onClose={onClose}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

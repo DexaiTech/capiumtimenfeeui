@@ -31,7 +31,7 @@ import {
   useVatCodes,
 } from '../api';
 import { vatName } from '../components/catalogue/vat';
-import { ServiceFormDialog } from '../components/catalogue/ServiceFormDialog';
+import { ServiceFormPanel } from '../components/catalogue/ServiceFormPanel';
 import { ActiveBadge } from '../components/badges';
 import { LoadError, PageShell } from '../components/PageShell';
 import { useUrlSearch } from '../hooks/useUrlSearch';
@@ -296,6 +296,11 @@ function ServiceList() {
 
   return (
     <>
+      <ServiceFormPanel
+        open={dialog?.type === 'form'}
+        service={dialog?.type === 'form' ? dialog.service : null}
+        onClose={close}
+      />
       <DataTable
         caption="Services"
         columns={columns}
@@ -404,11 +409,6 @@ function ServiceList() {
             </p>
           ) : null
         }
-      />
-      <ServiceFormDialog
-        open={dialog?.type === 'form'}
-        service={dialog?.type === 'form' ? dialog.service : null}
-        onClose={close}
       />
       <ConfirmDialog
         open={target !== null}

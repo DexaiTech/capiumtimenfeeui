@@ -21,11 +21,11 @@ import type { ClientDetail, ClientRateRead } from '../../types';
 import type { ClientAbilities } from '../abilities';
 import { describeError, type Failure } from '../errors';
 import {
-  ClientRateDialog,
-  RateEndDialog,
+  ClientRatePanel,
+  RateEndPanel,
   type ClientRateTarget,
   type RateEndTarget,
-} from './ClientRateDialogs';
+} from './ClientRatePanels';
 import {
   canEndRate,
   rateAudience,
@@ -126,6 +126,8 @@ export function RatesCard({ client, abilities }: RatesCardProps) {
 
   return (
     <section aria-label="Rate overrides" className="flex flex-col gap-2">
+      <ClientRatePanel target={editing} onClose={() => setEditing(null)} />
+      <RateEndPanel target={ending} onClose={() => setEnding(null)} />
       <DataTable
         caption={`Rate overrides of ${client.name}`}
         columns={columns}
@@ -194,8 +196,6 @@ export function RatesCard({ client, abilities }: RatesCardProps) {
           />
         }
       />
-      <ClientRateDialog target={editing} onClose={() => setEditing(null)} />
-      <RateEndDialog target={ending} onClose={() => setEnding(null)} />
       <ConfirmDialog
         open={deleting !== null}
         onClose={closeDelete}

@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
+import { Button, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { ApiError, isApiError } from '@/services/api';
 
@@ -28,7 +28,7 @@ import {
 } from '../schemas';
 import type { ClientDetail, ClientRead, ClientUpdate } from '../types';
 
-export interface ClientFormDialogProps {
+export interface ClientFormPanelProps {
   open: boolean;
   /** The client to edit; null to add one. */
   client: ClientRead | null;
@@ -45,7 +45,7 @@ function changedFields(next: ClientUpdate, previous: ClientUpdate): ClientUpdate
   return changes;
 }
 
-function ClientForm({ client, onClose, onSaved }: Omit<ClientFormDialogProps, 'open'>) {
+function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'open'>) {
   const { can } = useOrg();
   const { toast } = useToast();
   const formId = useId();
@@ -331,18 +331,12 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormDialogProps, 'o
 }
 
 /** Add or edit a client (react-hook-form + zod mirroring `ClientCreate` / `ClientUpdate`). */
-export function ClientFormDialog({ open, client, onClose, onSaved }: ClientFormDialogProps) {
+export function ClientFormPanel({ open, client, onClose, onSaved }: ClientFormPanelProps) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={client ? `Edit ${client.name}` : 'Add Client'}
-      size="lg"
-      closeOnBackdrop={false}
-    >
+    <FormPanel open={open} onClose={onClose} title={client ? `Edit ${client.name}` : 'Add Client'}>
       {open ? (
         <ClientForm key={client?.id ?? 'new'} client={client} onClose={onClose} onSaved={onSaved} />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

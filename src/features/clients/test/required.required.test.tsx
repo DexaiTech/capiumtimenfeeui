@@ -6,12 +6,12 @@ import { expectRequiredFields } from '@/test/requiredFields';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { ok, server } from '@/test/server';
 
-import { ClientFormDialog } from '../components/ClientFormDialog';
+import { ClientFormPanel } from '../components/ClientFormPanel';
 import { ClientsBulkBar } from '../components/ClientsBulkBar';
-import { ContactFormDialog } from '../components/ContactFormDialog';
-import { EngagementFormDialog } from '../components/EngagementFormDialog';
+import { ContactFormPanel } from '../components/ContactFormPanel';
+import { EngagementFormPanel } from '../components/EngagementFormPanel';
 import { ImportDialog } from '../components/ImportDialog';
-import { ClientRateDialog, RateEndDialog } from '../workspace/settings/ClientRateDialogs';
+import { ClientRatePanel, RateEndPanel } from '../workspace/settings/ClientRatePanels';
 import { techwave } from './fixtures';
 
 const quiet = () =>
@@ -23,8 +23,8 @@ const quiet = () =>
 describe('mandatory fields of the clients forms', () => {
   it('marks the client name and country, not the optional details', async () => {
     quiet();
-    renderInOrg(<ClientFormDialog open client={null} onClose={() => undefined} />);
-    const dialog = await screen.findByRole('dialog');
+    renderInOrg(<ClientFormPanel open client={null} onClose={() => undefined} />);
+    const dialog = await screen.findByRole('region', { name: 'Add Client' });
     expectRequiredFields(dialog, {
       required: ['Client name', 'Country'],
       optional: ['Client code', 'Email', 'Phone', 'Segment', 'Billing notes'],
@@ -33,24 +33,24 @@ describe('mandatory fields of the clients forms', () => {
 
   it('marks the contact name', async () => {
     renderInOrg(
-      <ContactFormDialog
+      <ContactFormPanel
         target={{ clientId: techwave.id, clientName: techwave.name, contact: null }}
         onClose={() => undefined}
       />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('region');
     expectRequiredFields(dialog, { required: ['Name'], optional: ['Position', 'Email', 'Phone'] });
   });
 
   it('marks the service of an engagement', async () => {
     quiet();
     renderInOrg(
-      <EngagementFormDialog
+      <EngagementFormPanel
         target={{ clientId: techwave.id, engagement: null, takenServiceIds: [] }}
         onClose={() => undefined}
       />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('region');
     expectRequiredFields(dialog, {
       required: ['Service'],
       optional: [/Agreed fee/, 'Start date', 'End date'],
@@ -66,9 +66,9 @@ describe('mandatory fields of the clients forms', () => {
   it('marks the rate amount, not the dates', async () => {
     quiet();
     renderInOrg(
-      <ClientRateDialog target={{ clientId: techwave.id, rate: null }} onClose={() => undefined} />,
+      <ClientRatePanel target={{ clientId: techwave.id, rate: null }} onClose={() => undefined} />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('region');
     expectRequiredFields(dialog, {
       required: [/Rate per hour/],
       optional: ['Applies to', 'Effective from', 'Effective to'],
@@ -77,7 +77,7 @@ describe('mandatory fields of the clients forms', () => {
 
   it('marks the last day of a rate', async () => {
     renderInOrg(
-      <RateEndDialog
+      <RateEndPanel
         target={{
           rate: {
             id: 'r1',
@@ -90,7 +90,7 @@ describe('mandatory fields of the clients forms', () => {
         onClose={() => undefined}
       />,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('region');
     expectRequiredFields(dialog, { required: ['Last day of the rate'] });
   });
 

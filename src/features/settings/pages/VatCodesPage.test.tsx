@@ -226,12 +226,12 @@ describe('VatCodesPage: permissions', () => {
   });
 });
 
-describe('VatRateFormDialog: adding', () => {
+describe('VatRateFormPanel: adding', () => {
   it('adds a VAT code and sends exactly the typed fields', async () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Add VAT code' });
 
     // A new code starts as Standard, not the default, with the rate still to type.
     expect(within(dialog).getByRole('combobox', { name: 'Code' })).toHaveValue('standard');
@@ -260,7 +260,7 @@ describe('VatRateFormDialog: adding', () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Add VAT code' });
 
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Reduced 12.5%');
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Code' }), 'Reduced');
@@ -281,7 +281,7 @@ describe('VatRateFormDialog: adding', () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Add VAT code' });
 
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Zero rated (export)');
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate (%)' }), '20');
@@ -302,7 +302,7 @@ describe('VatRateFormDialog: adding', () => {
     // Back to a taxed code: the rate can be typed again.
     await closed('Add VAT code');
     await user.click(screen.getByRole('button', { name: 'Add VAT code' }));
-    const second = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const second = await screen.findByRole('region', { name: 'Add VAT code' });
     await user.selectOptions(within(second).getByRole('combobox', { name: 'Code' }), 'Exempt');
     expect(within(second).getByRole('textbox', { name: 'Rate (%)' })).toBeDisabled();
     await user.selectOptions(within(second).getByRole('combobox', { name: 'Code' }), 'Reduced');
@@ -313,7 +313,7 @@ describe('VatRateFormDialog: adding', () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Add VAT code' });
 
     await user.click(within(dialog).getByRole('button', { name: 'Add VAT code' }));
     expect(await within(dialog).findByText('Enter a name for the VAT code')).toBeInTheDocument();
@@ -346,7 +346,7 @@ describe('VatRateFormDialog: adding', () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Add VAT code' });
 
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'reduced 5%');
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate (%)' }), '5');
@@ -358,7 +358,7 @@ describe('VatRateFormDialog: adding', () => {
     expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveAccessibleDescription(
       /A VAT rate with this name exists\./,
     );
-    expect(screen.getByRole('dialog', { name: 'Add VAT code' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Add VAT code' })).toBeInTheDocument();
     expect(backend.calls.vatCreates).toHaveLength(1);
   });
 
@@ -371,7 +371,7 @@ describe('VatRateFormDialog: adding', () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Add VAT code' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Another');
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate (%)' }), '8');
     await user.click(within(dialog).getByRole('button', { name: 'Add VAT code' }));
@@ -383,12 +383,12 @@ describe('VatRateFormDialog: adding', () => {
   });
 });
 
-describe('VatRateFormDialog: editing', () => {
+describe('VatRateFormPanel: editing', () => {
   it('opens with the saved values, saves only what changed and keeps the rest', async () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await chooseAction(user, 'Reduced 5%', 'Edit');
-    const dialog = await screen.findByRole('dialog', { name: 'Edit VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Edit VAT code' });
 
     expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveValue('Reduced 5%');
     expect(within(dialog).getByRole('combobox', { name: 'Code' })).toHaveValue('reduced');
@@ -416,7 +416,7 @@ describe('VatRateFormDialog: editing', () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await chooseAction(user, 'Standard 20%', 'Edit');
-    const dialog = await screen.findByRole('dialog', { name: 'Edit VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Edit VAT code' });
 
     const name = within(dialog).getByRole('textbox', { name: 'Name' });
     await user.clear(name);
@@ -436,7 +436,7 @@ describe('VatRateFormDialog: editing', () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await chooseAction(user, 'Reduced 5%', 'Edit');
-    const dialog = await screen.findByRole('dialog', { name: 'Edit VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Edit VAT code' });
     const name = within(dialog).getByRole('textbox', { name: 'Name' });
     await user.clear(name);
     await user.type(name, 'EXEMPT');
@@ -446,7 +446,7 @@ describe('VatRateFormDialog: editing', () => {
       await within(dialog).findByText('A VAT rate with this name exists.'),
     ).toBeInTheDocument();
     expect(backend.calls.vatUpdates).toEqual([{ id: reducedVat.id, body: { name: 'EXEMPT' } }]);
-    expect(screen.getByRole('dialog', { name: 'Edit VAT code' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Edit VAT code' })).toBeInTheDocument();
   });
 });
 
@@ -594,12 +594,12 @@ describe('VatCodesPage: default, archive, restore and delete', () => {
   });
 });
 
-describe('VatRateFormDialog: mandatory fields', () => {
+describe('VatRateFormPanel: mandatory fields', () => {
   it('stars the name and the rate, and drops the rate star when the code charges no VAT', async () => {
     const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+    const dialog = await screen.findByRole('region', { name: 'Add VAT code' });
 
     expectRequiredFields(dialog, {
       required: ['Name', 'Rate (%)'],

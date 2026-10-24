@@ -27,7 +27,7 @@ const menuItems = (menu: HTMLElement) =>
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add activity type' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Add activity type' });
+  const dialog = await screen.findByRole('region', { name: 'Add activity type' });
   // The VAT codes the form offers are loaded with it.
   await within(dialog).findByRole('option', { name: /Standard 20%/ });
   return dialog;
@@ -36,7 +36,7 @@ async function openAdd(user: User) {
 async function openEdit(user: User, name: string) {
   const menu = await openActions(user, name);
   await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Edit activity type' });
+  const dialog = await screen.findByRole('region', { name: 'Edit activity type' });
   await within(dialog).findByRole('option', { name: /Standard 20%/ });
   return dialog;
 }
@@ -170,7 +170,7 @@ describe('ActivityTypesPage list', () => {
   });
 });
 
-describe('ActivityTypeFormDialog', () => {
+describe('ActivityTypeFormPanel', () => {
   it('adds an activity type and sends exactly the filled fields', async () => {
     let body: unknown;
     server.use(
@@ -208,7 +208,7 @@ describe('ActivityTypeFormDialog', () => {
       invoice_description: 'Admin time',
     });
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Add activity type' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Add activity type' })).not.toBeInTheDocument(),
     );
   });
 
@@ -286,7 +286,7 @@ describe('ActivityTypeFormDialog', () => {
         'An activity type with this name already exists.',
       ),
     );
-    expect(screen.getByRole('dialog', { name: 'Add activity type' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Add activity type' })).toBeInTheDocument();
   });
 
   it('edits an activity type, sends only what changed and clears a field with null', async () => {

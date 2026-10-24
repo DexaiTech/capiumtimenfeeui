@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, DateField, Input, Modal, Textarea, useToast } from '@/components/ui';
+import { Button, DateField, Input, FormPanel, Textarea, useToast } from '@/components/ui';
 import { ClientPicker } from '@/features/clients';
 import { useOrg } from '@/features/organizations';
 
@@ -16,7 +16,7 @@ import { clientLabel } from '../../utils/format';
 import { DialogActions } from '../DialogActions';
 import { LineItemsEditor } from '../documents/LineItemsEditor';
 
-export interface EstimateFormDialogProps {
+export interface EstimateFormPanelProps {
   open: boolean;
   onClose: () => void;
   /** The draft to change; null raises a new estimate. */
@@ -27,7 +27,7 @@ export interface EstimateFormDialogProps {
 
 const FIELDS = ['client_id', 'expiry_date', 'reference', 'notes', 'lines'] as const;
 
-function EstimateForm({ estimate, onClose, onSaved }: Omit<EstimateFormDialogProps, 'open'>) {
+function EstimateForm({ estimate, onClose, onSaved }: Omit<EstimateFormPanelProps, 'open'>) {
   const { organization } = useOrg();
   const { toast } = useToast();
   const create = useCreateEstimate();
@@ -180,19 +180,17 @@ function EstimateForm({ estimate, onClose, onSaved }: Omit<EstimateFormDialogPro
  * Raises an estimate, or changes a draft. The estimate stays a draft, without a number, until it
  * is sent. Saved lines replace the old ones as a whole.
  */
-export function EstimateFormDialog({ open, onClose, estimate, onSaved }: EstimateFormDialogProps) {
+export function EstimateFormPanel({ open, onClose, estimate, onSaved }: EstimateFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
-      size="lg"
       title={estimate ? 'Edit estimate' : 'New estimate'}
       description={
         estimate
           ? 'Only a draft can be changed.'
           : 'A draft is saved without a number; sending it numbers it.'
       }
-      closeOnBackdrop={false}
     >
       {open ? (
         <EstimateForm
@@ -202,6 +200,6 @@ export function EstimateFormDialog({ open, onClose, estimate, onSaved }: Estimat
           onSaved={onSaved}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

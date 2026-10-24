@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, ErrorState, Modal, Skeleton, useToast } from '@/components/ui';
+import { Button, ErrorState, FormPanel, Skeleton, useToast } from '@/components/ui';
 import { isApiError } from '@/services/api';
 import { minutesToHours, parseMinutes } from '@/utils/minutes';
 
@@ -39,7 +39,7 @@ const FIELD_NAMES = {
 const sameDays = (a: ReadonlyArray<number>, b: ReadonlyArray<number>) =>
   a.length === b.length && a.every((day, index) => day === b[index]);
 
-export interface EditStaffDialogProps {
+export interface EditStaffPanelProps {
   staff: StaffMember | null;
   onClose: () => void;
 }
@@ -175,16 +175,14 @@ function EditStaffForm({
 }
 
 /** Edit every profile field of a staff member, including their status. */
-export function EditStaffDialog({ staff, onClose }: EditStaffDialogProps) {
+export function EditStaffPanel({ staff, onClose }: EditStaffPanelProps) {
   const grades = useGradeOptions({ enabled: staff !== null });
   return (
-    <Modal
+    <FormPanel
       open={staff !== null}
       onClose={onClose}
       title="Edit staff member"
       description={staff ? `${staff.full_name} · ${staff.code}` : undefined}
-      size="lg"
-      closeOnBackdrop={false}
     >
       {staff === null ? null : grades.isPending ? (
         <div role="status" aria-label="Loading" className="flex flex-col gap-4">
@@ -203,6 +201,6 @@ export function EditStaffDialog({ staff, onClose }: EditStaffDialogProps) {
       ) : (
         <EditStaffForm key={staff.id} staff={staff} grades={grades.data} onClose={onClose} />
       )}
-    </Modal>
+    </FormPanel>
   );
 }

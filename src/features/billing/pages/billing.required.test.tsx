@@ -1,23 +1,23 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { expectRequiredFields, isMarkedRequired } from '@/test/requiredFields';
 import { apiPath, ok, server } from '@/test/server';
 
-import { CreditNoteDialog } from '../components/CreditNoteDialog';
+import { CreditNotePanel } from '../components/CreditNotePanel';
 import { CreditNoteWipDialog } from '../components/CreditNoteWipDialog';
-import { InvoiceHeaderDialog } from '../components/InvoiceHeaderDialog';
+import { InvoiceHeaderPanel } from '../components/InvoiceHeaderPanel';
 import { IssueDialog } from '../components/IssueDialog';
-import { LineDialog } from '../components/LineDialog';
+import { LinePanel } from '../components/LinePanel';
 import { ReasonDialog } from '../components/ReasonDialog';
-import { RecordPaymentDialog } from '../components/RecordPaymentDialog';
+import { RecordPaymentPanel } from '../components/RecordPaymentPanel';
 import { SendInvoiceDialog } from '../components/SendInvoiceDialog';
 import { StartCreditNoteDialog } from '../components/creditNotes/CreditNoteLauncher';
-import { EstimateFormDialog } from '../components/estimates/EstimateFormDialog';
+import { EstimateFormPanel } from '../components/estimates/EstimateFormPanel';
 import { LineEditDialog } from '../components/prepare/LineEditDialog';
 import { DetailsStep } from '../components/prepare/DetailsStep';
-import { ScheduleFormDialog } from '../components/recurring/ScheduleFormDialog';
+import { ScheduleFormPanel } from '../components/recurring/ScheduleFormPanel';
 import { SendStatementDialog } from '../components/statements/SendStatementDialog';
 import type { InvoiceDetail, InvoiceLine } from '../types';
 import { harbour } from '../test/fixtures';
@@ -25,7 +25,13 @@ import { renderBillingPage } from '../test/render';
 import PrepareInvoicePage from './PrepareInvoicePage';
 
 const noop = () => undefined;
-const dialog = () => screen.findByRole('dialog');
+// Either a dialog (confirmations, reasons) or the inline panel of a form.
+const dialog = () =>
+  waitFor(() => {
+    const found = screen.queryByRole('dialog') ?? screen.queryAllByRole('region')[0];
+    if (!found) throw new Error('No dialog or form panel is open');
+    return found;
+  });
 /** A picker's label also names its list: the search box is the control that carries the star. */
 const expectPickerRequired = (scope: HTMLElement, name: string) =>
   expect(isMarkedRequired(within(scope).getByRole('combobox', { name }))).toBe(true);
@@ -64,7 +70,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
   });
 
   it('invoice details: both dates, not the reference or the notes', async () => {
-    renderBillingPage(<InvoiceHeaderDialog open onClose={noop} invoice={invoice} />);
+    renderBillingPage(<InvoiceHeaderPanel open onClose={noop} invoice={invoice} />);
     expectRequiredFields(await dialog(), {
       required: ['Issue date', 'Due date'],
       optional: ['Reference', 'Notes'],
@@ -105,7 +111,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
   });
 
   it('record a payment: client, amount, date and method, not the reference or notes', async () => {
-    renderBillingPage(<RecordPaymentDialog open onClose={noop} />);
+    renderBillingPage(<RecordPaymentPanel open onClose={noop} />);
     expectPickerRequired(await dialog(), 'Client');
     expectRequiredFields(await dialog(), {
       required: ['Amount received (£)', 'Date received', 'Method'],
@@ -114,7 +120,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
   });
 
   it('add a line: description, quantity and unit price, not the VAT code', async () => {
-    renderBillingPage(<LineDialog open onClose={noop} invoiceId="inv-1" line={null} />);
+    renderBillingPage(<LinePanel open onClose={noop} invoiceId="inv-1" line={null} />);
     expectRequiredFields(await dialog(), {
       required: ['Description', 'Quantity', 'Unit price (£)'],
       optional: ['VAT code'],
@@ -131,7 +137,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
       vat_rate_bp: 2000,
       wip: null,
     } as unknown as InvoiceLine;
-    renderBillingPage(<LineDialog open onClose={noop} invoiceId="inv-1" line={line} />);
+    renderBillingPage(<LinePanel open onClose={noop} invoiceId="inv-1" line={line} />);
     expectRequiredFields(await dialog(), {
       required: ['Description', 'Amount to bill (£)'],
       optional: ['VAT code'],
@@ -139,7 +145,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
   });
 
   it('credit note: reason and date', async () => {
-    renderBillingPage(<CreditNoteDialog open onClose={noop} invoice={invoice} />);
+    renderBillingPage(<CreditNotePanel open onClose={noop} invoice={invoice} />);
     expectRequiredFields(await dialog(), { required: ['Reason', 'Credit note date'] });
   });
 
@@ -174,7 +180,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
   });
 
   it('new estimate: the client and the first line, not the reference, expiry or notes', async () => {
-    renderBillingPage(<EstimateFormDialog open onClose={noop} estimate={null} onSaved={noop} />);
+    renderBillingPage(<EstimateFormPanel open onClose={noop} estimate={null} onSaved={noop} />);
     expectPickerRequired(await dialog(), 'Client');
     expectRequiredFields(await dialog(), {
       required: ['Description', 'Quantity', 'Unit price (£)'],
@@ -183,7 +189,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
   });
 
   it('new schedule: client, name, frequency, start date and the first line', async () => {
-    renderBillingPage(<ScheduleFormDialog open onClose={noop} schedule={null} onSaved={noop} />);
+    renderBillingPage(<ScheduleFormPanel open onClose={noop} schedule={null} onSaved={noop} />);
     expectPickerRequired(await dialog(), 'Client');
     expectRequiredFields(await dialog(), {
       required: ['Name', 'Frequency', 'Start date', 'Description', 'Quantity'],

@@ -37,7 +37,7 @@ import { todayInZone } from '@/utils/dates';
 import { flattenPages, useDeleteJob, useJobList, useMemberNames, useMembers } from '../api';
 import { CopyJobDialog } from '../components/CopyJobDialog';
 import { FilterPopover } from '../components/FilterPopover';
-import { JobFormDialog } from '../components/JobFormDialog';
+import { JobFormPanel } from '../components/JobFormPanel';
 import { JobsBulkBar } from '../components/JobsBulkBar';
 import { jobColumns, sortOfColumn, tableSort } from '../components/jobColumns';
 import { LoadError, PageShell } from '../components/PageShell';
@@ -214,6 +214,24 @@ export default function JobsPage() {
       title="Job List"
       description="The work of the practice: each job belongs to a client, with its tasks, budget and the people on it."
     >
+      <JobFormPanel
+        open={creating}
+        onClose={closeCreate}
+        job={null}
+        clientId={clientId ?? undefined}
+        onSaved={(job) => {
+          closeCreate();
+          void navigate(routes.org.job(organization.slug, job.id));
+        }}
+      />
+      {editing ? (
+        <JobFormPanel
+          open
+          onClose={() => setEditing(null)}
+          job={editing}
+          onSaved={() => setEditing(null)}
+        />
+      ) : null}
       {list.isError && !list.data ? (
         <LoadError
           title="Could not load the jobs"
@@ -357,24 +375,6 @@ export default function JobsPage() {
         />
       )}
 
-      <JobFormDialog
-        open={creating}
-        onClose={closeCreate}
-        job={null}
-        clientId={clientId ?? undefined}
-        onSaved={(job) => {
-          closeCreate();
-          void navigate(routes.org.job(organization.slug, job.id));
-        }}
-      />
-      {editing ? (
-        <JobFormDialog
-          open
-          onClose={() => setEditing(null)}
-          job={editing}
-          onSaved={() => setEditing(null)}
-        />
-      ) : null}
       {copying ? (
         <CopyJobDialog
           open

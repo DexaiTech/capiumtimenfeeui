@@ -29,8 +29,20 @@ function claims() {
       submitted_at: '2026-10-05T09:00:00Z',
       created_at: '2026-10-04T09:00:00Z',
       lines: [
-        makeLine({ incurred_on: '2026-09-20', net: 12000, gross: 12000, recharge_amount: 0, is_billable: false }),
-        makeLine({ incurred_on: '2026-09-22', net: 3000, gross: 3000, recharge_amount: 0, is_billable: false }),
+        makeLine({
+          incurred_on: '2026-09-20',
+          net: 12000,
+          gross: 12000,
+          recharge_amount: 0,
+          is_billable: false,
+        }),
+        makeLine({
+          incurred_on: '2026-09-22',
+          net: 3000,
+          gross: 3000,
+          recharge_amount: 0,
+          is_billable: false,
+        }),
       ],
     }),
     makeClaim({
@@ -38,7 +50,15 @@ function claims() {
       title: null,
       status: 'approved',
       created_at: '2026-10-02T09:00:00Z',
-      lines: [makeLine({ incurred_on: '2026-08-14', net: 800, gross: 800, recharge_amount: 0, is_billable: false })],
+      lines: [
+        makeLine({
+          incurred_on: '2026-08-14',
+          net: 800,
+          gross: 800,
+          recharge_amount: 0,
+          is_billable: false,
+        }),
+      ],
     }),
     makeClaim({
       id: 'c-ben',
@@ -51,7 +71,10 @@ function claims() {
   ];
 }
 
-function setup(init: Partial<ExpenseBackend> = {}, options: { route?: string; permissions?: string[] } = {}) {
+function setup(
+  init: Partial<ExpenseBackend> = {},
+  options: { route?: string; permissions?: string[] } = {},
+) {
   const backend = createBackend({ claims: claims(), ...init });
   server.use(...expenseHandlers(backend));
   renderExpensePage(<MyExpensesPage />, {
@@ -62,7 +85,8 @@ function setup(init: Partial<ExpenseBackend> = {}, options: { route?: string; pe
   return backend;
 }
 
-const lists = (backend: ExpenseBackend) => backend.calls.filter((call) => call.path === '/expense-claims' && call.method === 'GET');
+const lists = (backend: ExpenseBackend) =>
+  backend.calls.filter((call) => call.path === '/expense-claims' && call.method === 'GET');
 /** The table once the claims have loaded: while they load it is a skeleton marked `aria-busy`. */
 const table = async () => {
   const element = await screen.findByRole('table', { name: 'My expense claims' });
@@ -74,7 +98,9 @@ describe('My Expenses', () => {
   it('lists the caller’s own claims with their status, period, count and total', async () => {
     const backend = setup();
 
-    const rows = within(await table()).getAllByRole('row').slice(1);
+    const rows = within(await table())
+      .getAllByRole('row')
+      .slice(1);
     expect(rows).toHaveLength(3);
     // Newest first, and never someone else's.
     expect(rows.map((row) => within(row).getAllByRole('cell')[0]?.textContent)).toEqual([
@@ -86,10 +112,9 @@ describe('My Expenses', () => {
     expect(conference).toHaveTextContent('20/09/2026 – 22/09/2026');
     expect(conference).toHaveTextContent('Submitted');
     expect(conference).toHaveTextContent('£150.00');
-    expect(within(rows[1] as HTMLElement).getByRole('link', { name: 'Client visit, Leeds' })).toHaveAttribute(
-      'href',
-      '/acme/expenses/mine/c-draft',
-    );
+    expect(
+      within(rows[1] as HTMLElement).getByRole('link', { name: 'Client visit, Leeds' }),
+    ).toHaveAttribute('href', '/acme/expenses/mine/c-draft');
     expect(rows[2]).toHaveTextContent('Approved');
     expect(lists(backend)[0]?.params?.get('mine')).toBe('true');
     expect(screen.queryByText('Ben, not mine')).not.toBeInTheDocument();
@@ -103,9 +128,16 @@ describe('My Expenses', () => {
         return ok([], { meta: { next_cursor: null, has_more: false } });
       }),
     );
-    renderExpensePage(<MyExpensesPage />, { permissions: STAFF_PERMISSIONS, route: MINE, path: MINE });
+    renderExpensePage(<MyExpensesPage />, {
+      permissions: STAFF_PERMISSIONS,
+      route: MINE,
+      path: MINE,
+    });
 
-    expect(await screen.findByRole('table', { name: 'My expense claims' })).toHaveAttribute('aria-busy', 'true');
+    expect(await screen.findByRole('table', { name: 'My expense claims' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(await screen.findByText('No expense claims yet')).toBeInTheDocument();
   });
 
@@ -115,7 +147,7 @@ describe('My Expenses', () => {
 
     expect(await screen.findByText('No expense claims yet')).toBeInTheDocument();
     await user.click(within(screen.getByRole('table')).getByRole('button', { name: 'New claim' }));
-    expect(await screen.findByRole('dialog', { name: 'New expense claim' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'New expense claim' })).toBeInTheDocument();
     expect(backend.calls.filter((call) => call.method === 'POST')).toHaveLength(0);
   });
 
@@ -130,7 +162,11 @@ describe('My Expenses', () => {
       }),
     );
     const user = userEvent.setup();
-    renderExpensePage(<MyExpensesPage />, { permissions: STAFF_PERMISSIONS, route: MINE, path: MINE });
+    renderExpensePage(<MyExpensesPage />, {
+      permissions: STAFF_PERMISSIONS,
+      route: MINE,
+      path: MINE,
+    });
 
     expect(await screen.findByText('Could not load your claims')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
@@ -143,28 +179,33 @@ describe('My Expenses', () => {
     await table();
 
     await user.click(screen.getByRole('tab', { name: 'Submitted' }));
-    await waitFor(() => expect(lists(backend).at(-1)?.params?.getAll('status')).toEqual(['submitted']));
-    await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2));
+    await waitFor(() =>
+      expect(lists(backend).at(-1)?.params?.getAll('status')).toEqual(['submitted']),
+    );
+    await waitFor(() =>
+      expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2),
+    );
     expect(screen.getByRole('table')).toHaveTextContent('Conference');
 
     await user.click(screen.getByRole('tab', { name: 'All claims' }));
     await user.type(screen.getByRole('searchbox', { name: 'Search my claims' }), 'leeds');
     await waitFor(() => expect(lists(backend).at(-1)?.params?.get('q')).toBe('leeds'));
-    await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2));
+    await waitFor(() =>
+      expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2),
+    );
 
     await user.clear(screen.getByRole('searchbox', { name: 'Search my claims' }));
     await user.type(screen.getByRole('searchbox', { name: 'Search my claims' }), 'nothing like it');
     expect(await screen.findByText('No claims match')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
-    await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(4));
+    await waitFor(() =>
+      expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(4),
+    );
   });
 
   it('asks the API for the dates picked in the filter', async () => {
     const user = userEvent.setup();
-    const backend = setup(
-      {},
-      { route: `${MINE}?date_from=2026-09-01&date_to=2026-09-30` },
-    );
+    const backend = setup({}, { route: `${MINE}?date_from=2026-09-01&date_to=2026-09-30` });
     await table();
 
     expect(lists(backend)[0]?.params?.get('date_from')).toBe('2026-09-01');
@@ -198,7 +239,7 @@ describe('My Expenses', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New claim' }));
-    const form = await screen.findByRole('dialog', { name: 'New expense claim' });
+    const form = await screen.findByRole('region', { name: 'New expense claim' });
     expect(within(form).queryByText('Claim for')).not.toBeInTheDocument();
     await user.type(within(form).getByLabelText('Title (optional)'), 'Audit trip');
     await user.click(within(form).getByRole('button', { name: 'Start claim' }));
@@ -206,7 +247,9 @@ describe('My Expenses', () => {
     await waitFor(() =>
       expect(screen.getByTestId('location').textContent).toMatch(/^\/acme\/expenses\/mine\/.+/),
     );
-    expect(backend.calls.find((call) => call.method === 'POST')?.body).toEqual({ title: 'Audit trip' });
+    expect(backend.calls.find((call) => call.method === 'POST')?.body).toEqual({
+      title: 'Audit trip',
+    });
     expect(backend.claims.at(-1)?.user_id).toBe(ada.id);
   });
 
@@ -216,7 +259,7 @@ describe('My Expenses', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New claim' }));
-    const form = await screen.findByRole('dialog', { name: 'New expense claim' });
+    const form = await screen.findByRole('region', { name: 'New expense claim' });
     await user.click(within(form).getByRole('combobox', { name: 'Claim for' }));
     await user.click(await screen.findByRole('option', { name: /Ben Carter/ }));
     await user.click(within(form).getByRole('button', { name: 'Start claim' }));
@@ -229,7 +272,7 @@ describe('My Expenses', () => {
     const user = userEvent.setup();
     setup({}, { route: `${MINE}?new=1` });
 
-    const form = await screen.findByRole('dialog', { name: 'New expense claim' });
+    const form = await screen.findByRole('region', { name: 'New expense claim' });
     await user.click(within(form).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(MINE));
     expect(screen.getByTestId('location').textContent).not.toContain('new=1');
@@ -241,7 +284,10 @@ describe('My Expenses', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'Actions for Client visit, Leeds' }));
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Open', 'Delete']);
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Open',
+      'Delete',
+    ]);
     await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
     const confirm = await screen.findByRole('dialog', { name: 'Delete this claim?' });
     await user.click(within(confirm).getByRole('button', { name: 'Delete claim' }));
@@ -273,7 +319,9 @@ describe('My Expenses', () => {
     const confirm = await screen.findByRole('dialog', { name: 'Delete this claim?' });
     await user.click(within(confirm).getByRole('button', { name: 'Delete claim' }));
 
-    expect(await within(confirm).findByRole('alert')).toHaveTextContent('The claim is submitted and cannot be changed.');
+    expect(await within(confirm).findByRole('alert')).toHaveTextContent(
+      'The claim is submitted and cannot be changed.',
+    );
   });
 
   it('loads further claims with the cursor', async () => {

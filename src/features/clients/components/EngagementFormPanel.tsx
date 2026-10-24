@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, Switch, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, Select, Switch, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { isApiError } from '@/services/api';
 import { todayInZone } from '@/utils/dates';
@@ -30,7 +30,7 @@ export interface EngagementTarget {
   takenServiceIds: string[];
 }
 
-export interface EngagementFormDialogProps {
+export interface EngagementFormPanelProps {
   target: EngagementTarget | null;
   onClose: () => void;
 }
@@ -224,9 +224,9 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
 }
 
 /** Add a service to a client (engagement) or change its fee, frequency and dates. */
-export function EngagementFormDialog({ target, onClose }: EngagementFormDialogProps) {
+export function EngagementFormPanel({ target, onClose }: EngagementFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={target !== null}
       onClose={onClose}
       title={target?.engagement ? `Edit ${target.engagement.service_name}` : 'Add service'}
@@ -234,6 +234,6 @@ export function EngagementFormDialog({ target, onClose }: EngagementFormDialogPr
       {target ? (
         <EngagementForm key={target.engagement?.id ?? 'new'} target={target} onClose={onClose} />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

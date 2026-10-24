@@ -19,7 +19,7 @@ import { flattenPages, useScheduleList } from '../api';
 import { FilterPopover } from '../components/FilterPopover';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { ScheduleDetailDialog } from '../components/recurring/ScheduleDetailDialog';
-import { ScheduleFormDialog } from '../components/recurring/ScheduleFormDialog';
+import { ScheduleFormPanel } from '../components/recurring/ScheduleFormPanel';
 import { scheduleColumns } from '../components/recurring/scheduleColumns';
 import { SCHEDULE_STATUS_LABELS, SCHEDULE_TAB_ORDER } from '../constants';
 import { useUrlSearch } from '../hooks/useUrlSearch';
@@ -90,6 +90,21 @@ function ScheduleList() {
 
   return (
     <>
+      {form ? (
+        <ScheduleFormPanel
+          open
+          schedule={form.mode === 'edit' ? form.schedule : null}
+          onClose={() => {
+            // Leaving the edit goes back to the schedule it started from.
+            if (form.mode === 'edit') setDetailId(form.schedule.id);
+            setForm(null);
+          }}
+          onSaved={(schedule) => {
+            setForm(null);
+            setDetailId(schedule.id);
+          }}
+        />
+      ) : null}
       <DataTable
         caption="Recurring invoices"
         columns={columns}
@@ -191,21 +206,6 @@ function ScheduleList() {
           setForm({ mode: 'edit', schedule });
         }}
       />
-      {form ? (
-        <ScheduleFormDialog
-          open
-          schedule={form.mode === 'edit' ? form.schedule : null}
-          onClose={() => {
-            // Leaving the edit goes back to the schedule it started from.
-            if (form.mode === 'edit') setDetailId(form.schedule.id);
-            setForm(null);
-          }}
-          onSaved={(schedule) => {
-            setForm(null);
-            setDetailId(schedule.id);
-          }}
-        />
-      ) : null}
     </>
   );
 }

@@ -32,7 +32,7 @@ import {
   useExpenseTypeList,
   useSaveExpenseType,
 } from '../api';
-import { ExpenseTypeFormDialog } from '../components/ExpenseTypeFormDialog';
+import { ExpenseTypeFormPanel } from '../components/ExpenseTypeFormPanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { ActiveBadge } from '../components/StatusBadge';
 import { useUrlSearch } from '../hooks/useUrlSearch';
@@ -217,6 +217,11 @@ export default function ExpenseTypesPage() {
       title="Expense Types"
       description="What an expense can be for. The type sets the default VAT code and whether the amount is priced from miles."
     >
+      <ExpenseTypeFormPanel
+        type={dialog?.type === 'form' ? dialog.expenseType : null}
+        open={dialog?.type === 'form'}
+        onClose={close}
+      />
       <Card padding="sm">
         <dl aria-label="How expenses are priced" className="grid gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-0.5">
@@ -367,11 +372,6 @@ export default function ExpenseTypesPage() {
         />
       )}
 
-      <ExpenseTypeFormDialog
-        type={dialog?.type === 'form' ? dialog.expenseType : null}
-        open={dialog?.type === 'form'}
-        onClose={close}
-      />
       <ConfirmDialog
         open={dialog?.type === 'delete'}
         onClose={close}

@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker, useActivityTypes, useServices } from '@/features/team';
@@ -58,7 +58,7 @@ export interface EntryDefaults {
   billable?: boolean;
 }
 
-export interface EntryDialogProps {
+export interface EntryPanelProps {
   open: boolean;
   onClose: () => void;
   /** The entry to change; without it a new one is recorded. */
@@ -98,7 +98,7 @@ function EntryForm({
   onBehalfOf,
   onClose,
   onSaved,
-}: Omit<EntryDialogProps, 'open'>) {
+}: Omit<EntryPanelProps, 'open'>) {
   const { organization, can } = useOrg();
   const increment = organization.time_increment_minutes;
   const currency = organization.currency;
@@ -558,7 +558,7 @@ function EntryForm({
 }
 
 /** Record time, or change an entry: date, time, client, job, activity, description, note, billable. */
-export function EntryDialog({
+export function EntryPanel({
   open,
   onClose,
   entry,
@@ -566,7 +566,7 @@ export function EntryDialog({
   defaults,
   onBehalfOf,
   onSaved,
-}: EntryDialogProps) {
+}: EntryPanelProps) {
   const title = correction
     ? 'Correct approved time'
     : onBehalfOf
@@ -577,7 +577,7 @@ export function EntryDialog({
           ? 'Edit time entry'
           : 'Record time';
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={title}
@@ -591,8 +591,6 @@ export function EntryDialog({
           </>
         ) : undefined
       }
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? (
         <EntryForm
@@ -605,6 +603,6 @@ export function EntryDialog({
           onSaved={onSaved}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

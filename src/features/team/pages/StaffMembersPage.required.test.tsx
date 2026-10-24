@@ -27,7 +27,7 @@ describe('mandatory fields of the staff dialogs', () => {
     const user = userEvent.setup();
     renderInOrg(<StaffMembersPage />, { context: contextWith(OWNER_PERMISSIONS) });
     await user.click(await screen.findByRole('button', { name: 'Add staff member' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add staff member' });
+    const dialog = await screen.findByRole('region', { name: 'Add staff member' });
     await within(dialog).findByRole('combobox', { name: 'Grade' });
 
     expectRequiredFields(dialog, {
@@ -68,7 +68,7 @@ describe('mandatory fields of the staff dialogs', () => {
     await openActions(user, 'Sam Staff');
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
     await user.click(await screen.findByRole('button', { name: 'Edit details' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit staff member' });
+    const dialog = await screen.findByRole('region', { name: 'Edit staff member' });
     await within(dialog).findByRole('combobox', { name: 'Grade' });
 
     expectRequiredFields(dialog, {

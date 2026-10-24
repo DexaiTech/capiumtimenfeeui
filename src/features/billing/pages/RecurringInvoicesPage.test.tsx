@@ -165,7 +165,7 @@ describe('setting up a schedule', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New schedule' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New schedule' });
+    const dialog = await screen.findByRole('region', { name: 'New schedule' });
     expect(within(dialog).getByText(/never issued\s+automatically/)).toBeInTheDocument();
     expect(within(dialog).getByLabelText('Start date')).toHaveValue('2026-10-18');
 
@@ -212,7 +212,7 @@ describe('setting up a schedule', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New schedule' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New schedule' });
+    const dialog = await screen.findByRole('region', { name: 'New schedule' });
     await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
 
     expect(await within(dialog).findByText('Choose the client')).toBeInTheDocument();
@@ -227,7 +227,7 @@ describe('setting up a schedule', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New schedule' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New schedule' });
+    const dialog = await screen.findByRole('region', { name: 'New schedule' });
     fireEvent.change(within(dialog).getByLabelText('End date (optional)'), {
       target: { value: '2026-01-01' },
     });
@@ -317,7 +317,9 @@ describe('one schedule', () => {
     setup();
     const dialog = await openRow(user, 2, 'Annual accounts');
 
-    expect(await within(dialog).findByText(/has ended and can no longer be changed/)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(/has ended and can no longer be changed/),
+    ).toBeInTheDocument();
     for (const name of ['Edit', 'Pause', 'Resume']) {
       expect(within(dialog).queryByRole('button', { name })).not.toBeInTheDocument();
     }
@@ -330,7 +332,7 @@ describe('one schedule', () => {
     const dialog = await openRow(user, 0, 'Monthly bookkeeping');
 
     await user.click(await within(dialog).findByRole('button', { name: 'Edit' }));
-    const form = await screen.findByRole('dialog', { name: 'Edit schedule' });
+    const form = await screen.findByRole('region', { name: 'Edit schedule' });
     expect(within(form).getByLabelText('Name')).toHaveValue('Monthly bookkeeping');
     expect(within(form).queryByLabelText('Start date')).not.toBeInTheDocument();
     expect(within(form).queryByRole('combobox', { name: 'Client' })).not.toBeInTheDocument();
@@ -371,7 +373,7 @@ describe('one schedule', () => {
     const dialog = await openRow(user, 0, 'Monthly bookkeeping');
 
     await user.click(await within(dialog).findByRole('button', { name: 'Edit' }));
-    const form = await screen.findByRole('dialog', { name: 'Edit schedule' });
+    const form = await screen.findByRole('region', { name: 'Edit schedule' });
     expect(within(form).getByLabelText('End date (optional)')).toHaveValue('2027-03-31');
     fireEvent.change(within(form).getByLabelText('End date (optional)'), { target: { value: '' } });
     await user.click(within(form).getByRole('button', { name: 'Save schedule' }));

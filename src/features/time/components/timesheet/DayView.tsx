@@ -23,7 +23,7 @@ import { dialogError } from '../../utils/errors';
 import { describeVariance, refLabel } from '../../utils/format';
 import { formatLongDay } from '../../utils/weeks';
 import { BillableBadge, SheetStatusBadge } from '../badges';
-import { EntryDialog } from '../EntryDialog';
+import { EntryPanel } from '../EntryPanel';
 import { LoadError } from '../PageShell';
 import { CopyEntryDialog } from './CopyEntryDialog';
 
@@ -165,6 +165,7 @@ export function DayView({ date, canRecord, onAddEntry }: DayViewProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      <EntryPanel open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
       <Card padding="sm" className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <h2 className="text-sm font-semibold text-text">{formatLongDay(date)}</h2>
@@ -244,7 +245,6 @@ export function DayView({ date, canRecord, onAddEntry }: DayViewProps) {
         }
       />
 
-      <EntryDialog open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
       <CopyEntryDialog open={copying !== null} entry={copying} onClose={() => setCopying(null)} />
       <ConfirmDialog
         open={deleting !== null}

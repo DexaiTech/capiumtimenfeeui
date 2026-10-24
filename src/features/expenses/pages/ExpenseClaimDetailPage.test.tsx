@@ -73,6 +73,7 @@ const draft = (overrides: Partial<Parameters<typeof makeClaim>[0]> = {}) =>
 
 const linesTable = () => screen.findByRole('table', { name: 'Expenses in this claim' });
 const dialog = (name: string) => screen.findByRole('dialog', { name });
+const panel = (name: string) => screen.findByRole('region', { name });
 const lineMenu = async (user: ReturnType<typeof userEvent.setup>, description: string) => {
   await user.click(await screen.findByRole('button', { name: `Actions for ${description}` }));
 };
@@ -81,7 +82,9 @@ describe('a claim on its page', () => {
   it('shows the claim with its lines, totals and where to go back to', async () => {
     setup({ claim: draft() });
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Client visit, Leeds' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Client visit, Leeds' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to My Expenses' })).toHaveAttribute(
       'href',
       '/acme/expenses/mine',
@@ -93,7 +96,9 @@ describe('a claim on its page', () => {
     expect(train).toHaveTextContent('Acme Ltd');
     expect(train).toHaveTextContent('£43.00');
     expect(train).toHaveTextContent('£47.30');
-    expect(within(train).getByRole('button', { name: 'Receipts for Train to Leeds (0)' })).toHaveTextContent('Needed');
+    expect(
+      within(train).getByRole('button', { name: 'Receipts for Train to Leeds (0)' }),
+    ).toHaveTextContent('Needed');
     const totals = screen.getByLabelText('Totals of the claim');
     expect(totals).toHaveTextContent('Gross£53.00');
     expect(totals).toHaveTextContent('Recharged to clients£58.30');
@@ -146,7 +151,15 @@ describe('a claim on its page', () => {
     setup({ claim: draft({ status: 'approved' }) });
 
     await linesTable();
-    for (const name of ['Submit for approval', 'Add expense', 'Edit title', 'Recall', 'Delete claim', 'Approve', 'Return']) {
+    for (const name of [
+      'Submit for approval',
+      'Add expense',
+      'Edit title',
+      'Recall',
+      'Delete claim',
+      'Approve',
+      'Return',
+    ]) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     }
     const user = userEvent.setup();
@@ -171,7 +184,7 @@ describe('a claim on its page', () => {
     expect(await screen.findByText('This claim does not exist')).toBeInTheDocument();
   });
 
-  it("explains a claim of someone else the caller may not see", async () => {
+  it('explains a claim of someone else the caller may not see', async () => {
     const claim = draft();
     server.use(
       http.get(orgApiPath('/expense-claims/:claimId'), () =>
@@ -193,7 +206,7 @@ describe('adding an expense', () => {
     // An empty claim offers the button twice: in the header and in the empty state.
     const [header] = await screen.findAllByRole('button', { name: 'Add expense' });
     await user.click(header as HTMLElement);
-    return dialog('Add expense');
+    return panel('Add expense');
   }
 
   it('sends the amount typed and the VAT code, and shows the line the API stored', async () => {
@@ -210,12 +223,16 @@ describe('adding an expense', () => {
     expect(within(form).getByLabelText('VAT code')).toHaveValue(IDS.standardVat);
     expect(within(form).getByLabelText('VAT (£)')).toHaveValue('2.50');
     expect(within(form).getByLabelText('Gross (£)')).toHaveValue('15.00');
-    expect(within(form).getByText('It comes to £12.50 net, £2.50 VAT and £15.00 gross.')).toBeInTheDocument();
+    expect(
+      within(form).getByText('It comes to £12.50 net, £2.50 VAT and £15.00 gross.'),
+    ).toBeInTheDocument();
 
     await user.click(within(form).getByRole('button', { name: 'Add expense' }));
 
     expect(await screen.findByText('Expense added')).toBeInTheDocument();
-    const post = backend.calls.find((call) => call.method === 'POST' && call.path.endsWith('/lines'));
+    const post = backend.calls.find(
+      (call) => call.method === 'POST' && call.path.endsWith('/lines'),
+    );
     expect(post?.body).toEqual({
       expense_type_id: IDS.subsistence,
       incurred_on: DAY,
@@ -240,12 +257,18 @@ describe('adding an expense', () => {
     const gross = within(form).getByLabelText('Gross (£)');
 
     await user.type(net, '100');
-    expect([vat, gross].map((field) => (field as HTMLInputElement).value)).toEqual(['20.00', '120.00']);
+    expect([vat, gross].map((field) => (field as HTMLInputElement).value)).toEqual([
+      '20.00',
+      '120.00',
+    ]);
 
     // Typing the gross works out the VAT contained in it and the net.
     await user.clear(gross);
     await user.type(gross, '60');
-    expect([net, vat].map((field) => (field as HTMLInputElement).value)).toEqual(['50.00', '10.00']);
+    expect([net, vat].map((field) => (field as HTMLInputElement).value)).toEqual([
+      '50.00',
+      '10.00',
+    ]);
 
     // A VAT typed by hand keeps the net and moves the gross.
     await user.clear(net);
@@ -256,7 +279,10 @@ describe('adding an expense', () => {
 
     // Another VAT code works the VAT out again.
     await user.selectOptions(within(form).getByLabelText('VAT code'), 'Zero rate (0%)');
-    expect([vat, gross].map((field) => (field as HTMLInputElement).value)).toEqual(['0.00', '50.00']);
+    expect([vat, gross].map((field) => (field as HTMLInputElement).value)).toEqual([
+      '0.00',
+      '50.00',
+    ]);
   });
 
   it('prices a mileage expense from the miles at the practice rate', async () => {
@@ -270,14 +296,20 @@ describe('adding an expense', () => {
     fireEvent.change(within(form).getByLabelText('Date'), { target: { value: DAY } });
     await user.type(within(form).getByLabelText('Description'), 'Drive to Leeds');
     await user.type(within(form).getByLabelText('Miles'), '42.5');
-    expect(within(form).getByText('It comes to £19.13 net, £0.00 VAT and £19.13 gross.')).toBeInTheDocument();
+    expect(
+      within(form).getByText('It comes to £19.13 net, £0.00 VAT and £19.13 gross.'),
+    ).toBeInTheDocument();
     await user.click(within(form).getByRole('button', { name: 'Add expense' }));
 
     await screen.findByText('Expense added');
-    const post = backend.calls.find((call) => call.method === 'POST' && call.path.endsWith('/lines'));
+    const post = backend.calls.find(
+      (call) => call.method === 'POST' && call.path.endsWith('/lines'),
+    );
     expect(post?.body).toMatchObject({ expense_type_id: IDS.mileage, miles: '42.5' });
     expect(post?.body).not.toHaveProperty('net');
-    expect(within(await linesTable()).getByRole('row', { name: /Drive to Leeds/ })).toHaveTextContent('42.5 miles');
+    expect(
+      within(await linesTable()).getByRole('row', { name: /Drive to Leeds/ }),
+    ).toHaveTextContent('42.5 miles');
   });
 
   it('starts a billable expense for a client from the type, and lets a manager set the recharge', async () => {
@@ -303,7 +335,9 @@ describe('adding an expense', () => {
     await user.click(within(form).getByRole('button', { name: 'Add expense' }));
 
     await screen.findByText('Expense added');
-    const post = backend.calls.find((call) => call.method === 'POST' && call.path.endsWith('/lines'));
+    const post = backend.calls.find(
+      (call) => call.method === 'POST' && call.path.endsWith('/lines'),
+    );
     expect(post?.body).toMatchObject({
       client_id: IDS.acme,
       is_billable: true,
@@ -331,7 +365,9 @@ describe('adding an expense', () => {
     await user.click(within(form).getByRole('button', { name: 'Add expense' }));
     expect(await within(form).findByText('The date cannot be in the future')).toBeInTheDocument();
     expect(
-      within(form).getByText('Enter the miles, for example 42.5 (more than 0, two decimals at most)'),
+      within(form).getByText(
+        'Enter the miles, for example 42.5 (more than 0, two decimals at most)',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -363,7 +399,9 @@ describe('adding an expense', () => {
     await user.clear(within(form).getByLabelText('Net (£)'));
     await user.type(within(form).getByLabelText('Net (£)'), '10');
     await user.click(within(form).getByRole('button', { name: 'Add expense' }));
-    expect(await within(form).findByText('The period up to 31/08/2026 is locked.')).toBeInTheDocument();
+    expect(
+      await within(form).findByText('The period up to 31/08/2026 is locked.'),
+    ).toBeInTheDocument();
   });
 });
 
@@ -373,7 +411,7 @@ describe('changing and deleting an expense', () => {
     const { backend } = setup({ claim: draft() });
     await lineMenu(user, 'Train to Leeds');
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const form = await dialog('Edit expense');
+    const form = await panel('Edit expense');
 
     expect(within(form).getByLabelText('Description')).toHaveValue('Train to Leeds');
     expect(within(form).getByLabelText('Net (£)')).toHaveValue('43.00');
@@ -394,7 +432,7 @@ describe('changing and deleting an expense', () => {
     const { backend } = setup({ claim: draft() });
     await lineMenu(user, 'Taxi');
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const form = await dialog('Edit expense');
+    const form = await panel('Edit expense');
 
     await user.clear(within(form).getByLabelText('Net (£)'));
     await user.type(within(form).getByLabelText('Net (£)'), '12.00');
@@ -410,11 +448,15 @@ describe('changing and deleting an expense', () => {
     await lineMenu(user, 'Taxi');
     await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
     const confirm = await dialog('Delete this expense?');
-    expect(confirm).toHaveTextContent('Taxi (£10.00) will be removed from the claim, with its receipts.');
+    expect(confirm).toHaveTextContent(
+      'Taxi (£10.00) will be removed from the claim, with its receipts.',
+    );
     await user.click(within(confirm).getByRole('button', { name: 'Delete expense' }));
 
     expect(await screen.findByText('Expense deleted')).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole('row', { name: /Taxi/ })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole('row', { name: /Taxi/ })).not.toBeInTheDocument(),
+    );
     expect(backend.calls.some((call) => call.method === 'DELETE')).toBe(true);
   });
 
@@ -422,13 +464,17 @@ describe('changing and deleting an expense', () => {
     const user = userEvent.setup();
     const { backend } = setup({ claim: draft() });
     await user.click(await screen.findByRole('button', { name: 'Edit title' }));
-    const form = await dialog('Edit title');
+    const form = await panel('Edit title');
     await user.clear(within(form).getByLabelText('Title'));
     await user.type(within(form).getByLabelText('Title'), 'Leeds, September');
     await user.click(within(form).getByRole('button', { name: 'Save title' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Leeds, September' })).toBeInTheDocument();
-    expect(backend.calls.find((call) => call.method === 'PATCH')?.body).toEqual({ title: 'Leeds, September' });
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Leeds, September' }),
+    ).toBeInTheDocument();
+    expect(backend.calls.find((call) => call.method === 'PATCH')?.body).toEqual({
+      title: 'Leeds, September',
+    });
   });
 
   it('deletes a draft claim after a confirmation and goes back to the list', async () => {
@@ -439,7 +485,9 @@ describe('changing and deleting an expense', () => {
     expect(confirm).toHaveTextContent('Client visit, Leeds and its 2 expenses will be removed');
     await user.click(within(confirm).getByRole('button', { name: 'Delete claim' }));
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/acme/expenses/mine'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/acme/expenses/mine'),
+    );
     expect(backend.claims).toHaveLength(0);
   });
 });
@@ -452,17 +500,23 @@ describe('submitting a claim', () => {
     await user.click(await screen.findByRole('button', { name: 'Submit for approval' }));
 
     const blocked = await dialog('Receipts are missing');
-    expect(blocked).toHaveTextContent('Expenses above £25.00 need a receipt before the claim can be submitted.');
+    expect(blocked).toHaveTextContent(
+      'Expenses above £25.00 need a receipt before the claim can be submitted.',
+    );
     const list = within(blocked).getByRole('list', { name: 'Expenses without a receipt' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(1);
     expect(list).toHaveTextContent('Train to Leeds');
     // The row of the table points at it, too.
     expect(within(await linesTable()).getByText('Receipt needed')).toBeInTheDocument();
 
-    await user.click(within(blocked).getByRole('button', { name: 'Add a receipt for Train to Leeds' }));
+    await user.click(
+      within(blocked).getByRole('button', { name: 'Add a receipt for Train to Leeds' }),
+    );
     const receipts = await dialog('Receipts');
     chooseReceipts(pngFile('ticket.png'));
-    expect(await within(receipts).findByRole('list', { name: 'Receipts' })).toHaveTextContent('ticket.png');
+    expect(await within(receipts).findByRole('list', { name: 'Receipts' })).toHaveTextContent(
+      'ticket.png',
+    );
     await user.click(within(receipts).getByRole('button', { name: 'Done' }));
 
     await user.click(await screen.findByRole('button', { name: 'Submit for approval' }));
@@ -507,7 +561,9 @@ describe('the receipts of an expense', () => {
     });
 
   async function openReceipts(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(await screen.findByRole('button', { name: 'Receipts for Train to Leeds (1)' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Receipts for Train to Leeds (1)' }),
+    );
     return dialog('Receipts');
   }
 
@@ -520,7 +576,9 @@ describe('the receipts of an expense', () => {
     expect(list).toHaveTextContent('train-ticket.png');
     expect(list).toHaveTextContent('69 B · Ada Lovelace · 10/10/2026 11:00');
     expect(within(receipts).getByText(/It has the receipt it needs\./)).toBeInTheDocument();
-    expect(within(receipts).getByRole('list', { name: 'Accepted file types' })).toHaveTextContent('PDF');
+    expect(within(receipts).getByRole('list', { name: 'Accepted file types' })).toHaveTextContent(
+      'PDF',
+    );
     expect(within(receipts).getByText(/Max file size: 10 MB/)).toBeInTheDocument();
   });
 
@@ -582,13 +640,19 @@ describe('the receipts of an expense', () => {
     chooseReceipts(pdfFile('scan.pdf'));
 
     const uploads = await within(receipts).findByRole('list', { name: 'Uploads' });
-    expect(await within(uploads).findByRole('alert')).toHaveTextContent('The receipt is larger than 10 MB.');
+    expect(await within(uploads).findByRole('alert')).toHaveTextContent(
+      'The receipt is larger than 10 MB.',
+    );
   });
 
   it('shows the progress of an upload, then the file in the list', async () => {
     const user = userEvent.setup();
     const { backend } = setup({ claim: withReceipt() });
-    backend.nextUpload = { file_name: 'invoice.pdf', content_type: 'application/pdf', size_bytes: 8 };
+    backend.nextUpload = {
+      file_name: 'invoice.pdf',
+      content_type: 'application/pdf',
+      size_bytes: 8,
+    };
     const receipts = await openReceipts(user);
 
     chooseReceipts(pdfFile('invoice.pdf'));
@@ -606,7 +670,9 @@ describe('the receipts of an expense', () => {
 
     await user.click(within(receipts).getByRole('button', { name: 'Delete train-ticket.png' }));
     const confirm = await dialog('Delete receipt?');
-    expect(confirm).toHaveTextContent('train-ticket.png will be removed from this expense. This cannot be undone.');
+    expect(confirm).toHaveTextContent(
+      'train-ticket.png will be removed from this expense. This cannot be undone.',
+    );
     await user.click(within(confirm).getByRole('button', { name: 'Delete receipt' }));
 
     expect(await screen.findByText('train-ticket.png deleted')).toBeInTheDocument();
@@ -620,9 +686,13 @@ describe('the receipts of an expense', () => {
     const receipts = await openReceipts(user);
 
     expect(within(receipts).queryByRole('button', { name: /^Delete / })).not.toBeInTheDocument();
-    expect(within(receipts).queryByRole('button', { name: 'Choose a receipt' })).not.toBeInTheDocument();
     expect(
-      within(receipts).getByText('Receipts can only be added or removed while the claim is a draft or returned.'),
+      within(receipts).queryByRole('button', { name: 'Choose a receipt' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(receipts).getByText(
+        'Receipts can only be added or removed while the claim is a draft or returned.',
+      ),
     ).toBeInTheDocument();
   });
 });
@@ -649,7 +719,9 @@ describe('deciding on a claim', () => {
     await user.click(within(form).getByRole('button', { name: 'Approve claim' }));
 
     expect(await screen.findByText('Claim approved')).toBeInTheDocument();
-    expect(backend.calls.find((call) => call.path.endsWith('/approve'))?.body).toEqual({ note: 'Thanks' });
+    expect(backend.calls.find((call) => call.path.endsWith('/approve'))?.body).toEqual({
+      note: 'Thanks',
+    });
     expect(await screen.findByText(/Approved by Ben Carter/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Expense Approvals' })).toBeInTheDocument();
   });
@@ -667,7 +739,9 @@ describe('deciding on a claim', () => {
 
     await user.click(within(form).getByRole('button', { name: 'Return claim' }));
     expect(
-      await within(form).findByText('Say why the claim is returned, so the claimant knows what to change'),
+      await within(form).findByText(
+        'Say why the claim is returned, so the claimant knows what to change',
+      ),
     ).toBeInTheDocument();
     expect(backend.calls.filter((call) => call.path.endsWith('/return'))).toHaveLength(0);
 
@@ -696,7 +770,14 @@ describe('correcting an approved claim', () => {
   const approved = () =>
     draft({
       status: 'approved',
-      lines: [makeLine({ id: 'l-train', description: 'Train to Leeds', receipt_count: 1, receipts: [makeReceipt()] })],
+      lines: [
+        makeLine({
+          id: 'l-train',
+          description: 'Train to Leeds',
+          receipt_count: 1,
+          receipts: [makeReceipt()],
+        }),
+      ],
     });
 
   it('needs a reason, sends it with what changed and adds it to the history', async () => {
@@ -708,13 +789,15 @@ describe('correcting an approved claim', () => {
     });
     await lineMenu(user, 'Train to Leeds');
     await user.click(screen.getByRole('menuitem', { name: 'Correct' }));
-    const form = await dialog('Correct expense');
+    const form = await panel('Correct expense');
     expect(form).toHaveTextContent('The claim is approved: the correction needs a reason');
 
     await user.clear(within(form).getByLabelText('Description'));
     await user.type(within(form).getByLabelText('Description'), 'Train to York');
     await user.click(within(form).getByRole('button', { name: 'Save correction' }));
-    expect(await within(form).findByText('Say why you are correcting this expense')).toBeInTheDocument();
+    expect(
+      await within(form).findByText('Say why you are correcting this expense'),
+    ).toBeInTheDocument();
     expect(backend.calls.filter((call) => call.method === 'PATCH')).toHaveLength(0);
 
     await user.type(within(form).getByLabelText('Reason for the correction'), 'Wrong destination');
@@ -735,7 +818,9 @@ describe('correcting an approved claim', () => {
     setup({
       claim: draft({
         status: 'approved',
-        lines: [makeLine({ id: 'l-train', description: 'Train to Leeds', billing_status: 'billed' })],
+        lines: [
+          makeLine({ id: 'l-train', description: 'Train to Leeds', billing_status: 'billed' }),
+        ],
       }),
       permissions: OWNER_PERMISSIONS,
       backend: { canManage: true },
@@ -766,6 +851,8 @@ describe('an unreachable server', () => {
 
     expect(await screen.findByText('Could not load the claim')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Client visit, Leeds' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Client visit, Leeds' }),
+    ).toBeInTheDocument();
   });
 });

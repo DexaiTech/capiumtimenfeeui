@@ -28,12 +28,12 @@ import {
 import { CentralClientsDialog } from '../central/CentralClientsDialog';
 import { canSync, describeSync, describeSyncAll } from '../central/format';
 import type { MenuAction } from '../components/ActionMenu';
-import { ClientFormDialog } from '../components/ClientFormDialog';
+import { ClientFormPanel } from '../components/ClientFormPanel';
 import { ClientsBulkBar } from '../components/ClientsBulkBar';
 import { ClientsGrid } from '../components/ClientsGrid';
 import { ClientsTable } from '../components/ClientsTable';
 import { ClientsToolbar } from '../components/ClientsToolbar';
-import { ContactFormDialog, type ContactTarget } from '../components/ContactFormDialog';
+import { ContactFormPanel, type ContactTarget } from '../components/ContactFormPanel';
 import { ImportDialog } from '../components/ImportDialog';
 import {
   countFilters,
@@ -458,6 +458,12 @@ export default function ClientsPage() {
   return (
     <div className="capium-clients cc-page">
       <h1 className="cc-sr-only">Clients</h1>
+      <ClientFormPanel
+        open={formClient !== undefined || addRequested}
+        client={formClient ?? null}
+        onClose={closeForm}
+      />
+      <ContactFormPanel target={contactTarget} onClose={() => setContactTarget(null)} />
       <ClientsToolbar
         clientCount={summary.data?.total}
         search={search}
@@ -526,12 +532,6 @@ export default function ClientsPage() {
         />
       )}
 
-      <ClientFormDialog
-        open={formClient !== undefined || addRequested}
-        client={formClient ?? null}
-        onClose={closeForm}
-      />
-      <ContactFormDialog target={contactTarget} onClose={() => setContactTarget(null)} />
       <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
       <CentralClientsDialog open={centralOpen} onClose={() => setCentralOpen(false)} />
       <ConfirmDialog

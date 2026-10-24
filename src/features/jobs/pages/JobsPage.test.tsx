@@ -176,7 +176,8 @@ describe('the job list', () => {
     setup({ jobs: [] });
     expect(await screen.findByText('No jobs yet')).toBeInTheDocument();
     await user.click(within(screen.getByRole('table')).getByRole('button', { name: 'New job' }));
-    expect(await screen.findByRole('dialog', { name: 'New job' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'New job' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('shows the error with a retry', async () => {
@@ -204,7 +205,7 @@ describe('the job list', () => {
 describe('starting a job', () => {
   async function fillClientAndName(user: ReturnType<typeof userEvent.setup>, name: string) {
     await user.click(await screen.findByRole('button', { name: 'New job' }));
-    const form = await screen.findByRole('dialog', { name: 'New job' });
+    const form = await screen.findByRole('region', { name: 'New job' });
     await user.click(within(form).getByRole('combobox', { name: 'Client' }));
     await user.click(await screen.findByRole('option', { name: /Acme Ltd/ }));
     await user.type(within(form).getByLabelText('Job name'), name);
@@ -254,7 +255,7 @@ describe('starting a job', () => {
     const user = userEvent.setup();
     const backend = setup();
     await user.click(await screen.findByRole('button', { name: 'New job' }));
-    const form = await screen.findByRole('dialog', { name: 'New job' });
+    const form = await screen.findByRole('region', { name: 'New job' });
     await user.click(within(form).getByRole('button', { name: 'Create job' }));
 
     expect(await within(form).findByText('Choose the client')).toBeInTheDocument();
@@ -276,7 +277,7 @@ describe('starting a job', () => {
     const user = userEvent.setup();
     setup({}, { route: `${JOBS}?new=1` });
 
-    const form = await screen.findByRole('dialog', { name: 'New job' });
+    const form = await screen.findByRole('region', { name: 'New job' });
     await user.click(within(form).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.getByTestId('location').textContent).not.toContain('new=1'));
   });
@@ -329,7 +330,7 @@ describe('the actions of a job', () => {
     const backend = setup();
     await menu(user, 'J00001 Year-end accounts');
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const form = await screen.findByRole('dialog', { name: 'Edit job' });
+    const form = await screen.findByRole('region', { name: 'Edit job' });
 
     expect(within(form).getByLabelText('Job name')).toHaveValue('Year-end accounts');
     expect(within(form).getByRole('button', { name: 'Save job' })).toBeDisabled();

@@ -30,7 +30,7 @@ import {
   useVatCodes,
 } from '../api';
 import { ActiveBadge } from '../components/badges';
-import { ActivityTypeFormDialog } from '../components/catalogue/ActivityTypeFormDialog';
+import { ActivityTypeFormPanel } from '../components/catalogue/ActivityTypeFormPanel';
 import { vatName } from '../components/catalogue/vat';
 import { LoadError, PageShell } from '../components/PageShell';
 import { useUrlSearch } from '../hooks/useUrlSearch';
@@ -257,6 +257,12 @@ function ActivityTypeList() {
 
   return (
     <>
+      <ActivityTypeFormPanel
+        open={dialog?.type === 'form'}
+        activityType={editing}
+        linkedServices={editing ? servicesOf(editing) : undefined}
+        onClose={close}
+      />
       <DataTable
         caption="Activity types"
         columns={columns}
@@ -366,12 +372,6 @@ function ActivityTypeList() {
             </p>
           ) : null
         }
-      />
-      <ActivityTypeFormDialog
-        open={dialog?.type === 'form'}
-        activityType={editing}
-        linkedServices={editing ? servicesOf(editing) : undefined}
-        onClose={close}
       />
       <ConfirmDialog
         open={target !== null}

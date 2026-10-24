@@ -48,7 +48,7 @@ import {
   useTimeEntryList,
 } from '../api';
 import { BillableBadge, BillingStatusBadge, SheetStatusBadge } from '../components/badges';
-import { EntryDialog } from '../components/EntryDialog';
+import { EntryPanel } from '../components/EntryPanel';
 import { FilterPopover } from '../components/FilterPopover';
 import { HistoryDrawer } from '../components/HistoryDrawer';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
@@ -407,6 +407,14 @@ function List() {
 
   return (
     <>
+      <EntryPanel open={adding} onClose={() => setAdding(false)} defaults={{ date: today }} />
+      <EntryPanel open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
+      <EntryPanel
+        open={correcting !== null}
+        entry={correcting}
+        correction
+        onClose={() => setCorrecting(null)}
+      />
       <DataTable
         caption="Time entries"
         columns={columns}
@@ -575,14 +583,6 @@ function List() {
         }
       />
 
-      <EntryDialog open={adding} onClose={() => setAdding(false)} defaults={{ date: today }} />
-      <EntryDialog open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
-      <EntryDialog
-        open={correcting !== null}
-        entry={correcting}
-        correction
-        onClose={() => setCorrecting(null)}
-      />
       <HistoryDrawer entry={history} onClose={() => setHistory(null)} />
       <ConfirmDialog
         open={deleting !== null}

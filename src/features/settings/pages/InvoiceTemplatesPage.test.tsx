@@ -198,7 +198,7 @@ describe('InvoiceTemplatesPage: permissions', () => {
     renderInOrg(<InvoiceTemplatesPage />, { context: contextWith(STAFF_PERMISSIONS) });
     await chooseAction(user, 'Detailed time sheets', 'Preview');
 
-    const dialog = await screen.findByRole('dialog', { name: 'Invoice template' });
+    const dialog = await screen.findByRole('region', { name: 'Invoice template' });
     expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveValue(
       'Detailed time sheets',
     );
@@ -242,10 +242,10 @@ describe('InvoiceTemplatesPage: permissions', () => {
   });
 });
 
-describe('InvoiceTemplateFormDialog: adding', () => {
+describe('InvoiceTemplateFormPanel: adding', () => {
   async function openAdd(user: User) {
     await user.click(await screen.findByRole('button', { name: 'Add template' }));
-    return screen.findByRole('dialog', { name: 'Add invoice template' });
+    return screen.findByRole('region', { name: 'Add invoice template' });
   }
 
   it('adds a template and sends the fields it was given', async () => {
@@ -341,7 +341,7 @@ describe('InvoiceTemplateFormDialog: adding', () => {
       await within(dialog).findByText('A template with this name already exists.'),
     ).toBeInTheDocument();
     expect(within(dialog).getByRole('textbox', { name: 'Name' })).toBeInvalid();
-    expect(screen.getByRole('dialog', { name: 'Add invoice template' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Add invoice template' })).toBeInTheDocument();
   });
 
   it('explains a refusal that belongs to no field', async () => {
@@ -361,10 +361,10 @@ describe('InvoiceTemplateFormDialog: adding', () => {
   });
 });
 
-describe('InvoiceTemplateFormDialog: the preview', () => {
+describe('InvoiceTemplateFormPanel: the preview', () => {
   async function openAdd(user: User) {
     await user.click(await screen.findByRole('button', { name: 'Add template' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add invoice template' });
+    const dialog = await screen.findByRole('region', { name: 'Add invoice template' });
     return { dialog, preview: within(dialog).getByRole('region', { name: 'Invoice preview' }) };
   }
 
@@ -487,7 +487,7 @@ describe('InvoiceTemplateFormDialog: the preview', () => {
       },
     });
     await chooseAction(user, 'Detailed time sheets', 'Edit');
-    const dialog = await screen.findByRole('dialog', { name: 'Edit invoice template' });
+    const dialog = await screen.findByRole('region', { name: 'Edit invoice template' });
     const sample = within(within(dialog).getByRole('region', { name: 'Invoice preview' }));
 
     expect(sample.getByRole('columnheader', { name: 'Time' })).toBeInTheDocument();
@@ -502,10 +502,10 @@ describe('InvoiceTemplateFormDialog: the preview', () => {
   });
 });
 
-describe('InvoiceTemplateFormDialog: editing', () => {
+describe('InvoiceTemplateFormPanel: editing', () => {
   async function openEdit(user: User, name: string) {
     await chooseAction(user, name, 'Edit');
-    return screen.findByRole('dialog', { name: 'Edit invoice template' });
+    return screen.findByRole('region', { name: 'Edit invoice template' });
   }
 
   it('opens with the saved values and saves only what changed', async () => {
@@ -715,12 +715,12 @@ describe('InvoiceTemplatesPage: default, status and delete', () => {
   });
 });
 
-describe('InvoiceTemplateFormDialog: mandatory fields', () => {
+describe('InvoiceTemplateFormPanel: mandatory fields', () => {
   it('stars the name, not the layout choice, the options or the footer', async () => {
     const user = userEvent.setup();
     renderInOrg(<InvoiceTemplatesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add template' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add invoice template' });
+    const dialog = await screen.findByRole('region', { name: 'Add invoice template' });
     expectRequiredFields(dialog, {
       required: ['Name'],
       optional: ['Footer text', /Show the practice logo/, /Show the bank details/],

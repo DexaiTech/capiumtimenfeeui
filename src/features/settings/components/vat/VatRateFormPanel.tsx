@@ -3,7 +3,7 @@ import { useId, type ChangeEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, Select, useToast } from '@/components/ui';
 
 import { useCreateVatRate, useUpdateVatRate } from '../../api/billingHooks';
 import type { VatRate, VatRateCreate, VatRateUpdate } from '../../billingTypes';
@@ -21,7 +21,7 @@ const FIELDS = ['name', 'code', 'rate', 'is_default'] as const;
 /** API field → form field, for 422 details. */
 const FIELD_NAMES = { rate_bp: 'rate' };
 
-export interface VatRateFormDialogProps {
+export interface VatRateFormPanelProps {
   /** The VAT code to change, null to add one. */
   rate: VatRate | null;
   open: boolean;
@@ -169,9 +169,9 @@ function VatRateForm({ rate, onClose }: { rate: VatRate | null; onClose: () => v
 }
 
 /** Add a VAT code, or change one: its name, code (treatment) and rate. */
-export function VatRateFormDialog({ rate, open, onClose }: VatRateFormDialogProps) {
+export function VatRateFormPanel({ rate, open, onClose }: VatRateFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={rate ? 'Edit VAT code' : 'Add VAT code'}
@@ -180,10 +180,8 @@ export function VatRateFormDialog({ rate, open, onClose }: VatRateFormDialogProp
           ? rate.name
           : 'A VAT treatment and rate that invoice lines, services and expenses can use.'
       }
-      size="md"
-      closeOnBackdrop={false}
     >
       {open ? <VatRateForm key={rate?.id ?? 'new'} rate={rate} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

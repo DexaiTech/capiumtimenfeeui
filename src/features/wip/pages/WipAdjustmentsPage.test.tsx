@@ -233,7 +233,7 @@ describe('writing WIP on or off', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'Adjust WIP' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Adjust WIP' });
+    const dialog = await screen.findByRole('region', { name: 'Adjust WIP' });
     expect(dialog).toHaveTextContent('Above £500.00 needs approval');
     await user.click(within(dialog).getByRole('combobox', { name: 'Client' }));
     await user.click(await screen.findByRole('option', { name: /Acme Ltd/ }));
@@ -260,7 +260,7 @@ describe('writing WIP on or off', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'Adjust WIP' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Adjust WIP' });
+    const dialog = await screen.findByRole('region', { name: 'Adjust WIP' });
     await user.click(within(dialog).getByRole('combobox', { name: 'Client' }));
     await user.click(await screen.findByRole('option', { name: /Acme Ltd/ }));
     await user.click(within(dialog).getByRole('combobox', { name: 'Job' }));
@@ -288,7 +288,7 @@ describe('writing WIP on or off', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'Adjust WIP' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Adjust WIP' });
+    const dialog = await screen.findByRole('region', { name: 'Adjust WIP' });
     await user.click(within(dialog).getByRole('button', { name: 'Adjust WIP' }));
 
     expect(await within(dialog).findByText('Choose the client')).toBeInTheDocument();
@@ -311,7 +311,7 @@ describe('writing WIP on or off', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'Adjust WIP' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Adjust WIP' });
+    const dialog = await screen.findByRole('region', { name: 'Adjust WIP' });
     await user.click(within(dialog).getByRole('combobox', { name: 'Client' }));
     await user.click(await screen.findByRole('option', { name: /Acme Ltd/ }));
     await user.type(within(dialog).getByLabelText('Amount (£)'), '10');

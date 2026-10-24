@@ -8,7 +8,7 @@ import {
   Checkbox,
   ErrorState,
   Input,
-  Modal,
+  FormPanel,
   Select,
   Skeleton,
   useToast,
@@ -80,7 +80,7 @@ export interface CreatedStaff {
   secret: TemporaryPassword | null;
 }
 
-export interface AddStaffDialogProps {
+export interface AddStaffPanelProps {
   open: boolean;
   onClose: () => void;
   onCreated: (created: CreatedStaff) => void;
@@ -95,7 +95,7 @@ function AddStaffForm({
   grades: ReadonlyArray<Grade>;
   roles: ReadonlyArray<Role>;
   onClose: () => void;
-  onCreated: AddStaffDialogProps['onCreated'];
+  onCreated: AddStaffPanelProps['onCreated'];
 }) {
   const { organization, role: myRole, can } = useOrg();
   const roleName = useRoleName();
@@ -346,7 +346,7 @@ function AddStaffForm({
  * "Add staff member": a record without a login by default; optionally an invitation or an
  * account with a temporary password (which the page shows once).
  */
-export function AddStaffDialog({ open, onClose, onCreated }: AddStaffDialogProps) {
+export function AddStaffPanel({ open, onClose, onCreated }: AddStaffPanelProps) {
   const { can } = useOrg();
   const grades = useGradeOptions({ enabled: open });
   // The role choice needs `role.read`; without it the API gives the Staff role.
@@ -355,13 +355,11 @@ export function AddStaffDialog({ open, onClose, onCreated }: AddStaffDialogProps
   const failed = grades.isError ? grades : roles.isError ? roles : null;
 
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title="Add staff member"
       description="People you record time for do not need a login. Give them one now or later."
-      size="lg"
-      closeOnBackdrop={false}
     >
       {loading ? (
         <div role="status" aria-label="Loading" className="flex flex-col gap-4">
@@ -385,6 +383,6 @@ export function AddStaffDialog({ open, onClose, onCreated }: AddStaffDialogProps
           onCreated={onCreated}
         />
       )}
-    </Modal>
+    </FormPanel>
   );
 }

@@ -4,7 +4,7 @@ import { Controller, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { parsePounds } from '@/utils/money';
@@ -25,7 +25,7 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 const FIELDS = ['rate', 'effective_from'] as const;
 
-export interface StaffRateDialogProps {
+export interface StaffRatePanelProps {
   /** The person the rate is for; null keeps the dialog closed. */
   staff: StaffMember | null;
   kind: RateKind;
@@ -157,18 +157,17 @@ function RateForm({
 }
 
 /** "Set a cost rate / charge-out rate" for one person, from their own page (`rate.manage`). */
-export function StaffRateDialog({ staff, kind, onClose }: StaffRateDialogProps) {
+export function StaffRatePanel({ staff, kind, onClose }: StaffRatePanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={staff !== null}
       onClose={onClose}
       title={`${staff?.full_name ?? ''}: new ${RATE_KIND_LABEL[kind].toLowerCase()}`}
       description="The rate applies from the date you choose. Time already recorded keeps its rate until you re-rate it."
-      closeOnBackdrop={false}
     >
       {staff ? (
         <RateForm key={`${staff.id}-${kind}`} staff={staff} kind={kind} onClose={onClose} />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

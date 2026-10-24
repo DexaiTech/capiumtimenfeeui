@@ -27,8 +27,8 @@ import {
   useVoidInvoice,
 } from '../api';
 import { InvoiceStatusBadge } from '../components/badges';
-import { CreditNoteDialog } from '../components/CreditNoteDialog';
-import { InvoiceHeaderDialog } from '../components/InvoiceHeaderDialog';
+import { CreditNotePanel } from '../components/CreditNotePanel';
+import { InvoiceHeaderPanel } from '../components/InvoiceHeaderPanel';
 import {
   InvoiceCreditNotesCard,
   InvoiceDetailsCard,
@@ -39,10 +39,10 @@ import { InvoiceLinesCard } from '../components/invoice/InvoiceLinesCard';
 import { InvoiceSummaryStrip } from '../components/invoice/InvoiceSummaryStrip';
 import { InvoiceTimeline } from '../components/invoice/InvoiceTimeline';
 import { IssueDialog } from '../components/IssueDialog';
-import { LineDialog } from '../components/LineDialog';
+import { LinePanel } from '../components/LinePanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { ReasonDialog } from '../components/ReasonDialog';
-import { RecordPaymentDialog } from '../components/RecordPaymentDialog';
+import { RecordPaymentPanel } from '../components/RecordPaymentPanel';
 import { SendInvoiceDialog } from '../components/SendInvoiceDialog';
 import { useFileDownload } from '../hooks/useFileDownload';
 import type { InvoiceDetail, InvoiceLine } from '../types';
@@ -235,6 +235,15 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <InvoiceHeaderPanel open={dialog?.type === 'details'} invoice={invoice} onClose={close} />
+      <LinePanel
+        open={dialog?.type === 'line'}
+        invoiceId={invoice.id}
+        line={dialog?.type === 'line' ? dialog.line : null}
+        onClose={close}
+      />
+      <CreditNotePanel open={dialog?.type === 'credit'} invoice={invoice} onClose={close} />
+      <RecordPaymentPanel open={dialog?.type === 'payment'} invoice={invoice} onClose={close} />
       <BackLink />
       <PageShell
         title={title}
@@ -310,15 +319,6 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
 
       <IssueDialog open={dialog?.type === 'issue'} invoice={invoice} onClose={close} />
       <SendInvoiceDialog open={dialog?.type === 'send'} invoice={invoice} onClose={close} />
-      <InvoiceHeaderDialog open={dialog?.type === 'details'} invoice={invoice} onClose={close} />
-      <LineDialog
-        open={dialog?.type === 'line'}
-        invoiceId={invoice.id}
-        line={dialog?.type === 'line' ? dialog.line : null}
-        onClose={close}
-      />
-      <CreditNoteDialog open={dialog?.type === 'credit'} invoice={invoice} onClose={close} />
-      <RecordPaymentDialog open={dialog?.type === 'payment'} invoice={invoice} onClose={close} />
       <ReasonDialog
         open={dialog?.type === 'void'}
         onClose={close}

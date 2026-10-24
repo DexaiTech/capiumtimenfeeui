@@ -26,7 +26,7 @@ import { formatBasisPoints } from '@/utils/money';
 import { flattenPages, useRateRules, useStaffMember } from '../api';
 import { LoginStatusBadge, RuleStatusBadge, StaffStatusBadge } from '../components/badges';
 import { LoadError, NoAccess } from '../components/PageShell';
-import { StaffRateDialog } from '../components/staff/StaffRateDialog';
+import { StaffRatePanel } from '../components/staff/StaffRatePanel';
 import {
   TemporaryPasswordDialog,
   type TemporaryPassword,
@@ -147,110 +147,112 @@ function RatesCard({ staff }: { staff: StaffDetail }) {
   const rows = flattenPages(rules.data);
 
   return (
-    <Card padding="none" role="region" aria-label="Rates">
-      <CardHeader
-        title="Rates"
-        description="What this person costs the practice and what you charge for them. Time uses the rate in force on its date."
-        actions={
-          <>
-            <Link
-              to={routes.org.module(organization.slug, 'team', 'rate-preview')}
-              className={buttonClasses({ size: 'sm' })}
-            >
-              Rate preview
-            </Link>
-            <Link
-              to={routes.org.module(organization.slug, 'team', 'rate-history')}
-              className={buttonClasses({ size: 'sm' })}
-            >
-              Rate history
-            </Link>
-          </>
-        }
-      />
-      <div className="flex flex-col gap-5 p-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <RateSummary
-            kind="cost"
-            rate={staff.cost_rate}
-            source={staff.cost_rate_source}
-            canManage={canManage}
-            onSet={() => setKind('cost')}
-          />
-          <RateSummary
-            kind="charge"
-            rate={staff.charge_rate}
-            source={staff.charge_rate_source}
-            canManage={canManage}
-            onSet={() => setKind('charge')}
-          />
-        </div>
-        {rules.isPending ? (
-          <div role="status" aria-label="Loading the rates" className="flex flex-col gap-2">
-            <Skeleton shape="rect" className="h-8 w-full" />
-            <Skeleton shape="rect" className="h-8 w-full" />
-          </div>
-        ) : rules.isError ? (
-          <p className="text-sm text-danger">Could not load this person&apos;s rates.</p>
-        ) : rows.length === 0 ? (
-          <p className="text-sm text-text-muted">
-            No rate is set for this person. The grade or practice default applies.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] text-left text-sm">
-              <caption className="sr-only">Rates that name this person</caption>
-              <thead>
-                <tr className="border-b border-row-border text-xs text-text-muted">
-                  <th scope="col" className="py-2 pr-4 font-medium">
-                    Type
-                  </th>
-                  <th scope="col" className="py-2 pr-4 font-medium">
-                    Applies to
-                  </th>
-                  <th scope="col" className="py-2 pr-4 text-right font-medium">
-                    Rate
-                  </th>
-                  <th scope="col" className="py-2 pr-4 font-medium">
-                    Period
-                  </th>
-                  <th scope="col" className="py-2 font-medium">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((rule) => (
-                  <tr key={rule.id} className="border-b border-row-border last:border-b-0">
-                    <td className="py-2 pr-4 text-text">{RATE_KIND_LABEL[rule.kind]}</td>
-                    <td className="py-2 pr-4 text-text-muted">
-                      {rule.level === 'staff'
-                        ? 'Everything they do'
-                        : scopeNames({ ...rule, staff: null, grade: null }).join(' · ') ||
-                          rule.level_label}
-                    </td>
-                    <td className="py-2 pr-4 text-right text-text tabular-nums">
-                      {formatRate(rule.rate)}
-                    </td>
-                    <td className="py-2 pr-4 whitespace-nowrap text-text-muted">
-                      {formatPeriod(rule.effective_from, rule.effective_to)}
-                    </td>
-                    <td className="py-2">
-                      <RuleStatusBadge status={rule.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      <StaffRateDialog
+    <>
+      <StaffRatePanel
         staff={kind ? staff : null}
         kind={kind ?? 'charge'}
         onClose={() => setKind(null)}
       />
-    </Card>
+      <Card padding="none" role="region" aria-label="Rates">
+        <CardHeader
+          title="Rates"
+          description="What this person costs the practice and what you charge for them. Time uses the rate in force on its date."
+          actions={
+            <>
+              <Link
+                to={routes.org.module(organization.slug, 'team', 'rate-preview')}
+                className={buttonClasses({ size: 'sm' })}
+              >
+                Rate preview
+              </Link>
+              <Link
+                to={routes.org.module(organization.slug, 'team', 'rate-history')}
+                className={buttonClasses({ size: 'sm' })}
+              >
+                Rate history
+              </Link>
+            </>
+          }
+        />
+        <div className="flex flex-col gap-5 p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <RateSummary
+              kind="cost"
+              rate={staff.cost_rate}
+              source={staff.cost_rate_source}
+              canManage={canManage}
+              onSet={() => setKind('cost')}
+            />
+            <RateSummary
+              kind="charge"
+              rate={staff.charge_rate}
+              source={staff.charge_rate_source}
+              canManage={canManage}
+              onSet={() => setKind('charge')}
+            />
+          </div>
+          {rules.isPending ? (
+            <div role="status" aria-label="Loading the rates" className="flex flex-col gap-2">
+              <Skeleton shape="rect" className="h-8 w-full" />
+              <Skeleton shape="rect" className="h-8 w-full" />
+            </div>
+          ) : rules.isError ? (
+            <p className="text-sm text-danger">Could not load this person&apos;s rates.</p>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-text-muted">
+              No rate is set for this person. The grade or practice default applies.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[34rem] text-left text-sm">
+                <caption className="sr-only">Rates that name this person</caption>
+                <thead>
+                  <tr className="border-b border-row-border text-xs text-text-muted">
+                    <th scope="col" className="py-2 pr-4 font-medium">
+                      Type
+                    </th>
+                    <th scope="col" className="py-2 pr-4 font-medium">
+                      Applies to
+                    </th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">
+                      Rate
+                    </th>
+                    <th scope="col" className="py-2 pr-4 font-medium">
+                      Period
+                    </th>
+                    <th scope="col" className="py-2 font-medium">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((rule) => (
+                    <tr key={rule.id} className="border-b border-row-border last:border-b-0">
+                      <td className="py-2 pr-4 text-text">{RATE_KIND_LABEL[rule.kind]}</td>
+                      <td className="py-2 pr-4 text-text-muted">
+                        {rule.level === 'staff'
+                          ? 'Everything they do'
+                          : scopeNames({ ...rule, staff: null, grade: null }).join(' · ') ||
+                            rule.level_label}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-text tabular-nums">
+                        {formatRate(rule.rate)}
+                      </td>
+                      <td className="py-2 pr-4 whitespace-nowrap text-text-muted">
+                        {formatPeriod(rule.effective_from, rule.effective_to)}
+                      </td>
+                      <td className="py-2">
+                        <RuleStatusBadge status={rule.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Card>
+    </>
   );
 }
 
@@ -298,7 +300,7 @@ function StaffDetailView({ staffId }: { staffId: string }) {
   const navigate = useNavigate();
   const staff = useStaffMember(staffId);
   const [secret, setSecret] = useState<TemporaryPassword | null>(null);
-  const { actionsFor, edit, dialogs } = useStaffActions({
+  const { actionsFor, edit, dialogs, editPanel } = useStaffActions({
     onSecret: setSecret,
     onDeleted: () => void navigate(routes.org.staff(organization.slug), { replace: true }),
   });
@@ -380,6 +382,7 @@ function StaffDetailView({ staffId }: { staffId: string }) {
           />
         ) : null}
       </Card>
+      {editPanel}
       <ProfileCard staff={member} canEdit={canUpdate} onEdit={() => edit(member)} />
       {can(PERMISSIONS.rateRead) ? <RatesCard staff={member} /> : null}
       <SignInCard staff={member} />

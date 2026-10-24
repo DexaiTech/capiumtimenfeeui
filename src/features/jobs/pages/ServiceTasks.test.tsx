@@ -40,7 +40,7 @@ function setupList(init: Partial<JobsBackend> = {}) {
 
 async function openNewJob(user: User, name = 'Monthly payroll') {
   await user.click(await screen.findByRole('button', { name: 'New job' }));
-  const form = await screen.findByRole('dialog', { name: 'New job' });
+  const form = await screen.findByRole('region', { name: 'New job' });
   await user.click(within(form).getByRole('combobox', { name: 'Client' }));
   await user.click(await screen.findByRole('option', { name: /Acme Ltd/ }));
   await user.type(within(form).getByLabelText('Job name'), name);
@@ -138,7 +138,7 @@ describe('starting a job with the default tasks of its service', () => {
       await screen.findByRole('button', { name: 'Actions for J00001 Year-end accounts' }),
     );
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const form = await screen.findByRole('dialog', { name: 'Edit job' });
+    const form = await screen.findByRole('region', { name: 'Edit job' });
     expect(within(form).getByLabelText('Service')).toHaveValue(IDS.payroll);
     expect(defaultTasksSwitch(form)).not.toBeInTheDocument();
     expect(within(form).queryByText('Run the payroll')).not.toBeInTheDocument();

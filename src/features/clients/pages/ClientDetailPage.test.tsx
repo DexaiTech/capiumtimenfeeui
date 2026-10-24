@@ -440,7 +440,7 @@ describe('editing a client linked to the central service', () => {
     await heading('Techwave Innovations Ltd');
 
     await user.click(within(header()).getByRole('button', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: /Edit Techwave Innovations Ltd/ });
+    const dialog = await screen.findByRole('region', { name: /Edit Techwave Innovations Ltd/ });
 
     const name = within(dialog).getByRole('textbox', { name: 'Client name' });
     expect(name).toBeDisabled();
@@ -476,7 +476,7 @@ describe('editing a client linked to the central service', () => {
     await heading('Techwave Innovations Ltd');
 
     await user.click(within(header()).getByRole('button', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: /Edit Techwave Innovations Ltd/ });
+    const dialog = await screen.findByRole('region', { name: /Edit Techwave Innovations Ltd/ });
     const phone = within(dialog).getByRole('textbox', { name: 'Phone' });
     await user.clear(phone);
     await user.type(phone, '020 7946 1111');
@@ -501,7 +501,7 @@ describe('editing a client linked to the central service', () => {
     await heading('Techwave Innovations Ltd');
 
     await user.click(within(header()).getByRole('button', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: /Edit Techwave Innovations Ltd/ });
+    const dialog = await screen.findByRole('region', { name: /Edit Techwave Innovations Ltd/ });
     const city = within(dialog).getByRole('textbox', { name: 'Town or city' });
     await user.clear(city);
     await user.type(city, 'Leeds');
@@ -522,7 +522,7 @@ describe('editing a client linked to the central service', () => {
     await heading('Mutual Technologies');
 
     await user.click(within(header()).getByRole('button', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: /Edit Mutual Technologies/ });
+    const dialog = await screen.findByRole('region', { name: /Edit Mutual Technologies/ });
     expect(within(dialog).getByRole('textbox', { name: 'Client name' })).toBeEnabled();
     expect(within(dialog).getByRole('textbox', { name: 'Town or city' })).toBeEnabled();
   });

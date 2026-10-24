@@ -9,7 +9,7 @@ import { formatMoney } from '@/utils/money';
 import { useInvoice, useOpenInvoices } from '../../api';
 import type { CreditNote } from '../../types';
 import { dateCell } from '../../utils/format';
-import { CreditNoteDialog } from '../CreditNoteDialog';
+import { CreditNotePanel } from '../CreditNotePanel';
 import { DialogActions } from '../DialogActions';
 
 function ChooseInvoice({
@@ -79,7 +79,7 @@ export interface CreditNoteLauncherProps {
 export function CreditNoteLauncher({ invoiceId, onClose, onCreated }: CreditNoteLauncherProps) {
   const query = useInvoice(invoiceId);
   if (query.data) {
-    return <CreditNoteDialog open invoice={query.data} onClose={onClose} onCreated={onCreated} />;
+    return <CreditNotePanel open invoice={query.data} onClose={onClose} onCreated={onCreated} />;
   }
   return (
     <Modal open onClose={onClose} title="Raise a credit note">

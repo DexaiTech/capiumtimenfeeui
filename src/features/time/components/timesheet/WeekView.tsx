@@ -22,9 +22,9 @@ import {
   type DraftRow,
 } from '../../utils/grid';
 import { weekdayName } from '../../utils/weeks';
-import { EntryDialog } from '../EntryDialog';
+import { EntryPanel } from '../EntryPanel';
 import { Notice } from '../Notice';
-import { AddRowDialog } from './AddRowDialog';
+import { AddRowPanel } from './AddRowPanel';
 import { rowTitle } from './rowLabels';
 import { WeekGridTable } from './WeekGridTable';
 
@@ -182,6 +182,16 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
 
   return (
     <div ref={containerRef} className="flex flex-col gap-3">
+      <AddRowPanel
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        existingKeys={new Set(rows.map((row) => row.key))}
+        onAdd={(draft) => {
+          focusKey.current = rowKey(draft);
+          setDrafts((current) => [...current, draft]);
+        }}
+      />
+      <EntryPanel open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
         {editable ? (
           <Button
@@ -252,16 +262,6 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
         </Notice>
       ) : null}
 
-      <AddRowDialog
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        existingKeys={new Set(rows.map((row) => row.key))}
-        onAdd={(draft) => {
-          focusKey.current = rowKey(draft);
-          setDrafts((current) => [...current, draft]);
-        }}
-      />
-      <EntryDialog open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
       <ConfirmDialog
         open={clearing !== null}
         onClose={() => answerClear(false)}

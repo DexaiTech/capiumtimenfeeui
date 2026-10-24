@@ -3,7 +3,7 @@ import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, useToast } from '@/components/ui';
+import { Button, Input, FormPanel, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { StaffPicker } from '@/features/team';
 
@@ -19,14 +19,14 @@ import type { ExpenseClaimDetail } from '../types';
 import { toFormError } from '../utils/errors';
 import { DialogActions } from './DialogActions';
 
-export interface NewClaimDialogProps {
+export interface NewClaimPanelProps {
   open: boolean;
   onClose: () => void;
   /** Called with the new draft claim: the page opens it. */
   onCreated: (claim: ExpenseClaimDetail) => void;
 }
 
-function NewClaimForm({ onClose, onCreated }: Omit<NewClaimDialogProps, 'open'>) {
+function NewClaimForm({ onClose, onCreated }: Omit<NewClaimPanelProps, 'open'>) {
   const { can } = useOrg();
   const { toast } = useToast();
   const create = useCreateClaim();
@@ -108,28 +108,27 @@ function NewClaimForm({ onClose, onCreated }: Omit<NewClaimDialogProps, 'open'>)
 }
 
 /** Starts a draft claim: a title if wanted, and (with `expense.manage`) whose claim it is. */
-export function NewClaimDialog({ open, onClose, onCreated }: NewClaimDialogProps) {
+export function NewClaimPanel({ open, onClose, onCreated }: NewClaimPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title="New expense claim"
       description="A claim holds the expenses you send for approval together."
-      closeOnBackdrop={false}
     >
       {open ? <NewClaimForm onClose={onClose} onCreated={onCreated} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }
 
-export interface ClaimTitleDialogProps {
+export interface ClaimTitlePanelProps {
   claimId: string;
   title: string | null;
   open: boolean;
   onClose: () => void;
 }
 
-function ClaimTitleForm({ claimId, title, onClose }: Omit<ClaimTitleDialogProps, 'open'>) {
+function ClaimTitleForm({ claimId, title, onClose }: Omit<ClaimTitlePanelProps, 'open'>) {
   const { toast } = useToast();
   const update = useUpdateClaimTitle();
   const formId = useId();
@@ -192,10 +191,10 @@ function ClaimTitleForm({ claimId, title, onClose }: Omit<ClaimTitleDialogProps,
 }
 
 /** Changes the title of a draft or returned claim. */
-export function ClaimTitleDialog({ claimId, title, open, onClose }: ClaimTitleDialogProps) {
+export function ClaimTitlePanel({ claimId, title, open, onClose }: ClaimTitlePanelProps) {
   return (
-    <Modal open={open} onClose={onClose} title="Edit title" closeOnBackdrop={false}>
+    <FormPanel open={open} onClose={onClose} title="Edit title">
       {open ? <ClaimTitleForm claimId={claimId} title={title} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

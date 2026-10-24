@@ -39,7 +39,7 @@ describe('mandatory fields of the job dialogs', () => {
     const user = userEvent.setup();
     setupList();
     await user.click(await screen.findByRole('button', { name: 'New job' }));
-    const form = await screen.findByRole('dialog', { name: 'New job' });
+    const form = await screen.findByRole('region', { name: 'New job' });
     await within(form).findByRole('combobox', { name: 'Client' });
     expectRequiredFields(form, {
       required: ['Job name'],
@@ -60,7 +60,7 @@ describe('mandatory fields of the job dialogs', () => {
     const user = userEvent.setup();
     setupList();
     await openRowAction(user, 'Edit');
-    const form = await screen.findByRole('dialog', { name: 'Edit job' });
+    const form = await screen.findByRole('region', { name: 'Edit job' });
     expectRequiredFields(form, { required: ['Job name'], optional: ['Description', 'Manager'] });
   });
 
@@ -84,7 +84,7 @@ describe('mandatory fields of the job dialogs', () => {
       path: `${JOBS}/:jobId`,
     });
     await user.click(await screen.findByRole('button', { name: 'Add task' }));
-    const form = await screen.findByRole('dialog', { name: 'Add task' });
+    const form = await screen.findByRole('region', { name: 'Add task' });
     expectRequiredFields(form, {
       required: ['Title'],
       optional: ['Description', 'Due date', 'Hours budget', 'Starts as'],

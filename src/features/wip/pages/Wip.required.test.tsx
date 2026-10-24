@@ -21,7 +21,7 @@ describe('mandatory fields of the WIP dialogs', () => {
       path: `${WIP}/adjustments`,
     });
     await user.click(await screen.findByRole('button', { name: 'Adjust WIP' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Adjust WIP' });
+    const dialog = await screen.findByRole('region', { name: 'Adjust WIP' });
     expectRequiredFields(dialog, {
       required: ['Amount (£)', 'Reason'],
       optional: ['Kind of WIP', 'Effective date'],

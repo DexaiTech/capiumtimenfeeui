@@ -4,12 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 
-import { CreateTicketDialog } from '../components/list/CreateTicketDialog';
+import { CreateTicketPanel } from '../components/list/CreateTicketPanel';
 
 describe('mandatory fields of the ticket forms', () => {
   it('marks the subject and the description of a new ticket, not priority or status', async () => {
-    renderInOrg(<CreateTicketDialog open onClose={() => undefined} />);
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    renderInOrg(<CreateTicketPanel open onClose={() => undefined} />);
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     expectRequiredFields(dialog, {
       required: ['Subject'],
       optional: ['Priority', 'Status'],
@@ -21,8 +21,8 @@ describe('mandatory fields of the ticket forms', () => {
   });
 
   it('puts no asterisk into the label text', async () => {
-    renderInOrg(<CreateTicketDialog open onClose={() => undefined} />);
-    const dialog = await screen.findByRole('dialog', { name: 'Application Testing' });
+    renderInOrg(<CreateTicketPanel open onClose={() => undefined} />);
+    const dialog = await screen.findByRole('region', { name: 'Application Testing' });
     expect(dialog.textContent).not.toContain('*');
   });
 });

@@ -45,7 +45,7 @@ const menuItems = (menu: HTMLElement) =>
 
 async function openAddDialog(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add staff member' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Add staff member' });
+  const dialog = await screen.findByRole('region', { name: 'Add staff member' });
   await within(dialog).findByRole('combobox', { name: 'Grade' });
   return dialog;
 }
@@ -464,7 +464,7 @@ describe('StaffMembersPage row actions', () => {
   });
 });
 
-describe('AddStaffDialog', () => {
+describe('AddStaffPanel', () => {
   it('adds a staff member without a login and sends exactly the filled fields', async () => {
     let body: unknown;
     server.use(
@@ -513,7 +513,7 @@ describe('AddStaffDialog', () => {
       chargeable_target_bp: 6250,
     });
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Add staff member' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Add staff member' })).not.toBeInTheDocument(),
     );
   });
 
@@ -797,28 +797,28 @@ describe('AddStaffDialog', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('That address already belongs to an account.')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Add staff member' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Add staff member' })).not.toBeInTheDocument(),
     );
   });
 
   it('opens from the quick-create link, only with member.invite', async () => {
     const first = renderPage({ route: '/?new=1' });
-    expect(await screen.findByRole('dialog', { name: 'Add staff member' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Add staff member' })).toBeInTheDocument();
     first.unmount();
 
     renderPage({ route: '/?new=1', context: contextWith(STAFF_PERMISSIONS) });
     await row(/Sam Staff/);
-    expect(screen.queryByRole('dialog', { name: 'Add staff member' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Add staff member' })).not.toBeInTheDocument();
   });
 });
 
-describe('EditStaffDialog', () => {
+describe('EditStaffPanel', () => {
   async function openEdit(user: User, name: string) {
     // "Edit" in the list opens the person's own page; the dialog opens from there.
     await openActions(user, name);
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
     await user.click(await screen.findByRole('button', { name: 'Edit details' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit staff member' });
+    const dialog = await screen.findByRole('region', { name: 'Edit staff member' });
     await within(dialog).findByRole('combobox', { name: 'Grade' });
     return dialog;
   }

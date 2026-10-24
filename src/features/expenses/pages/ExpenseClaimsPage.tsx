@@ -45,7 +45,7 @@ import {
 } from '../components/claimColumns';
 import { ApproveDialog, BulkApproveDialog, ReturnDialog } from '../components/DecisionDialogs';
 import { FilterPopover } from '../components/FilterPopover';
-import { NewClaimDialog } from '../components/NewClaimDialog';
+import { NewClaimPanel } from '../components/NewClaimPanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { CLAIM_STATUS_META } from '../constants';
 import { useUrlSearch } from '../hooks/useUrlSearch';
@@ -246,6 +246,14 @@ export default function ExpenseClaimsPage() {
       title="Expense Claims"
       description="Every claim of the practice: filter them, open one, approve or return the ones waiting, or start a claim for a member of staff."
     >
+      <NewClaimPanel
+        open={dialog?.type === 'new'}
+        onClose={close}
+        onCreated={(claim) => {
+          close();
+          void navigate(routes.org.expenseClaim(organization.slug, claim.id, 'claims'));
+        }}
+      />
       {summary.data ? (
         <Card padding="sm">
           <dl aria-label="Claims at a glance" className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -432,14 +440,6 @@ export default function ExpenseClaimsPage() {
         />
       )}
 
-      <NewClaimDialog
-        open={dialog?.type === 'new'}
-        onClose={close}
-        onCreated={(claim) => {
-          close();
-          void navigate(routes.org.expenseClaim(organization.slug, claim.id, 'claims'));
-        }}
-      />
       {target && dialog?.type === 'approve' ? (
         <ApproveDialog claim={target} open onClose={close} />
       ) : null}

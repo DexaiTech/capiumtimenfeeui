@@ -3,7 +3,7 @@ import { useId, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Badge, Button, Checkbox, Input, Modal, Select, useToast } from '@/components/ui';
+import { Badge, Button, Checkbox, Input, FormPanel, Select, useToast } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
@@ -37,7 +37,7 @@ const CREATE_FIELDS = [
 ] as const;
 const EDIT_FIELDS = ['rate', 'effective_from', 'effective_to'] as const;
 
-export interface RateRuleDialogProps {
+export interface RateRulePanelProps {
   kind: RateKind;
   /** The rule to change; null to add one. */
   rule: RateRule | null;
@@ -407,9 +407,9 @@ function EditRateForm({ rule, onClose }: { rule: RateRule; onClose: () => void }
 }
 
 /** Add a rate (scope, amount and period) or change one (amount and period; the scope is fixed). */
-export function RateRuleDialog({ kind, rule, open, defaultLevel, onClose }: RateRuleDialogProps) {
+export function RateRulePanel({ kind, rule, open, defaultLevel, onClose }: RateRulePanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={rule ? 'Edit rate' : `Add ${kind === 'cost' ? 'cost' : 'charge-out'} rate`}
@@ -420,8 +420,6 @@ export function RateRuleDialog({ kind, rule, open, defaultLevel, onClose }: Rate
             ? 'What a person or a grade costs the practice per hour.'
             : 'What the practice charges per hour. The most specific rate in force wins.'
       }
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? (
         rule ? (
@@ -430,6 +428,6 @@ export function RateRuleDialog({ kind, rule, open, defaultLevel, onClose }: Rate
           <CreateRateForm kind={kind} defaultLevel={defaultLevel} onClose={onClose} />
         )
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

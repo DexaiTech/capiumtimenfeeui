@@ -54,6 +54,7 @@ function setup(
 
 const tasksTable = () => screen.findByRole('table', { name: 'Tasks of J00001' });
 const dialog = (name: string) => screen.findByRole('dialog', { name });
+const panel = (name: string) => screen.findByRole('region', { name });
 
 describe('a job on its page', () => {
   it('shows the job with its figures, details and budget', async () => {
@@ -215,7 +216,7 @@ describe('the tasks of a job', () => {
     const backend = setup();
     await tasksTable();
     await user.click(screen.getByRole('button', { name: 'Add task' }));
-    const form = await dialog('Add task');
+    const form = await panel('Add task');
 
     await user.type(within(form).getByLabelText('Title'), 'Review the draft');
     fireEvent.change(within(form).getByLabelText('Due date'), { target: { value: '2026-11-15' } });
@@ -284,7 +285,7 @@ describe('the tasks of a job', () => {
     await tasksTable();
     await user.click(await screen.findByRole('button', { name: 'Actions for File the accounts' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const form = await dialog('Edit task');
+    const form = await panel('Edit task');
 
     expect(within(form).getByRole('button', { name: 'Save task' })).toBeDisabled();
     await user.clear(within(form).getByLabelText('Title'));
@@ -344,7 +345,7 @@ describe('editing, copying and deleting the job', () => {
     const user = userEvent.setup();
     const backend = setup();
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
-    const form = await dialog('Edit job');
+    const form = await panel('Edit job');
 
     await user.type(within(form).getByLabelText('Description'), 'Statutory accounts');
     await user.click(within(form).getByRole('button', { name: 'Save job' }));
@@ -359,7 +360,7 @@ describe('editing, copying and deleting the job', () => {
       jobs: [makeJob({ pm_job_id: 'pm-9', pm_linked_at: '2026-10-05T09:00:00Z' })],
     });
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
-    const form = await dialog('Edit job');
+    const form = await panel('Edit job');
 
     expect(within(form).getByText(/linked to an external job/)).toBeInTheDocument();
     expect(within(form).getByLabelText('Job name')).toBeDisabled();

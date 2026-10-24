@@ -188,7 +188,7 @@ describe('raising an estimate', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New estimate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New estimate' });
+    const dialog = await screen.findByRole('region', { name: 'New estimate' });
     await user.type(within(dialog).getByRole('combobox', { name: 'Client' }), 'Harb');
     await user.click(await within(dialog).findByRole('option', { name: /Harbour & Co/ }));
     await user.type(within(dialog).getByLabelText('Reference (optional)'), 'Audit 2027');
@@ -236,7 +236,7 @@ describe('raising an estimate', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New estimate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New estimate' });
+    const dialog = await screen.findByRole('region', { name: 'New estimate' });
     expect(within(dialog).getByRole('button', { name: 'Remove line 1' })).toBeDisabled();
 
     await user.click(within(dialog).getByRole('button', { name: 'Add a line' }));
@@ -252,7 +252,7 @@ describe('raising an estimate', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New estimate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New estimate' });
+    const dialog = await screen.findByRole('region', { name: 'New estimate' });
     await user.click(within(dialog).getByRole('button', { name: 'Create estimate' }));
 
     expect(await within(dialog).findByText('Choose the client')).toBeInTheDocument();
@@ -277,7 +277,7 @@ describe('raising an estimate', () => {
     await table();
 
     await user.click(screen.getByRole('button', { name: 'New estimate' }));
-    const dialog = await screen.findByRole('dialog', { name: 'New estimate' });
+    const dialog = await screen.findByRole('region', { name: 'New estimate' });
     await user.type(within(dialog).getByRole('combobox', { name: 'Client' }), 'Harb');
     await user.click(await within(dialog).findByRole('option', { name: /Harbour & Co/ }));
     const line = within(within(dialog).getByRole('group', { name: 'Line 1' }));
@@ -286,7 +286,7 @@ describe('raising an estimate', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Create estimate' }));
 
     expect(await within(dialog).findByText('An estimate needs at least one line.')).toBeVisible();
-    expect(screen.getByRole('dialog', { name: 'New estimate' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'New estimate' })).toBeInTheDocument();
   });
 
   it('hides the writing actions from a person who can only read', async () => {
@@ -485,7 +485,7 @@ describe('one estimate', () => {
     const dialog = await openRow(user, 0, 'Draft estimate');
 
     await user.click(await within(dialog).findByRole('button', { name: 'Edit' }));
-    const form = await screen.findByRole('dialog', { name: 'Edit estimate' });
+    const form = await screen.findByRole('region', { name: 'Edit estimate' });
     expect(within(form).getByLabelText('Reference (optional)')).toHaveValue('Year-end accounts');
     expect(within(form).getByLabelText('Expires on (optional)')).toHaveValue('2026-11-30');
     const line = within(within(form).getByRole('group', { name: 'Line 1' }));
@@ -515,7 +515,7 @@ describe('one estimate', () => {
     const dialog = await openRow(user, 0, 'Draft estimate');
 
     await user.click(await within(dialog).findByRole('button', { name: 'Edit' }));
-    const form = await screen.findByRole('dialog', { name: 'Edit estimate' });
+    const form = await screen.findByRole('region', { name: 'Edit estimate' });
     const line = within(within(form).getByRole('group', { name: 'Line 1' }));
     const quantity = line.getByLabelText('Quantity');
     await user.clear(quantity);

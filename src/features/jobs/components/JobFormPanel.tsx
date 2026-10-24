@@ -8,7 +8,7 @@ import {
   DateField,
   DurationInput,
   Input,
-  Modal,
+  FormPanel,
   Select,
   Switch,
   Textarea,
@@ -56,7 +56,7 @@ const START_OPTIONS: ReadonlyArray<SelectOption> = [
   { value: 'in_progress', label: 'In progress' },
 ];
 
-export interface JobFormDialogProps {
+export interface JobFormPanelProps {
   open: boolean;
   onClose: () => void;
   /** The job to edit; null starts a new one. */
@@ -66,7 +66,7 @@ export interface JobFormDialogProps {
   onSaved: (job: Job) => void;
 }
 
-interface JobFormProps extends Omit<JobFormDialogProps, 'open'> {
+interface JobFormProps extends Omit<JobFormPanelProps, 'open'> {
   formId: string;
 }
 
@@ -434,20 +434,18 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
 }
 
 /** Start a job for a client, or change the details of one (its status has its own action). */
-export function JobFormDialog({ open, onClose, ...rest }: JobFormDialogProps) {
+export function JobFormPanel({ open, onClose, ...rest }: JobFormPanelProps) {
   const formId = useId();
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={rest.job ? 'Edit job' : 'New job'}
       description={rest.job ? jobLabel(rest.job) : undefined}
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? (
         <JobForm key={rest.job?.id ?? 'new'} formId={formId} onClose={onClose} {...rest} />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

@@ -20,7 +20,7 @@ describe('mandatory fields of the catalogue dialogs', () => {
     const user = userEvent.setup();
     renderInOrg(<GradesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add grade' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add grade' });
+    const dialog = await screen.findByRole('region', { name: 'Add grade' });
     expectRequiredFields(dialog, {
       required: ['Name', 'Code'],
       optional: [
@@ -36,7 +36,7 @@ describe('mandatory fields of the catalogue dialogs', () => {
     const user = userEvent.setup();
     renderInOrg(<ServicesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add service' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add service' });
+    const dialog = await screen.findByRole('region', { name: 'Add service' });
     await within(dialog).findByRole('checkbox', { name: /Bookkeeping/ });
     expectRequiredFields(dialog, {
       required: ['Name', 'Code'],
@@ -54,7 +54,7 @@ describe('mandatory fields of the catalogue dialogs', () => {
     const user = userEvent.setup();
     renderInOrg(<ServicesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add service' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add service' });
+    const dialog = await screen.findByRole('region', { name: 'Add service' });
     await within(dialog).findByRole('checkbox', { name: /Bookkeeping/ });
     await user.click(within(dialog).getByRole('button', { name: 'Add task' }));
     expectRequiredFields(within(dialog).getByRole('group', { name: 'Default task 1' }), {
@@ -67,7 +67,7 @@ describe('mandatory fields of the catalogue dialogs', () => {
     const user = userEvent.setup();
     renderInOrg(<ActivityTypesPage />);
     await user.click(await screen.findByRole('button', { name: 'Add activity type' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add activity type' });
+    const dialog = await screen.findByRole('region', { name: 'Add activity type' });
     await within(dialog).findByRole('option', { name: /Standard 20%/ });
     expectRequiredFields(dialog, {
       required: ['Name', 'Code'],

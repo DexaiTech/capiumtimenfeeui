@@ -13,7 +13,7 @@ import {
 } from '@/components/ui';
 
 import { useDeleteContact, useUpdateContact } from '../../api';
-import { ContactFormDialog, type ContactTarget } from '../../components/ContactFormDialog';
+import { ContactFormPanel, type ContactTarget } from '../../components/ContactFormPanel';
 import type { ClientDetail, ContactRead } from '../../types';
 import { describeError } from '../errors';
 
@@ -115,6 +115,7 @@ export function ContactsTab({ client, canEdit }: ContactsTabProps) {
 
   return (
     <>
+      <ContactFormPanel target={target} onClose={() => setTarget(null)} />
       <DataTable
         caption={`Contacts of ${client.name}`}
         columns={columns}
@@ -186,7 +187,6 @@ export function ContactsTab({ client, canEdit }: ContactsTabProps) {
           />
         }
       />
-      <ContactFormDialog target={target} onClose={() => setTarget(null)} />
       <ConfirmDialog
         open={deleting !== null}
         onClose={() => setDeleting(null)}

@@ -18,7 +18,7 @@ import { formatMoney } from '@/utils/money';
 
 import { flattenPages, useEstimateList, useEstimateSummary } from '../api';
 import { EstimateDetailDialog } from '../components/estimates/EstimateDetailDialog';
-import { EstimateFormDialog } from '../components/estimates/EstimateFormDialog';
+import { EstimateFormPanel } from '../components/estimates/EstimateFormPanel';
 import { estimateColumns } from '../components/estimates/estimateColumns';
 import { FilterPopover } from '../components/FilterPopover';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
@@ -102,6 +102,21 @@ function EstimateList() {
 
   return (
     <>
+      {form ? (
+        <EstimateFormPanel
+          open
+          estimate={form.mode === 'edit' ? form.estimate : null}
+          onClose={() => {
+            // Leaving the edit goes back to the estimate it started from.
+            if (form.mode === 'edit') setDetailId(form.estimate.id);
+            setForm(null);
+          }}
+          onSaved={(estimate) => {
+            setForm(null);
+            setDetailId(estimate.id);
+          }}
+        />
+      ) : null}
       {summary.data ? (
         <p className="text-sm text-text-muted">
           Open estimates, sent and not yet answered, are worth{' '}
@@ -206,21 +221,6 @@ function EstimateList() {
           setForm({ mode: 'edit', estimate });
         }}
       />
-      {form ? (
-        <EstimateFormDialog
-          open
-          estimate={form.mode === 'edit' ? form.estimate : null}
-          onClose={() => {
-            // Leaving the edit goes back to the estimate it started from.
-            if (form.mode === 'edit') setDetailId(form.estimate.id);
-            setForm(null);
-          }}
-          onSaved={(estimate) => {
-            setForm(null);
-            setDetailId(estimate.id);
-          }}
-        />
-      ) : null}
     </>
   );
 }

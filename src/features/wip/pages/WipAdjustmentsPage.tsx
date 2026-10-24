@@ -6,7 +6,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { useDocumentTitle, useUrlParams } from '@/hooks';
 
-import { AdjustmentFormDialog } from '../components/AdjustmentFormDialog';
+import { AdjustmentFormPanel } from '../components/AdjustmentFormPanel';
 import { AdjustmentsView } from '../components/AdjustmentsView';
 import { LedgerView } from '../components/LedgerView';
 import { PageShell } from '../components/PageShell';
@@ -39,6 +39,7 @@ export default function WipAdjustmentsPage() {
       description="Write work in progress on or off with a reason; larger amounts wait for approval. Items written off from the WIP details can be reversed under Write-offs, and the ledger records every movement."
       actions={
         <>
+          <AdjustmentFormPanel open={creating} onClose={() => setCreating(false)} />
           <SegmentedControl
             label="View"
             options={VIEWS}
@@ -77,7 +78,6 @@ export default function WipAdjustmentsPage() {
       ) : (
         <AdjustmentsView onCreate={() => setCreating(true)} />
       )}
-      <AdjustmentFormDialog open={creating} onClose={() => setCreating(false)} />
     </PageShell>
   );
 }

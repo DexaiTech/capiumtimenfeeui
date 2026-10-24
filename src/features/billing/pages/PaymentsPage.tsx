@@ -27,7 +27,7 @@ import { FilterPopover } from '../components/FilterPopover';
 import { paymentColumns } from '../components/payments/paymentColumns';
 import { PaymentDetailDialog } from '../components/payments/PaymentDetailDialog';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
-import { RecordPaymentDialog } from '../components/RecordPaymentDialog';
+import { RecordPaymentPanel } from '../components/RecordPaymentPanel';
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATE_LABELS } from '../constants';
 import { isoDateParam, oneOf, useUrlSearch } from '../hooks/useUrlSearch';
 import {
@@ -125,6 +125,7 @@ function PaymentList() {
 
   return (
     <>
+      <RecordPaymentPanel open={recording} onClose={() => setRecording(false)} />
       <DataTable
         caption="Payments"
         columns={columns}
@@ -253,7 +254,6 @@ function PaymentList() {
         }
       />
       <PaymentDetailDialog paymentId={openId} onClose={() => setOpenId(null)} />
-      <RecordPaymentDialog open={recording} onClose={() => setRecording(false)} />
     </>
   );
 }

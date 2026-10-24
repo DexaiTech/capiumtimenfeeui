@@ -3,7 +3,7 @@ import { useId, useMemo } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, DateField, Input, Modal, Select, useToast } from '@/components/ui';
+import { Button, Checkbox, DateField, Input, FormPanel, Select, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker, useVatCodes, type VatCode } from '@/features/team';
 import { todayInZone } from '@/utils/dates';
@@ -38,7 +38,7 @@ function vatChoices(codes: VatCode[] | undefined, current: string | null) {
   ];
 }
 
-export interface DisbursementFormDialogProps {
+export interface DisbursementFormPanelProps {
   /** The disbursement to change, null to record one. */
   disbursement: Disbursement | null;
   /** The client and job names to show for a disbursement being edited. */
@@ -51,7 +51,7 @@ function DisbursementForm({
   disbursement,
   names,
   onClose,
-}: Omit<DisbursementFormDialogProps, 'open'>) {
+}: Omit<DisbursementFormPanelProps, 'open'>) {
   const { organization, can } = useOrg();
   const { toast } = useToast();
   const save = useSaveDisbursement();
@@ -271,20 +271,18 @@ function DisbursementForm({
 }
 
 /** Record a disbursement (a cost paid for a client, to recharge), or change one that is unbilled. */
-export function DisbursementFormDialog({
+export function DisbursementFormPanel({
   disbursement,
   names,
   open,
   onClose,
-}: DisbursementFormDialogProps) {
+}: DisbursementFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={disbursement ? 'Edit disbursement' : 'Record disbursement'}
       description="A cost paid on a client's behalf, to recharge to them."
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? (
         <DisbursementForm
@@ -294,6 +292,6 @@ export function DisbursementFormDialog({
           onClose={onClose}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

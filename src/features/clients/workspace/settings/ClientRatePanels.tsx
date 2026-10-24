@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, Select, useToast, type SelectOption } from '@/components/ui';
+import { Button, Input, FormPanel, Select, useToast, type SelectOption } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { formatUkDate, todayInZone } from '@/utils/dates';
 import { currencySymbol, formatMoney, parsePounds } from '@/utils/money';
@@ -33,7 +33,7 @@ export interface ClientRateTarget {
   rate: ClientRateRead | null;
 }
 
-export interface ClientRateDialogProps {
+export interface ClientRatePanelProps {
   target: ClientRateTarget | null;
   onClose: () => void;
 }
@@ -167,20 +167,18 @@ function ClientRateForm({ target, onClose }: { target: ClientRateTarget; onClose
 }
 
 /** Add a rate override for the client, or change the amount of one. */
-export function ClientRateDialog({ target, onClose }: ClientRateDialogProps) {
+export function ClientRatePanel({ target, onClose }: ClientRatePanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={target !== null}
       onClose={onClose}
       title={target?.rate ? 'Edit client rate' : 'Add client rate'}
       description="A charge-out rate that applies to the time recorded for this client only."
-      size="md"
-      closeOnBackdrop={false}
     >
       {target ? (
         <ClientRateForm key={target.rate?.id ?? 'new'} target={target} onClose={onClose} />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }
 
@@ -188,7 +186,7 @@ export interface RateEndTarget {
   rate: ClientRateRead;
 }
 
-export interface RateEndDialogProps {
+export interface RateEndPanelProps {
   target: RateEndTarget | null;
   onClose: () => void;
 }
@@ -282,16 +280,10 @@ function RateEndForm({ target, onClose }: { target: RateEndTarget; onClose: () =
 }
 
 /** Sets the last day of a rate (`PATCH /rates/{id}`), or makes it open-ended again. */
-export function RateEndDialog({ target, onClose }: RateEndDialogProps) {
+export function RateEndPanel({ target, onClose }: RateEndPanelProps) {
   return (
-    <Modal
-      open={target !== null}
-      onClose={onClose}
-      title="End-date rate"
-      size="sm"
-      closeOnBackdrop={false}
-    >
+    <FormPanel open={target !== null} onClose={onClose} title="End-date rate">
       {target ? <RateEndForm key={target.rate.id} target={target} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

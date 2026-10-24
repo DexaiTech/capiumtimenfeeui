@@ -6,7 +6,7 @@ import { FormAlert, useSubmitError } from '@/components/forms';
 import {
   Button,
   Input,
-  Modal,
+  FormPanel,
   SegmentedControl,
   Select,
   Skeleton,
@@ -32,7 +32,7 @@ const METHOD_OPTIONS = PAYMENT_METHODS.map((method) => ({
   label: PAYMENT_METHOD_LABELS[method],
 }));
 
-export interface RecordPaymentDialogProps {
+export interface RecordPaymentPanelProps {
   open: boolean;
   onClose: () => void;
   /** Opens for this invoice: its client is fixed and its balance is the amount to allocate. */
@@ -40,7 +40,7 @@ export interface RecordPaymentDialogProps {
   onRecorded?: (payment: Payment) => void;
 }
 
-function PaymentForm({ invoice, onClose, onRecorded }: Omit<RecordPaymentDialogProps, 'open'>) {
+function PaymentForm({ invoice, onClose, onRecorded }: Omit<RecordPaymentPanelProps, 'open'>) {
   const { organization } = useOrg();
   const { toast } = useToast();
   const create = useCreatePayment();
@@ -270,22 +270,20 @@ function PaymentForm({ invoice, onClose, onRecorded }: Omit<RecordPaymentDialogP
 }
 
 /** Records money received from a client and allocates it (oldest invoice first, by hand, or none). */
-export function RecordPaymentDialog({
+export function RecordPaymentPanel({
   open,
   onClose,
   invoice,
   onRecorded,
-}: RecordPaymentDialogProps) {
+}: RecordPaymentPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title="Record a payment"
       description="Money received from a client. Allocate it to invoices now or later."
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? <PaymentForm invoice={invoice} onClose={onClose} onRecorded={onRecorded} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

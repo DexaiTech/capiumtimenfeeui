@@ -3,7 +3,7 @@ import { useId, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, SegmentedControl, Textarea, useToast } from '@/components/ui';
+import { Button, Input, FormPanel, SegmentedControl, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
@@ -22,7 +22,7 @@ interface RowState {
   amount: string;
 }
 
-export interface CreditNoteDialogProps {
+export interface CreditNotePanelProps {
   open: boolean;
   onClose: () => void;
   /** The invoice with its lines and balance. */
@@ -30,7 +30,7 @@ export interface CreditNoteDialogProps {
   onCreated?: (note: CreditNote) => void;
 }
 
-function CreditNoteForm({ invoice, onClose, onCreated }: Omit<CreditNoteDialogProps, 'open'>) {
+function CreditNoteForm({ invoice, onClose, onCreated }: Omit<CreditNotePanelProps, 'open'>) {
   const { organization } = useOrg();
   const { toast } = useToast();
   const create = useCreateCreditNote();
@@ -262,17 +262,15 @@ function CreditNoteForm({ invoice, onClose, onCreated }: Omit<CreditNoteDialogPr
 }
 
 /** Raises a full or partial credit note against an issued invoice. */
-export function CreditNoteDialog({ open, onClose, invoice, onCreated }: CreditNoteDialogProps) {
+export function CreditNotePanel({ open, onClose, invoice, onCreated }: CreditNotePanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title="Raise a credit note"
       description={`${invoice.number ?? 'Invoice'} · ${invoice.client?.name ?? ''} · outstanding ${formatMoney(invoice.balance, invoice.currency)}`}
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? <CreditNoteForm invoice={invoice} onClose={onClose} onCreated={onCreated} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

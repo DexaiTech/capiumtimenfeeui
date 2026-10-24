@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, Textarea, useToast } from '@/components/ui';
+import { Button, Input, FormPanel, Textarea, useToast } from '@/components/ui';
 
 import { useUpdateInvoice } from '../api';
 import { headerSchema, type HeaderValues } from '../schemas/forms';
@@ -13,13 +13,13 @@ import { DialogActions } from './DialogActions';
 
 const FIELDS = ['issue_date', 'due_date', 'reference', 'notes'] as const;
 
-export interface InvoiceHeaderDialogProps {
+export interface InvoiceHeaderPanelProps {
   open: boolean;
   onClose: () => void;
   invoice: InvoiceDetail;
 }
 
-function HeaderForm({ invoice, onClose }: Omit<InvoiceHeaderDialogProps, 'open'>) {
+function HeaderForm({ invoice, onClose }: Omit<InvoiceHeaderPanelProps, 'open'>) {
   const { toast } = useToast();
   const update = useUpdateInvoice(invoice.id);
   const formId = useId();
@@ -115,10 +115,10 @@ function HeaderForm({ invoice, onClose }: Omit<InvoiceHeaderDialogProps, 'open'>
 }
 
 /** The dates, reference and notes of a draft invoice. */
-export function InvoiceHeaderDialog({ open, onClose, invoice }: InvoiceHeaderDialogProps) {
+export function InvoiceHeaderPanel({ open, onClose, invoice }: InvoiceHeaderPanelProps) {
   return (
-    <Modal open={open} onClose={onClose} title="Edit invoice details" closeOnBackdrop={false}>
+    <FormPanel open={open} onClose={onClose} title="Edit invoice details">
       {open ? <HeaderForm invoice={invoice} onClose={onClose} /> : null}
-    </Modal>
+    </FormPanel>
   );
 }

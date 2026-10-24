@@ -38,7 +38,7 @@ const menuItems = (menu: HTMLElement) =>
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add service' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Add service' });
+  const dialog = await screen.findByRole('region', { name: 'Add service' });
   // The activity types and VAT codes the form offers are loaded with it.
   await within(dialog).findByRole('checkbox', { name: /Bookkeeping/ });
   return dialog;
@@ -47,7 +47,7 @@ async function openAdd(user: User) {
 async function openEdit(user: User, name: string) {
   const menu = await openActions(user, name);
   await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Edit service' });
+  const dialog = await screen.findByRole('region', { name: 'Edit service' });
   await within(dialog).findByRole('checkbox', { name: /Bookkeeping/ });
   return dialog;
 }
@@ -258,7 +258,7 @@ describe('ServicesPage list', () => {
   });
 });
 
-describe('ServiceFormDialog', () => {
+describe('ServiceFormPanel', () => {
   it('adds a service, sends exactly the filled fields and then limits it to the ticked activity types', async () => {
     const calls: Array<{ method: string; body: unknown }> = [];
     server.use(
@@ -412,7 +412,7 @@ describe('ServiceFormDialog', () => {
     expect(
       await within(dialog).findByText('A service with this name already exists.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Add service' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Add service' })).toBeInTheDocument();
   });
 
   it('edits a service and sends only what changed, clearing a field with null', async () => {
@@ -478,7 +478,7 @@ describe('ServiceFormDialog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
     expect(await screen.findByText('Year-end accounts saved')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Edit service' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Edit service' })).not.toBeInTheDocument(),
     );
 
     dialog = await openEdit(user, 'Year-end accounts');
@@ -504,7 +504,7 @@ describe('ServiceFormDialog', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Actions for Limited' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit service' });
+    const dialog = await screen.findByRole('region', { name: 'Edit service' });
     const kept = await within(dialog).findByRole('checkbox', { name: /Training/ });
     expect(kept).toBeChecked();
     expect(within(dialog).getByText('TRN · inactive')).toBeInTheDocument();
@@ -537,13 +537,13 @@ describe('ServiceFormDialog', () => {
       ),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Add service' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Add service' })).not.toBeInTheDocument(),
     );
   });
 });
 
-describe('ServiceFormDialog default tasks', () => {
-  const dialogOf = () => screen.getByRole('dialog', { name: 'Edit service' });
+describe('ServiceFormPanel default tasks', () => {
+  const dialogOf = () => screen.getByRole('region', { name: 'Edit service' });
   const titlesIn = (dialog: HTMLElement) =>
     within(dialog)
       .queryAllByRole('textbox', { name: 'Title' })
@@ -797,7 +797,7 @@ describe('ServiceFormDialog default tasks', () => {
       await screen.findByText('Payroll saved, but its default tasks were not'),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Add service' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Add service' })).not.toBeInTheDocument(),
     );
   });
 

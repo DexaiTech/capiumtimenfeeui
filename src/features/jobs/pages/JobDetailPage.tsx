@@ -22,7 +22,7 @@ import { AssigneePicker } from '../components/AssigneePicker';
 import { BudgetPanel } from '../components/BudgetPanel';
 import { CopyJobDialog } from '../components/CopyJobDialog';
 import { JobDetailsCard } from '../components/JobDetailsCard';
-import { JobFormDialog } from '../components/JobFormDialog';
+import { JobFormPanel } from '../components/JobFormPanel';
 import { JobSummaryCards } from '../components/JobSummaryCards';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { JobStatusPicker } from '../components/StatusPickers';
@@ -193,6 +193,12 @@ export default function JobDetailPage() {
         </>
       }
     >
+      <JobFormPanel
+        open={dialog === 'edit'}
+        onClose={() => setDialog(null)}
+        job={job}
+        onSaved={() => setDialog(null)}
+      />
       <div className="flex flex-wrap items-center gap-4">
         {back}
         <JobStatusPicker
@@ -242,12 +248,6 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      <JobFormDialog
-        open={dialog === 'edit'}
-        onClose={() => setDialog(null)}
-        job={job}
-        onSaved={() => setDialog(null)}
-      />
       <CopyJobDialog
         open={dialog === 'copy'}
         onClose={() => setDialog(null)}

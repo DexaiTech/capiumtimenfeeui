@@ -21,7 +21,7 @@ import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
 import { useCreateEngagementJob, useDeleteEngagement, useEngagementJobRuns } from '../../api';
-import { EngagementFormDialog, type EngagementTarget } from '../../components/EngagementFormDialog';
+import { EngagementFormPanel, type EngagementTarget } from '../../components/EngagementFormPanel';
 import { FREQUENCY_LABELS, labelOf } from '../../constants';
 import type { ClientDetail, ClientServiceRead } from '../../types';
 import type { ClientAbilities } from '../abilities';
@@ -260,6 +260,7 @@ export function ServicesCard({ client, abilities }: ServicesCardProps) {
 
   return (
     <section aria-label="Services" className="flex flex-col gap-2">
+      <EngagementFormPanel target={target} onClose={() => setTarget(null)} />
       <DataTable
         caption={`Services of ${client.name}`}
         columns={columns}
@@ -327,7 +328,6 @@ export function ServicesCard({ client, abilities }: ServicesCardProps) {
         slug={organization.slug}
         onClose={() => setViewingRuns(null)}
       />
-      <EngagementFormDialog target={target} onClose={() => setTarget(null)} />
       <ConfirmDialog
         open={removing !== null}
         onClose={closeRemove}

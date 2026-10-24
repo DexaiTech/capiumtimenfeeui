@@ -60,9 +60,9 @@ describe('adding several tasks to a job', () => {
   async function openSeveral(user: ReturnType<typeof userEvent.setup>) {
     await tasksTable();
     await user.click(screen.getByRole('button', { name: 'Add task' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add task' });
+    const dialog = await screen.findByRole('region', { name: 'Add task' });
     await user.click(within(dialog).getByRole('button', { name: 'Several tasks' }));
-    return screen.findByRole('dialog', { name: 'Add several tasks' });
+    return screen.findByRole('region', { name: 'Add several tasks' });
   }
 
   it('adds one task per line, with a pasted list marker removed, in one request', async () => {

@@ -24,7 +24,7 @@ import { formatBasisPoints } from '@/utils/money';
 
 import { flattenPages, useDeleteGrade, useGrades, useSetGradeActive } from '../api';
 import { ActiveBadge } from '../components/badges';
-import { GradeFormDialog } from '../components/grades/GradeFormDialog';
+import { GradeFormPanel } from '../components/grades/GradeFormPanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { useUrlSearch } from '../hooks/useUrlSearch';
 import type { Grade, GradeFilters, GradeSort } from '../types';
@@ -229,6 +229,11 @@ function GradeList() {
 
   return (
     <>
+      <GradeFormPanel
+        open={dialog?.type === 'form'}
+        grade={dialog?.type === 'form' ? dialog.grade : null}
+        onClose={close}
+      />
       <DataTable
         caption="Grades"
         columns={columns}
@@ -343,11 +348,6 @@ function GradeList() {
             </div>
           ) : null
         }
-      />
-      <GradeFormDialog
-        open={dialog?.type === 'form'}
-        grade={dialog?.type === 'form' ? dialog.grade : null}
-        onClose={close}
       />
       <ConfirmDialog
         open={target !== null}

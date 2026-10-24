@@ -10,7 +10,7 @@ import { useDocumentTitle } from '@/hooks';
 import { flattenPages, useBulkTickets, useTickets, useTicketTags } from '../api';
 import { LiveRegion } from '../components/LiveRegion';
 import { BulkBar } from '../components/list/BulkBar';
-import { CreateTicketDialog } from '../components/list/CreateTicketDialog';
+import { CreateTicketPanel } from '../components/list/CreateTicketPanel';
 import { TicketsTable } from '../components/list/TicketsTable';
 import { TicketsToolbar } from '../components/list/TicketsToolbar';
 import { LoadError, NoAccess } from '../components/Notices';
@@ -94,6 +94,7 @@ function TicketList() {
       <LiveRegion message={announcement} />
       <LiveRegion message={note} />
       {toolbar}
+      <CreateTicketPanel open={creating && canCreate} onClose={() => setCreating(false)} />
       {selected.size > 0 && canUpdate ? (
         <BulkBar
           count={selected.size}
@@ -169,7 +170,6 @@ function TicketList() {
           }
         />
       )}
-      <CreateTicketDialog open={creating && canCreate} onClose={() => setCreating(false)} />
     </section>
   );
 }

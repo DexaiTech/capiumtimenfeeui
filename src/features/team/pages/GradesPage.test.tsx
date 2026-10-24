@@ -22,7 +22,7 @@ async function openActions(user: User, name: string) {
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add grade' }));
-  return screen.findByRole('dialog', { name: 'Add grade' });
+  return screen.findByRole('region', { name: 'Add grade' });
 }
 
 const READ_ONLY = ['member.read', 'rate.read'];
@@ -194,7 +194,7 @@ describe('GradesPage forms', () => {
       sort_order: 4,
     });
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Add grade' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('region', { name: 'Add grade' })).not.toBeInTheDocument(),
     );
   });
 
@@ -280,7 +280,7 @@ describe('GradesPage forms', () => {
 
     await openActions(user, 'Senior');
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit grade' });
+    const dialog = await screen.findByRole('region', { name: 'Edit grade' });
     expect(within(dialog).getByRole('textbox', { name: /Default cost rate/ })).toHaveValue('30.00');
     expect(within(dialog).getByRole('textbox', { name: /Default charge-out rate/ })).toHaveValue(
       '120.00',
@@ -318,7 +318,7 @@ describe('GradesPage forms', () => {
 
     await openActions(user, 'Senior');
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit grade' });
+    const dialog = await screen.findByRole('region', { name: 'Edit grade' });
     const target = within(dialog).getByRole('textbox', { name: /Default chargeable target/ });
     await user.clear(target);
     await user.type(target, '70');

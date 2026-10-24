@@ -309,7 +309,7 @@ describe('ClientsPage actions', () => {
     await clientRow(techwave.name);
 
     await user.click(screen.getByRole('button', { name: 'Add Client' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add Client' });
+    const dialog = await screen.findByRole('region', { name: 'Add Client' });
     const form = within(dialog);
     await user.click(form.getByRole('button', { name: 'Add Client' }));
     expect(await form.findByText('Enter the client name')).toBeInTheDocument();
@@ -360,10 +360,10 @@ describe('ClientsPage actions', () => {
     renderInOrg(<ClientsPage />);
     await clientRow(techwave.name);
     await user.click(screen.getByRole('button', { name: 'Add Client' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add Client' });
+    const dialog = await screen.findByRole('region', { name: 'Add Client' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Client name' }), 'Techwave');
     await user.click(within(dialog).getByRole('button', { name: 'Add Client' }));
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add Client' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Add Client' })).toBeNull());
     expect(await screen.findByText('Client created')).toBeInTheDocument();
     await waitFor(() => expect(lists).toBeGreaterThan(1));
   });
@@ -382,13 +382,13 @@ describe('ClientsPage actions', () => {
     const user = userEvent.setup();
     renderInOrg(<ClientsPage />);
     await user.click(await screen.findByRole('button', { name: `Add contact for ${mutual.name}` }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add contact' });
+    const dialog = await screen.findByRole('region', { name: 'Add contact' });
     expect(within(dialog).getByText(mutual.name)).toBeInTheDocument();
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Jane Doe');
     await user.type(within(dialog).getByRole('textbox', { name: 'Email' }), 'jane@mutual.example');
     await user.click(within(dialog).getByRole('button', { name: 'Add contact' }));
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add contact' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Add contact' })).toBeNull());
     expect(posted).toBe(mutual.id);
     expect(body).toEqual({
       name: 'Jane Doe',

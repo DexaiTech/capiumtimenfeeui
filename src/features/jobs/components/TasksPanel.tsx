@@ -32,7 +32,7 @@ import { hoursOf, isAssignedTo } from '../utils/format';
 import { AssigneePicker } from './AssigneePicker';
 import { LoadError } from './PageShell';
 import { TaskStatusPicker } from './StatusPickers';
-import { TaskFormDialog } from './TaskFormDialog';
+import { TaskFormPanel } from './TaskFormPanel';
 import { TasksBulkBar } from './TasksBulkBar';
 
 /** The tasks of a job: their status, who they are assigned to, when they are due, and the hours. */
@@ -231,6 +231,12 @@ export function TasksPanel({ job }: { job: Job }) {
 
   return (
     <>
+      <TaskFormPanel
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        job={job}
+        task={editing === 'new' ? null : editing}
+      />
       {pickedIds.length > 0 && canEdit ? (
         <div className="px-1 py-2">
           <TasksBulkBar
@@ -311,12 +317,6 @@ export function TasksPanel({ job }: { job: Job }) {
             }
           />
         }
-      />
-      <TaskFormDialog
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        job={job}
-        task={editing === 'new' ? null : editing}
       />
       <ConfirmDialog
         open={deleting !== null}

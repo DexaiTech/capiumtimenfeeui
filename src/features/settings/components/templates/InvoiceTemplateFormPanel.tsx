@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 
 import { useCreateInvoiceTemplate, useUpdateInvoiceTemplate } from '../../api/billingHooks';
@@ -20,7 +20,7 @@ import { InvoicePreview } from './InvoicePreview';
 
 const FIELDS = ['name', 'layout', 'show_logo', 'show_bank_details', 'footer_text'] as const;
 
-export interface InvoiceTemplateFormDialogProps {
+export interface InvoiceTemplateFormPanelProps {
   /** The template to change, null to add one. */
   template: InvoiceTemplate | null;
   open: boolean;
@@ -193,19 +193,19 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
  * Add an invoice template, or change one: name, layout, whether the logo and bank details are
  * printed, and the footer, with a preview of the invoice that follows the fields as they change.
  */
-export function InvoiceTemplateFormDialog({
+export function InvoiceTemplateFormPanel({
   template,
   open,
   readOnly = false,
   onClose,
-}: InvoiceTemplateFormDialogProps) {
+}: InvoiceTemplateFormPanelProps) {
   const title = readOnly
     ? 'Invoice template'
     : template
       ? 'Edit invoice template'
       : 'Add invoice template';
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
       title={title}
@@ -214,8 +214,6 @@ export function InvoiceTemplateFormDialog({
           ? template.name
           : 'How an invoice looks: the layout of its lines, the logo, the bank details and the footer.'
       }
-      size="lg"
-      closeOnBackdrop={false}
     >
       {open ? (
         <TemplateForm
@@ -225,6 +223,6 @@ export function InvoiceTemplateFormDialog({
           onClose={onClose}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

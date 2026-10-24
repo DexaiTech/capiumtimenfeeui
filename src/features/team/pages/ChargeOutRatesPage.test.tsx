@@ -32,7 +32,7 @@ async function openActions(user: User, subject: string) {
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add rate' }));
-  return screen.findByRole('dialog', { name: 'Add charge-out rate' });
+  return screen.findByRole('region', { name: 'Add charge-out rate' });
 }
 
 const setDate = (dialog: HTMLElement, label: string, value: string) =>

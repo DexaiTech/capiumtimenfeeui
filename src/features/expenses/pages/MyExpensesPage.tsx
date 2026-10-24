@@ -31,7 +31,7 @@ import {
   tableSort,
 } from '../components/claimColumns';
 import { FilterPopover } from '../components/FilterPopover';
-import { NewClaimDialog } from '../components/NewClaimDialog';
+import { NewClaimPanel } from '../components/NewClaimPanel';
 import { LoadError, PageShell } from '../components/PageShell';
 import { CLAIM_STATUS_META } from '../constants';
 import { useUrlSearch } from '../hooks/useUrlSearch';
@@ -181,6 +181,14 @@ export default function MyExpensesPage() {
       title="My Expenses"
       description="Your expense claims: record what you spent, attach the receipts and send the claim for approval."
     >
+      <NewClaimPanel
+        open={creating}
+        onClose={closeCreate}
+        onCreated={(claim) => {
+          closeCreate();
+          void navigate(routes.org.expenseClaim(organization.slug, claim.id, 'mine'));
+        }}
+      />
       {list.isError && !list.data ? (
         <LoadError
           title="Could not load your claims"
@@ -299,14 +307,6 @@ export default function MyExpensesPage() {
         />
       )}
 
-      <NewClaimDialog
-        open={creating}
-        onClose={closeCreate}
-        onCreated={(claim) => {
-          closeCreate();
-          void navigate(routes.org.expenseClaim(organization.slug, claim.id, 'mine'));
-        }}
-      />
       <ConfirmDialog
         open={deleting !== null}
         onClose={() => setDeleting(null)}

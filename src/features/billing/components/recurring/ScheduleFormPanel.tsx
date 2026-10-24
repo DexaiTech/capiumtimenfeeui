@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, DateField, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
+import { Button, DateField, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
 import { ClientPicker } from '@/features/clients';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
@@ -23,7 +23,7 @@ import { clientLabel, dateCell } from '../../utils/format';
 import { DialogActions } from '../DialogActions';
 import { LineItemsEditor } from '../documents/LineItemsEditor';
 
-export interface ScheduleFormDialogProps {
+export interface ScheduleFormPanelProps {
   open: boolean;
   onClose: () => void;
   /** The schedule to change; null sets up a new one. */
@@ -48,7 +48,7 @@ const FREQUENCY_CHOICES = SCHEDULE_FREQUENCIES.map((value) => ({
   label: SCHEDULE_FREQUENCY_LABELS[value],
 }));
 
-function ScheduleForm({ schedule, onClose, onSaved }: Omit<ScheduleFormDialogProps, 'open'>) {
+function ScheduleForm({ schedule, onClose, onSaved }: Omit<ScheduleFormPanelProps, 'open'>) {
   const { organization } = useOrg();
   const { toast } = useToast();
   const create = useCreateSchedule();
@@ -244,19 +244,17 @@ function ScheduleForm({ schedule, onClose, onSaved }: Omit<ScheduleFormDialogPro
 }
 
 /** Sets up a recurring invoice schedule, or changes one that has not ended. */
-export function ScheduleFormDialog({ open, onClose, schedule, onSaved }: ScheduleFormDialogProps) {
+export function ScheduleFormPanel({ open, onClose, schedule, onSaved }: ScheduleFormPanelProps) {
   return (
-    <Modal
+    <FormPanel
       open={open}
       onClose={onClose}
-      size="lg"
       title={schedule ? 'Edit schedule' : 'New schedule'}
       description={
         schedule
           ? 'Changes apply to the invoices drafted from now on.'
           : 'The lines below become the draft invoice of every run.'
       }
-      closeOnBackdrop={false}
     >
       {open ? (
         <ScheduleForm
@@ -266,6 +264,6 @@ export function ScheduleFormDialog({ open, onClose, schedule, onSaved }: Schedul
           onSaved={onSaved}
         />
       ) : null}
-    </Modal>
+    </FormPanel>
   );
 }

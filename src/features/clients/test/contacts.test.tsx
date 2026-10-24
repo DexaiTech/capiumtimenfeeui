@@ -53,7 +53,7 @@ describe('ContactsTab', () => {
     expect(await screen.findByText('No contacts yet')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Add contact' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add contact' });
+    const dialog = await screen.findByRole('region', { name: 'Add contact' });
     expect(within(dialog).getByRole('checkbox', { name: /^Primary contact/ })).toBeChecked();
     expect(within(dialog).getByRole('checkbox', { name: /^Billing contact/ })).not.toBeChecked();
   });
@@ -71,7 +71,7 @@ describe('ContactsTab', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Add contact' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add contact' });
+    const dialog = await screen.findByRole('region', { name: 'Add contact' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Sam Doe');
     await user.type(within(dialog).getByRole('textbox', { name: 'Position' }), 'Finance director');
     await user.type(within(dialog).getByRole('textbox', { name: 'Email' }), 'sam@techwave.example');
@@ -109,7 +109,7 @@ describe('ContactsTab', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Add contact' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add contact' });
+    const dialog = await screen.findByRole('region', { name: 'Add contact' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Email' }), 'nope');
     await user.click(within(dialog).getByRole('button', { name: 'Add contact' }));
 
@@ -131,7 +131,7 @@ describe('ContactsTab', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Add contact' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add contact' });
+    const dialog = await screen.findByRole('region', { name: 'Add contact' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Sam Doe');
     await user.click(within(dialog).getByRole('button', { name: 'Add contact' }));
 
@@ -155,7 +155,7 @@ describe('ContactsTab', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Edit Tarak Patel' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit contact' });
+    const dialog = await screen.findByRole('region', { name: 'Edit contact' });
     expect(within(dialog).getByRole('checkbox', { name: /^Billing contact/ })).toBeChecked();
     await user.type(within(dialog).getByRole('textbox', { name: 'Position' }), 'Accounts payable');
     await user.click(within(dialog).getByRole('button', { name: 'Save contact' }));
