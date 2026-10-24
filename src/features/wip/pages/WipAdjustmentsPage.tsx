@@ -39,7 +39,6 @@ export default function WipAdjustmentsPage() {
       description="Write work in progress on or off with a reason; larger amounts wait for approval. Items written off from the WIP details can be reversed under Write-offs, and the ledger records every movement."
       actions={
         <>
-          <AdjustmentFormPanel open={creating} onClose={() => setCreating(false)} />
           <SegmentedControl
             label="View"
             options={VIEWS}
@@ -71,6 +70,7 @@ export default function WipAdjustmentsPage() {
         </>
       }
     >
+      <AdjustmentFormPanel open={creating} onClose={() => setCreating(false)} />
       {view === 'ledger' ? (
         <LedgerView />
       ) : view === 'write-offs' ? (

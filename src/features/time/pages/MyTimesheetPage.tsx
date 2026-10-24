@@ -143,11 +143,6 @@ export default function MyTimesheetPage() {
       description="Record time by day, week or calendar, and submit the week for approval."
       actions={
         <>
-          <EntryPanel
-            open={adding}
-            onClose={() => setAdding(false)}
-            defaults={{ date: defaultDate }}
-          />
           {view === 'week' && weekEditable ? (
             <Button
               leftIcon={<Copy className="size-4" aria-hidden="true" />}
@@ -166,6 +161,7 @@ export default function MyTimesheetPage() {
         </>
       }
     >
+      <EntryPanel open={adding} onClose={() => setAdding(false)} defaults={{ date: defaultDate }} />
       <TimerCard />
       <PageToolbar
         start={
