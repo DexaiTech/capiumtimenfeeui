@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import type { Organization } from '@/features/organizations';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
 import { orgContext, staffRole, testOrganization } from '../test/fixtures';
@@ -187,5 +188,29 @@ describe('PracticeSettingsPage', () => {
   it('offers deleting the practice to an Owner', () => {
     renderSettings(<PracticeSettingsPage />);
     expect(screen.getByRole('button', { name: 'Delete practice' })).toBeInTheDocument();
+  });
+});
+
+describe('PracticeSettingsPage: mandatory fields', () => {
+  it('stars the name, country, payment terms and default rate, not the optional ones', async () => {
+    const user = userEvent.setup();
+    renderSettings(<PracticeSettingsPage />);
+    const form = screen.getByRole('form', { name: 'Practice settings' });
+
+    expectRequiredFields(form, {
+      required: ['Practice name'],
+      optional: ['Company number', 'Email', 'Phone'],
+    });
+    await openTab(user, 'Address');
+    expectRequiredFields(form, {
+      required: ['Country'],
+      optional: ['Address line 1', 'Address line 2', 'Town or city', 'Postcode'],
+    });
+    await openTab(user, 'Billing');
+    expectRequiredFields(form, {
+      required: [/^Default charge-out rate/, 'Payment terms (days)'],
+    });
+    await openTab(user, 'Invoices');
+    expectRequiredFields(form, { required: [], optional: ['Bank details', 'Invoice footer'] });
   });
 });

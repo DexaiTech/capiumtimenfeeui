@@ -8,6 +8,7 @@ import type {
   Service,
   ServiceCreate,
   ServiceUpdate,
+  TaskTemplateInput,
 } from '../types';
 import { useTeamInvalidation } from './invalidation';
 import { teamKeys } from './keys';
@@ -20,6 +21,24 @@ export function useServices(options: { enabled?: boolean } = {}) {
     queryKey: teamKeys.services(organization.id),
     queryFn: ({ signal }) => teamApi.listServices(organization.id, signal),
     enabled: options.enabled ?? true,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * The default tasks of a service, in order. Nothing is fetched without a service (or when
+ * `enabled` is false). Readable with the permission the other service endpoints need.
+ */
+export function useServiceTaskTemplates(
+  serviceId: string | null | undefined,
+  options: { enabled?: boolean } = {},
+) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: teamKeys.serviceTaskTemplates(organization.id, serviceId ?? ''),
+    queryFn: ({ signal }) =>
+      teamApi.listServiceTaskTemplates(organization.id, serviceId ?? '', signal),
+    enabled: Boolean(serviceId) && (options.enabled ?? true),
     staleTime: 30_000,
   });
 }
@@ -47,8 +66,20 @@ export function useVatCodes(options: { enabled?: boolean } = {}) {
 }
 
 export type SaveServiceVariables =
-  | { mode: 'create'; body: ServiceCreate; activityTypeIds: string[] }
-  | { mode: 'update'; serviceId: string; body: ServiceUpdate; activityTypeIds?: string[] };
+  | {
+      mode: 'create';
+      body: ServiceCreate;
+      activityTypeIds: string[];
+      templates?: TaskTemplateInput[];
+    }
+  | {
+      mode: 'update';
+      serviceId: string;
+      body: ServiceUpdate;
+      activityTypeIds?: string[];
+      /** The whole new list of default tasks; left out to keep the saved one. */
+      templates?: TaskTemplateInput[];
+    };
 
 /**
  * The service itself was saved, but replacing the activity types it is limited to failed. The
@@ -69,9 +100,27 @@ export class ActivityLinkError extends Error {
 }
 
 /**
- * Creates or changes a service and, when given, replaces the activity types it is limited to
- * (a separate endpoint). The two calls run in order; a failure of the second leaves the first
- * saved and is reported as an `ActivityLinkError`.
+ * The service itself (and its activity types) were saved, but replacing its default tasks failed.
+ * The caller tells the person both, so they know the service exists and what is left to redo.
+ */
+export class TaskTemplateSaveError extends Error {
+  /** The service as saved; null when only the default tasks were being changed. */
+  saved: Service | null;
+  /** Why the default tasks were refused (usually an `ApiError`). */
+  reason: unknown;
+
+  constructor(saved: Service | null, reason: unknown) {
+    super('The default tasks of the service could not be saved');
+    this.name = 'TaskTemplateSaveError';
+    this.saved = saved;
+    this.reason = reason;
+  }
+}
+
+/**
+ * Creates or changes a service and, when given, replaces the activity types it is limited to and
+ * its default tasks (separate endpoints). The calls run in order; a failure of a later one leaves
+ * the earlier ones saved and is reported as an `ActivityLinkError` or a `TaskTemplateSaveError`.
  */
 export function useSaveService() {
   const { organization } = useOrg();
@@ -83,22 +132,28 @@ export function useSaveService() {
       if (variables.mode === 'create') {
         saved = await teamApi.createService(organization.id, variables.body);
         serviceId = saved.id;
-        if (variables.activityTypeIds.length === 0) return saved;
       } else {
         serviceId = variables.serviceId;
         if (Object.keys(variables.body).length > 0) {
           saved = await teamApi.updateService(organization.id, serviceId, variables.body);
         }
       }
-      if (variables.activityTypeIds) {
+      const activityTypeIds =
+        variables.mode === 'create' && variables.activityTypeIds.length === 0
+          ? undefined
+          : variables.activityTypeIds;
+      if (activityTypeIds) {
         try {
-          await teamApi.setServiceActivityTypes(
-            organization.id,
-            serviceId,
-            variables.activityTypeIds,
-          );
+          await teamApi.setServiceActivityTypes(organization.id, serviceId, activityTypeIds);
         } catch (error) {
           throw new ActivityLinkError(saved, error);
+        }
+      }
+      if (variables.templates) {
+        try {
+          await teamApi.setServiceTaskTemplates(organization.id, serviceId, variables.templates);
+        } catch (error) {
+          throw new TaskTemplateSaveError(saved, error);
         }
       }
       return saved;

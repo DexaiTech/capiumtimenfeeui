@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { server } from '@/test/server';
 
 import { IDS, job as makeJob } from '../test/fixtures';
@@ -224,5 +225,19 @@ describe('bulk actions on the job list', () => {
     await waitFor(() => expect(table).not.toHaveAttribute('aria-busy', 'true'));
     expect(within(table).queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Bulk actions for jobs' })).not.toBeInTheDocument();
+  });
+});
+
+describe('mandatory fields of the bulk dialogs', () => {
+  it('marks the new due date until the due date is cleared instead', async () => {
+    const user = userEvent.setup();
+    setup();
+    const bar = await tick(user, 'J00002 Bookkeeping Q3');
+    await user.click(within(bar).getByRole('button', { name: 'Edit' }));
+    await user.click(await screen.findByRole('option', { name: 'Set due date' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set the due date of 1 job' });
+    expectRequiredFields(dialog, { required: ['New due date'] });
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Clear the due date instead' }));
+    expectRequiredFields(dialog, { required: [], optional: ['New due date'] });
   });
 });

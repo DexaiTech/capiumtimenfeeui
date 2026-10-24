@@ -75,6 +75,7 @@ function ReasonForm({
       >
         <Textarea
           label={label}
+          required
           rows={3}
           hint={hint}
           error={errors.reason?.message}

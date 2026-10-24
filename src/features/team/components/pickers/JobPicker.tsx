@@ -13,6 +13,7 @@ export interface JobPickerProps extends Pick<
   | 'placeholder'
   | 'hint'
   | 'error'
+  | 'required'
   | 'disabled'
   | 'clearable'
   | 'listPlacement'

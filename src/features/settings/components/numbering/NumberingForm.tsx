@@ -183,6 +183,7 @@ function NumberingEditor({ kind, sequence }: { kind: NumberedDocument; sequence:
           />
           <Input
             label="Zero padding"
+            required
             inputMode="numeric"
             autoComplete="off"
             hint={`Digits in the number, filled with leading zeros: 5 shows 42 as 00042. ${PADDING_MIN} to ${PADDING_MAX}.`}
@@ -191,6 +192,7 @@ function NumberingEditor({ kind, sequence }: { kind: NumberedDocument; sequence:
           />
           <Input
             label="Next number"
+            required
             inputMode="numeric"
             autoComplete="off"
             hint={

@@ -63,6 +63,7 @@ function LineForm({
       >
         <Textarea
           label="Description"
+          required
           rows={3}
           error={errors.description?.message}
           {...register('description')}

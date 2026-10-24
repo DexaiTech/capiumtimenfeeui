@@ -9,6 +9,8 @@ export interface CheckboxProps extends Omit<
   label: ReactNode;
   description?: ReactNode;
   error?: string;
+  /** Marks the box as mandatory (for example an acceptance): a red star and `aria-required`. */
+  required?: boolean;
   ref?: Ref<HTMLInputElement>;
 }
 
@@ -16,6 +18,7 @@ export function Checkbox({
   label,
   description,
   error,
+  required,
   id,
   className,
   ref,
@@ -41,12 +44,13 @@ export function Checkbox({
           id={inputId}
           type="checkbox"
           aria-invalid={error ? true : undefined}
+          aria-required={required || undefined}
           aria-describedby={describedBy || undefined}
           className="size-4.5 shrink-0 cursor-pointer rounded-sm accent-primary disabled:cursor-not-allowed"
           {...rest}
         />
         <span className="flex flex-col">
-          <span className="text-sm text-text">{label}</span>
+          <span className={cn('text-sm text-text', required && 'field-required')}>{label}</span>
           {description ? (
             <span id={descriptionId} className="text-xs text-text-muted">
               {description}

@@ -64,7 +64,7 @@ function CopyEntryForm({ entry, onClose }: { entry: TimeEntry; onClose: () => vo
           {entry.client_name ? ` for ${entry.client_name}` : ''} becomes a new entry. It follows the
           same rules as any new time: a closed job, a locked period or a full day refuse it.
         </p>
-        <DateField label="Copy to" value={date} onChange={setDate} error={dateError} />
+        <DateField label="Copy to" required value={date} onChange={setDate} error={dateError} />
         <Checkbox
           label="Copy the internal note too"
           checked={includeNotes}

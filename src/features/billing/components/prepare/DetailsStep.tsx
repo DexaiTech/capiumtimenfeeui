@@ -159,6 +159,7 @@ export function DetailsStep({
           <Input
             label="Issue date"
             type="date"
+            required
             error={errors.issue_date?.message}
             {...register('issue_date')}
           />

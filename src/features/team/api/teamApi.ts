@@ -43,6 +43,8 @@ import type {
   StaffLinked,
   StaffMember,
   StaffUpdate,
+  TaskTemplate,
+  TaskTemplateInput,
   VatCode,
 } from '../types';
 
@@ -178,6 +180,18 @@ export const teamApi = {
         activity_code_ids: ids,
       },
     ),
+  listServiceTaskTemplates: (organizationId: string, serviceId: string, signal?: AbortSignal) =>
+    api.get<TaskTemplate[]>(`${org(organizationId)}/services/${seg(serviceId)}/task-templates`, {
+      signal,
+    }),
+  setServiceTaskTemplates: (
+    organizationId: string,
+    serviceId: string,
+    templates: TaskTemplateInput[],
+  ) =>
+    api.put<TaskTemplate[]>(`${org(organizationId)}/services/${seg(serviceId)}/task-templates`, {
+      templates,
+    }),
   listActivityTypes: (organizationId: string, signal?: AbortSignal) =>
     api.get<ActivityType[]>(`${org(organizationId)}/activity-codes`, {
       query: { include_inactive: true },

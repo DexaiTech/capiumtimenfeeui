@@ -21,9 +21,11 @@ import type {
   JobStatus,
   JobUpdate,
   TaskFilters,
+  TaskBulkRequest,
   TaskInput,
   TaskStatus,
   TaskUpdate,
+  TasksBulkCreate,
 } from '../types';
 import { useJobInvalidation } from './invalidation';
 import { jobsApi } from './jobsApi';
@@ -237,6 +239,37 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: ({ jobId, body }: { jobId: string; body: TaskInput }) =>
       jobsApi.createTask(organization.id, jobId, body),
+    onSettled: invalidate.jobs,
+  });
+}
+
+/** Several tasks for one job, all or nothing (`POST /jobs/{id}/tasks/bulk`). */
+export function useCreateTasksBulk() {
+  const { organization } = useOrg();
+  const invalidate = useJobInvalidation();
+  return useMutation({
+    mutationFn: ({ jobId, body }: { jobId: string; body: TasksBulkCreate }) =>
+      jobsApi.createTasksBulk(organization.id, jobId, body),
+    onSettled: invalidate.jobs,
+  });
+}
+
+/** The default tasks of the job's service, added to it (`POST /jobs/{id}/tasks/from-service`). */
+export function useAddServiceTasks() {
+  const { organization } = useOrg();
+  const invalidate = useJobInvalidation();
+  return useMutation({
+    mutationFn: (jobId: string) => jobsApi.addTasksFromService(organization.id, jobId),
+    onSettled: invalidate.jobs,
+  });
+}
+
+/** One action on the selected tasks, of any jobs: all or nothing (`POST /tasks/bulk`). */
+export function useBulkTasks() {
+  const { organization } = useOrg();
+  const invalidate = useJobInvalidation();
+  return useMutation({
+    mutationFn: (body: TaskBulkRequest) => jobsApi.bulkTasks(organization.id, body),
     onSettled: invalidate.jobs,
   });
 }

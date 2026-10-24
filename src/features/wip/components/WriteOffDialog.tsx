@@ -85,6 +85,7 @@ function WriteOffForm({ items, onClose, onDone, formId }: FormProps) {
         </p>
         <Textarea
           label="Reason"
+          required
           rows={3}
           maxLength={REASON_MAX}
           error={errors.reason?.message}

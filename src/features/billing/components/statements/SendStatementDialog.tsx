@@ -186,6 +186,7 @@ function SendForm({
           <Input
             label="To"
             type="date"
+            required
             max={today}
             error={errors.date_to?.message}
             {...register('date_to')}
@@ -194,6 +195,7 @@ function SendForm({
         {single ? (
           <Textarea
             label="Send to"
+            required={!single.hasRecipient}
             rows={2}
             autoComplete="off"
             hint={

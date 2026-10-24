@@ -148,6 +148,7 @@ function ScheduleForm({ schedule, onClose, onSaved }: Omit<ScheduleFormDialogPro
             render={({ field }) => (
               <ClientPicker
                 label="Client"
+                required
                 value={field.value || null}
                 onChange={(client) => field.onChange(client?.id ?? '')}
                 error={errors.client_id?.message}
@@ -158,6 +159,7 @@ function ScheduleForm({ schedule, onClose, onSaved }: Omit<ScheduleFormDialogPro
         )}
         <Input
           label="Name"
+          required
           autoComplete="off"
           hint="What you call this schedule, for example Monthly bookkeeping."
           error={errors.name?.message}
@@ -166,6 +168,7 @@ function ScheduleForm({ schedule, onClose, onSaved }: Omit<ScheduleFormDialogPro
         <div className="grid gap-4 sm:grid-cols-3">
           <Select
             label="Frequency"
+            required
             options={FREQUENCY_CHOICES}
             error={errors.frequency?.message}
             {...register('frequency')}
@@ -177,6 +180,7 @@ function ScheduleForm({ schedule, onClose, onSaved }: Omit<ScheduleFormDialogPro
               render={({ field }) => (
                 <DateField
                   label="Start date"
+                  required
                   value={field.value || null}
                   onChange={(value) => field.onChange(value ?? '')}
                   error={errors.start_date?.message}

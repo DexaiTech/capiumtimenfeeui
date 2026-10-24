@@ -28,6 +28,7 @@ export default function PrepareInvoicePage() {
           <Card padding="sm">
             <ClientPicker
               label="Client"
+              required
               value={clientId}
               onChange={(client) => setParam({ client: client?.id ?? null })}
               listPlacement="inline"

@@ -86,6 +86,7 @@ function WipForm({ creditNote, onClose }: Omit<CreditNoteWipDialogProps, 'open'>
         </p>
         <Textarea
           label="Reason"
+          required
           rows={2}
           hint="Required. Kept in the audit log."
           error={errors.reason?.message}

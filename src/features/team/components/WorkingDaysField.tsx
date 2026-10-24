@@ -6,18 +6,30 @@ export interface WorkingDaysFieldProps {
   value: ReadonlyArray<number>;
   onChange: (days: number[]) => void;
   error?: string;
+  required?: boolean;
   className?: string;
 }
 
 /** The days of the week a person works, as seven labelled checkboxes. */
-export function WorkingDaysField({ value, onChange, error, className }: WorkingDaysFieldProps) {
+export function WorkingDaysField({
+  value,
+  onChange,
+  error,
+  required,
+  className,
+}: WorkingDaysFieldProps) {
   const toggle = (day: number, on: boolean) => {
     const next = on ? [...value, day] : value.filter((entry) => entry !== day);
     onChange([...new Set(next)].sort((a, b) => a - b));
   };
   return (
-    <fieldset className={cn('flex min-w-0 flex-col gap-1.5', className)}>
-      <legend className="mb-1.5 text-sm font-medium text-text">Working days</legend>
+    <fieldset
+      className={cn('flex min-w-0 flex-col gap-1.5', className)}
+      aria-required={required ? true : undefined}
+    >
+      <legend className={cn('mb-1.5 text-sm font-medium text-text', required && 'field-required')}>
+        Working days
+      </legend>
       <div className="flex flex-wrap gap-1.5">
         {WEEKDAYS.map((day) => {
           const checked = value.includes(day.value);

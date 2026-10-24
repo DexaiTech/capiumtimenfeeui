@@ -16,6 +16,7 @@ import type {
   Rerun,
   RerunItem,
   Service,
+  TaskTemplate,
   StaffDetail,
   StaffMember,
   VatCode,
@@ -635,6 +636,7 @@ export const service = (
   status: 'active',
   sort_order: 0,
   activity_code_ids: [],
+  task_template_count: 0,
   is_used: false,
   can_delete: true,
   created_at: NOW,
@@ -642,12 +644,38 @@ export const service = (
   ...overrides,
 });
 
+export const template = (
+  id: string,
+  title: string,
+  sortOrder: number,
+  overrides: Partial<TaskTemplate> = {},
+): TaskTemplate => ({
+  id,
+  title,
+  description: null,
+  budget_minutes: null,
+  due_offset_days: null,
+  sort_order: sortOrder,
+  ...overrides,
+});
+
+/** The default tasks of the year-end accounts service. */
+export const accountsTemplates: TaskTemplate[] = [
+  template('tpl-1', 'Request records', 0, { due_offset_days: 7 }),
+  template('tpl-2', 'Prepare the accounts', 1, {
+    budget_minutes: 270,
+    description: 'Trial balance to draft accounts',
+  }),
+  template('tpl-3', 'Partner review', 2, { due_offset_days: 30 }),
+];
+
 export const accountsService = service(accounts.id, 'ACCS', 'Year-end accounts', {
   billing_basis: 'fixed',
   default_fee: 45000,
   vat_rate_id: standardVat.id,
   invoice_description: 'Preparation of annual accounts',
   activity_code_ids: [bookkeeping.id, review.id],
+  task_template_count: accountsTemplates.length,
   is_used: true,
   can_delete: false,
 });

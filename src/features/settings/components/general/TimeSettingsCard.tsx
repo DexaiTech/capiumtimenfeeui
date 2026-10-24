@@ -93,6 +93,7 @@ export function TimeSettingsCard({ organization, editable }: GeneralCardProps) {
         />
         <Input
           label="Daily target (hours)"
+          required
           inputMode="decimal"
           autoComplete="off"
           hint="Hours in a working day, for example 7.5. Used for capacity and utilisation."

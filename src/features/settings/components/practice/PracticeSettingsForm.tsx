@@ -195,7 +195,13 @@ export function PracticeSettingsForm({ organization, editable }: PracticeSetting
         </p>
       </Card>
 
-      <Tabs label="Practice settings section" idBase="practice-settings" items={TABS} value={tab} onChange={setTab} />
+      <Tabs
+        label="Practice settings section"
+        idBase="practice-settings"
+        items={TABS}
+        value={tab}
+        onChange={setTab}
+      />
 
       <fieldset disabled={!editable} className="flex min-w-0 flex-col gap-5">
         <div
@@ -214,6 +220,7 @@ export function PracticeSettingsForm({ organization, editable }: PracticeSetting
             <div className="grid gap-5 sm:grid-cols-2">
               <Input
                 label="Practice name"
+                required
                 autoComplete="organization"
                 error={errors.name?.message}
                 {...register('name')}
@@ -288,6 +295,7 @@ export function PracticeSettingsForm({ organization, editable }: PracticeSetting
                 />
                 <Input
                   label="Country"
+                  required
                   autoComplete="country"
                   maxLength={2}
                   hint="Two letters, e.g. GB"
@@ -309,8 +317,7 @@ export function PracticeSettingsForm({ organization, editable }: PracticeSetting
             <div className="flex flex-col gap-1">
               <h2 className="text-base font-semibold text-text">Billing</h2>
               <p className="text-sm text-text-muted">
-                VAT, payment terms and the default charge-out rate used when no other rate
-                applies.
+                VAT, payment terms and the default charge-out rate used when no other rate applies.
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -323,6 +330,7 @@ export function PracticeSettingsForm({ organization, editable }: PracticeSetting
               />
               <Input
                 label={`Default charge-out rate (${symbol} per hour)`}
+                required
                 inputMode="decimal"
                 autoComplete="off"
                 leftIcon={<span className="text-sm">{symbol}</span>}
@@ -331,6 +339,7 @@ export function PracticeSettingsForm({ organization, editable }: PracticeSetting
               />
               <Input
                 label="Payment terms (days)"
+                required
                 inputMode="numeric"
                 autoComplete="off"
                 hint="Invoices fall due this many days after issue, unless the client has its own terms."

@@ -14,6 +14,7 @@ export interface RadioGroupFieldProps<TValue extends string> {
   value: TValue;
   onChange: (value: TValue) => void;
   options: ReadonlyArray<RadioOption<TValue>>;
+  required?: boolean;
   className?: string;
 }
 
@@ -23,12 +24,18 @@ export function RadioGroupField<TValue extends string>({
   value,
   onChange,
   options,
+  required,
   className,
 }: RadioGroupFieldProps<TValue>) {
   const name = useId();
   return (
-    <fieldset className={cn('flex min-w-0 flex-col gap-2', className)}>
-      <legend className="mb-1 text-sm font-medium text-text">{legend}</legend>
+    <fieldset
+      className={cn('flex min-w-0 flex-col gap-2', className)}
+      aria-required={required ? true : undefined}
+    >
+      <legend className={cn('mb-1 text-sm font-medium text-text', required && 'field-required')}>
+        {legend}
+      </legend>
       {options.map((option) => (
         <label
           key={option.value}

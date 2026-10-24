@@ -23,6 +23,8 @@ export interface SelectProps<TValue extends string = string> extends Omit<
   hideLabel?: boolean;
   error?: string;
   hint?: ReactNode;
+  /** Marks the field as mandatory: a red star on the label and `aria-required` on the select. */
+  required?: boolean;
   /** Extra classes for the select element itself (a tint), not its wrapper. */
   selectClassName?: string;
   ref?: Ref<HTMLSelectElement>;
@@ -40,6 +42,7 @@ export function Select<TValue extends string = string>({
   hideLabel,
   error,
   hint,
+  required,
   id,
   className,
   selectClassName,
@@ -56,6 +59,7 @@ export function Select<TValue extends string = string>({
       hideLabel={hideLabel}
       hint={hint}
       error={error}
+      required={required}
       className={className}
     >
       <div className="relative">
@@ -63,6 +67,7 @@ export function Select<TValue extends string = string>({
           ref={ref}
           id={ids.inputId}
           aria-invalid={error ? true : undefined}
+          aria-required={required || undefined}
           aria-describedby={describedBy(ids, hint, error)}
           className={cn(controlClasses, 'h-11 appearance-none pr-10 pl-3 md:h-8', selectClassName)}
           {...rest}

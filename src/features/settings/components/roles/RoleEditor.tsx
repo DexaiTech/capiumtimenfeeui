@@ -266,6 +266,7 @@ export function RoleEditor({
           <div className="grid gap-4 lg:grid-cols-2">
             <Input
               label="Name"
+              required
               autoComplete="off"
               error={errors.name?.message}
               {...register('name')}

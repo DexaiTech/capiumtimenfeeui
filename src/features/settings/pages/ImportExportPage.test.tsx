@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { server } from '@/test/server';
 
 import type { BulkImportResult, ImportResult, OpeningBalanceTimeImportResult } from '../adminTypes';
@@ -648,5 +649,27 @@ describe('the staff, rates and jobs permissions', () => {
     setup({}, only(BULK));
 
     expect(await screen.findByRole('tab', { name: 'Staff, rates & jobs' })).toBeInTheDocument();
+  });
+});
+
+describe('import dialogs: mandatory fields', () => {
+  it('stars the CSV file of the client import', async () => {
+    const dialog = (setup(), await openImport(userEvent.setup()));
+    expectRequiredFields(dialog, { required: ['CSV file'] });
+  });
+
+  it('stars the CSV file of the rates import, not its option', async () => {
+    setup();
+    const dialog = await openBulkImport(userEvent.setup(), 'rates');
+    expectRequiredFields(dialog, {
+      required: ['CSV file'],
+      optional: [/End the earlier rate/],
+    });
+  });
+
+  it('stars the CSV file of the historic time import', async () => {
+    setup();
+    const dialog = await openOpeningBalanceImport(userEvent.setup());
+    expectRequiredFields(dialog, { required: ['CSV file'] });
   });
 });

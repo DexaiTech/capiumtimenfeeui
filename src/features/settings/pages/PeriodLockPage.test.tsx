@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { server } from '@/test/server';
 
 import { historyOf, lockedThrough, NOT_LOCKED, reopenedEvent } from '../test/adminFixtures';
@@ -382,5 +383,23 @@ describe('a failed load', () => {
     expect(
       await screen.findByRole('heading', { name: 'Locked through 28/02/2026' }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('mandatory fields of the period lock dialogs', () => {
+  it('stars the day to lock through, not the reason', async () => {
+    setup();
+    const dialog = await openLockDialog(userEvent.setup());
+    expectRequiredFields(dialog, { required: ['Lock through'], optional: ['Reason (optional)'] });
+  });
+
+  it('stars the reason always, and the day only when moving the lock back', async () => {
+    const user = userEvent.setup();
+    setup();
+    const dialog = await openReopenDialog(user);
+    expectRequiredFields(dialog, { required: ['New last locked day', 'Reason'] });
+    await user.click(within(dialog).getByRole('button', { name: 'Remove the lock' }));
+    expect(within(dialog).queryByLabelText('New last locked day')).not.toBeInTheDocument();
+    expectRequiredFields(dialog, { required: ['Reason'] });
   });
 });

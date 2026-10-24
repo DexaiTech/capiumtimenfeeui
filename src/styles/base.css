@@ -1,6 +1,20 @@
 @import 'tailwindcss';
 @import './theme.css';
 
+@layer components {
+  /*
+   * A required field: a red star after its label. It is drawn by CSS, so the label's text (and the
+   * control's accessible name) stay as written; the control carries aria-required for assistive
+   * technology. The second `content` has empty alternative text where that is supported.
+   */
+  .field-required::after {
+    margin-inline-start: 0.2em;
+    color: var(--color-danger);
+    content: '*';
+    content: '*' / '';
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;

@@ -9,6 +9,7 @@ import { fail, ok, server } from '@/test/server';
 
 import {
   accountsService,
+  accountsTemplates,
   archivedService,
   bookkeeping,
   review,
@@ -79,13 +80,15 @@ describe('ServicesPage list', () => {
     expect(accounts.getByText('Bookkeeping')).toBeInTheDocument();
     expect(accounts.getByText('Review')).toBeInTheDocument();
     expect(accounts.getByText('Active')).toBeInTheDocument();
+    // The number of default tasks.
+    expect(accounts.getByText('3')).toBeInTheDocument();
 
     const tax = within(await row(/^Tax advice/));
     expect(tax.getByText('Ad hoc tax questions')).toBeInTheDocument();
     expect(tax.getByText('Hourly')).toBeInTheDocument();
     expect(tax.getByText('Non-billable')).toBeInTheDocument();
-    // Without a fee, a VAT code or an invoice description: a dash; no limit: every type.
-    expect(tax.getAllByText('—')).toHaveLength(3);
+    // Without a fee, a VAT code, an invoice description or default tasks: a dash; no limit: every type.
+    expect(tax.getAllByText('—')).toHaveLength(4);
     expect(tax.getByText('All activity types')).toBeInTheDocument();
 
     expect(within(await row(/^Legacy payroll/)).getByText('Inactive')).toBeInTheDocument();
@@ -536,6 +539,282 @@ describe('ServiceFormDialog', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Add service' })).not.toBeInTheDocument(),
     );
+  });
+});
+
+describe('ServiceFormDialog default tasks', () => {
+  const dialogOf = () => screen.getByRole('dialog', { name: 'Edit service' });
+  const titlesIn = (dialog: HTMLElement) =>
+    within(dialog)
+      .queryAllByRole('textbox', { name: 'Title' })
+      .map((box) => (box as HTMLInputElement).value);
+
+  it('shows the count of default tasks in its own sortable column', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    await row(/^Year-end accounts/);
+    expect(screen.getByRole('columnheader', { name: /Default tasks/ })).toBeInTheDocument();
+    expect(within(await row(/^Tax advice/)).getAllByText('—').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: 'Default tasks' }));
+    await user.click(screen.getByRole('button', { name: 'Default tasks' }));
+    expect(names()[0]?.startsWith('Year-e')).toBe(true);
+  });
+
+  it('loads the default tasks of the service being edited, in order', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openEdit(user, 'Year-end accounts');
+    await waitFor(() =>
+      expect(titlesIn(dialog)).toEqual([
+        'Request records',
+        'Prepare the accounts',
+        'Partner review',
+      ]),
+    );
+    const second = within(within(dialog).getByRole('group', { name: 'Default task 2' }));
+    expect(second.getByRole('textbox', { name: 'Hours budget' })).toHaveValue('4:30');
+    expect(second.getByRole('textbox', { name: 'Description' })).toHaveValue(
+      'Trial balance to draft accounts',
+    );
+    const first = within(within(dialog).getByRole('group', { name: 'Default task 1' }));
+    expect(first.getByRole('textbox', { name: 'Due (days after the job starts)' })).toHaveValue(
+      '7',
+    );
+    // Nothing changed: nothing to save.
+    expect(within(dialog).getByRole('button', { name: 'Save service' })).toBeDisabled();
+  });
+
+  it('saves a changed list with PUT, replacing the whole ordered list, and no service PATCH', async () => {
+    const calls: Array<{ method: string; body: unknown }> = [];
+    server.use(
+      http.patch(orgApiPath(`/services/${accountsService.id}`), async ({ request }) => {
+        calls.push({ method: 'PATCH', body: await request.json() });
+        return ok(accountsService);
+      }),
+      http.put(
+        orgApiPath(`/services/${accountsService.id}/task-templates`),
+        async ({ request }) => {
+          calls.push({ method: 'PUT', body: await request.json() });
+          return ok(accountsTemplates);
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openEdit(user, 'Year-end accounts');
+    await waitFor(() => expect(titlesIn(dialog)).toHaveLength(3));
+
+    await user.click(within(dialog).getByRole('button', { name: 'Remove task 2' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Move task 2 up' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add task' }));
+    const added = within(within(dialog).getByRole('group', { name: 'Default task 3' }));
+    await user.type(added.getByRole('textbox', { name: 'Title' }), 'File the accounts');
+    await user.type(added.getByRole('textbox', { name: 'Hours budget' }), '0:45{Enter}');
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+
+    expect(await screen.findByText('Year-end accounts saved')).toBeInTheDocument();
+    expect(calls).toEqual([
+      {
+        method: 'PUT',
+        body: {
+          templates: [
+            {
+              title: 'Partner review',
+              description: null,
+              budget_minutes: null,
+              due_offset_days: 30,
+            },
+            {
+              title: 'Request records',
+              description: null,
+              budget_minutes: null,
+              due_offset_days: 7,
+            },
+            {
+              title: 'File the accounts',
+              description: null,
+              budget_minutes: 45,
+              due_offset_days: null,
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
+  it('does not send the default tasks when only the service changed', async () => {
+    const calls: string[] = [];
+    server.use(
+      http.patch(orgApiPath(`/services/${accountsService.id}`), () => {
+        calls.push('PATCH');
+        return ok(accountsService);
+      }),
+      http.put(orgApiPath(`/services/${accountsService.id}/task-templates`), () => {
+        calls.push('PUT');
+        return ok([]);
+      }),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openEdit(user, 'Year-end accounts');
+    await waitFor(() => expect(titlesIn(dialog)).toHaveLength(3));
+    const name = within(dialog).getByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.type(name, 'Annual accounts');
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+    expect(await screen.findByText('Annual accounts saved')).toBeInTheDocument();
+    expect(calls).toEqual(['PATCH']);
+  });
+
+  it('saves a changed list when it is all that changed, and an emptied list clears them', async () => {
+    const calls: Array<{ method: string; body: unknown }> = [];
+    server.use(
+      http.patch(orgApiPath(`/services/${accountsService.id}`), async ({ request }) => {
+        calls.push({ method: 'PATCH', body: await request.json() });
+        return ok(accountsService);
+      }),
+      http.put(
+        orgApiPath(`/services/${accountsService.id}/task-templates`),
+        async ({ request }) => {
+          calls.push({ method: 'PUT', body: await request.json() });
+          return ok([]);
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openEdit(user, 'Year-end accounts');
+    await waitFor(() => expect(titlesIn(dialog)).toHaveLength(3));
+    for (let i = 0; i < 3; i += 1) {
+      await user.click(within(dialog).getByRole('button', { name: 'Remove task 1' }));
+    }
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+    expect(await screen.findByText('Year-end accounts saved')).toBeInTheDocument();
+    expect(calls).toEqual([{ method: 'PUT', body: { templates: [] } }]);
+  });
+
+  it('adds a service with default tasks: the service first, then the list', async () => {
+    const calls: Array<{ method: string; path: string; body: unknown }> = [];
+    server.use(
+      http.post(orgApiPath('/services'), async ({ request }) => {
+        calls.push({ method: 'POST', path: '/services', body: await request.json() });
+        return ok(service('service-pay', 'PAY', 'Payroll'), { status: 201 });
+      }),
+      http.put(orgApiPath('/services/service-pay/task-templates'), async ({ request }) => {
+        calls.push({ method: 'PUT', path: 'task-templates', body: await request.json() });
+        return ok([]);
+      }),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openAdd(user);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Payroll');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Code' }), 'pay');
+    await user.click(within(dialog).getByRole('button', { name: 'Paste a list' }));
+    await user.click(within(dialog).getByRole('textbox', { name: 'Tasks to add' }));
+    await user.paste('1. Collect inputs\n2. Run payroll');
+    await user.click(within(dialog).getByRole('button', { name: 'Add 2 tasks' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add service' }));
+
+    expect(await screen.findByText('Payroll added')).toBeInTheDocument();
+    expect(calls.map((call) => call.method)).toEqual(['POST', 'PUT']);
+    expect(calls[1]?.body).toEqual({
+      templates: [
+        { title: 'Collect inputs', description: null, budget_minutes: null, due_offset_days: null },
+        { title: 'Run payroll', description: null, budget_minutes: null, due_offset_days: null },
+      ],
+    });
+  });
+
+  it('does not save and shows the errors while a row has no title or a wrong number of days', async () => {
+    let puts = 0;
+    server.use(
+      http.put(orgApiPath(`/services/${accountsService.id}/task-templates`), () => {
+        puts += 1;
+        return ok([]);
+      }),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openEdit(user, 'Year-end accounts');
+    await waitFor(() => expect(titlesIn(dialog)).toHaveLength(3));
+    await user.clear(within(dialog).getAllByRole('textbox', { name: 'Title' })[0] as HTMLElement);
+    const days = within(dialog).getAllByRole('textbox', {
+      name: 'Due (days after the job starts)',
+    })[2] as HTMLElement;
+    await user.clear(days);
+    await user.type(days, '4000');
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+
+    expect(await within(dialog).findByText('Enter the task title')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('Enter a whole number of days from 0 to 3650'),
+    ).toBeInTheDocument();
+    expect(puts).toBe(0);
+  });
+
+  it('shows the API refusal of the list in the dialog and keeps it open', async () => {
+    server.use(
+      http.put(orgApiPath(`/services/${accountsService.id}/task-templates`), () =>
+        fail(422, 'VALIDATION_ERROR', 'Some fields are not valid.', {
+          details: [
+            { field: 'templates.0.title', code: 'too_long', message: 'The title is too long.' },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openEdit(user, 'Year-end accounts');
+    await waitFor(() => expect(titlesIn(dialog)).toHaveLength(3));
+    await user.click(within(dialog).getByRole('button', { name: 'Remove task 3' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+
+    expect(await within(dialog).findByText('The title is too long.')).toBeInTheDocument();
+    expect(dialogOf()).toBeInTheDocument();
+  });
+
+  it('says so when a new service was saved but its default tasks were refused', async () => {
+    server.use(
+      http.post(orgApiPath('/services'), () =>
+        ok(service('service-pay', 'PAY', 'Payroll'), { status: 201 }),
+      ),
+      http.put(orgApiPath('/services/service-pay/task-templates'), () =>
+        fail(403, 'PERMISSION_DENIED', 'You need settings.manage.'),
+      ),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openAdd(user);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Payroll');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Code' }), 'pay');
+    await user.click(within(dialog).getByRole('button', { name: 'Add task' }));
+    await user.type(within(dialog).getByRole('textbox', { name: 'Title' }), 'Run payroll');
+    await user.click(within(dialog).getByRole('button', { name: 'Add service' }));
+
+    expect(
+      await screen.findByText('Payroll saved, but its default tasks were not'),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Add service' })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('offers a retry when the default tasks cannot be loaded, and does not touch them', async () => {
+    let attempt = 0;
+    server.use(
+      http.get(orgApiPath(`/services/${accountsService.id}/task-templates`), () => {
+        attempt += 1;
+        return attempt === 1 ? fail(500, 'INTERNAL_ERROR', 'Boom.') : ok(accountsTemplates);
+      }),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+    const dialog = await openEdit(user, 'Year-end accounts');
+    expect(await within(dialog).findByText(/Could not load the default tasks/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(titlesIn(dialog)).toHaveLength(3));
   });
 });
 

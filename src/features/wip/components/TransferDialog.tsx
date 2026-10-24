@@ -176,6 +176,7 @@ function TransferForm({ preset = null, onClose, onDone, formId }: FormProps) {
             {can(PERMISSIONS.clientRead) ? (
               <ClientPicker
                 label="Client"
+                required
                 value={clientId || null}
                 onChange={(id) => {
                   setValue('client_id', id ?? '', { shouldDirty: true });
@@ -188,6 +189,7 @@ function TransferForm({ preset = null, onClose, onDone, formId }: FormProps) {
             ) : null}
             <JobPicker
               label="From job"
+              required
               hint="The job the WIP leaves"
               value={fromJobId || null}
               clientId={clientId || null}
@@ -206,6 +208,7 @@ function TransferForm({ preset = null, onClose, onDone, formId }: FormProps) {
           render={({ field }) => (
             <JobPicker
               label="To job"
+              required
               hint="Both jobs must be the same client's and open"
               value={field.value || null}
               clientId={clientId || null}
@@ -227,6 +230,7 @@ function TransferForm({ preset = null, onClose, onDone, formId }: FormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Amount (£)"
+              required
               inputMode="decimal"
               autoComplete="off"
               error={errors.amount?.message}
@@ -243,8 +247,10 @@ function TransferForm({ preset = null, onClose, onDone, formId }: FormProps) {
           </div>
         ) : null}
         {mode === 'items' && !preset ? (
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="mb-1 text-sm font-medium text-text">Items to move</legend>
+          <fieldset className="flex flex-col gap-1.5" aria-required="true">
+            <legend className="field-required mb-1 text-sm font-medium text-text">
+              Items to move
+            </legend>
             {fromJobId === '' ? (
               <p className="text-xs text-text-muted">Choose the job the WIP leaves first.</p>
             ) : listing.isPending ? (
@@ -296,6 +302,7 @@ function TransferForm({ preset = null, onClose, onDone, formId }: FormProps) {
         />
         <Textarea
           label="Reason"
+          required
           rows={3}
           maxLength={REASON_MAX}
           error={errors.reason?.message}

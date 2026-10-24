@@ -39,13 +39,6 @@ const PRIORITY_CHOICES = TICKET_PRIORITIES.map((value) => ({
 
 const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes('Files');
 
-/** A label with the red star of a required field. */
-const required = (text: string) => (
-  <>
-    {text} <span className="text-danger">*</span>
-  </>
-);
-
 interface StagedFile {
   id: string;
   file: File;
@@ -156,7 +149,8 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
       >
         <div className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr]">
           <Textarea
-            label={required('Subject')}
+            label="Subject"
+            required
             rows={2}
             maxLength={SUBJECT_MAX_LENGTH}
             autoComplete="off"
@@ -197,8 +191,8 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
           name="description"
           render={({ field }) => (
             <RichTextEditor
-              label={required('Description')}
-              ariaLabel="Description"
+              label="Description"
+              required
               placeholder="Describe the problem: what happened, what you expected, how to repeat it…"
               value={descriptionHtml}
               error={errors.description?.message}

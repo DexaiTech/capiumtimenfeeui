@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import type { Organization } from '@/features/organizations';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
 import { orgContext, staffRole, testOrganization } from '../test/fixtures';
@@ -68,9 +69,9 @@ describe('GeneralSettingsPage', () => {
       billing.getByRole('textbox', { name: 'WIP adjustment approval threshold (£)' }),
     ).toHaveValue('500.00');
     expect(billing.getByRole('switch', { name: 'Write-off percentage rule' })).toBeChecked();
-    expect(
-      billing.getByRole('textbox', { name: 'Write-off approval threshold (%)' }),
-    ).toHaveValue('10');
+    expect(billing.getByRole('textbox', { name: 'Write-off approval threshold (%)' })).toHaveValue(
+      '10',
+    );
     expect(billing.getByRole('switch', { name: 'Invoice approval' })).not.toBeChecked();
     expect(billing.getByRole('textbox', { name: 'Invoice approval threshold (£)' })).toHaveValue(
       '0.00',
@@ -446,5 +447,35 @@ describe('GeneralSettingsPage', () => {
     expect(
       within(card('Expenses')).getByRole('textbox', { name: 'Mileage rate (£ per mile)' }),
     ).toBeDisabled();
+  });
+});
+
+describe('GeneralSettingsPage: mandatory fields', () => {
+  it('stars the typed values of every card, and the dependent ones only while their switch is on', async () => {
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    const time = card('Time recording');
+    expectRequiredFields(time, { required: ['Daily target (hours)'] });
+    const days = within(time).getByRole('group', { name: 'Working days' });
+    expect(days).toHaveAttribute('aria-required', 'true');
+    expect(within(time).getByText('Working days')).toHaveClass('field-required');
+
+    await openTab(user, 'WIP & billing');
+    const billing = card('WIP and billing');
+    // The percentage rule is on, invoice approval and reminders are off.
+    expectRequiredFields(billing, {
+      required: [/^WIP adjustment approval threshold/, 'Write-off approval threshold (%)'],
+      optional: [/^Invoice approval threshold/, 'Days after the due date'],
+    });
+    await user.click(within(billing).getByRole('switch', { name: 'Invoice approval' }));
+    expectRequiredFields(billing, { required: [/^Invoice approval threshold/] });
+    await user.click(within(billing).getByRole('switch', { name: 'Write-off percentage rule' }));
+    expectRequiredFields(billing, { required: [], optional: ['Write-off approval threshold (%)'] });
+
+    await openTab(user, 'Expenses');
+    expectRequiredFields(card('Expenses'), {
+      required: [/^Mileage rate/, 'Expense mark-up (%)', /^Receipt required above/],
+    });
   });
 });

@@ -13,6 +13,7 @@ export interface ClientPickerProps extends Pick<
   | 'placeholder'
   | 'hint'
   | 'error'
+  | 'required'
   | 'disabled'
   | 'clearable'
   | 'listPlacement'

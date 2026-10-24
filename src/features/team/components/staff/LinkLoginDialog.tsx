@@ -148,6 +148,7 @@ function LinkLoginForm({
         />
         <Input
           label={mode === 'existing_user' ? 'Email of their existing login' : 'Sign-in email'}
+          required={mode === 'existing_user' || !staff.email}
           type="email"
           autoComplete="off"
           spellCheck={false}

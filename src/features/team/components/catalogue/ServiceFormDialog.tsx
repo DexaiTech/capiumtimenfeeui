@@ -1,15 +1,30 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Checkbox, Input, Modal, Select, Textarea, useToast } from '@/components/ui';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
-import { ActivityLinkError, useActivityTypes, useSaveService, useVatCodes } from '../../api';
+import {
+  ActivityLinkError,
+  TaskTemplateSaveError,
+  useActivityTypes,
+  useSaveService,
+  useServiceTaskTemplates,
+  useVatCodes,
+} from '../../api';
 import { serviceSchema, type ServiceValues } from '../../schemas/catalogue';
 import type { BillingBasis, Service, ServiceCreate, ServiceUpdate } from '../../types';
 import { dialogError, toFormError } from '../../utils/errors';
+import { TaskTemplateEditor } from './TaskTemplateEditor';
+import {
+  hasErrors,
+  rowsFromTemplates,
+  toTemplateInputs,
+  validateRows,
+  type TemplateRow,
+} from './taskTemplateRows';
 import { vatOptions } from './vat';
 import { DialogActions } from '../DialogActions';
 
@@ -49,6 +64,17 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
   const formId = useId();
   const vatCodes = useVatCodes();
   const activityTypes = useActivityTypes();
+  // The default tasks are edited as a list of their own: loaded when a service is edited, and
+  // saved (with the service) only when they were changed.
+  const templates = useServiceTaskTemplates(service?.id);
+  const loadedRows = useMemo(() => rowsFromTemplates(templates.data ?? []), [templates.data]);
+  const [editedRows, setEditedRows] = useState<TemplateRow[] | null>(null);
+  const [showTemplateErrors, setShowTemplateErrors] = useState(false);
+  const rows = editedRows ?? loadedRows;
+  const templatesChanged =
+    editedRows !== null &&
+    (service === null ? editedRows.length > 0 : templates.isSuccess) &&
+    JSON.stringify(toTemplateInputs(editedRows)) !== JSON.stringify(toTemplateInputs(loadedRows));
   const {
     register,
     handleSubmit,
@@ -75,6 +101,11 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
 
   const onSubmit = handleSubmit((values) => {
     clearSubmitError();
+    if (templatesChanged) {
+      setShowTemplateErrors(true);
+      if (hasErrors(validateRows(rows))) return;
+    }
+    const templateInputs = templatesChanged ? toTemplateInputs(rows) : undefined;
     const code = values.code.toUpperCase();
     const description = values.description || null;
     const fee = pence(values.default_fee);
@@ -83,6 +114,20 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
     const sortOrder = Number(values.sort_order);
     const basis: BillingBasis = values.billing_basis;
     const onError = (error: unknown) => {
+      if (error instanceof TaskTemplateSaveError) {
+        if (service) {
+          // Editing: the service is saved, nothing is lost; show why and let the person retry.
+          handleSubmitError(toFormError(error.reason));
+          return;
+        }
+        toast({
+          tone: 'warning',
+          title: `${error.saved?.name ?? values.name} saved, but its default tasks were not`,
+          description: `${dialogError(error.reason).message} Edit the service to try again.`,
+        });
+        onClose();
+        return;
+      }
       if (error instanceof ActivityLinkError) {
         // The service is saved; only its activity types were refused.
         toast({
@@ -109,7 +154,12 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
       if (vat) body.vat_rate_id = vat;
       if (invoiceText) body.invoice_description = invoiceText;
       save.mutate(
-        { mode: 'create', body, activityTypeIds: values.activity_code_ids },
+        {
+          mode: 'create',
+          body,
+          activityTypeIds: values.activity_code_ids,
+          templates: templateInputs,
+        },
         {
           onSuccess: () => {
             toast({ tone: 'success', title: `${values.name} added` });
@@ -135,7 +185,7 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
     if (invoiceText !== service.invoice_description) changes.invoice_description = invoiceText;
     if (sortOrder !== service.sort_order) changes.sort_order = sortOrder;
     const activityChanged = !sameSet(values.activity_code_ids, service.activity_code_ids);
-    if (Object.keys(changes).length === 0 && !activityChanged) {
+    if (Object.keys(changes).length === 0 && !activityChanged && !templatesChanged) {
       onClose();
       return;
     }
@@ -145,6 +195,7 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
         serviceId: service.id,
         body: changes,
         activityTypeIds: activityChanged ? values.activity_code_ids : undefined,
+        templates: templateInputs,
       },
       {
         onSuccess: () => {
@@ -173,12 +224,14 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
           <Input
             label="Name"
+            required
             autoComplete="off"
             error={errors.name?.message}
             {...register('name')}
           />
           <Input
             label="Code"
+            required
             autoComplete="off"
             maxLength={12}
             error={errors.code?.message}
@@ -277,6 +330,24 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
             </fieldset>
           )}
         />
+        {service && templates.isPending ? (
+          <p className="text-sm text-text-muted">Loading default tasks…</p>
+        ) : service && templates.isError ? (
+          <FormAlert
+            message="Could not load the default tasks of this service, so they cannot be changed now."
+            action={
+              <Button size="sm" onClick={() => void templates.refetch()}>
+                Try again
+              </Button>
+            }
+          />
+        ) : (
+          <TaskTemplateEditor
+            rows={rows}
+            onChange={setEditedRows}
+            showErrors={showTemplateErrors}
+          />
+        )}
         {submitError ? (
           <FormAlert message={submitError.message} requestId={submitError.requestId} />
         ) : null}
@@ -288,7 +359,7 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
           form={formId}
           variant="primary"
           loading={save.isPending}
-          disabled={(service !== null && !isDirty) || retryIn > 0}
+          disabled={(service !== null && !isDirty && !templatesChanged) || retryIn > 0}
         >
           {service ? 'Save service' : 'Add service'}
         </Button>

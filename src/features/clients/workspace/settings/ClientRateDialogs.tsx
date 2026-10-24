@@ -124,6 +124,7 @@ function ClientRateForm({ target, onClose }: { target: ClientRateTarget; onClose
         />
         <Input
           label={`Rate per hour (${currencySymbol(currency)})`}
+          required
           inputMode="decimal"
           autoComplete="off"
           data-autofocus
@@ -251,6 +252,7 @@ function RateEndForm({ target, onClose }: { target: RateEndTarget; onClose: () =
         </p>
         <Input
           label="Last day of the rate"
+          required
           type="date"
           min={rate.effective_from}
           data-autofocus

@@ -6,7 +6,13 @@
 export { ClientPicker } from './components/pickers/ClientPicker';
 export { JobPicker } from './components/pickers/JobPicker';
 export { StaffPicker } from './components/pickers/StaffPicker';
-export { useActivityTypes, useGradeOptions, useServices, useVatCodes } from './api';
+export {
+  useActivityTypes,
+  useGradeOptions,
+  useServices,
+  useServiceTaskTemplates,
+  useVatCodes,
+} from './api';
 export type {
   ActivityType,
   Grade,
@@ -14,5 +20,6 @@ export type {
   Service,
   StaffMember,
   StaffStatus,
+  TaskTemplate,
   VatCode,
 } from './types';

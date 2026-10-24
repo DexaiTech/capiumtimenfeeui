@@ -124,6 +124,7 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
           <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-4">
             <Input
               label="Name"
+              required
               autoComplete="off"
               hint="Shown when a template is chosen for a client."
               error={errors.name?.message}

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
 import { archivedVat, exemptVat, reducedVat, standardVat, zeroVat } from '../test/billingFixtures';
@@ -590,5 +591,21 @@ describe('VatCodesPage: default, archive, restore and delete', () => {
     renderInOrg(<VatCodesPage />);
     await chooseAction(user, 'Reduced 5%', 'Make default');
     expect(await screen.findByText("You don't have permission to do that")).toBeInTheDocument();
+  });
+});
+
+describe('VatRateFormDialog: mandatory fields', () => {
+  it('stars the name and the rate, and drops the rate star when the code charges no VAT', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<VatCodesPage />);
+    await user.click(await screen.findByRole('button', { name: 'Add VAT code' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add VAT code' });
+
+    expectRequiredFields(dialog, {
+      required: ['Name', 'Rate (%)'],
+      optional: [/Make this the default VAT code/],
+    });
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Code' }), 'exempt');
+    expectRequiredFields(dialog, { required: ['Name'], optional: ['Rate (%)'] });
   });
 });

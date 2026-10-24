@@ -88,6 +88,7 @@ function InviteForm({ staff, roles, onClose }: InviteStaffDialogProps & { staff:
             </p>
             <Input
               label="Sign-in email"
+              required={!staff.email && !staff.login_email}
               type="email"
               autoComplete="off"
               spellCheck={false}

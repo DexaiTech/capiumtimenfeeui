@@ -44,7 +44,7 @@ const TABS: ReadonlyArray<{ value: ServiceTab; label: string }> = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
 ];
-const SORTS = ['name', 'code', 'basis', 'fee', 'status'] as const;
+const SORTS = ['name', 'code', 'basis', 'fee', 'tasks', 'status'] as const;
 
 type DialogState =
   { type: 'form'; service: Service | null } | { type: 'delete'; service: Service } | null;
@@ -236,6 +236,20 @@ function ServiceList() {
               </Badge>
             ) : null}
           </span>
+        ),
+    },
+    {
+      id: 'tasks',
+      header: 'Default tasks',
+      sortable: true,
+      sortValue: (service) => service.task_template_count,
+      align: 'end',
+      className: 'w-36 whitespace-nowrap',
+      cell: (service) =>
+        service.task_template_count === 0 ? (
+          <span className="text-text-muted">—</span>
+        ) : (
+          <span className="text-text tabular-nums">{service.task_template_count}</span>
         ),
     },
     {

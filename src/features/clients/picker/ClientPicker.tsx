@@ -25,6 +25,8 @@ export interface ClientPickerProps {
   /** Called with the chosen client, or null when the choice is cleared. */
   onChange: (client: ClientOption | null) => void;
   disabled?: boolean;
+  /** Marks the field as mandatory: a red star on the label and `aria-required` on the input. */
+  required?: boolean;
   /** A validation message, shown under the field. */
   error?: string;
   hint?: ReactNode;
@@ -55,6 +57,7 @@ export function ClientPicker({
   value,
   onChange,
   disabled = false,
+  required,
   error,
   hint,
   placeholder = 'Search by name or code',
@@ -151,6 +154,7 @@ export function ClientPicker({
       hideLabel={hideLabel}
       hint={hint}
       error={error}
+      required={required}
       className={className}
     >
       <div
@@ -177,6 +181,7 @@ export function ClientPicker({
             aria-controls={listId}
             aria-autocomplete="list"
             aria-activedescendant={active ? optionId(active) : undefined}
+            aria-required={required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy(ids, hint, error)}
             disabled={disabled}

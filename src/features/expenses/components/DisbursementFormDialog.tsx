@@ -169,6 +169,7 @@ function DisbursementForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <ClientPicker
             label="Client"
+            required
             value={clientId || null}
             valueLabel={names?.client}
             onChange={(id) => {
@@ -197,6 +198,7 @@ function DisbursementForm({
             render={({ field }) => (
               <DateField
                 label="Date"
+                required
                 value={field.value || null}
                 onChange={(value) => field.onChange(value ?? '')}
                 error={errors.incurred_on?.message}
@@ -213,6 +215,7 @@ function DisbursementForm({
         </div>
         <Input
           label="Description"
+          required
           autoComplete="off"
           maxLength={LIMITS.description}
           error={errors.description?.message}
@@ -221,6 +224,7 @@ function DisbursementForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Amount before VAT (£)"
+            required
             inputMode="decimal"
             autoComplete="off"
             hint="What is recharged to the client."

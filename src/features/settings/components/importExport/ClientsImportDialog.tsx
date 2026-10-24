@@ -88,7 +88,7 @@ function ImportBody({ onClose }: { onClose: () => void }) {
         <div className="flex flex-wrap items-center gap-3">
           <label
             htmlFor={inputId}
-            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-text hover:bg-surface-hover md:h-9"
+            className="field-required inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-text hover:bg-surface-hover md:h-9"
           >
             <FileUp className="size-4" aria-hidden="true" />
             Choose CSV file
@@ -99,6 +99,7 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             accept=".csv,text/csv"
             className="sr-only"
             aria-label="CSV file"
+            aria-required="true"
             onChange={(event) => choose(event.target.files?.[0] ?? null)}
           />
           <span className="text-sm text-text-muted">{file ? file.name : 'No file chosen'}</span>

@@ -9,6 +9,7 @@ import {
   DurationInput,
   Input,
   Modal,
+  SegmentedControl,
   Select,
   Textarea,
   useToast,
@@ -28,6 +29,7 @@ import { TASK_STATUSES, type Job, type Task } from '../types';
 import { toFormError } from '../utils/errors';
 import { AssigneePicker } from './AssigneePicker';
 import { DialogActions } from './DialogActions';
+import { TasksBulkAddForm } from './TasksBulkAddForm';
 
 const FIELDS = ['title', 'description', 'due_date', 'budget_minutes', 'status'] as const;
 
@@ -114,6 +116,7 @@ function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
       >
         <Input
           label="Title"
+          required
           autoComplete="off"
           maxLength={LIMITS.taskTitle}
           error={errors.title?.message}
@@ -192,17 +195,41 @@ function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
 /** Add a task to a job, or change the title, description, due date and budget of one. */
 export function TaskFormDialog({ open, onClose, ...rest }: TaskFormDialogProps) {
   const formId = useId();
+  const [several, setSeveral] = useState(false);
+  const adding = rest.task === null;
+  const close = () => {
+    setSeveral(false);
+    onClose();
+  };
   return (
     <Modal
       open={open}
-      onClose={onClose}
-      title={rest.task ? 'Edit task' : 'Add task'}
+      onClose={close}
+      title={adding ? (several ? 'Add several tasks' : 'Add task') : 'Edit task'}
       description={rest.job.name}
       size="md"
       closeOnBackdrop={false}
     >
       {open ? (
-        <TaskForm key={rest.task?.id ?? 'new'} formId={formId} onClose={onClose} {...rest} />
+        <div className="flex flex-col gap-4">
+          {adding ? (
+            <SegmentedControl
+              label="How many tasks"
+              options={[
+                { value: 'one', label: 'One task' },
+                { value: 'several', label: 'Several tasks' },
+              ]}
+              value={several ? 'several' : 'one'}
+              onChange={(value) => setSeveral(value === 'several')}
+              className="self-start"
+            />
+          ) : null}
+          {adding && several ? (
+            <TasksBulkAddForm job={rest.job} formId={formId} onClose={close} />
+          ) : (
+            <TaskForm key={rest.task?.id ?? 'new'} formId={formId} onClose={close} {...rest} />
+          )}
+        </div>
       ) : null}
     </Modal>
   );

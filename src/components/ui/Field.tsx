@@ -12,6 +12,8 @@ export interface FieldProps {
   error?: string;
   /** Rendered at the end of the label row (for example a "Forgot password?" link). */
   labelAction?: ReactNode;
+  /** A red star after the label (the control must carry `aria-required` itself). */
+  required?: boolean;
   className?: string;
   children: ReactNode;
 }
@@ -24,6 +26,7 @@ export function Field({
   hint,
   error,
   labelAction,
+  required,
   className,
   children,
 }: FieldProps) {
@@ -37,7 +40,11 @@ export function Field({
       >
         <label
           htmlFor={ids.inputId}
-          className={cn('text-xs font-medium text-text', hideLabel && 'sr-only')}
+          className={cn(
+            'text-xs font-medium text-text',
+            required && 'field-required',
+            hideLabel && 'sr-only',
+          )}
         >
           {label}
         </label>

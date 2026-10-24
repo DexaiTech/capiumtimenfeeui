@@ -547,6 +547,8 @@ export interface Service {
   sort_order: number;
   /** The activity types time on this service's jobs is limited to; empty means every type. */
   activity_code_ids: string[];
+  /** How many default tasks a new job of this service can start with. */
+  task_template_count: number;
   is_used: boolean;
   can_delete: boolean;
   created_at: IsoDateTime;
@@ -612,6 +614,25 @@ export interface ActivityTypeUpdate {
   vat_rate_id?: string | null;
   invoice_description?: string | null;
   is_active?: boolean;
+}
+
+/** One default task of a service (`GET {org}/services/{id}/task-templates`), in list order. */
+export interface TaskTemplate {
+  id: string;
+  title: string;
+  description: string | null;
+  budget_minutes: number | null;
+  /** Days after the job's start date the task is due; null for no due date. */
+  due_offset_days: number | null;
+  sort_order: number;
+}
+
+/** One entry of the list `PUT {org}/services/{id}/task-templates` replaces the templates with. */
+export interface TaskTemplateInput {
+  title: string;
+  description?: string | null;
+  budget_minutes?: number | null;
+  due_offset_days?: number | null;
 }
 
 export interface ServiceActivityTypes {

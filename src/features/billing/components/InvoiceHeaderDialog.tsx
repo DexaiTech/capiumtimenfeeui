@@ -46,7 +46,8 @@ function HeaderForm({ invoice, onClose }: Omit<InvoiceHeaderDialogProps, 'open'>
     const changes: InvoiceHeaderUpdate = {};
     if (values.issue_date !== (invoice.issue_date ?? '')) changes.issue_date = values.issue_date;
     if (values.due_date !== (invoice.due_date ?? '')) changes.due_date = values.due_date;
-    if (values.reference !== (invoice.reference ?? '')) changes.reference = values.reference || null;
+    if (values.reference !== (invoice.reference ?? ''))
+      changes.reference = values.reference || null;
     if (values.notes !== (invoice.notes ?? '')) changes.notes = values.notes || null;
     if (Object.keys(changes).length === 0) {
       onClose();
@@ -73,12 +74,14 @@ function HeaderForm({ invoice, onClose }: Omit<InvoiceHeaderDialogProps, 'open'>
           <Input
             label="Issue date"
             type="date"
+            required
             error={errors.issue_date?.message}
             {...register('issue_date')}
           />
           <Input
             label="Due date"
             type="date"
+            required
             error={errors.due_date?.message}
             {...register('due_date')}
           />

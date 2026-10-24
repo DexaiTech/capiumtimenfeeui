@@ -84,16 +84,16 @@ function ImportBody({ onClose }: { onClose: () => void }) {
     <>
       <div className="flex flex-col gap-4">
         <p className="text-sm text-text-muted">
-          Upload a CSV of historic unbilled time from a previous system (at most 100 rows):
-          client code, staff email, date (ISO <code>YYYY-MM-DD</code>) and hours are required;
-          activity code, job number and billable (Y/N, default Y) are optional. The file is
-          checked first; nothing is created until every row is valid. Imported time is shown
-          separately from newly recorded time, and can still be billed together with it.
+          Upload a CSV of historic unbilled time from a previous system (at most 100 rows): client
+          code, staff email, date (ISO <code>YYYY-MM-DD</code>) and hours are required; activity
+          code, job number and billable (Y/N, default Y) are optional. The file is checked first;
+          nothing is created until every row is valid. Imported time is shown separately from newly
+          recorded time, and can still be billed together with it.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label
             htmlFor={inputId}
-            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-text hover:bg-surface-hover md:h-9"
+            className="field-required inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-text hover:bg-surface-hover md:h-9"
           >
             <FileUp className="size-4" aria-hidden="true" />
             Choose CSV file
@@ -104,6 +104,7 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             accept=".csv,text/csv"
             className="sr-only"
             aria-label="CSV file"
+            aria-required="true"
             onChange={(event) => choose(event.target.files?.[0] ?? null)}
           />
           <span className="text-sm text-text-muted">{file ? file.name : 'No file chosen'}</span>

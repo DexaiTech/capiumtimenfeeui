@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
@@ -10,12 +10,13 @@ import {
   Input,
   Modal,
   Select,
+  Switch,
   Textarea,
   useToast,
   type SelectOption,
 } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
-import { ClientPicker, useServices, type Service } from '@/features/team';
+import { ClientPicker, useServices, useServiceTaskTemplates, type Service } from '@/features/team';
 import { penceToPoundsInput } from '@/utils/money';
 
 import { useCreateJob, useMembers, useUpdateJob } from '../api';
@@ -94,10 +95,18 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
     setError,
     fields: FIELDS,
   });
-  const [basis, clientValue, budgetMinutes] = useWatch({
+  const [basis, clientValue, budgetMinutes, serviceValue, startDate] = useWatch({
     control,
-    name: ['billing_basis', 'client_id', 'budget_minutes'],
+    name: ['billing_basis', 'client_id', 'budget_minutes', 'service_id', 'start_date'],
   });
+
+  // A new job can start with the default tasks of its service: offered (on) when it has some.
+  const [addDefaultTasks, setAddDefaultTasks] = useState(true);
+  const defaultTaskCount = job
+    ? 0
+    : (services.data?.find((entry) => entry.id === serviceValue)?.task_template_count ?? 0);
+  const offersDefaultTasks = defaultTaskCount > 0;
+  const defaultTasks = useServiceTaskTemplates(serviceValue, { enabled: offersDefaultTasks });
 
   const memberOptions = (current: string): SelectOption[] => {
     const options: SelectOption[] = [
@@ -141,7 +150,9 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
     clearSubmitError();
     const onError = (error: unknown) => handleSubmitError(toFormError(error));
     if (!job) {
-      create.mutate(toJobInput(values), {
+      const input = toJobInput(values);
+      if (offersDefaultTasks && addDefaultTasks) input.add_default_tasks = true;
+      create.mutate(input, {
         onSuccess: (created) => {
           toast({ tone: 'success', title: 'Job created', description: jobLabel(created) });
           onSaved(created);
@@ -177,8 +188,8 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
       >
         {managed ? (
           <p className="rounded-md bg-surface-sunken px-3 py-2 text-xs text-text-muted">
-            This job is linked to an external job: its name, service, manager, partner and dates
-            are managed there.
+            This job is linked to an external job: its name, service, manager, partner and dates are
+            managed there.
           </p>
         ) : null}
         {job ? (
@@ -191,6 +202,7 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
         ) : can('client.read') ? (
           <ClientPicker
             label="Client"
+            required
             value={clientValue || null}
             onChange={(id) => setValue('client_id', id ?? '', { shouldDirty: true })}
             error={errors.client_id?.message}
@@ -202,6 +214,7 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
         )}
         <Input
           label="Job name"
+          required
           autoComplete="off"
           maxLength={LIMITS.jobName}
           disabled={managed}
@@ -358,6 +371,40 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
             )}
           />
         </div>
+        {offersDefaultTasks ? (
+          <div className="flex flex-col gap-1 rounded-md border border-border px-3 py-1">
+            <Switch
+              checked={addDefaultTasks}
+              onChange={setAddDefaultTasks}
+              label={`Add this service's ${String(defaultTaskCount)} default ${defaultTaskCount === 1 ? 'task' : 'tasks'}`}
+              description="They are added to the job when it is created, in this order, assigned to the people on the job."
+            />
+            {addDefaultTasks ? (
+              <div className="pb-2">
+                {defaultTasks.isPending ? (
+                  <p className="text-xs text-text-muted">Loading the tasks…</p>
+                ) : defaultTasks.isError ? (
+                  <p className="text-xs text-text-muted">The list of tasks could not be loaded.</p>
+                ) : (
+                  <>
+                    <ol className="list-decimal pl-5 text-sm text-text">
+                      {defaultTasks.data.map((entry) => (
+                        <li key={entry.id}>{entry.title}</li>
+                      ))}
+                    </ol>
+                    {defaultTasks.data.some((entry) => entry.due_offset_days !== null) ? (
+                      <p className="mt-1 text-xs text-text-muted">
+                        {startDate
+                          ? 'Tasks with a due date fall that many days after the start date of the job.'
+                          : 'Set a start date to give these tasks due dates: without one, they have none.'}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {job ? null : (
           <Select
             label="Starts as"

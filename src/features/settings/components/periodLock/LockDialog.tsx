@@ -66,6 +66,7 @@ function LockForm({ currentLock, onClose }: { currentLock: string | null; onClos
       >
         <Input
           label="Lock through"
+          required
           type="date"
           min={currentLock ? addDays(currentLock, 1) : undefined}
           max={today}

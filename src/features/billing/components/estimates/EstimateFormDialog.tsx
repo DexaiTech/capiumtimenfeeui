@@ -115,6 +115,7 @@ function EstimateForm({ estimate, onClose, onSaved }: Omit<EstimateFormDialogPro
             render={({ field }) => (
               <ClientPicker
                 label="Client"
+                required
                 value={field.value || null}
                 onChange={(client) => field.onChange(client?.id ?? '')}
                 error={errors.client_id?.message}

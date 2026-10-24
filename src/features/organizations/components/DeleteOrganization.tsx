@@ -102,6 +102,7 @@ export function DeleteOrganization({ organization }: DeleteOrganizationProps) {
                 confirm
               </>
             }
+            required
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}

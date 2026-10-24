@@ -23,6 +23,8 @@ export interface MemberPickerProps {
   hint?: ReactNode;
   error?: string;
   disabled?: boolean;
+  /** Marks the field as mandatory: a red star on the label and `aria-required` on the input. */
+  required?: boolean;
   /**
    * `overlay` floats the results over what follows; `inline` pushes it down, for use
    * inside a scrolling container (a modal) that would clip an overlay.
@@ -45,6 +47,7 @@ export function MemberPicker({
   hint,
   error,
   disabled = false,
+  required,
   listPlacement = 'overlay',
   className,
 }: MemberPickerProps) {
@@ -123,7 +126,14 @@ export function MemberPicker({
   const display = open ? text : (selected?.full_name ?? (value ? 'Selected person' : ''));
 
   return (
-    <Field ids={ids} label={label} hint={hint} error={error} className={className}>
+    <Field
+      ids={ids}
+      label={label}
+      hint={hint}
+      error={error}
+      required={required}
+      className={className}
+    >
       <div
         ref={rootRef}
         className="relative"
@@ -149,6 +159,7 @@ export function MemberPicker({
             aria-autocomplete="list"
             aria-activedescendant={activeOption ? optionId(activeOption) : undefined}
             aria-invalid={error ? true : undefined}
+            aria-required={required || undefined}
             aria-describedby={describedBy(ids, hint, error)}
             disabled={disabled}
             placeholder={selected?.full_name ?? placeholder}

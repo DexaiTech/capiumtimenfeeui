@@ -71,6 +71,7 @@ function ReturnForm({ claim, onClose, onDone }: Omit<ClaimDialogProps, 'open'>) 
       >
         <Textarea
           label="Reason"
+          required
           rows={4}
           maxLength={LIMITS.decision}
           hint="The claimant reads this: say what to change."

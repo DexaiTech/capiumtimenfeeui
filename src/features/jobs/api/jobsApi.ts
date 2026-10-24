@@ -19,10 +19,13 @@ import type {
   Member,
   Task,
   TaskFilters,
+  TaskBulkRequest,
   TaskInput,
   TaskListItem,
   TaskStatus,
   TaskUpdate,
+  TasksBulkCreate,
+  TasksFromService,
 } from '../types';
 
 const org = (organizationId: string) => `/organizations/${encodeURIComponent(organizationId)}`;
@@ -86,6 +89,12 @@ export const jobsApi = {
     api.post<Task>(`${org(organizationId)}/jobs/${seg(jobId)}/tasks`, body),
   updateTask: (organizationId: string, jobId: string, taskId: string, body: TaskUpdate) =>
     api.patch<Task>(`${org(organizationId)}/jobs/${seg(jobId)}/tasks/${seg(taskId)}`, body),
+  createTasksBulk: (organizationId: string, jobId: string, body: TasksBulkCreate) =>
+    api.post<Task[]>(`${org(organizationId)}/jobs/${seg(jobId)}/tasks/bulk`, body),
+  addTasksFromService: (organizationId: string, jobId: string) =>
+    api.post<TasksFromService>(`${org(organizationId)}/jobs/${seg(jobId)}/tasks/from-service`),
+  bulkTasks: (organizationId: string, body: TaskBulkRequest) =>
+    api.post<BulkResult<TaskBulkRequest['action']>>(`${org(organizationId)}/tasks/bulk`, body),
   deleteTask: (organizationId: string, jobId: string, taskId: string) =>
     api.delete<null>(`${org(organizationId)}/jobs/${seg(jobId)}/tasks/${seg(taskId)}`),
   changeTaskStatus: (organizationId: string, jobId: string, taskId: string, status: TaskStatus) =>

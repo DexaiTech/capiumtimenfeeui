@@ -30,6 +30,7 @@ function ChooseInvoice({
       <div className="flex flex-col gap-4">
         <ClientPicker
           label="Client"
+          required
           value={clientId}
           onChange={(client) => {
             setClientId(client?.id ?? null);
@@ -46,6 +47,7 @@ function ChooseInvoice({
         ) : (
           <Select
             label="Invoice to credit"
+            required
             placeholder="Choose an invoice"
             value={invoiceId}
             onChange={(event) => setInvoiceId(event.target.value)}

@@ -10,6 +10,8 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   hideLabel?: boolean;
   error?: string;
   hint?: ReactNode;
+  /** Marks the field as mandatory: a red star on the label and `aria-required` on the box. */
+  required?: boolean;
   ref?: Ref<HTMLTextAreaElement>;
 }
 
@@ -18,6 +20,7 @@ export function Textarea({
   hideLabel,
   error,
   hint,
+  required,
   id,
   rows = 4,
   className,
@@ -34,6 +37,7 @@ export function Textarea({
       hideLabel={hideLabel}
       hint={hint}
       error={error}
+      required={required}
       className={className}
     >
       <textarea
@@ -41,6 +45,7 @@ export function Textarea({
         id={ids.inputId}
         rows={rows}
         aria-invalid={error ? true : undefined}
+        aria-required={required || undefined}
         aria-describedby={describedBy(ids, hint, error)}
         className={cn(controlClasses, 'min-h-24 resize-y px-3 py-2.5')}
         {...rest}

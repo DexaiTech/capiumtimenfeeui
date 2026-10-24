@@ -100,6 +100,7 @@ function RateForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Rate (£ per hour)"
+            required
             inputMode="decimal"
             autoComplete="off"
             autoFocus
@@ -108,6 +109,7 @@ function RateForm({
           />
           <Input
             label="Starts on"
+            required
             type="date"
             error={errors.effective_from?.message}
             {...register('effective_from')}

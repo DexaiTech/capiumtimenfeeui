@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
 import { detailedTemplate, retiredTemplate, summaryTemplate } from '../test/billingFixtures';
@@ -711,5 +712,18 @@ describe('InvoiceTemplatesPage: default, status and delete', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'You need settings.manage to delete templates.',
     );
+  });
+});
+
+describe('InvoiceTemplateFormDialog: mandatory fields', () => {
+  it('stars the name, not the layout choice, the options or the footer', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<InvoiceTemplatesPage />);
+    await user.click(await screen.findByRole('button', { name: 'Add template' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add invoice template' });
+    expectRequiredFields(dialog, {
+      required: ['Name'],
+      optional: ['Footer text', /Show the practice logo/, /Show the bank details/],
+    });
   });
 });

@@ -57,6 +57,7 @@ export function LoginForm({ defaultEmail = '', showForgotPassword = true }: Logi
     <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
       <Input
         label="Email"
+        required
         type="email"
         autoComplete="email"
         inputMode="email"
@@ -67,6 +68,7 @@ export function LoginForm({ defaultEmail = '', showForgotPassword = true }: Logi
       />
       <PasswordField
         label="Password"
+        required
         autoComplete="current-password"
         error={errors.password?.message}
         labelAction={

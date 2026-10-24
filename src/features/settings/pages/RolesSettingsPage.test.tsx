@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
 import {
@@ -271,5 +272,20 @@ describe('RolesSettingsPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit role Reviewer' }));
     expect(await screen.findByText("You can't edit this role.")).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+  });
+});
+
+describe('RolesSettingsPage: mandatory fields', () => {
+  it('stars the name of a new role, not the description or the starting point', async () => {
+    const user = userEvent.setup();
+    server.use(...settingsHandlers());
+    mockDesktopViewport();
+    renderSettings(<RolesSettingsPage />);
+    await user.click(await screen.findByRole('button', { name: 'New role' }));
+    await screen.findByLabelText('Name');
+    expectRequiredFields(document.body, {
+      required: ['Name'],
+      optional: ['Description', 'Start from'],
+    });
   });
 });

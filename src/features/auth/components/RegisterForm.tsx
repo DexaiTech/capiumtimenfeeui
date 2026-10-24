@@ -51,6 +51,7 @@ export function RegisterForm({ onRegistered, defaultEmail = '' }: RegisterFormPr
     <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
       <Input
         label="Full name"
+        required
         autoComplete="name"
         leftIcon={<UserIcon className="size-4" />}
         placeholder="Ada Lovelace"
@@ -59,6 +60,7 @@ export function RegisterForm({ onRegistered, defaultEmail = '' }: RegisterFormPr
       />
       <Input
         label="Work email"
+        required
         type="email"
         autoComplete="email"
         inputMode="email"
@@ -70,6 +72,7 @@ export function RegisterForm({ onRegistered, defaultEmail = '' }: RegisterFormPr
       <div className="flex flex-col gap-2.5">
         <PasswordField
           label="Password"
+          required
           autoComplete="new-password"
           error={errors.password?.message}
           aria-describedby={strengthId}
@@ -79,6 +82,7 @@ export function RegisterForm({ onRegistered, defaultEmail = '' }: RegisterFormPr
       </div>
       <PasswordField
         label="Confirm password"
+        required
         autoComplete="new-password"
         error={errors.password_confirm?.message}
         {...register('password_confirm')}

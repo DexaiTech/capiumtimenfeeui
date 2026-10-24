@@ -150,6 +150,7 @@ function PaymentForm({ invoice, onClose, onRecorded }: Omit<RecordPaymentDialogP
         ) : (
           <ClientPicker
             label="Client"
+            required
             value={clientId || null}
             onChange={(client) => {
               setValue('client_id', client?.id ?? '', { shouldValidate: tried });
@@ -162,6 +163,7 @@ function PaymentForm({ invoice, onClose, onRecorded }: Omit<RecordPaymentDialogP
         <div className="grid gap-4 sm:grid-cols-3">
           <Input
             label="Amount received (£)"
+            required
             inputMode="decimal"
             autoComplete="off"
             error={errors.amount?.message}
@@ -169,12 +171,14 @@ function PaymentForm({ invoice, onClose, onRecorded }: Omit<RecordPaymentDialogP
           />
           <Input
             label="Date received"
+            required
             type="date"
             error={errors.received_on?.message}
             {...register('received_on')}
           />
           <Select
             label="Method"
+            required
             options={METHOD_OPTIONS}
             error={errors.method?.message}
             {...register('method')}
@@ -266,7 +270,12 @@ function PaymentForm({ invoice, onClose, onRecorded }: Omit<RecordPaymentDialogP
 }
 
 /** Records money received from a client and allocates it (oldest invoice first, by hand, or none). */
-export function RecordPaymentDialog({ open, onClose, invoice, onRecorded }: RecordPaymentDialogProps) {
+export function RecordPaymentDialog({
+  open,
+  onClose,
+  invoice,
+  onRecorded,
+}: RecordPaymentDialogProps) {
   return (
     <Modal
       open={open}

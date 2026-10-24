@@ -1,5 +1,7 @@
 import { testUser } from '@/test/fixtures';
 
+import type { TaskTemplate } from '@/features/team';
+
 import type { Assignee, CalendarEvent, Job, Member, Task } from '../types';
 
 /** The practice and its people: Ada is the signed-in person. */
@@ -11,6 +13,7 @@ export const IDS = {
   cara: '0198c1f2-0000-7000-8000-000000000003',
   audit: '0198c1f2-0000-7000-8000-0000000000e1',
   bookkeeping: '0198c1f2-0000-7000-8000-0000000000e2',
+  payroll: '0198c1f2-0000-7000-8000-0000000000e3',
 } as const;
 
 const member = (user_id: string, full_name: string, email: string): Member => ({
@@ -49,6 +52,7 @@ export const services = [
     status: 'active',
     sort_order: 1,
     activity_code_ids: [],
+    task_template_count: 0,
     is_used: false,
     can_delete: true,
     created_at: '2026-10-01T09:00:00Z',
@@ -68,10 +72,51 @@ export const services = [
     status: 'active',
     sort_order: 2,
     activity_code_ids: [],
+    task_template_count: 0,
     is_used: false,
     can_delete: true,
     created_at: '2026-10-01T09:00:00Z',
     updated_at: '2026-10-01T09:00:00Z',
+  },
+  {
+    id: IDS.payroll,
+    code: 'PAY',
+    name: 'Payroll',
+    description: null,
+    billing_basis: 'hourly',
+    default_fee: null,
+    default_billable: true,
+    vat_rate_id: null,
+    invoice_description: null,
+    is_active: true,
+    status: 'active',
+    sort_order: 3,
+    activity_code_ids: [],
+    task_template_count: 2,
+    is_used: false,
+    can_delete: true,
+    created_at: '2026-10-01T09:00:00Z',
+    updated_at: '2026-10-01T09:00:00Z',
+  },
+];
+
+/** The default tasks of the Payroll service, by service id. */
+export const payrollTemplates: TaskTemplate[] = [
+  {
+    id: 'tpl-1',
+    title: 'Collect payroll inputs',
+    description: null,
+    budget_minutes: 60,
+    due_offset_days: 2,
+    sort_order: 0,
+  },
+  {
+    id: 'tpl-2',
+    title: 'Run the payroll',
+    description: 'Process and send the payslips',
+    budget_minutes: null,
+    due_offset_days: null,
+    sort_order: 1,
   },
 ];
 

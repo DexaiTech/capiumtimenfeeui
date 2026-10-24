@@ -132,6 +132,7 @@ function TypeForm({ type, onClose }: { type: ExpenseType | null; onClose: () => 
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
           <Input
             label="Name"
+            required
             autoComplete="off"
             maxLength={LIMITS.typeName}
             error={errors.name?.message}
@@ -139,6 +140,7 @@ function TypeForm({ type, onClose }: { type: ExpenseType | null; onClose: () => 
           />
           <Input
             label="Code"
+            required
             autoComplete="off"
             maxLength={LIMITS.typeCode}
             error={errors.code?.message}

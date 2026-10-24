@@ -85,6 +85,7 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
           <Input
             label="Issue date"
             type="date"
+            required
             error={errors.issue_date?.message}
             {...register('issue_date')}
           />

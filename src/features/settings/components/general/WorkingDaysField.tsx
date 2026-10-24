@@ -23,12 +23,13 @@ export function WorkingDaysField({
   const errorId = useId();
   return (
     <div className="flex flex-col gap-1.5">
-      <span id={labelId} className="text-sm font-medium text-text">
+      <span id={labelId} className="field-required text-sm font-medium text-text">
         Working days
       </span>
       <div
         role="group"
         aria-labelledby={labelId}
+        aria-required="true"
         aria-describedby={error ? errorId : undefined}
         className="grid grid-cols-7 gap-1 sm:flex sm:flex-wrap sm:gap-2"
       >

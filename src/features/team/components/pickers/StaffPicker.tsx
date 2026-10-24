@@ -13,6 +13,7 @@ export interface StaffPickerProps extends Pick<
   | 'placeholder'
   | 'hint'
   | 'error'
+  | 'required'
   | 'disabled'
   | 'clearable'
   | 'listPlacement'

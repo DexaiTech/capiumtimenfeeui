@@ -109,6 +109,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
         ) : null}
         <Select
           label="Service"
+          required
           options={serviceOptions}
           placeholder={services.isPending ? 'Loading services…' : 'Choose a service'}
           disabled={Boolean(editing)}

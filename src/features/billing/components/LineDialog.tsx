@@ -94,7 +94,8 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LineDialogProps, 'ope
     if (form.description !== line.description) changes.description = form.description;
     if (formatQuantity(q) !== line.quantity) changes.quantity = formatQuantity(q);
     if (u !== line.unit_amount) changes.unit_amount = u;
-    if (form.vat_rate_id !== (line.vat_rate_id ?? '')) changes.vat_rate_id = form.vat_rate_id || null;
+    if (form.vat_rate_id !== (line.vat_rate_id ?? ''))
+      changes.vat_rate_id = form.vat_rate_id || null;
     if (Object.keys(changes).length === 0) {
       onClose();
       return;
@@ -122,6 +123,7 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LineDialogProps, 'ope
       >
         <Input
           label="Description"
+          required
           autoComplete="off"
           error={errors.description?.message}
           {...register('description')}
@@ -129,6 +131,7 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LineDialogProps, 'ope
         <div className="grid gap-4 sm:grid-cols-3">
           <Input
             label="Quantity"
+            required
             inputMode="decimal"
             autoComplete="off"
             error={errors.quantity?.message}
@@ -136,6 +139,7 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LineDialogProps, 'ope
           />
           <Input
             label="Unit price (£)"
+            required
             inputMode="decimal"
             autoComplete="off"
             hint="Negative for a discount."
@@ -219,7 +223,8 @@ function WipLineForm({
     const changes: InvoiceLineUpdate = {};
     if (form.description !== line.description) changes.description = form.description;
     if (net !== line.net_amount) changes.net_amount = net;
-    if (form.vat_rate_id !== (line.vat_rate_id ?? '')) changes.vat_rate_id = form.vat_rate_id || null;
+    if (form.vat_rate_id !== (line.vat_rate_id ?? ''))
+      changes.vat_rate_id = form.vat_rate_id || null;
     if (Object.keys(changes).length === 0) {
       onClose();
       return;
@@ -246,6 +251,7 @@ function WipLineForm({
       >
         <Input
           label="Description"
+          required
           autoComplete="off"
           error={errors.description?.message}
           {...register('description')}
@@ -253,9 +259,12 @@ function WipLineForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Amount to bill (£)"
+            required
             inputMode="decimal"
             autoComplete="off"
-            hint={wipValue === null ? undefined : `The work on this line is worth ${money(wipValue)}.`}
+            hint={
+              wipValue === null ? undefined : `The work on this line is worth ${money(wipValue)}.`
+            }
             error={errors.net_amount?.message}
             {...register('net_amount')}
           />
@@ -312,7 +321,12 @@ export function LineDialog({ open, onClose, invoiceId, line }: LineDialogProps) 
         wip ? (
           <WipLineForm key={line.id} invoiceId={invoiceId} line={line} onClose={onClose} />
         ) : (
-          <ManualLineForm key={line?.id ?? 'new'} invoiceId={invoiceId} line={line} onClose={onClose} />
+          <ManualLineForm
+            key={line?.id ?? 'new'}
+            invoiceId={invoiceId}
+            line={line}
+            onClose={onClose}
+          />
         )
       ) : null}
     </Modal>

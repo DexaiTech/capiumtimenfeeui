@@ -5,10 +5,16 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, server } from '@/test/server';
 
 import { estimateSequence, testSequences } from '../test/billingFixtures';
-import { billingHandlers, createBillingBackend, orgApiPath, type BillingBackend } from '../test/billingHandlers';
+import {
+  billingHandlers,
+  createBillingBackend,
+  orgApiPath,
+  type BillingBackend,
+} from '../test/billingHandlers';
 import DocumentNumberingPage from './DocumentNumberingPage';
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -186,5 +192,16 @@ describe('DocumentNumberingPage', () => {
     expect(
       within(screen.getByRole('form', { name: 'Invoice numbering' })).getByRole('alert'),
     ).toHaveTextContent('You need organization.update.');
+  });
+});
+
+describe('DocumentNumberingPage: mandatory fields', () => {
+  it('stars the padding and the next number, not the prefix', async () => {
+    renderInOrg(<DocumentNumberingPage />);
+    const form = await screen.findByRole('form', { name: 'Invoice numbering' });
+    expectRequiredFields(form, {
+      required: ['Zero padding', 'Next number'],
+      optional: ['Prefix'],
+    });
   });
 });

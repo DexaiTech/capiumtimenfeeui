@@ -61,6 +61,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
       />
       <Input
         label="Full name"
+        required
         autoComplete="name"
         error={errors.full_name?.message}
         {...register('full_name')}

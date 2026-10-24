@@ -3,14 +3,7 @@ import { useId, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import {
-  Button,
-  Input,
-  Modal,
-  SegmentedControl,
-  Textarea,
-  useToast,
-} from '@/components/ui';
+import { Button, Input, Modal, SegmentedControl, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
@@ -73,7 +66,12 @@ function CreditNoteForm({ invoice, onClose, onCreated }: Omit<CreditNoteDialogPr
     const typed = row ? parsePounds(row.amount) : null;
     const pence = mode === 'full' ? line.net_amount : row?.on ? typed : 0;
     const valid = pence !== null && pence >= 0 && pence <= line.net_amount;
-    return { line, pence: valid ? pence : 0, valid, vat: valid ? vatOn(pence, line.vat_rate_bp) : 0 };
+    return {
+      line,
+      pence: valid ? pence : 0,
+      valid,
+      vat: valid ? vatOn(pence, line.vat_rate_bp) : 0,
+    };
   });
   const net = credits.reduce((total, credit) => total + credit.pence, 0);
   const vat = credits.reduce((total, credit) => total + credit.vat, 0);
@@ -150,9 +148,15 @@ function CreditNoteForm({ invoice, onClose, onCreated }: Omit<CreditNoteDialogPr
             <thead>
               <tr className="text-left text-text-muted">
                 {mode === 'partial' ? <th scope="col" className="h-9 w-10 px-3" /> : null}
-                <th scope="col" className="h-9 px-3">Line</th>
-                <th scope="col" className="h-9 px-3 text-right">Line net</th>
-                <th scope="col" className="h-9 px-3 text-right">Credit (net)</th>
+                <th scope="col" className="h-9 px-3">
+                  Line
+                </th>
+                <th scope="col" className="h-9 px-3 text-right">
+                  Line net
+                </th>
+                <th scope="col" className="h-9 px-3 text-right">
+                  Credit (net)
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -223,6 +227,7 @@ function CreditNoteForm({ invoice, onClose, onCreated }: Omit<CreditNoteDialogPr
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem]">
           <Textarea
             label="Reason"
+            required
             rows={2}
             hint="Printed on the credit note and kept in the audit log."
             error={errors.reason?.message}
@@ -230,6 +235,7 @@ function CreditNoteForm({ invoice, onClose, onCreated }: Omit<CreditNoteDialogPr
           />
           <Input
             label="Credit note date"
+            required
             type="date"
             error={errors.issue_date?.message}
             {...register('issue_date')}

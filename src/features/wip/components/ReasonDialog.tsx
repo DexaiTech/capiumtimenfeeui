@@ -53,6 +53,7 @@ export function ReasonDialog({
       {children}
       <Textarea
         label={label}
+        required={required}
         rows={3}
         maxLength={REASON_MAX}
         value={text}

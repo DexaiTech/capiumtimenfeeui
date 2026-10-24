@@ -292,6 +292,7 @@ function LineForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
             label="Expense type"
+            required
             placeholder="Choose a type"
             options={typeOptions}
             value={typeId}
@@ -304,6 +305,7 @@ function LineForm({
             render={({ field }) => (
               <DateField
                 label="Date"
+                required
                 value={field.value || null}
                 max={today}
                 onChange={(value) => field.onChange(value ?? '')}
@@ -314,6 +316,7 @@ function LineForm({
         </div>
         <Input
           label="Description"
+          required
           autoComplete="off"
           maxLength={LIMITS.description}
           error={errors.description?.message}
@@ -338,6 +341,7 @@ function LineForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <ClientPicker
               label="Client"
+              required={isBillable}
               clearable
               value={clientId || null}
               valueLabel={line?.client?.name}
@@ -364,6 +368,7 @@ function LineForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Miles"
+              required
               inputMode="decimal"
               autoComplete="off"
               hint={
@@ -467,6 +472,7 @@ function LineForm({
         {correcting ? (
           <Textarea
             label="Reason for the correction"
+            required
             rows={2}
             maxLength={LIMITS.reason}
             hint="Kept in the history of the claim with the old and the new figures."

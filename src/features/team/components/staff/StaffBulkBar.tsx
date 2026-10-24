@@ -154,6 +154,7 @@ export function StaffBulkBar({
         {editing === 'grade' ? (
           <Select
             label="New grade"
+            required
             placeholder="Choose a grade"
             options={gradeOptions}
             value={gradeId}
@@ -163,6 +164,7 @@ export function StaffBulkBar({
         {editing === 'approver' ? (
           <StaffPicker
             label="New approver"
+            required
             value={approverId}
             onChange={(id) => setApproverId(id)}
             hasLogin

@@ -70,6 +70,7 @@ export function CreateOrganizationForm({ onCreated }: CreateOrganizationFormProp
     <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
       <Input
         label="Practice name"
+        required
         autoComplete="organization"
         leftIcon={<Building2 className="size-4" />}
         placeholder="Smith & Co Accountants"

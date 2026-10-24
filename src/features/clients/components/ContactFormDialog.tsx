@@ -83,6 +83,7 @@ function ContactForm({ target, onClose }: { target: ContactTarget; onClose: () =
         ) : null}
         <Input
           label="Name"
+          required
           autoComplete="name"
           data-autofocus
           error={errors.name?.message}

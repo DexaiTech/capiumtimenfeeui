@@ -52,6 +52,7 @@ export function EmailRequestForm({ submitLabel, onSubmitEmail, onSent }: EmailRe
     >
       <Input
         label="Email"
+        required
         type="email"
         autoComplete="email"
         inputMode="email"

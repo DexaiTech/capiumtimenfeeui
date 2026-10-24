@@ -70,6 +70,7 @@ export function LineItemsEditor<TForm extends FieldValues & WithLines>({
           >
             <Input
               label="Description"
+              required
               autoComplete="off"
               error={rowErrors?.description?.message}
               {...lineRegister(`lines.${index}.description`)}
@@ -77,6 +78,7 @@ export function LineItemsEditor<TForm extends FieldValues & WithLines>({
             <div className="grid gap-3 sm:grid-cols-3">
               <Input
                 label="Quantity"
+                required
                 inputMode="decimal"
                 autoComplete="off"
                 error={rowErrors?.quantity?.message}
@@ -84,6 +86,7 @@ export function LineItemsEditor<TForm extends FieldValues & WithLines>({
               />
               <Input
                 label="Unit price (£)"
+                required
                 inputMode="decimal"
                 autoComplete="off"
                 hint="Negative for a discount."

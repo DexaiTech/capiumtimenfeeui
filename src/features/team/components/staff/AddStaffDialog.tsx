@@ -139,6 +139,7 @@ function AddStaffForm({
     formState: { errors, isSubmitting },
   } = form;
   const login = useWatch({ control, name: 'login' });
+  const workEmail = useWatch({ control, name: 'email' });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
     useSubmitError<StaffFormValues>({ setError, fields: FIELDS });
 
@@ -284,6 +285,7 @@ function AddStaffForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Sign-in email"
+              required={workEmail.trim() === ''}
               type="email"
               autoComplete="off"
               spellCheck={false}

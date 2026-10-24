@@ -163,6 +163,7 @@ function CreateRateForm({
         ) : null}
         <Select
           label="Applies to"
+          required
           options={options.map((option) => ({ value: option.level, label: option.label }))}
           hint={selected?.help}
           error={errors.level?.message}
@@ -175,6 +176,7 @@ function CreateRateForm({
             render={({ field }) => (
               <ClientPicker
                 label="Client"
+                required
                 value={field.value}
                 onChange={(id) => field.onChange(id)}
                 error={errors.client_id?.message}
@@ -185,6 +187,7 @@ function CreateRateForm({
         {needs?.service ? (
           <Select
             label="Service"
+            required
             placeholder="Choose a service"
             options={serviceOptions}
             error={errors.service_id?.message}
@@ -198,6 +201,7 @@ function CreateRateForm({
             render={({ field }) => (
               <StaffPicker
                 label="Staff member"
+                required
                 value={field.value}
                 onChange={(id) => field.onChange(id)}
                 error={errors.user_id?.message}
@@ -208,6 +212,7 @@ function CreateRateForm({
         {needs?.grade ? (
           <Select
             label="Grade"
+            required
             placeholder="Choose a grade"
             options={gradeOptions}
             error={errors.grade_id?.message}
@@ -216,6 +221,7 @@ function CreateRateForm({
         ) : null}
         <Input
           label="Rate per hour (£)"
+          required
           inputMode="decimal"
           autoComplete="off"
           placeholder="95.00"
@@ -225,6 +231,7 @@ function CreateRateForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Effective from"
+            required
             type="date"
             error={errors.effective_from?.message}
             {...register('effective_from')}
@@ -342,6 +349,7 @@ function EditRateForm({ rule, onClose }: { rule: RateRule; onClose: () => void }
         </div>
         <Input
           label="Rate per hour (£)"
+          required
           inputMode="decimal"
           autoComplete="off"
           error={errors.rate?.message}
@@ -350,6 +358,7 @@ function EditRateForm({ rule, onClose }: { rule: RateRule; onClose: () => void }
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Effective from"
+            required
             type="date"
             disabled={rule.is_used}
             hint={

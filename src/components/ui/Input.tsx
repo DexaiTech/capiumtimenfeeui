@@ -12,6 +12,8 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   error?: string;
   hint?: ReactNode;
   labelAction?: ReactNode;
+  /** Marks the field as mandatory: a red star on the label and `aria-required` on the input. */
+  required?: boolean;
   leftIcon?: ReactNode;
   /** Interactive content inside the field's trailing edge (for example a show-password toggle). */
   rightSlot?: ReactNode;
@@ -24,6 +26,7 @@ export function Input({
   error,
   hint,
   labelAction,
+  required,
   leftIcon,
   rightSlot,
   id,
@@ -43,6 +46,7 @@ export function Input({
       hint={hint}
       error={error}
       labelAction={labelAction}
+      required={required}
       className={className}
     >
       <div className="relative">
@@ -58,6 +62,7 @@ export function Input({
           ref={ref}
           id={ids.inputId}
           aria-invalid={error ? true : undefined}
+          aria-required={required || undefined}
           aria-describedby={
             [describedBy(ids, hint, error), extraDescribedBy].filter(Boolean).join(' ') || undefined
           }

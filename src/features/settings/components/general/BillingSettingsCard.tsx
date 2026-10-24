@@ -121,6 +121,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
         />
         <Input
           label={`WIP adjustment approval threshold (${symbol})`}
+          required
           inputMode="decimal"
           autoComplete="off"
           leftIcon={<span className="text-sm">{symbol}</span>}
@@ -147,6 +148,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
       />
       <Input
         label="Write-off approval threshold (%)"
+        required={percentEnabled}
         inputMode="decimal"
         autoComplete="off"
         className="sm:max-w-sm"
@@ -177,6 +179,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
       />
       <Input
         label={`Invoice approval threshold (${symbol})`}
+        required={approval}
         inputMode="decimal"
         autoComplete="off"
         leftIcon={<span className="text-sm">{symbol}</span>}
@@ -208,6 +211,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
       />
       <Input
         label="Days after the due date"
+        required={reminders}
         inputMode="numeric"
         autoComplete="off"
         className="sm:max-w-sm"

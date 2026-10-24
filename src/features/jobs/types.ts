@@ -86,10 +86,14 @@ export interface JobInput {
   manager_user_id?: string | null;
   status?: 'planned' | 'in_progress';
   assignee_user_ids?: string[];
+  /** Start the job with the default tasks of its service (the API's default is false). */
+  add_default_tasks?: boolean;
 }
 
 /** `JobUpdate`: every field optional; the client and the status have no place here. */
-export type JobUpdate = Partial<Omit<JobInput, 'client_id' | 'status' | 'assignee_user_ids'>>;
+export type JobUpdate = Partial<
+  Omit<JobInput, 'client_id' | 'status' | 'assignee_user_ids' | 'add_default_tasks'>
+>;
 
 /**
  * `POST /jobs/bulk`: one action on 1-200 jobs, all or nothing. `set_manager` and `set_due_date`
@@ -156,6 +160,30 @@ export interface TaskInput {
   budget_minutes?: Minutes | null;
   due_date?: IsoDate | null;
   assignee_user_ids?: string[];
+}
+
+/**
+ * `POST /tasks/bulk`: one action on 1-200 tasks of any jobs, all or nothing. `set_due_date` takes
+ * null to clear; `delete` takes no value.
+ */
+export type TaskBulkRequest = { task_ids: string[] } & (
+  | { action: 'set_status'; value: TaskStatus }
+  | { action: 'set_due_date'; value: IsoDate | null }
+  | { action: 'add_assignee'; value: string }
+  | { action: 'remove_assignee'; value: string }
+  | { action: 'delete' }
+);
+
+/** `POST /jobs/{id}/tasks/bulk`: 1-100 tasks for one job, all or nothing. */
+export interface TasksBulkCreate {
+  tasks: TaskInput[];
+}
+
+/** `POST /jobs/{id}/tasks/from-service`: the default tasks of the job's service were added. */
+export interface TasksFromService {
+  added: number;
+  /** Left out because a task with that title was already on the job. */
+  skipped: number;
 }
 
 export interface TaskUpdate {

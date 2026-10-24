@@ -79,6 +79,7 @@ function ChangeRoleForm({ staff, roles, onClose }: ChangeRoleDialogProps & { sta
       >
         <Select
           label="Role"
+          required
           options={options}
           hint={
             options.some((option) => option.disabled)

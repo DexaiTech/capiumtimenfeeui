@@ -52,12 +52,14 @@ export function StaffFormFields({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Full name"
+          required
           autoComplete="off"
           error={errors.full_name?.message}
           {...register('full_name')}
         />
         <Input
           label="Staff code"
+          required={mode === 'edit'}
           autoComplete="off"
           placeholder={mode === 'add' ? 'Next number' : undefined}
           hint={mode === 'add' ? 'Leave empty to use the next number.' : undefined}
@@ -68,6 +70,7 @@ export function StaffFormFields({
       <div className="grid gap-4 sm:grid-cols-2">
         <Select
           label="Grade"
+          required
           placeholder="Choose a grade"
           options={gradeOptions}
           error={errors.grade_id?.message}
@@ -75,6 +78,7 @@ export function StaffFormFields({
         />
         <Input
           label="Start date"
+          required={mode === 'add'}
           type="date"
           error={errors.start_date?.message}
           {...register('start_date')}
@@ -128,6 +132,7 @@ export function StaffFormFields({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Hours per working day"
+          required
           inputMode="decimal"
           autoComplete="off"
           hint="For example 7.5 or 7:30."
@@ -136,6 +141,7 @@ export function StaffFormFields({
         />
         <Input
           label="Chargeable target (%)"
+          required={mode === 'edit'}
           inputMode="decimal"
           autoComplete="off"
           placeholder={mode === 'add' ? 'Grade default' : undefined}
@@ -152,6 +158,7 @@ export function StaffFormFields({
             value={field.value}
             onChange={field.onChange}
             error={errors.working_days?.message}
+            required
           />
         )}
       />

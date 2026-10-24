@@ -151,6 +151,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormDialogProps, 'o
         <section className="grid gap-4 sm:grid-cols-2" aria-label="Client">
           <Input
             label="Client name"
+            required
             autoComplete="organization"
             error={errors.name?.message}
             hint={linked ? MANAGED_MESSAGE : undefined}
@@ -251,6 +252,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormDialogProps, 'o
             />
             <Input
               label="Country"
+              required
               maxLength={2}
               error={errors.country?.message}
               {...managed}

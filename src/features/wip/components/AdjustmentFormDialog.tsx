@@ -98,6 +98,7 @@ function AdjustmentForm({ onClose, formId }: { onClose: () => void; formId: stri
       >
         <ClientPicker
           label="Client"
+          required
           value={clientId || null}
           onChange={(id) => {
             setValue('client_id', id ?? '', { shouldDirty: true });
@@ -124,6 +125,7 @@ function AdjustmentForm({ onClose, formId }: { onClose: () => void; formId: stri
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Amount (£)"
+            required
             inputMode="decimal"
             autoComplete="off"
             hint={`Above ${limit} needs approval`}
@@ -156,6 +158,7 @@ function AdjustmentForm({ onClose, formId }: { onClose: () => void; formId: stri
         />
         <Textarea
           label="Reason"
+          required
           rows={3}
           maxLength={REASON_MAX}
           error={errors.reason?.message}

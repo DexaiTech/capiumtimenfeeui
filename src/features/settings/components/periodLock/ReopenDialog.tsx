@@ -76,6 +76,7 @@ function ReopenForm({ currentLock, onClose }: { currentLock: string; onClose: ()
         {mode === 'to_date' ? (
           <Input
             label="New last locked day"
+            required
             type="date"
             max={dayBefore(currentLock)}
             hint={`Now locked through ${formatUkDate(currentLock)}. Days after the one you choose are open again.`}
@@ -89,6 +90,7 @@ function ReopenForm({ currentLock, onClose }: { currentLock: string; onClose: ()
         )}
         <Textarea
           label="Reason"
+          required
           rows={3}
           maxLength={REASON_MAX}
           hint="Required. It is kept in the history with your name."

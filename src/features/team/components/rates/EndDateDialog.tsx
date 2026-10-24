@@ -77,6 +77,7 @@ function EndDateForm({ rule, onClose }: { rule: RateRule; onClose: () => void })
         </p>
         <Input
           label="Last day of the rate"
+          required
           type="date"
           min={rule.effective_from}
           error={errors.effective_to?.message}

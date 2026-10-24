@@ -45,9 +45,8 @@ function ReasonForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<ReasonValues>({ resolver: zodResolver(schema), defaultValues: { reason: '' } });
-  const { submitError, retryIn, handleSubmitError, clearSubmitError } = useSubmitError<ReasonValues>(
-    { setError, fields: ['reason'] },
-  );
+  const { submitError, retryIn, handleSubmitError, clearSubmitError } =
+    useSubmitError<ReasonValues>({ setError, fields: ['reason'] });
 
   const submit = handleSubmit(async (values) => {
     clearSubmitError();
@@ -71,6 +70,7 @@ function ReasonForm({
         <Textarea
           label={label}
           rows={3}
+          required={required}
           hint={hint}
           error={errors.reason?.message}
           {...register('reason')}
@@ -101,7 +101,13 @@ function ReasonForm({
  */
 export function ReasonDialog({ open, onClose, title, description, ...form }: ReasonDialogProps) {
   return (
-    <Modal open={open} onClose={onClose} title={title} description={description} closeOnBackdrop={false}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      description={description}
+      closeOnBackdrop={false}
+    >
       {open ? <ReasonForm {...form} onClose={onClose} /> : null}
     </Modal>
   );

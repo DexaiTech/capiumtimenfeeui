@@ -72,6 +72,7 @@ export function ExpenseSettingsCard({ organization, editable }: GeneralCardProps
       <div className="grid gap-5 sm:grid-cols-3">
         <Input
           label={`Mileage rate (${symbol} per mile)`}
+          required
           inputMode="decimal"
           autoComplete="off"
           leftIcon={<span className="text-sm">{symbol}</span>}
@@ -81,6 +82,7 @@ export function ExpenseSettingsCard({ organization, editable }: GeneralCardProps
         />
         <Input
           label="Expense mark-up (%)"
+          required
           inputMode="decimal"
           autoComplete="off"
           hint="Added when an expense is recharged to the client. 0 adds nothing."
@@ -89,6 +91,7 @@ export function ExpenseSettingsCard({ organization, editable }: GeneralCardProps
         />
         <Input
           label={`Receipt required above (${symbol})`}
+          required
           inputMode="decimal"
           autoComplete="off"
           leftIcon={<span className="text-sm">{symbol}</span>}

@@ -120,12 +120,14 @@ function ActivityTypeForm({
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
           <Input
             label="Name"
+            required
             autoComplete="off"
             error={errors.name?.message}
             {...register('name')}
           />
           <Input
             label="Code"
+            required
             autoComplete="off"
             maxLength={12}
             error={errors.code?.message}

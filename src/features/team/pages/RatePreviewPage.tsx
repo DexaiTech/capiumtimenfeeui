@@ -168,6 +168,7 @@ function RatePreview() {
           {canPickStaff ? (
             <StaffPicker
               label="Staff member"
+              required
               value={staffId || null}
               onChange={(id) => {
                 setStaffId(id ?? '');

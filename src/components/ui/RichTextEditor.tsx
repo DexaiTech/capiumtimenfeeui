@@ -47,6 +47,8 @@ export interface RichTextEditorProps {
   ariaLabel?: string;
   error?: string;
   hint?: ReactNode;
+  /** Marks the field as mandatory: a red star on the label and `aria-required` on the box. */
+  required?: boolean;
   /** The HTML shown. A value that differs from what the editor last reported replaces its content. */
   value: string;
   onChange: (value: RichTextValue) => void;
@@ -284,6 +286,7 @@ export function RichTextEditor({
   ariaLabel,
   error,
   hint,
+  required = false,
   value,
   onChange,
   placeholder,
@@ -334,6 +337,7 @@ export function RichTextEditor({
         id: ids.inputId,
         role: 'textbox',
         'aria-multiline': 'true',
+        ...(required ? { 'aria-required': 'true' } : {}),
         'aria-labelledby': `${ids.inputId}-label`,
         ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
         class: cn(
@@ -356,7 +360,7 @@ export function RichTextEditor({
         return true;
       },
     }),
-    [ids.inputId, ariaLabel, areaClassName],
+    [ids.inputId, ariaLabel, areaClassName, required],
   );
   const onUpdate = useCallback(({ editor: current }: { editor: Editor }) => {
     const html = current.isEmpty ? '' : current.getHTML();
@@ -414,6 +418,7 @@ export function RichTextEditor({
       hideLabel={hideLabel}
       hint={hint}
       error={error}
+      required={required}
       className={className}
     >
       <div

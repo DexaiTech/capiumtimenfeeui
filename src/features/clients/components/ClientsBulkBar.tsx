@@ -154,6 +154,7 @@ export function ClientsBulkBar({
           <>
             <Input
               label="New segment"
+              required={!clearSegment}
               value={segment}
               maxLength={40}
               disabled={clearSegment}

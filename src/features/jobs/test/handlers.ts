@@ -1,5 +1,6 @@
 import { http, type HttpHandler } from 'msw';
 
+import type { TaskTemplate } from '@/features/team';
 import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
 
@@ -22,6 +23,7 @@ import {
   IDS,
   job as makeJob,
   members as memberFixtures,
+  payrollTemplates,
   services,
   task as makeTask,
 } from './fixtures';
@@ -52,6 +54,8 @@ export interface JobsBackend {
   nextId: number;
   /** The id of the signed-in person (`me`). */
   userId: string;
+  /** The default tasks of each service by id (Payroll has two). */
+  templates: Record<string, TaskTemplate[]>;
 }
 
 export function createBackend(initial: Partial<JobsBackend> = {}): JobsBackend {
@@ -64,6 +68,7 @@ export function createBackend(initial: Partial<JobsBackend> = {}): JobsBackend {
     inUse: new Set(),
     nextId: 0,
     userId: IDS.ada,
+    templates: { [IDS.payroll]: payrollTemplates },
     ...initial,
   };
 }
@@ -197,6 +202,10 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
       const params = new URL(request.url).searchParams;
       record('GET', '/members', undefined, params);
       return ok(backend.members, { meta: END });
+    }),
+    http.get(orgApiPath('/services/:serviceId/task-templates'), ({ params }) => {
+      record('GET', `/services/${String(params.serviceId)}/task-templates`);
+      return ok(backend.templates[String(params.serviceId)] ?? []);
     }),
     http.get(orgApiPath('/services'), () => ok(services)),
     http.get(orgApiPath('/clients/:clientId'), ({ params }) => {
@@ -396,7 +405,24 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
         }),
         body,
       );
+      delete (created as { add_default_tasks?: unknown }).add_default_tasks;
       backend.jobs.push(created);
+      const defaults =
+        body.add_default_tasks === true ? backend.templates[String(body.service_id)] : [];
+      for (const [index, entry] of (defaults ?? []).entries()) {
+        backend.nextId += 1;
+        backend.tasks.push(
+          makeTask({
+            id: `t-new-${String(backend.nextId)}`,
+            job_id: created.id,
+            title: entry.title,
+            description: entry.description,
+            budget_minutes: entry.budget_minutes,
+            sort_order: index,
+          }),
+        );
+      }
+      syncCounts(backend, created);
       return ok(created, { status: 201, message: 'Job created' });
     }),
     /* The bulk endpoint: all or nothing, with the rules of the single operations. */
@@ -633,6 +659,129 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
     http.get(orgApiPath('/jobs/:jobId/tasks'), ({ params }) => {
       if (!find(params.jobId)) return notFound();
       return ok(backend.tasks.filter((entry) => entry.job_id === params.jobId));
+    }),
+    /* Several tasks for one job, all or nothing; a title that starts with "!" is refused. */
+    http.post(orgApiPath('/jobs/:jobId/tasks/bulk'), async ({ params, request }) => {
+      const body = (await request.json()) as { tasks: Array<Record<string, unknown>> };
+      record('POST', `/jobs/${String(params.jobId)}/tasks/bulk`, body);
+      const owner = find(params.jobId);
+      if (!owner) return notFound();
+      if (owner.status === 'closed' || owner.status === 'cancelled') {
+        return fail(409, 'JOB_CLOSED', 'A closed or cancelled job cannot be changed.');
+      }
+      const refused = body.tasks
+        .map((item, index) => ({ item, row: index + 1 }))
+        .filter(({ item }) => String(item.title).startsWith('!'));
+      if (refused.length > 0) {
+        return fail(409, 'BULK_REFUSED', 'Some tasks could not be added; nothing was added.', {
+          details: refused.map(({ item, row }) => ({
+            name: `Task ${String(row)}: ${String(item.title)}`,
+            row,
+            error_code: 'invalid',
+            reason: 'This task cannot be added.',
+          })),
+        });
+      }
+      const created = body.tasks.map((item) => {
+        backend.nextId += 1;
+        const ids = rowsOf<string>(item.assignee_user_ids);
+        const made = makeTask({
+          id: `t-new-${String(backend.nextId)}`,
+          job_id: owner.id,
+          title: String(item.title),
+          status: (item.status as TaskStatus | undefined) ?? 'not_started',
+          due_date: (item.due_date as string | undefined) ?? null,
+          assignees: ids.map((id) => named(backend, id)),
+        });
+        backend.tasks.push(made);
+        return made;
+      });
+      syncCounts(backend, owner);
+      return ok(created, { status: 201, message: `${String(created.length)} task(s) added` });
+    }),
+    /* One action on tasks of any jobs: all or nothing; time logged stops a delete. */
+    http.post(orgApiPath('/tasks/bulk'), async ({ request }) => {
+      const body = (await request.json()) as {
+        task_ids: string[];
+        action: string;
+        value?: string | null;
+      };
+      record('POST', '/tasks/bulk', body);
+      const chosen = body.task_ids.map((id) => backend.tasks.find((entry) => entry.id === id));
+      if (chosen.some((entry) => entry === undefined)) {
+        return fail(404, 'RESOURCE_NOT_FOUND', 'Some of the tasks were not found.');
+      }
+      const picked = chosen as Task[];
+      let changed = picked.length;
+      if (body.action === 'delete') {
+        const blocked = picked.filter((entry) => entry.logged_minutes > 0);
+        if (blocked.length > 0) {
+          return fail(
+            409,
+            'BULK_REFUSED',
+            'Some tasks could not be changed; nothing was changed.',
+            {
+              details: blocked.map((entry) => ({
+                task_id: entry.id,
+                name: entry.title,
+                error_code: 'TASK_IN_USE',
+                reason: 'Time is recorded against this task.',
+              })),
+            },
+          );
+        }
+        backend.tasks = backend.tasks.filter((entry) => !picked.includes(entry));
+      } else if (body.action === 'set_status') {
+        for (const entry of picked) entry.status = body.value as TaskStatus;
+      } else if (body.action === 'set_due_date') {
+        for (const entry of picked) entry.due_date = body.value ?? null;
+      } else if (body.action === 'add_assignee' || body.action === 'remove_assignee') {
+        const user = String(body.value);
+        changed = 0;
+        for (const entry of picked) {
+          const has = entry.assignees.some((a) => a.user_id === user);
+          if (body.action === 'add_assignee' && !has) {
+            entry.assignees = [...entry.assignees, named(backend, user)];
+            changed += 1;
+          } else if (body.action === 'remove_assignee' && has) {
+            entry.assignees = entry.assignees.filter((a) => a.user_id !== user);
+            changed += 1;
+          }
+        }
+      }
+      for (const owner of backend.jobs) syncCounts(backend, owner);
+      return ok({ action: body.action, affected: picked.length, changed });
+    }),
+    /* The default tasks of the job's service, without the titles the job already has. */
+    http.post(orgApiPath('/jobs/:jobId/tasks/from-service'), ({ params }) => {
+      record('POST', `/jobs/${String(params.jobId)}/tasks/from-service`);
+      const owner = find(params.jobId);
+      if (!owner) return notFound();
+      if (owner.status === 'closed' || owner.status === 'cancelled') {
+        return fail(409, 'JOB_CLOSED', 'A closed or cancelled job cannot be changed.');
+      }
+      const defaults = owner.service_id ? (backend.templates[owner.service_id] ?? []) : [];
+      if (defaults.length === 0) {
+        return fail(409, 'SERVICE_HAS_NO_TASKS', "This job's service has no default tasks.");
+      }
+      const have = new Set(
+        backend.tasks.filter((entry) => entry.job_id === owner.id).map((entry) => entry.title),
+      );
+      const fresh = defaults.filter((entry) => !have.has(entry.title));
+      for (const entry of fresh) {
+        backend.nextId += 1;
+        backend.tasks.push(
+          makeTask({
+            id: `t-new-${String(backend.nextId)}`,
+            job_id: owner.id,
+            title: entry.title,
+            description: entry.description,
+            budget_minutes: entry.budget_minutes,
+          }),
+        );
+      }
+      syncCounts(backend, owner);
+      return ok({ added: fresh.length, skipped: defaults.length - fresh.length });
     }),
     http.post(orgApiPath('/jobs/:jobId/tasks'), async ({ params, request }) => {
       const body = (await request.json()) as Record<string, unknown>;

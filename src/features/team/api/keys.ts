@@ -42,6 +42,8 @@ export const teamKeys = {
 
   services: (organizationId: string) =>
     [...queryKeys.org.services(organizationId), 'list'] as const,
+  serviceTaskTemplates: (organizationId: string, serviceId: string) =>
+    [...queryKeys.org.services(organizationId), 'task-templates', serviceId] as const,
   activityTypes: (organizationId: string) =>
     [...queryKeys.org.activityCodes(organizationId), 'list'] as const,
   vatCodes: (organizationId: string) =>

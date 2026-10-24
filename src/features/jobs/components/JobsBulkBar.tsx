@@ -143,7 +143,13 @@ export function JobsBulkBar({ ids, canUpdate, canDelete, onClear }: JobsBulkBarP
         ) : null}
         {editing === 'due' ? (
           <>
-            <DateField label="New due date" value={due} onChange={setDue} disabled={clearDue} />
+            <DateField
+              label="New due date"
+              value={due}
+              onChange={setDue}
+              disabled={clearDue}
+              required={!clearDue}
+            />
             <Checkbox
               label="Clear the due date instead"
               checked={clearDue}

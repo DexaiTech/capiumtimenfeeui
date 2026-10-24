@@ -111,6 +111,7 @@ function VatRateForm({ rate, onClose }: { rate: VatRate | null; onClose: () => v
       >
         <Input
           label="Name"
+          required
           autoComplete="off"
           hint="Shown wherever a VAT code is chosen, for example Standard 20%."
           error={errors.name?.message}
@@ -125,6 +126,7 @@ function VatRateForm({ rate, onClose }: { rate: VatRate | null; onClose: () => v
           />
           <Input
             label="Rate (%)"
+            required={!rateLocked}
             inputMode="decimal"
             autoComplete="off"
             disabled={rateLocked}

@@ -98,6 +98,7 @@ function CopyForm({ job, onClose, onCopied, formId }: CopyFormProps) {
       >
         <Input
           label="Name of the new job"
+          required
           autoComplete="off"
           maxLength={LIMITS.jobName}
           error={errors.name?.message}
@@ -106,6 +107,7 @@ function CopyForm({ job, onClose, onCopied, formId }: CopyFormProps) {
         {can('client.read') ? (
           <ClientPicker
             label="Client"
+            required
             value={clientValue || null}
             valueLabel={job.client_name}
             onChange={(id) => setValue('client_id', id ?? '', { shouldDirty: true })}

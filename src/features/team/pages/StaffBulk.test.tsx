@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
+import { expectRequiredFields, isMarkedRequired } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
 import { sam, seniorGrade } from '../test/fixtures';
@@ -172,5 +173,25 @@ describe('bulk actions on the staff list', () => {
     await screen.findByRole('row', { name: /^Select Sam Staff/ });
     await user.click(screen.getByRole('checkbox', { name: 'Select Sam Staff' }));
     expect(screen.queryByRole('region', { name: BAR })).toBeNull();
+  });
+});
+
+describe('mandatory fields of the bulk dialogs', () => {
+  it('marks the new grade and the new approver', async () => {
+    const user = userEvent.setup();
+    setup();
+    const bar = await tick(user, 'Sam Staff');
+    await user.click(within(bar).getByRole('button', { name: 'Edit' }));
+    await user.click(await screen.findByRole('option', { name: 'Set grade' }));
+    let dialog = await screen.findByRole('dialog', { name: /Set the grade of/ });
+    expectRequiredFields(dialog, { required: ['New grade'] });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await user.click(within(bar).getByRole('button', { name: 'Edit' }));
+    await user.click(await screen.findByRole('option', { name: 'Set approver' }));
+    dialog = await screen.findByRole('dialog', { name: /Set the approver of/ });
+    expect(isMarkedRequired(within(dialog).getByRole('combobox', { name: 'New approver' }))).toBe(
+      true,
+    );
   });
 });

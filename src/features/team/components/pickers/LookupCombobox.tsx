@@ -26,6 +26,8 @@ export interface LookupComboboxProps {
   placeholder?: string;
   hint?: ReactNode;
   error?: string;
+  /** Marks the field as mandatory: a red star on the label and `aria-required` on the input. */
+  required?: boolean;
   emptyText?: string;
   disabled?: boolean;
   /** Shows a clear button next to a chosen record. Default true. */
@@ -56,6 +58,7 @@ export function LookupCombobox({
   placeholder = 'Search',
   hint,
   error,
+  required,
   emptyText = 'Nothing found.',
   disabled = false,
   clearable = true,
@@ -131,6 +134,7 @@ export function LookupCombobox({
       hideLabel={hideLabel}
       hint={hint}
       error={error}
+      required={required}
       className={className}
     >
       <div
@@ -158,6 +162,7 @@ export function LookupCombobox({
             aria-autocomplete="list"
             aria-activedescendant={activeOption ? optionId(activeOption) : undefined}
             aria-invalid={error ? true : undefined}
+            aria-required={required || undefined}
             aria-describedby={describedBy(ids, hint, error)}
             disabled={disabled}
             placeholder={value?.label ?? placeholder}

@@ -331,6 +331,7 @@ function EntryForm({
             </Notice>
             <Textarea
               label="Reason for the correction"
+              required
               rows={2}
               hint="Required. It is kept with the correction."
               error={errors.reason?.message}
@@ -341,6 +342,7 @@ function EntryForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Date"
+            required
             type="date"
             disabled={readOnly}
             error={errors.entry_date?.message}
@@ -348,6 +350,7 @@ function EntryForm({
           />
           <Input
             label="Time"
+            required
             autoComplete="off"
             placeholder="h:mm"
             disabled={readOnly}

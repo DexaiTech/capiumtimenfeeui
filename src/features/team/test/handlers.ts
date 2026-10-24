@@ -15,9 +15,12 @@ import type {
   RerunItem,
   Service,
   StaffMember,
+  TaskTemplate,
   VatCode,
 } from '../types';
 import {
+  accountsService,
+  accountsTemplates,
   detailOf,
   testActivities,
   testChanges,
@@ -46,6 +49,8 @@ export interface TeamData {
   reruns?: Rerun[];
   rerunItems?: RerunItem[];
   services?: Service[];
+  /** The default tasks of each service by id (the year-end accounts service has three). */
+  taskTemplates?: Record<string, TaskTemplate[]>;
   activities?: ActivityType[];
   vatCodes?: VatCode[];
   clients?: ClientOption[];
@@ -179,6 +184,12 @@ export function teamHandlers(data: TeamData = {}): HttpHandler[] {
       return ok(rows, { meta: END });
     }),
 
+    http.get(orgApiPath('/services/:serviceId/task-templates'), ({ params }) =>
+      ok(
+        data.taskTemplates?.[String(params.serviceId)] ??
+          (params.serviceId === accountsService.id ? accountsTemplates : []),
+      ),
+    ),
     http.get(orgApiPath('/services'), () => ok(data.services ?? testServices)),
     http.get(orgApiPath('/activity-codes'), () => ok(data.activities ?? testActivities)),
     http.get(orgApiPath('/vat-rates'), () => ok(data.vatCodes ?? testVatCodes)),

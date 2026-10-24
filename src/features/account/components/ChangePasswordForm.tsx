@@ -76,6 +76,7 @@ export function ChangePasswordForm({
     <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
       <PasswordField
         label={currentLabel}
+        required
         autoComplete="current-password"
         error={errors.current_password?.message}
         {...register('current_password')}
@@ -83,6 +84,7 @@ export function ChangePasswordForm({
       <div className="flex flex-col gap-2.5">
         <PasswordField
           label="New password"
+          required
           autoComplete="new-password"
           error={errors.password?.message}
           aria-describedby={strengthId}
@@ -92,6 +94,7 @@ export function ChangePasswordForm({
       </div>
       <PasswordField
         label="Confirm new password"
+        required
         autoComplete="new-password"
         error={errors.password_confirm?.message}
         {...register('password_confirm')}

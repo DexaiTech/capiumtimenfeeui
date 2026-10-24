@@ -168,6 +168,7 @@ export function TemplateEditor({ template, onBack }: TemplateEditorProps) {
                   controls.current.subject = node;
                 }}
                 label="Subject"
+                required
                 value={draft.subject}
                 maxLength={200}
                 disabled={save.isPending}
@@ -181,6 +182,7 @@ export function TemplateEditor({ template, onBack }: TemplateEditorProps) {
                   controls.current.html_body = node;
                 }}
                 label="Email body (HTML)"
+                required
                 rows={10}
                 value={draft.html_body}
                 disabled={save.isPending}
@@ -194,6 +196,7 @@ export function TemplateEditor({ template, onBack }: TemplateEditorProps) {
                   controls.current.text_body = node;
                 }}
                 label="Plain text body"
+                required
                 rows={6}
                 value={draft.text_body}
                 disabled={save.isPending}
