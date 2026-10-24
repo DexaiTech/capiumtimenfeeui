@@ -84,7 +84,10 @@ describe('AuditExportMenu', () => {
     await user.click(screen.getByRole('button', { name: 'CSV (.csv)' }));
 
     expect(await screen.findByText('Could not export the audit log')).toBeInTheDocument();
-    expect(screen.getByText('Your role does not include exporting the audit log.')).toBeVisible();
+    // In the page, not "visible": a toast fades in, and the test must not depend on that timing.
+    expect(
+      screen.getByText('Your role does not include exporting the audit log.'),
+    ).toBeInTheDocument();
     expect(clicks).toHaveLength(0);
     expect(screen.queryByText('Audit log exported')).toBeNull();
   });

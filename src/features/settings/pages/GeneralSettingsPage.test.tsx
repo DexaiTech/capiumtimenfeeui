@@ -214,7 +214,11 @@ describe('GeneralSettingsPage', () => {
       within(card('WIP and billing')).getByRole('switch', { name: 'Write-off percentage rule' }),
     );
     await user.click(save('WIP and billing', 'Save billing settings'));
-    expect(await screen.findByText('WIP and billing settings saved')).toBeInTheDocument();
+    // The first save's message may still be showing: wait for the second request instead.
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect((await screen.findAllByText('WIP and billing settings saved')).length).toBeGreaterThan(
+      0,
+    );
     expect(bodies).toEqual([
       { wip_write_off_approval_threshold_percent: 1250 },
       { wip_write_off_approval_threshold_percent: null },
