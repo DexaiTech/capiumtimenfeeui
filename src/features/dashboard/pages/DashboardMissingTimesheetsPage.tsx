@@ -88,7 +88,9 @@ export default function DashboardMissingTimesheetsPage() {
   const reachable = data
     ? data.rows.filter((row) => row.has_login && row.last_reminded_at === null).length
     : 0;
-  const failure = reminders.error ? describeFailure(reminders.error, 'Could not send the reminders') : null;
+  const failure = reminders.error
+    ? describeFailure(reminders.error, 'Could not send the reminders')
+    : null;
 
   const columns: ReadonlyArray<TableColumn<MissingTimesheet>> = [
     {
@@ -133,7 +135,9 @@ export default function DashboardMissingTimesheetsPage() {
       id: 'reminded',
       header: 'Last reminded',
       cell: (row) =>
-        row.last_reminded_at ? formatUkDateTime(row.last_reminded_at, organization.timezone) : 'Never',
+        row.last_reminded_at
+          ? formatUkDateTime(row.last_reminded_at, organization.timezone)
+          : 'Never',
     },
   ];
 

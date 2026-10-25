@@ -52,7 +52,7 @@ export function quickCreateItems(
   );
   add(
     'invoice',
-    'Prepare invoice',
+    'Create invoice',
     FilePlus2,
     modulePath(slug, ORG_SEGMENTS.billing, 'prepare'),
     can(P.invoiceCreate),

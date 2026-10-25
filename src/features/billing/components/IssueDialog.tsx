@@ -1,9 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Checkbox, Input, Modal, useToast } from '@/components/ui';
+import { PERMISSIONS } from '@/constants/permissions';
+import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
@@ -23,8 +26,9 @@ export interface IssueDialogProps {
 }
 
 function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'>) {
-  const { organization } = useOrg();
+  const { organization, can } = useOrg();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const issue = useIssueInvoice();
   const send = useSendInvoice();
   const formId = useId();
@@ -65,6 +69,18 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
             tone: 'success',
             title: issued.number ? `Invoice ${issued.number} issued` : 'Invoice issued',
             description: `${formatMoney(issued.gross_total, issued.currency)} to ${issued.client?.name ?? 'the client'}`,
+            // The next thing that happens to an issued invoice, one click away.
+            ...(can(PERMISSIONS.paymentRecord)
+              ? {
+                  action: {
+                    label: 'Record payment',
+                    onClick: () =>
+                      void navigate(
+                        `${routes.org.invoice(organization.slug, issued.id)}?action=payment`,
+                      ),
+                  },
+                }
+              : {}),
           });
           if (sendAfter) {
             send.mutate(

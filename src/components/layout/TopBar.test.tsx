@@ -158,7 +158,7 @@ describe('TopBar', () => {
       'Timesheet Approvals',
     ]);
     expect(labels(ownerContext.permissions, 'billing')).toEqual([
-      'Prepare Invoice',
+      'Create Invoice',
       'Invoices',
       'Credit Notes',
       'Recurring Invoices',
@@ -239,7 +239,7 @@ describe('TopBar', () => {
           'New job',
           'Log time',
           'New expense',
-          'Prepare invoice',
+          'Create invoice',
           'Record payment',
           'Add staff member',
           'New ticket',
@@ -269,7 +269,7 @@ describe('TopBar', () => {
     it.each([
       ['New client', '/acme/clients?new=1'],
       ['Log time', '/acme/time'],
-      ['Prepare invoice', '/acme/billing/prepare'],
+      ['Create invoice', '/acme/billing/prepare'],
       ['Add staff member', '/acme/team/staff?new=1'],
     ])('leads %s to %s', async (label, target) => {
       const user = userEvent.setup();
@@ -277,6 +277,16 @@ describe('TopBar', () => {
       await user.click(screen.getByRole('button', { name: 'Create new' }));
       await user.click(screen.getByRole('menuitem', { name: label }));
       expect(location()).toBe(target);
+    });
+  });
+
+  describe('the help', () => {
+    it('leads from the Help button to the Help centre', async () => {
+      const user = userEvent.setup();
+      renderShell(ownerContext.permissions);
+      await user.click(screen.getByRole('button', { name: 'Help' }));
+      await user.click(screen.getByRole('link', { name: 'How it works, glossary and support' }));
+      expect(location()).toBe('/acme/help');
     });
   });
 
@@ -310,7 +320,7 @@ describe('TopBar', () => {
         'My Actions',
         'Clients',
         'Client List',
-        'Client 360',
+        'Client Overview',
       ]);
     });
 

@@ -26,14 +26,14 @@ export default function Client360Page() {
   const recents = useRecentClients(organization.id);
   const clearRecents = useRecentClientsStore((state) => state.clear);
   const [centralOpen, setCentralOpen] = useState(false);
-  useDocumentTitle('Client 360');
+  useDocumentTitle('Client Overview');
 
   const overview = (clientId: string) => routes.org.client(organization.slug, clientId, 'overview');
 
   return (
     <>
       <PageHeader
-        title="Client 360"
+        title="Client Overview"
         description="Pick a client to see everything about them in one place."
       />
       <div className="grid w-full items-start gap-4 lg:grid-cols-2">

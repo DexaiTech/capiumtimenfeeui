@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
+import { Button, FormPanel, FormSection, Input, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { ApiError, isApiError } from '@/services/api';
 
@@ -147,7 +147,8 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
         {submitError ? (
           <FormAlert message={submitError.message} requestId={submitError.requestId} />
         ) : null}
-        <section className="grid gap-4 sm:grid-cols-2" aria-label="Client">
+        <p className="text-xs text-text-muted">Fields marked with a red star are required.</p>
+        <FormSection title="About the client" className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Client name"
             required
@@ -179,6 +180,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
           />
           <Input
             label="Segment"
+            hint="A group of your own, for example Gold or Retail. Use it to filter the client list."
             list={`${formId}-segments`}
             error={errors.segment?.message}
             {...register('segment')}
@@ -188,23 +190,35 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
               <option key={segment} value={segment} />
             ))}
           </datalist>
-        </section>
+        </FormSection>
 
-        <section className="grid gap-4 sm:grid-cols-3" aria-label="Identifiers">
+        <FormSection
+          title="Company and tax numbers"
+          description="Optional. Open it to add them."
+          className="grid gap-4 sm:grid-cols-3"
+          collapsible
+          defaultOpen={client !== null}
+          forceOpen={Boolean(errors.company_number ?? errors.utr ?? errors.vat_number)}
+        >
           <Input
             label="Company number"
             error={errors.company_number?.message}
             {...register('company_number')}
           />
-          <Input label="UTR" error={errors.utr?.message} {...register('utr')} />
+          <Input
+            label="UTR"
+            hint="Unique Taxpayer Reference, 10 digits."
+            error={errors.utr?.message}
+            {...register('utr')}
+          />
           <Input
             label="VAT number"
             error={errors.vat_number?.message}
             {...register('vat_number')}
           />
-        </section>
+        </FormSection>
 
-        <section className="grid gap-4 sm:grid-cols-2" aria-label="Contact details">
+        <FormSection title="Contact and address" className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Email"
             type="email"
@@ -258,9 +272,24 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
               {...register('country')}
             />
           </div>
-        </section>
+        </FormSection>
 
-        <section className="grid gap-4 sm:grid-cols-3" aria-label="Practice">
+        <FormSection
+          title="How you work with this client"
+          description="Optional: year-end, payment terms and who looks after the client."
+          className="grid gap-4 sm:grid-cols-3"
+          collapsible
+          defaultOpen={client !== null}
+          forceOpen={Boolean(
+            errors.year_end_month ??
+            errors.year_end_day ??
+            errors.payment_terms_days ??
+            errors.health_score ??
+            errors.accounting_software ??
+            errors.manager_user_id ??
+            errors.partner_user_id,
+          )}
+        >
           <Select
             label="Year-end month"
             options={[{ value: '', label: 'Not set' }, ...MONTH_OPTIONS]}
@@ -275,6 +304,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
           />
           <Input
             label="Payment terms (days)"
+            hint="Days after the invoice date that payment is due. Empty: the practice's terms."
             inputMode="numeric"
             error={errors.payment_terms_days?.message}
             {...register('payment_terms_days')}
@@ -296,21 +326,30 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
             <>
               <Select
                 label="Manager"
+                hint="Looks after the day-to-day work."
                 options={memberOptions}
                 error={errors.manager_user_id?.message}
                 {...register('manager_user_id')}
               />
               <Select
                 label="Partner"
+                hint="Responsible for the relationship and the sign-off."
                 options={memberOptions}
                 error={errors.partner_user_id?.message}
                 {...register('partner_user_id')}
               />
             </>
           ) : null}
-        </section>
+        </FormSection>
 
-        <section className="grid gap-4" aria-label="Notes">
+        <FormSection
+          title="Notes"
+          description="Optional. Notes are for the practice only; billing notes are for whoever raises the invoices."
+          className="grid gap-4"
+          collapsible
+          defaultOpen={client !== null}
+          forceOpen={Boolean(errors.notes ?? errors.billing_notes)}
+        >
           <Textarea label="Notes" rows={3} error={errors.notes?.message} {...register('notes')} />
           <Textarea
             label="Billing notes"
@@ -318,7 +357,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
             error={errors.billing_notes?.message}
             {...register('billing_notes')}
           />
-        </section>
+        </FormSection>
       </form>
       <div className="sticky -bottom-5 z-10 -mx-5 rounded-b-xl mt-5 flex flex-col-reverse gap-2 border-t border-border bg-surface-raised px-5 pt-4 pb-5 sm:flex-row sm:justify-end md:-mx-6 md:px-6">
         <Button onClick={onClose}>Cancel</Button>

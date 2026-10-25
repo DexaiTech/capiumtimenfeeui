@@ -37,6 +37,7 @@ export function errorCode(error: unknown): string | undefined {
  * fields: the API names a field `minutes`, the form calls it `time`.
  */
 export function toFormError(error: unknown, rename: Record<string, string> = {}): unknown {
+  if (isApiError(error) && error.code === 'TIME_LOCKED') return withLockedHint(error);
   if (!isApiError(error) || error.status !== 422) return error;
   const details = fieldDetails(error);
   if (details.length === 0) return error;
@@ -47,6 +48,26 @@ export function toFormError(error: unknown, rename: Record<string, string> = {})
     requestId: error.requestId,
     retryAfter: error.retryAfter,
     details: details.map((detail) => ({ ...detail, field: rename[detail.field] ?? detail.field })),
+  });
+}
+
+/** A locked week says what to do next: the refusal alone leaves the person stuck. */
+function withLockedHint(error: ApiError): ApiError {
+  const status = detailsObject(error)?.timesheet_status;
+  const hint =
+    status === 'submitted'
+      ? ' Recall the timesheet to change it.'
+      : status === 'approved'
+        ? ' Ask a manager to reopen the week, or record the time on a date in an open week.'
+        : '';
+  if (!hint) return error;
+  return new ApiError({
+    status: error.status,
+    code: error.code,
+    message: error.message + hint,
+    requestId: error.requestId,
+    retryAfter: error.retryAfter,
+    details: error.details,
   });
 }
 

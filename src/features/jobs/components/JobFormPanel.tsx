@@ -9,6 +9,7 @@ import {
   DurationInput,
   Input,
   FormPanel,
+  FormSection,
   Select,
   Switch,
   Textarea,
@@ -192,65 +193,72 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
             managed there.
           </p>
         ) : null}
-        {job ? (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-medium text-text">Client</span>
-            <span className="text-sm text-text">
-              {job.client_name} <span className="text-text-muted">({job.client_code})</span>
-            </span>
-          </div>
-        ) : can('client.read') ? (
-          <ClientPicker
-            label="Client"
+        <p className="text-xs text-text-muted">Fields marked with a red star are required.</p>
+        <FormSection title="The job" className="flex flex-col gap-4">
+          {job ? (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-medium text-text">Client</span>
+              <span className="text-sm text-text">
+                {job.client_name} <span className="text-text-muted">({job.client_code})</span>
+              </span>
+            </div>
+          ) : can('client.read') ? (
+            <ClientPicker
+              label="Client"
+              required
+              value={clientValue || null}
+              onChange={(id) => setValue('client_id', id ?? '', { shouldDirty: true })}
+              error={errors.client_id?.message}
+            />
+          ) : (
+            <p className="text-sm text-text-muted">
+              Your role cannot choose a client, so it cannot start a job from here.
+            </p>
+          )}
+          <Input
+            label="Job name"
             required
-            value={clientValue || null}
-            onChange={(id) => setValue('client_id', id ?? '', { shouldDirty: true })}
-            error={errors.client_id?.message}
+            autoComplete="off"
+            maxLength={LIMITS.jobName}
+            disabled={managed}
+            error={errors.name?.message}
+            {...register('name')}
           />
-        ) : (
-          <p className="text-sm text-text-muted">
-            Your role cannot choose a client, so it cannot start a job from here.
-          </p>
-        )}
-        <Input
-          label="Job name"
-          required
-          autoComplete="off"
-          maxLength={LIMITS.jobName}
-          disabled={managed}
-          error={errors.name?.message}
-          {...register('name')}
-        />
-        <Textarea
-          label="Description"
-          rows={2}
-          maxLength={LIMITS.jobDescription}
-          error={errors.description?.message}
-          {...register('description')}
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Controller
-            control={control}
-            name="service_id"
-            render={({ field }) => (
-              <Select
-                label="Service"
-                options={serviceOptions(field.value)}
-                value={field.value}
-                disabled={managed}
-                onChange={(event) => onServiceChange(event.target.value)}
-                error={errors.service_id?.message}
-              />
-            )}
+          <Textarea
+            label="Description"
+            rows={2}
+            maxLength={LIMITS.jobDescription}
+            error={errors.description?.message}
+            {...register('description')}
           />
-          <Select
-            label="Billing"
-            options={BASIS_OPTIONS}
-            error={errors.billing_basis?.message}
-            {...register('billing_basis')}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Controller
+              control={control}
+              name="service_id"
+              render={({ field }) => (
+                <Select
+                  label="Service"
+                  options={serviceOptions(field.value)}
+                  value={field.value}
+                  disabled={managed}
+                  onChange={(event) => onServiceChange(event.target.value)}
+                  error={errors.service_id?.message}
+                />
+              )}
+            />
+            <Select
+              label="Billing"
+              options={BASIS_OPTIONS}
+              error={errors.billing_basis?.message}
+              {...register('billing_basis')}
+            />
+          </div>
+        </FormSection>
+        <FormSection
+          title="Fees and budget"
+          description="Optional. Left empty, the service and the practice's rates apply."
+          className="grid gap-4 sm:grid-cols-2"
+        >
           {basis === 'fixed' ? (
             <Input
               label="Fixed fee (£)"
@@ -287,8 +295,8 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
             error={errors.budget_fee?.message}
             {...register('budget_fee')}
           />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        </FormSection>
+        <FormSection title="Dates" className="grid gap-4 sm:grid-cols-2">
           <Controller
             control={control}
             name="start_date"
@@ -340,8 +348,12 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
               />
             )}
           />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        </FormSection>
+        <FormSection
+          title="People"
+          description="The manager runs the job; the partner is responsible for the client."
+          className="grid gap-4 sm:grid-cols-2"
+        >
           <Controller
             control={control}
             name="manager_user_id"
@@ -370,7 +382,7 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
               />
             )}
           />
-        </div>
+        </FormSection>
         {offersDefaultTasks ? (
           <div className="flex flex-col gap-1 rounded-md border border-border px-3 py-1">
             <Switch

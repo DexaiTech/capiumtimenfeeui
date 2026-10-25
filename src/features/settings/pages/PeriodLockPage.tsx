@@ -14,7 +14,7 @@ export default function PeriodLockPage() {
   useDocumentTitle('Period lock');
   return (
     <SettingsSection
-      title="Period Lock"
+      title="Lock Past Periods"
       description="Lock time, expenses and WIP up to a date, and reopen periods."
     >
       {can(P.periodLockRead) ? <PeriodLockView /> : <NoAccess what="the period lock" />}

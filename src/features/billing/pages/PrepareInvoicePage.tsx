@@ -11,14 +11,14 @@ import { NoAccess, PageShell } from '../components/PageShell';
 
 /** /:orgSlug/billing/prepare: Choose a client and the work to bill, then review and issue the invoice. */
 export default function PrepareInvoicePage() {
-  useDocumentTitle('Prepare Invoice');
+  useDocumentTitle('Create Invoice');
   const { can } = useOrg();
   const { params, setParam } = useUrlParams();
   const clientId = params.get('client');
 
   return (
     <PageShell
-      title="Prepare Invoice"
+      title="Create Invoice"
       description="Choose a client and the work to bill, then review and issue the invoice."
     >
       {!can(P.invoiceCreate) ? (

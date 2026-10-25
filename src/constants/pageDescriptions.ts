@@ -1,0 +1,90 @@
+/**
+ * One line for every page of the menu, in plain words: what it is for. Shown as the tooltip of
+ * the menu entry, so a name like "Unbilled Work" or "Money Owed" explains itself before it is
+ * opened. Keyed `moduleId/pageId`, as in `navigation.ts`.
+ */
+export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  'dashboard/overview': 'Your week, your actions and the practice’s key figures at a glance.',
+  'dashboard/my-actions': 'What is waiting for you: approvals to give, timesheets to submit.',
+  'dashboard/my-timesheet': 'The hours you have recorded this week against your target.',
+  'dashboard/pending-approvals': 'Timesheets and expense claims waiting for your decision.',
+  'dashboard/missing-timesheets': 'Who has not recorded time for the days that are due.',
+  'dashboard/top-clients-by-wip': 'The clients with the most work done but not yet billed.',
+  'dashboard/billing-trend': 'What was billed each month.',
+  'dashboard/debtor-ageing': 'Unpaid invoices by how overdue they are.',
+
+  'clients/list': 'All your clients: find one, add one, open its jobs, invoices and contacts.',
+  'clients/client-360': 'One client on one page: contacts, jobs, time, invoices and settings.',
+
+  'time/my-timesheet': 'Record your time by day, week or calendar, and submit the week.',
+  'time/entries': 'Every time entry: search, filter, correct and export.',
+  'time/team': 'Your team’s weeks: who has submitted and who is missing.',
+  'time/approvals': 'Approve or return submitted timesheets.',
+  'time/analysis': 'Where the time went: by client, job, person or activity.',
+
+  'jobs/list': 'Every job with its client, status, manager, due date and budget.',
+  'jobs/job-details': 'One job: its tasks, budget, assignees and time.',
+  'jobs/budgets': 'Jobs against their budgets: which are running over.',
+  'jobs/tasks': 'Every task across jobs: status, assignees and due dates.',
+  'jobs/assignments': 'Who is working on what.',
+  'jobs/calendar': 'Job due dates on a calendar.',
+
+  'expenses/mine': 'Your expense claims: record what you spent and submit it.',
+  'expenses/claims': 'Every claim of the practice: filter, open and approve.',
+  'expenses/approvals': 'Claims waiting for your decision.',
+  'expenses/receipts': 'Receipts attached to claims, and the lines that still need one.',
+  'expenses/disbursements': 'Costs paid for a client and recharged to them.',
+  'expenses/types': 'The kinds of expense you can claim, with their VAT.',
+
+  'wip/summary': 'Work done but not yet billed (WIP), by client, job, partner or service.',
+  'wip/details': 'The individual time, expense and fee items that are waiting to be billed.',
+  'wip/ageing': 'Unbilled work by how old it is.',
+  'wip/adjustments': 'Write work in progress on or off, with a reason.',
+  'wip/transfers': 'Move unbilled work from one client or job to another.',
+  'wip/historic': 'What the WIP was on an earlier date.',
+
+  'billing/prepare': 'Choose a client and the work to bill, review the lines and make the invoice.',
+  'billing/invoices': 'Every invoice: draft, issue, send, correct.',
+  'billing/credit-notes': 'Credit notes raised against issued invoices.',
+  'billing/recurring': 'Invoices drafted automatically on a schedule.',
+  'billing/estimates': 'Quotes for clients; an accepted one becomes a draft invoice.',
+  'billing/payments': 'Money received, and which invoices it was matched to.',
+  'billing/debtors': 'Who owes you money, how much and for how long, with reminders.',
+  'billing/statements': 'A client’s statement of invoices and payments, to email or print.',
+
+  'reports/time-analysis': 'Where the time went: by client, job, person or activity.',
+  'reports/utilisation': 'How much of working time was chargeable, per person.',
+  'reports/missing-timesheets': 'Who has not recorded time for the days that are due.',
+  'reports/job-profitability': 'Fees against cost for each job.',
+  'reports/wip-ageing': 'Unbilled work and its age.',
+  'reports/recovery': 'How much of the value of work was billed.',
+  'reports/expenses': 'Expenses by type, client and person.',
+  'reports/billing': 'Invoiced amounts over time.',
+  'reports/payments': 'Money received over time.',
+  'reports/aged-debtors': 'Unpaid invoices by how overdue they are.',
+
+  'team/staff': 'The people you record time for: grade, approver, hours and sign-in.',
+  'team/grades': 'Levels of staff, each with default cost and charge-out rates.',
+  'team/cost-rates': 'What an hour of each person or grade costs the practice.',
+  'team/charge-out-rates': 'What you bill for an hour, by person, grade, client or service.',
+  'team/rate-history': 'Every change of a rate, with its dates.',
+  'team/rate-preview': 'Check which rate applies to a person, client and day.',
+  'team/re-rate': 'Re-price time that is not billed yet with today’s rates.',
+  'team/services': 'The work you sell, with default fees, activities and tasks.',
+  'team/activity-types': 'What a piece of time was spent on, and whether it is billable.',
+
+  'settings/general':
+    'The rules for the whole practice: time recording, unbilled work, billing, rates, expenses and locale.',
+  'settings/practice': 'The practice itself: name, address, VAT number and bank details.',
+  'settings/roles': 'What each role may see and do.',
+  'settings/period-lock': 'Close the past: no time, expenses or WIP before the date can change.',
+  'settings/vat-codes': 'The VAT rates invoices and expenses can use.',
+  'settings/document-numbering': 'How invoices, credit notes and estimates are numbered.',
+  'settings/invoice-templates': 'How an invoice looks.',
+  'settings/notifications': 'Which alerts you and the practice receive.',
+  'settings/email-templates': 'The wording of the emails the system sends.',
+  'settings/integrations': 'Connections to other systems.',
+  'settings/import-export': 'Bring clients, staff and jobs in, or take them out as files.',
+  'settings/audit-logs': 'Who changed what, and when.',
+  'settings/onboarding': 'The steps to set the practice up, and how far you have got.',
+};

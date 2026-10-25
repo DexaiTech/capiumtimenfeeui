@@ -1,6 +1,6 @@
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
-import { Input, Select } from '@/components/ui';
+import { FormSection, Input, Select } from '@/components/ui';
 
 import { STAFF_STATUS_LABEL } from '../../constants';
 import type { Grade, RefRead } from '../../types';
@@ -49,121 +49,136 @@ export function StaffFormFields({
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Full name"
-          required
-          autoComplete="off"
-          error={errors.full_name?.message}
-          {...register('full_name')}
-        />
-        <Input
-          label="Staff code"
-          required={mode === 'edit'}
-          autoComplete="off"
-          placeholder={mode === 'add' ? 'Next number' : undefined}
-          hint={mode === 'add' ? 'Leave empty to use the next number.' : undefined}
-          error={errors.code?.message}
-          {...register('code')}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label="Grade"
-          required
-          placeholder="Choose a grade"
-          options={gradeOptions}
-          error={errors.grade_id?.message}
-          {...register('grade_id')}
-        />
-        <Input
-          label="Start date"
-          required={mode === 'add'}
-          type="date"
-          error={errors.start_date?.message}
-          {...register('start_date')}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Work email"
-          type="email"
-          autoComplete="off"
-          spellCheck={false}
-          error={errors.email?.message}
-          {...register('email')}
-        />
+      <p className="text-xs text-text-muted">Fields marked with a red star are required.</p>
+      <FormSection title="The person" className="flex flex-col gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Full name"
+            required
+            autoComplete="off"
+            error={errors.full_name?.message}
+            {...register('full_name')}
+          />
+          <Input
+            label="Staff code"
+            required={mode === 'edit'}
+            autoComplete="off"
+            placeholder={mode === 'add' ? 'Next number' : undefined}
+            hint={mode === 'add' ? 'Leave empty to use the next number.' : undefined}
+            error={errors.code?.message}
+            {...register('code')}
+          />
+        </div>
+      </FormSection>
+      <FormSection
+        title="Their place in the practice"
+        description="The grade sets their default rates; the approver signs off their timesheets."
+        className="flex flex-col gap-4"
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="Grade"
+            required
+            placeholder="Choose a grade"
+            options={gradeOptions}
+            error={errors.grade_id?.message}
+            {...register('grade_id')}
+          />
+          <Input
+            label="Start date"
+            required={mode === 'add'}
+            type="date"
+            error={errors.start_date?.message}
+            {...register('start_date')}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Work email"
+            type="email"
+            autoComplete="off"
+            spellCheck={false}
+            error={errors.email?.message}
+            {...register('email')}
+          />
+          <Controller
+            control={control}
+            name="approver_id"
+            render={({ field }) => (
+              <StaffPicker
+                label="Approver"
+                value={field.value}
+                valueLabel={approverName}
+                onChange={(id) => field.onChange(id)}
+                hasLogin
+                selectable
+                excludeId={staffId}
+                placeholder="No approver"
+                hint="Only people who can sign in can approve timesheets."
+                error={errors.approver_id?.message}
+              />
+            )}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Job title"
+            autoComplete="off"
+            placeholder="For example Senior accountant"
+            error={errors.job_title?.message}
+            {...register('job_title')}
+          />
+          <Input
+            label="Initials"
+            autoComplete="off"
+            placeholder="Auto"
+            maxLength={6}
+            error={errors.initials?.message}
+            {...register('initials')}
+          />
+        </div>
+      </FormSection>
+      <FormSection
+        title="Working time"
+        description="Used for timesheet targets and for finding days with no time recorded."
+        className="flex flex-col gap-4"
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Hours per working day"
+            required
+            inputMode="decimal"
+            autoComplete="off"
+            hint="For example 7.5 or 7:30."
+            error={errors.hours_per_day?.message}
+            {...register('hours_per_day')}
+          />
+          <Input
+            label="Chargeable target (%)"
+            required={mode === 'edit'}
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder={mode === 'add' ? 'Grade default' : undefined}
+            hint="Share of working time expected to be chargeable."
+            error={errors.target_percent?.message}
+            {...register('target_percent')}
+          />
+        </div>
         <Controller
           control={control}
-          name="approver_id"
+          name="working_days"
           render={({ field }) => (
-            <StaffPicker
-              label="Approver"
+            <WorkingDaysField
               value={field.value}
-              valueLabel={approverName}
-              onChange={(id) => field.onChange(id)}
-              hasLogin
-              selectable
-              excludeId={staffId}
-              placeholder="No approver"
-              hint="Only people who can sign in can approve timesheets."
-              error={errors.approver_id?.message}
+              onChange={field.onChange}
+              error={errors.working_days?.message}
+              required
             />
           )}
         />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Job title"
-          autoComplete="off"
-          placeholder="For example Senior accountant"
-          error={errors.job_title?.message}
-          {...register('job_title')}
-        />
-        <Input
-          label="Initials"
-          autoComplete="off"
-          placeholder="Auto"
-          maxLength={6}
-          error={errors.initials?.message}
-          {...register('initials')}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Hours per working day"
-          required
-          inputMode="decimal"
-          autoComplete="off"
-          hint="For example 7.5 or 7:30."
-          error={errors.hours_per_day?.message}
-          {...register('hours_per_day')}
-        />
-        <Input
-          label="Chargeable target (%)"
-          required={mode === 'edit'}
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder={mode === 'add' ? 'Grade default' : undefined}
-          hint="Share of working time expected to be chargeable."
-          error={errors.target_percent?.message}
-          {...register('target_percent')}
-        />
-      </div>
-      <Controller
-        control={control}
-        name="working_days"
-        render={({ field }) => (
-          <WorkingDaysField
-            value={field.value}
-            onChange={field.onChange}
-            error={errors.working_days?.message}
-            required
-          />
-        )}
-      />
+      </FormSection>
       {mode === 'edit' ? (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <FormSection title="Status" className="grid gap-4 sm:grid-cols-2">
           <Select
             label="Status"
             options={STATUS_OPTIONS}
@@ -177,7 +192,7 @@ export function StaffFormFields({
             error={errors.leaving_date?.message}
             {...register('leaving_date')}
           />
-        </div>
+        </FormSection>
       ) : null}
     </>
   );

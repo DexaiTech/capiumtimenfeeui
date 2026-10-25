@@ -53,7 +53,8 @@ export function ChangeHint({ comparison, unit, period, better = 'neutral' }: Cha
     change.direction === 'flat' || better === 'neutral'
       ? null
       : (change.direction === 'up') === (better === 'up');
-  const Icon = change.direction === 'up' ? ArrowUp : change.direction === 'down' ? ArrowDown : Minus;
+  const Icon =
+    change.direction === 'up' ? ArrowUp : change.direction === 'down' ? ArrowDown : Minus;
   return (
     <span
       className={cn(

@@ -15,7 +15,15 @@ const GRID: WeekGrid = {
   user_id: 'u',
   week_start: '2026-10-12',
   week_end: '2026-10-18',
-  days: ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'],
+  days: [
+    '2026-10-12',
+    '2026-10-13',
+    '2026-10-14',
+    '2026-10-15',
+    '2026-10-16',
+    '2026-10-17',
+    '2026-10-18',
+  ],
   timesheet_id: null,
   timesheet_status: 'open',
   rows: [
@@ -47,9 +55,9 @@ describe('grid helpers', () => {
   it('keys a row by client, job, activity and billable status', () => {
     expect(rowKey(identity)).toBe(`${ACME.id}|${ACCOUNTS_JOB.id}|${PREPARATION.id}|billable`);
     expect(rowKey({ ...identity, is_billable: false })).toContain('non-billable');
-    expect(rowKey({ client_id: null, job_id: null, activity_code_id: null, is_billable: false })).toBe(
-      '||'.concat('|non-billable'),
-    );
+    expect(
+      rowKey({ client_id: null, job_id: null, activity_code_id: null, is_billable: false }),
+    ).toBe('||'.concat('|non-billable'));
   });
 
   it('splits a cell key back into its row and date', () => {
@@ -85,7 +93,11 @@ describe('grid helpers', () => {
       is_billable: true,
       service_name: 'Tax returns',
     };
-    const rows = buildRows(GRID, [draft, draft, { ...draft, job_id: ACCOUNTS_JOB.id, activity_code_id: PREPARATION.id }], new Map());
+    const rows = buildRows(
+      GRID,
+      [draft, draft, { ...draft, job_id: ACCOUNTS_JOB.id, activity_code_id: PREPARATION.id }],
+      new Map(),
+    );
     expect(rows.map((row) => [row.job_number, row.draft])).toEqual([
       ['J00001', false],
       ['J00002', true],

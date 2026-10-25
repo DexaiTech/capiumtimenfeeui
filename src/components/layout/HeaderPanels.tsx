@@ -1,8 +1,9 @@
 import { Bell, CircleQuestionMark, Keyboard } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
-import { EmptyState, Popover, Tooltip } from '@/components/ui';
+import { buttonClasses, EmptyState, Popover, Tooltip } from '@/components/ui';
+import { routes } from '@/constants/routes';
 import { cn } from '@/utils/cn';
 
 import { badgeCount, bellLabel } from './notificationBadge';
@@ -15,6 +16,7 @@ const barIcon =
 
 /** The help icon: how to find your way around. */
 export function HelpMenu() {
+  const { practice } = useShell();
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   return (
@@ -56,6 +58,15 @@ export function HelpMenu() {
           <p className="text-text-muted">
             Missing something? Your practice administrator decides what each role can see.
           </p>
+          {practice ? (
+            <Link
+              to={routes.org.help(practice.slug)}
+              onClick={() => setOpen(false)}
+              className={buttonClasses({ variant: 'primary', size: 'sm' })}
+            >
+              How it works, glossary and support
+            </Link>
+          ) : null}
         </div>
       </Popover>
     </>

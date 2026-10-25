@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '@/services/api';
 
-import { describeFailure, detailsObject, dialogError, errorCode, fieldDetails, toFormError } from './errors';
+import {
+  describeFailure,
+  detailsObject,
+  dialogError,
+  errorCode,
+  fieldDetails,
+  toFormError,
+} from './errors';
 import { describeVariance, formatClock, formatDayList, formatShare, refLabel } from './format';
 import { changeLines, formatEntryValue } from './history';
 import { chartRows, groupLabel, presetOf, rangePresets, valueLessCost } from './analysis';
@@ -13,10 +20,18 @@ const apiError = (init: Partial<ConstructorParameters<typeof ApiError>[0]> = {})
 
 describe('errors', () => {
   it('reads the fields a 422 names, and the object details of a 409', () => {
-    const fields = apiError({ details: [{ field: 'minutes', code: 'day_limit', message: 'Too much' }] });
-    expect(fieldDetails(fields)).toEqual([{ field: 'minutes', code: 'day_limit', message: 'Too much' }]);
+    const fields = apiError({
+      details: [{ field: 'minutes', code: 'day_limit', message: 'Too much' }],
+    });
+    expect(fieldDetails(fields)).toEqual([
+      { field: 'minutes', code: 'day_limit', message: 'Too much' },
+    ]);
     expect(fieldDetails(new Error('x'))).toEqual([]);
-    const locked = apiError({ status: 409, code: 'PERIOD_LOCKED', details: { date: '2026-03-15' } });
+    const locked = apiError({
+      status: 409,
+      code: 'PERIOD_LOCKED',
+      details: { date: '2026-03-15' },
+    });
     expect(detailsObject(locked)).toEqual({ date: '2026-03-15' });
     expect(detailsObject(fields)).toBeNull();
     expect(errorCode(locked)).toBe('PERIOD_LOCKED');
@@ -34,16 +49,26 @@ describe('errors', () => {
     expect(describeFailure(apiError({ status: 403, message: 'No.' }), 'Failed').title).toBe(
       "You don't have permission to do that",
     );
-    expect(describeFailure(apiError({ status: 404 }), 'Failed').title).toBe('That record no longer exists');
+    expect(describeFailure(apiError({ status: 404 }), 'Failed').title).toBe(
+      'That record no longer exists',
+    );
     expect(describeFailure(apiError({ status: 429, retryAfter: 90 }), 'Failed').description).toBe(
       'Try again in 2 minutes.',
     );
-    expect(describeFailure(apiError({ status: 500, message: 'Boom', requestId: 'r1' }), 'Could not save')).toEqual({
+    expect(
+      describeFailure(
+        apiError({ status: 500, message: 'Boom', requestId: 'r1' }),
+        'Could not save',
+      ),
+    ).toEqual({
       title: 'Could not save',
       description: 'Boom (Request ID: r1)',
     });
     expect(describeFailure(new Error('x'), 'Could not save').description).toMatch(/unexpected/);
-    expect(dialogError(apiError({ message: 'Nope' }))).toEqual({ message: 'Nope', requestId: undefined });
+    expect(dialogError(apiError({ message: 'Nope' }))).toEqual({
+      message: 'Nope',
+      requestId: undefined,
+    });
   });
 });
 
@@ -134,7 +159,11 @@ describe('analysis', () => {
     const periods = chartRows([row({ key: '2026-10-02' }), row({ key: '2026-10-01' })], 'day');
     expect(periods.map((item) => item.key)).toEqual(['2026-10-01', '2026-10-02']);
     const people = chartRows(
-      [row({ name: 'A', total_minutes: 10 }), row({ name: 'B', total_minutes: 30 }), row({ name: 'C', total_minutes: 20 })],
+      [
+        row({ name: 'A', total_minutes: 10 }),
+        row({ name: 'B', total_minutes: 30 }),
+        row({ name: 'C', total_minutes: 20 }),
+      ],
       'person',
       2,
     );

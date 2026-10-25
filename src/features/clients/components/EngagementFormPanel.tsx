@@ -161,6 +161,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
           />
           <Select
             label="Frequency"
+            hint="How often this work repeats. One-off means it does not."
             options={FREQUENCY_OPTIONS}
             error={errors.frequency?.message}
             {...register('frequency')}
@@ -168,6 +169,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
           <Input
             label="Start date"
             type="date"
+            hint="When the first period starts. Needed to create jobs automatically."
             required={autoCreate}
             error={errors.start_date?.message}
             {...register('start_date')}
@@ -179,7 +181,12 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
             {...register('end_date')}
           />
         </div>
-        <Checkbox label="Active" error={errors.is_active?.message} {...register('is_active')} />
+        <Checkbox
+          label="Active"
+          description="Turn off to stop work on this service without removing it."
+          error={errors.is_active?.message}
+          {...register('is_active')}
+        />
         <div className="flex flex-col gap-2 rounded-md border border-border p-3">
           <Controller
             control={control}

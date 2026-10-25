@@ -1,4 +1,4 @@
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, CircleQuestionMark, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
@@ -9,7 +9,7 @@ import { backdrop, drawer } from '@/components/common/motion';
 import { Button } from '@/components/ui';
 import { useFocusTrap } from '@/components/ui/useFocusTrap';
 import { activePageId, moduleIdForPath } from '@/constants/navigation';
-import { ORG_SEGMENTS } from '@/constants/routes';
+import { ORG_SEGMENTS, routes } from '@/constants/routes';
 import { cn } from '@/utils/cn';
 
 import { useShell } from './shellContext';
@@ -167,6 +167,18 @@ function DrawerPanel({ onClose }: { onClose: () => void }) {
                     ))}
                   </ul>
                 ) : null}
+              </li>
+            ) : null}
+            {practice ? (
+              <li key="help">
+                <NavLink
+                  to={routes.org.help(practice.slug)}
+                  onClick={onClose}
+                  className={({ isActive }) => linkClasses(isActive)}
+                >
+                  <CircleQuestionMark aria-hidden="true" className="size-4.5" />
+                  Help
+                </NavLink>
               </li>
             ) : null}
           </ul>

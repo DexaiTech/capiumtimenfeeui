@@ -173,10 +173,10 @@ function ReRate() {
 /** `/:orgSlug/team/re-rate`: re-price unbilled time at today's rates, with a preview first (`rate.manage`). */
 export default function ReRateTimePage() {
   const { can } = useOrg();
-  useDocumentTitle('Re-rate Time');
+  useDocumentTitle('Change Rates on Past Time');
   return (
     <PageShell
-      title="Re-rate Time"
+      title="Change Rates on Past Time"
       description="Re-price unbilled time at the rates in force now. Preview the effect first: billed, drafted and written-off time is never touched."
     >
       {can(PERMISSIONS.rateManage) ? <ReRate /> : <NoAccess what="re-rating" />}

@@ -83,7 +83,9 @@ beforeEach(() => {
 describe('ReRateTimePage scope', () => {
   it('starts with the scope form only: no preview, nothing to apply', async () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Re-rate Time' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Change Rates on Past Time' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('1. Choose the time to re-rate')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 2, name: 'Preview' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Apply re-rate' })).not.toBeInTheDocument();

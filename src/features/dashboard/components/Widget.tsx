@@ -7,12 +7,7 @@ import { formatUkDateTime } from '@/utils/dates';
 
 import type { WidgetData } from '../types';
 import { RefreshButton } from './RefreshButton';
-import {
-  WidgetEmpty,
-  WidgetError,
-  WidgetNoAccess,
-  WidgetSkeleton,
-} from './WidgetStates';
+import { WidgetEmpty, WidgetError, WidgetNoAccess, WidgetSkeleton } from './WidgetStates';
 
 /** "Updated 17/10/2026 00:30": when the API worked the figures out, in the practice's time zone. */
 export function UpdatedAt({ at, className }: { at: string; className?: string }) {

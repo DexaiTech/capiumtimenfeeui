@@ -46,6 +46,7 @@ export function ModuleSidebar({ moduleId }: { moduleId: ModuleId }) {
                   <li key={page.id} className="flex-1 lg:flex-none">
                     <Link
                       to={page.to(slug)}
+                      title={page.description}
                       aria-current={page.id === activeId ? 'page' : undefined}
                       className={sidebarLinkClasses(page.id === activeId)}
                     >

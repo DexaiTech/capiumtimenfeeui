@@ -57,7 +57,7 @@ beforeEach(() => {
 describe('Client360Page', () => {
   it('replaces the placeholder with a search and a recent list', () => {
     renderLanding();
-    expect(screen.getByRole('heading', { level: 1, name: 'Client 360' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Client Overview' })).toBeInTheDocument();
     expect(
       screen.getByText('Pick a client to see everything about them in one place.'),
     ).toBeInTheDocument();

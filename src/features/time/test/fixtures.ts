@@ -1,14 +1,7 @@
 import { testUser } from '@/test/fixtures';
 import { addDays } from '@/utils/dates';
 
-import type {
-  JobRef,
-  StaffPerson,
-  TimeEntry,
-  Timer,
-  Timesheet,
-  TimesheetStatus,
-} from '../types';
+import type { JobRef, StaffPerson, TimeEntry, Timer, Timesheet, TimesheetStatus } from '../types';
 
 /** The practice's "now" in every test: a Wednesday, 11:00 in London (BST). */
 export const NOW_ISO = '2026-10-14T10:00:00Z';
@@ -130,7 +123,8 @@ export const PEOPLE: StaffPerson[] = [
 ];
 
 /** The sheet of a week gets an id that tells whose and which week it is. */
-export const sheetId = (userId: string, weekStart: string) => `sheet-${userId.slice(-2)}-${weekStart}`;
+export const sheetId = (userId: string, weekStart: string) =>
+  `sheet-${userId.slice(-2)}-${weekStart}`;
 
 export const CHARGE_RATE = 9500;
 export const COST_RATE = 4000;

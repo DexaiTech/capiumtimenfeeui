@@ -9,6 +9,7 @@ import { addDays, todayInZone } from '@/utils/dates';
 
 import { useRangeEntries, useTimesheet, useWeek } from '../api';
 import { EntryPanel } from '../components/EntryPanel';
+import { RatesNotSetNotice } from '../components/RatesNotSetNotice';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { PeriodNavigator } from '../components/PeriodNavigator';
 import { CalendarView } from '../components/timesheet/CalendarView';
@@ -162,6 +163,7 @@ export default function MyTimesheetPage() {
       }
     >
       <EntryPanel open={adding} onClose={() => setAdding(false)} defaults={{ date: defaultDate }} />
+      <RatesNotSetNotice />
       <TimerCard />
       <PageToolbar
         start={

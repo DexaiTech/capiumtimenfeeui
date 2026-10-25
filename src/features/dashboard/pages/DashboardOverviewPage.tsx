@@ -17,6 +17,7 @@ import {
   useTopClientsByWip,
 } from '../api';
 import { BillingTrendChart } from '../components/BillingTrendChart';
+import { GettingStartedCard } from '../components/GettingStartedCard';
 import { DebtorAgeingChart } from '../components/DebtorAgeingChart';
 import { MyActionsWidget } from '../components/MyActionsWidget';
 import { MyTimesheetChart } from '../components/MyTimesheetChart';
@@ -82,6 +83,7 @@ export default function DashboardOverviewPage() {
           </>
         }
       />
+      <GettingStartedCard />
       <SummaryCards query={cards} />
       <div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         <MyActionsWidget />

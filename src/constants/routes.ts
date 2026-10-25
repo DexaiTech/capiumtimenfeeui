@@ -79,6 +79,8 @@ export const routes = {
     staffMember: (slug: string, staffId: string) =>
       under(slug, ORG_SEGMENTS.team, 'staff', segment(staffId)),
     account: (slug: string) => under(slug, ORG_SEGMENTS.account),
+    /** The Help centre: how the product fits together, the glossary, shortcuts and support. */
+    help: (slug: string) => under(slug, 'help'),
     /** Application Testing: the dashboard, the ticket list and one ticket. */
     applicationTesting: (slug: string) => under(slug, ORG_SEGMENTS.applicationTesting),
     ticketsDashboard: (slug: string) => under(slug, ORG_SEGMENTS.applicationTesting, 'dashboard'),

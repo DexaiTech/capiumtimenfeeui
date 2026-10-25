@@ -12,7 +12,8 @@ const DELAY = 800;
 function setup(overrides: Partial<AutosaveHandlers> = {}) {
   const saved: Array<[string, number | null]> = [];
   const handlers: AutosaveHandlers = {
-    parse: (text) => (text.trim() === '' ? null : Number.isNaN(Number(text)) ? 'invalid' : Number(text)),
+    parse: (text) =>
+      text.trim() === '' ? null : Number.isNaN(Number(text)) ? 'invalid' : Number(text),
     validate: () => null,
     isUnchanged: () => false,
     confirmClear: () => Promise.resolve(true),
@@ -104,7 +105,9 @@ describe('CellAutosave', () => {
   });
 
   it('refuses text that is not a duration and values the page rejects, without saving', async () => {
-    const { engine, saved } = setup({ validate: (_key, minutes) => (minutes === 99 ? 'Too long' : null) });
+    const { engine, saved } = setup({
+      validate: (_key, minutes) => (minutes === 99 ? 'Too long' : null),
+    });
     engine.edit('a', 'abc');
     engine.commit('a');
     await vi.advanceTimersByTimeAsync(0);

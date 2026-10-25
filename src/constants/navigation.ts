@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 
 import { PERMISSIONS as P, type PermissionCode } from './permissions';
+import { PAGE_DESCRIPTIONS } from './pageDescriptions';
 import { ORG_SEGMENTS, modulePath, type ModuleSegment } from './routes';
 
 /**
@@ -95,8 +96,12 @@ export interface SubPage extends AccessRule {
   segment: string;
   /** Also current below the module for paths that no other page claims (detail pages). */
   detail?: boolean;
+  /** Not offered in menus or search; the page and its address still exist. */
+  hidden?: boolean;
   /** Groups the page under a heading in the "More" overflow menu; ungrouped pages get none. */
   group?: string;
+  /** One line in plain words on what the page is for: the tooltip of its menu entry. */
+  description?: string;
   to: (slug: string) => string;
 }
 
@@ -135,11 +140,16 @@ interface PageDef {
   /** Defaults to the id; '' for the module's index page. */
   segment?: string;
   detail?: boolean;
+  hidden?: boolean;
   /** Groups the page under a heading in the "More" overflow menu; ungrouped pages get none. */
   group?: string;
 }
 
-function pagesOf(moduleSegment: ModuleSegment, defs: ReadonlyArray<PageDef>): SubPage[] {
+function pagesOf(
+  moduleId: ModuleId,
+  moduleSegment: ModuleSegment,
+  defs: ReadonlyArray<PageDef>,
+): SubPage[] {
   return defs.map((def) => {
     const segment = def.segment ?? def.id;
     return {
@@ -148,7 +158,9 @@ function pagesOf(moduleSegment: ModuleSegment, defs: ReadonlyArray<PageDef>): Su
       icon: def.icon,
       segment,
       detail: def.detail,
+      hidden: def.hidden,
       group: def.group,
+      description: PAGE_DESCRIPTIONS[`${moduleId}/${def.id}`],
       anyOf: def.anyOf ?? [],
       to: (slug: string) => modulePath(slug, moduleSegment, segment),
     };
@@ -170,7 +182,7 @@ function moduleOf(
     segment,
     anyOf,
     to: (slug: string) => modulePath(slug, segment),
-    pages: pagesOf(segment, defs),
+    pages: pagesOf(id, segment, defs),
   };
 }
 
@@ -249,7 +261,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
       { id: 'list', label: 'Client List', icon: Users, segment: '', anyOf: [P.clientRead] },
       {
         id: 'client-360',
-        label: 'Client 360',
+        label: 'Client Overview',
         icon: ScanSearch,
         segment: '360',
         detail: true,
@@ -316,6 +328,8 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         label: 'Job List',
         icon: Briefcase,
         segment: '',
+        // A job's own page opens from its row, so the list stays current while one is open.
+        detail: true,
         anyOf: [P.jobRead],
         group: 'Jobs',
       },
@@ -324,7 +338,8 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         label: 'Job Details',
         icon: FileText,
         segment: 'details',
-        detail: true,
+        // Kept for its address and its guard, but not offered: a job is opened from the list.
+        hidden: true,
         anyOf: [P.jobRead],
         group: 'Jobs',
       },
@@ -482,7 +497,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     [
       {
         id: 'prepare',
-        label: 'Prepare Invoice',
+        label: 'Create Invoice',
         icon: FilePlus2,
         anyOf: [P.invoiceCreate],
         group: 'Invoicing',
@@ -548,7 +563,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     [
       {
         id: 'time-analysis',
-        label: 'Time Analysis',
+        label: 'Time Analysis Report',
         icon: Clock,
         anyOf: [P.reportRead],
         group: 'Time & people',
@@ -562,7 +577,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
       },
       {
         id: 'missing-timesheets',
-        label: 'Missing Timesheets',
+        label: 'Missing Timesheets Report',
         icon: CalendarX2,
         anyOf: [P.reportRead],
         group: 'Time & people',
@@ -576,7 +591,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
       },
       {
         id: 'wip-ageing',
-        label: 'WIP & Ageing',
+        label: 'WIP Ageing Report',
         icon: Hourglass,
         anyOf: [P.reportFinancial],
         group: 'Jobs & WIP',
@@ -590,21 +605,21 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
       },
       {
         id: 'expenses',
-        label: 'Expenses',
+        label: 'Expenses Report',
         icon: Receipt,
         anyOf: [P.reportRead, P.reportFinancial],
         group: 'Jobs & WIP',
       },
       {
         id: 'billing',
-        label: 'Billing',
+        label: 'Billing Report',
         icon: ChartLine,
         anyOf: [P.reportFinancial],
         group: 'Billing & cash',
       },
       {
         id: 'payments',
-        label: 'Payments',
+        label: 'Payments Report',
         icon: CreditCard,
         anyOf: [P.reportFinancial],
         group: 'Billing & cash',
@@ -658,7 +673,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
       },
       {
         id: 're-rate',
-        label: 'Re-rate Time',
+        label: 'Change Rates on Past Time',
         icon: RefreshCcw,
         anyOf: [P.rateManage],
         group: 'Rates',
@@ -698,7 +713,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
       },
       {
         id: 'period-lock',
-        label: 'Period Lock',
+        label: 'Lock Past Periods',
         icon: Lock,
         anyOf: [P.settingsManage, P.organizationUpdate],
         group: 'Access control',
@@ -815,7 +830,7 @@ export function visibleModules(
   const result: VisibleModule[] = [];
   for (const module of NAV_MODULES) {
     if (!allows(module, can)) continue;
-    const pages = module.pages.filter((page) => allows(page, can));
+    const pages = module.pages.filter((page) => allows(page, can) && !page.hidden);
     if (module.pages.length > 0 && pages.length === 0) continue;
     const first = pages[0];
     result.push({ ...module, pages, href: first ? first.to(slug) : module.to(slug) });

@@ -167,6 +167,8 @@ describe('practice route (/:orgSlug)', () => {
       '/acme/dashboard',
     );
     expect(topBarLinks().map(([label]) => label)).not.toContain('Clients');
+    // It says which permission the page needs, so the person can ask for exactly that.
+    expect(screen.getByText(/needs permission to: View client/)).toBeInTheDocument();
   });
 
   it('guards a page with the rule its secondary bar uses', async () => {
@@ -193,7 +195,7 @@ describe('practice route (/:orgSlug)', () => {
     const { router } = renderApp('/acme/settings');
     await waitFor(() => expect(router.state.location.pathname).toBe('/acme/settings/period-lock'));
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Period Lock' }),
+      await screen.findByRole('heading', { level: 1, name: 'Lock Past Periods' }),
     ).toBeInTheDocument();
   });
 
@@ -216,18 +218,16 @@ describe('practice route (/:orgSlug)', () => {
   it('shows the reports of the caller in a grouped sidebar instead of the secondary bar', async () => {
     mockOrganizations([contextWith(['report.read'])]);
     const { router } = renderApp('/acme/reports');
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/acme/reports/time-analysis'),
-    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/acme/reports/time-analysis'));
 
     const sidebar = await screen.findByRole('navigation', { name: 'Reports pages' });
-    expect(within(sidebar).getByRole('link', { name: 'Time Analysis' })).toHaveAttribute(
+    expect(within(sidebar).getByRole('link', { name: 'Time Analysis Report' })).toHaveAttribute(
       'aria-current',
       'page',
     );
     expect(within(sidebar).getByRole('link', { name: 'Utilisation' })).toBeInTheDocument();
     // Financial reports need report.financial, which this role does not hold.
-    expect(within(sidebar).queryByRole('link', { name: 'Billing' })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'Billing Report' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('navigation', { name: 'Reports pages' })).toHaveLength(1);
   });
 
@@ -243,7 +243,7 @@ describe('practice route (/:orgSlug)', () => {
     );
     expect(within(sidebar).getByRole('link', { name: 'Credit Notes' })).toBeInTheDocument();
     // Preparing an invoice needs invoice.create, which this role does not hold.
-    expect(within(sidebar).queryByRole('link', { name: 'Prepare Invoice' })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'Create Invoice' })).not.toBeInTheDocument();
   });
 
   it('shows the work in progress pages in a grouped sidebar with only the current page marked', async () => {
@@ -271,21 +271,22 @@ describe('practice route (/:orgSlug)', () => {
       'page',
     );
     // Approving claims needs expense.approve, which this role does not hold.
-    expect(within(sidebar).queryByRole('link', { name: 'Expense Approvals' })).not.toBeInTheDocument();
+    expect(
+      within(sidebar).queryByRole('link', { name: 'Expense Approvals' }),
+    ).not.toBeInTheDocument();
   });
 
-  it('keeps Job Details marked in the jobs sidebar while a job is open', async () => {
+  it('keeps Job List marked in the jobs sidebar while a job is open, and offers no Job Details page', async () => {
     mockOrganizations([contextWith(['job.read'])]);
     renderApp('/acme/jobs/6f1c2b9e-0000-4000-8000-000000000001');
 
     const sidebar = await screen.findByRole('navigation', { name: 'Jobs pages' });
-    expect(within(sidebar).getByRole('link', { name: 'Job Details' })).toHaveAttribute(
+    expect(within(sidebar).getByRole('link', { name: 'Job List' })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    expect(within(sidebar).getByRole('link', { name: 'Job List' })).not.toHaveAttribute(
-      'aria-current',
-    );
+    // A job is opened from the list: the picker page is not offered in the menu.
+    expect(within(sidebar).queryByRole('link', { name: 'Job Details' })).not.toBeInTheDocument();
   });
 
   it('shows the time pages of the caller in a grouped sidebar', async () => {

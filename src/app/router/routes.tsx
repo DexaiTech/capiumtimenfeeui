@@ -171,6 +171,7 @@ const ORG_ROUTES: RouteObject[] = [
     path: ORG_SEGMENTS.account,
     lazy: page(() => import('@/features/account/pages/AccountPage')),
   },
+  { path: 'help', lazy: page(() => import('@/features/help/pages/HelpPage')) },
   // Inside the shell: the chrome stays and the content says the page does not exist.
   { path: '*', element: <NotFoundPage /> },
 ];

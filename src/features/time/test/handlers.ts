@@ -205,7 +205,8 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       timesheet_status: status,
       cost_rate: backend.seesCost ? item.cost_rate : null,
       cost_value: backend.seesCost ? item.cost_value : null,
-      is_locked: status === 'submitted' || status === 'approved' || item.billing_status !== 'unbilled',
+      is_locked:
+        status === 'submitted' || status === 'approved' || item.billing_status !== 'unbilled',
     };
   };
   const owned = (userId: string, from: string, to: string) =>
@@ -223,7 +224,11 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       days,
     );
   const minutesOn = (userId: string, date: string) =>
-    sum(backend.entries.filter((item) => item.user_id === userId && item.entry_date === date).map((item) => item.minutes));
+    sum(
+      backend.entries
+        .filter((item) => item.user_id === userId && item.entry_date === date)
+        .map((item) => item.minutes),
+    );
 
   const sheetRead = (sheet: Sheet): Timesheet => {
     const week = owned(sheet.user_id, sheet.week_start, addDays(sheet.week_start, 6));
@@ -241,7 +246,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       entry_count: week.length,
       total_minutes: sum(week.map((item) => item.minutes)),
       billable_minutes: sum(week.filter((item) => item.is_billable).map((item) => item.minutes)),
-      non_billable_minutes: sum(week.filter((item) => !item.is_billable).map((item) => item.minutes)),
+      non_billable_minutes: sum(
+        week.filter((item) => !item.is_billable).map((item) => item.minutes),
+      ),
       billable_value: sum(week.filter((item) => item.is_billable).map((item) => item.charge_value)),
       created_at: '2026-10-12T08:00:00Z',
       updated_at: NOW,
@@ -296,7 +303,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       row.entry_ids.push(item.id);
     }
     const targets = targetsOf(userId, days);
-    const totals = days.map((day) => sum(mine.filter((item) => item.entry_date === day).map((item) => item.minutes)));
+    const totals = days.map((day) =>
+      sum(mine.filter((item) => item.entry_date === day).map((item) => item.minutes)),
+    );
     const sheet = sheetFor(userId, start);
     const working = days.filter((_, index) => (targets[index] ?? 0) > 0);
     return {
@@ -310,7 +319,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       day_totals: totals,
       total_minutes: sum(totals),
       chargeable_minutes: sum(mine.filter((item) => item.is_billable).map((item) => item.minutes)),
-      non_chargeable_minutes: sum(mine.filter((item) => !item.is_billable).map((item) => item.minutes)),
+      non_chargeable_minutes: sum(
+        mine.filter((item) => !item.is_billable).map((item) => item.minutes),
+      ),
       today: TODAY,
       targets: {
         daily_minutes: Object.fromEntries(days.map((day, index) => [day, targets[index] ?? 0])),
@@ -323,7 +334,13 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
   };
 
   /** What a write must pass before it is stored (the rules of time in `docs/modules/time.md`). */
-  const refuse = (userId: string, date: string, jobId: string | null | undefined, extra = 0, skipId?: string) => {
+  const refuse = (
+    userId: string,
+    date: string,
+    jobId: string | null | undefined,
+    extra = 0,
+    skipId?: string,
+  ) => {
     if (backend.lockedThrough && date <= backend.lockedThrough) {
       return fail(
         409,
@@ -338,7 +355,11 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
     }
     const status = sheetFor(userId, weekStartOf(date, 1))?.status;
     if (status === 'submitted' || status === 'approved') {
-      return fail(409, 'TIME_LOCKED', 'This time is locked: its timesheet is submitted or approved.');
+      return fail(
+        409,
+        'TIME_LOCKED',
+        'This time is locked: its timesheet is submitted or approved.',
+      );
     }
     const others = sum(
       backend.entries
@@ -404,7 +425,8 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
 
   const record = async (request: Request): Promise<unknown> => {
     const url = new URL(request.url);
-    const text = request.method === 'GET' || request.method === 'DELETE' ? '' : await request.clone().text();
+    const text =
+      request.method === 'GET' || request.method === 'DELETE' ? '' : await request.clone().text();
     let body: unknown;
     try {
       body = text ? (JSON.parse(text) as unknown) : undefined;
@@ -451,7 +473,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         entries: day.map(view),
         total_minutes: total,
         billable_minutes: sum(day.filter((item) => item.is_billable).map((item) => item.minutes)),
-        non_billable_minutes: sum(day.filter((item) => !item.is_billable).map((item) => item.minutes)),
+        non_billable_minutes: sum(
+          day.filter((item) => !item.is_billable).map((item) => item.minutes),
+        ),
         target_minutes: target,
         remaining_minutes: Math.max(0, target - total),
         variance_minutes: total - target,
@@ -473,7 +497,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
           week_start: weekStartOf(day, 1),
           entry_count: mine.length,
           total_minutes: sum(mine.map((item) => item.minutes)),
-          billable_minutes: sum(mine.filter((item) => item.is_billable).map((item) => item.minutes)),
+          billable_minutes: sum(
+            mine.filter((item) => item.is_billable).map((item) => item.minutes),
+          ),
           target_minutes: target,
           is_working_day: target > 0,
           timesheet_status: sheetFor(userId, weekStartOf(day, 1))?.status ?? 'open',
@@ -501,7 +527,11 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       const to = weekStartOf(body.to_week_start, 1);
       const target = sheetFor(backend.userId, to);
       if (target && (target.status === 'submitted' || target.status === 'approved')) {
-        return fail(409, 'TIMESHEET_NOT_EDITABLE', 'The timesheet of that week cannot take new time.');
+        return fail(
+          409,
+          'TIMESHEET_NOT_EDITABLE',
+          'The timesheet of that week cannot take new time.',
+        );
       }
       const offset = (Date.parse(to) - Date.parse(from)) / 86_400_000;
       const created: TimeEntry[] = [];
@@ -509,7 +539,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       for (const source of owned(backend.userId, from, addDays(from, 6))) {
         const forced = backend.skipCopy[source.id];
         const date = addDays(source.entry_date, offset);
-        const closed = source.job_id !== null && JOBS.find((job) => job.id === source.job_id)?.status === 'completed';
+        const closed =
+          source.job_id !== null &&
+          JOBS.find((job) => job.id === source.job_id)?.status === 'completed';
         if (forced) {
           skipped.push(forced);
           continue;
@@ -617,7 +649,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       if (!found) return notFound();
       if (!body.reason?.trim()) {
         return fail(422, 'TIME_CORRECTION_REASON_REQUIRED', 'Say why the time is corrected.', {
-          details: [{ field: 'reason', code: 'required', message: 'Say why the time is corrected.' }],
+          details: [
+            { field: 'reason', code: 'required', message: 'Say why the time is corrected.' },
+          ],
         });
       }
       const shown = view(found);
@@ -638,7 +672,13 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       found.charge_value = poundsFor(minutes, found.charge_rate);
       found.cost_value = poundsFor(minutes, COST_RATE);
       const changes: Record<string, [unknown, unknown]> = {};
-      for (const field of ['entry_date', 'minutes', 'description', 'is_billable', 'charge_value'] as const) {
+      for (const field of [
+        'entry_date',
+        'minutes',
+        'description',
+        'is_billable',
+        'charge_value',
+      ] as const) {
         if (before[field] !== found[field]) changes[field] = [before[field], found[field]];
       }
       backend.nextId += 1;
@@ -670,13 +710,20 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       if (shown.is_locked) return fail(409, 'TIME_LOCKED', 'This time is locked.');
       const date = body.entry_date ?? found.entry_date;
       const minutes = body.minutes === undefined ? found.minutes : round(body.minutes);
-      const refusal = refuse(found.user_id, date, body.job_id === undefined ? found.job_id : body.job_id, minutes, found.id);
+      const refusal = refuse(
+        found.user_id,
+        date,
+        body.job_id === undefined ? found.job_id : body.job_id,
+        minutes,
+        found.id,
+      );
       if (refusal) return refusal;
       found.entry_date = date;
       found.minutes = minutes;
       if (body.description !== undefined) found.description = body.description;
       if (body.internal_note !== undefined) found.internal_note = body.internal_note;
-      if (body.is_billable !== undefined && body.is_billable !== null) found.is_billable = body.is_billable;
+      if (body.is_billable !== undefined && body.is_billable !== null)
+        found.is_billable = body.is_billable;
       if (body.job_id !== undefined) {
         const job = JOBS.find((candidate) => candidate.id === body.job_id);
         found.job_id = job?.id ?? null;
@@ -744,7 +791,12 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       const body = (await record(request)) as { description?: string } | undefined;
       const timer = backend.timer;
       if (!timer) return fail(404, 'TIMER_NOT_FOUND', 'There is no timer.');
-      const refusal = refuse(backend.userId, timer.started_on, timer.job_id, round(Math.ceil(timer.elapsed_seconds / 60)));
+      const refusal = refuse(
+        backend.userId,
+        timer.started_on,
+        timer.job_id,
+        round(Math.ceil(timer.elapsed_seconds / 60)),
+      );
       if (refusal) return refusal;
       const created = newEntry(
         {
@@ -779,7 +831,8 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         (candidate) =>
           candidate.weekly_capacity_minutes > 0 &&
           (!params.get('user_id') || candidate.id === params.get('user_id')) &&
-          (!params.get('manager_user_id') || candidate.approver?.id === params.get('manager_user_id')),
+          (!params.get('manager_user_id') ||
+            candidate.approver?.id === params.get('manager_user_id')),
       ).flatMap((candidate) => {
         const sheet = sheetFor(candidate.id, week);
         if (sheet && (sheet.status === 'submitted' || sheet.status === 'approved')) return [];
@@ -795,7 +848,8 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
             logged_minutes: logged,
             expected_minutes: sum(targets),
             missing_days: days.filter(
-              (day, index) => (targets[index] ?? 0) > 0 && day <= TODAY && minutesOn(candidate.id, day) === 0,
+              (day, index) =>
+                (targets[index] ?? 0) > 0 && day <= TODAY && minutesOn(candidate.id, day) === 0,
             ),
             last_reminded_at: backend.reminded[candidate.id] ?? null,
             has_login: candidate.has_login,
@@ -883,7 +937,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       if (!sheet) return notFound();
       if (!body?.decision_note?.trim()) {
         return fail(422, 'VALIDATION_ERROR', 'Validation failed.', {
-          details: [{ field: 'decision_note', code: 'required', message: 'Say why it is returned.' }],
+          details: [
+            { field: 'decision_note', code: 'required', message: 'Say why it is returned.' },
+          ],
         });
       }
       if (sheet.status !== 'submitted') {
@@ -905,7 +961,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
     }),
     http.post(orgApiPath('/approvals/bulk-approve'), async ({ request }) => {
       const body = (await record(request)) as { timesheet_ids: string[] };
-      const chosen = body.timesheet_ids.map((id) => backend.sheets.find((sheet) => sheet.id === id));
+      const chosen = body.timesheet_ids.map((id) =>
+        backend.sheets.find((sheet) => sheet.id === id),
+      );
       if (chosen.some((sheet) => !sheet)) return notFound();
       if (chosen.some((sheet) => sheet?.status !== 'submitted')) {
         return fail(409, 'INVALID_STATUS_TRANSITION', 'One of the timesheets is not submitted.');
@@ -927,8 +985,12 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       const rows = PEOPLE.filter(
         (candidate) =>
           (!q || candidate.full_name.toLowerCase().includes(q)) &&
-          (params.get('has_login') === null || String(candidate.has_login) === params.get('has_login')),
-      ).map((candidate) => ({ ...candidate, email: `${candidate.code.toLowerCase()}@acme.example` }));
+          (params.get('has_login') === null ||
+            String(candidate.has_login) === params.get('has_login')),
+      ).map((candidate) => ({
+        ...candidate,
+        email: `${candidate.code.toLowerCase()}@acme.example`,
+      }));
       return ok(rows, { meta: END });
     }),
     http.get(orgApiPath('/clients/:clientId'), ({ params }) => {
@@ -996,21 +1058,41 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       const group = params.get('group_by') ?? 'person';
       const from = params.get('date_from') ?? '0000-00-00';
       const to = params.get('date_to') ?? '9999-99-99';
-      const list = backend.entries.filter((item) => item.entry_date >= from && item.entry_date <= to);
-      const keyOf = (item: TimeEntry): { key: string | null; code: string | null; name: string } => {
+      const list = backend.entries.filter(
+        (item) => item.entry_date >= from && item.entry_date <= to,
+      );
+      const keyOf = (
+        item: TimeEntry,
+      ): { key: string | null; code: string | null; name: string } => {
         switch (group) {
           case 'client':
-            return { key: item.client_id, code: item.client_code, name: item.client_name ?? 'No client' };
+            return {
+              key: item.client_id,
+              code: item.client_code,
+              name: item.client_name ?? 'No client',
+            };
           case 'job':
             return { key: item.job_id, code: item.job_number, name: item.job_name ?? 'No job' };
           case 'activity':
-            return { key: item.activity_code_id, code: item.activity_code, name: item.activity_name ?? 'No activity' };
+            return {
+              key: item.activity_code_id,
+              code: item.activity_code,
+              name: item.activity_name ?? 'No activity',
+            };
           case 'day':
             return { key: item.entry_date, code: null, name: item.entry_date };
           case 'month':
-            return { key: `${item.entry_date.slice(0, 7)}-01`, code: null, name: monthLabel(item.entry_date) };
+            return {
+              key: `${item.entry_date.slice(0, 7)}-01`,
+              code: null,
+              name: monthLabel(item.entry_date),
+            };
           default:
-            return { key: item.user_id, code: person(item.user_id)?.code ?? null, name: person(item.user_id)?.full_name ?? 'Someone' };
+            return {
+              key: item.user_id,
+              code: person(item.user_id)?.code ?? null,
+              name: person(item.user_id)?.full_name ?? 'Someone',
+            };
         }
       };
       const groups = new Map<string, TimeEntry[]>();
@@ -1023,14 +1105,18 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       }
       const amounts = (items: TimeEntry[]) => {
         const total = sum(items.map((item) => item.minutes));
-        const chargeable = sum(items.filter((item) => item.is_billable).map((item) => item.minutes));
+        const chargeable = sum(
+          items.filter((item) => item.is_billable).map((item) => item.minutes),
+        );
         return {
           entry_count: items.length,
           total_minutes: total,
           chargeable_minutes: chargeable,
           non_chargeable_minutes: total - chargeable,
           chargeable_bp: total === 0 ? null : Math.round((chargeable * 10000) / total),
-          charge_value: sum(items.filter((item) => item.is_billable).map((item) => item.charge_value)),
+          charge_value: sum(
+            items.filter((item) => item.is_billable).map((item) => item.charge_value),
+          ),
           cost_value: backend.seesCost ? sum(items.map((item) => item.cost_value ?? 0)) : null,
         };
       };
@@ -1043,7 +1129,11 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
           client_name: null,
         })),
         totals: amounts(list),
-        filters: { date_from: params.get('date_from'), date_to: params.get('date_to'), group_by: group },
+        filters: {
+          date_from: params.get('date_from'),
+          date_to: params.get('date_to'),
+          group_by: group,
+        },
       });
     }),
     http.get(orgApiPath('/reports/utilisation'), async ({ request }) => {

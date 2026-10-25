@@ -53,6 +53,8 @@ describe('IssueDialog: issue and send', () => {
     await user.click(button);
     await waitFor(() => expect(calls).toEqual(['issue', 'send']));
     expect(await screen.findByText('Invoice email queued')).toBeInTheDocument();
+    // The next step is one click away on the confirmation.
+    expect(await screen.findByRole('button', { name: 'Record payment' })).toBeInTheDocument();
   });
 
   it('only issues when the box is turned off', async () => {

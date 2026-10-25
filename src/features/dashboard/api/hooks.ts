@@ -118,7 +118,8 @@ export function useApproveTimesheet() {
   const queryClient = useQueryClient();
   const { organization } = useOrg();
   return useMutation({
-    mutationFn: (timesheetId: string) => dashboardApi.approveTimesheet(organization.id, timesheetId),
+    mutationFn: (timesheetId: string) =>
+      dashboardApi.approveTimesheet(organization.id, timesheetId),
     onSuccess: () => refreshAfterDecision(queryClient, organization.id),
   });
 }
