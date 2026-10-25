@@ -6,7 +6,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { Button } from './Button';
 import { FormPanel } from './FormPanel';
 
-function Harness({ onClose = () => undefined }: { onClose?: () => void }) {
+function Harness({
+  onClose = () => undefined,
+  onSubmit = () => undefined,
+}: {
+  onClose?: () => void;
+  onSubmit?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div>
@@ -20,10 +26,18 @@ function Harness({ onClose = () => undefined }: { onClose?: () => void }) {
         title="New project"
         description="Name the project."
       >
-        <label>
-          Name
-          <input />
-        </label>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit();
+          }}
+        >
+          <label>
+            Name
+            <input />
+          </label>
+          <button type="submit">Save</button>
+        </form>
       </FormPanel>
       <p>The list stays here</p>
     </div>
@@ -67,5 +81,44 @@ describe('FormPanel', () => {
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole('region', { name: 'New project' })).not.toBeInTheDocument();
+  });
+
+  it('asks before discarding what was typed, and closes at once when nothing was', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    await user.click(screen.getByRole('button', { name: 'New project' }));
+    await user.type(screen.getByLabelText('Name'), 'Audit');
+    await user.keyboard('{Escape}');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Discard what you typed?');
+
+    await user.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toHaveValue('Audit');
+
+    await user.click(screen.getByRole('button', { name: 'Close New project' }));
+    await user.click(screen.getByRole('button', { name: 'Discard' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('region', { name: 'New project' })).not.toBeInTheDocument();
+  });
+
+  it('saves with Ctrl+Enter from a field', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<Harness onSubmit={onSubmit} />);
+    await user.click(screen.getByRole('button', { name: 'New project' }));
+    await user.type(screen.getByLabelText('Name'), 'Audit');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives the focus back to the button that opened it', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const opener = screen.getByRole('button', { name: 'New project' });
+    await user.click(opener);
+    await user.click(screen.getByRole('button', { name: 'Close New project' }));
+    expect(opener).toHaveFocus();
   });
 });

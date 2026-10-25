@@ -23,6 +23,8 @@ export interface ReasonDialogProps {
   tone?: 'danger' | 'primary';
   /** Runs the action; rejects with the API error, which the dialog shows and stays open. */
   onSubmit: (reason: string) => Promise<unknown>;
+  /** Common answers, offered as buttons that fill the field: one click instead of typing. */
+  suggestions?: ReadonlyArray<string>;
   /** What the action does, above the field. */
   children?: ReactNode;
 }
@@ -33,6 +35,7 @@ function ReasonForm({
   required = true,
   confirmLabel,
   tone = 'danger',
+  suggestions = [],
   onSubmit,
   onClose,
   children,
@@ -43,6 +46,7 @@ function ReasonForm({
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ReasonValues>({ resolver: zodResolver(schema), defaultValues: { reason: '' } });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
@@ -67,6 +71,21 @@ function ReasonForm({
         className="flex flex-col gap-4"
       >
         {children ? <div className="text-sm text-text-muted">{children}</div> : null}
+        {suggestions.length > 0 ? (
+          <div role="group" aria-label="Common reasons" className="flex flex-wrap gap-2">
+            {suggestions.map((suggestion) => (
+              <Button
+                key={suggestion}
+                size="sm"
+                onClick={() =>
+                  setValue('reason', suggestion, { shouldDirty: true, shouldValidate: true })
+                }
+              >
+                {suggestion}
+              </Button>
+            ))}
+          </div>
+        ) : null}
         <Textarea
           label={label}
           rows={3}

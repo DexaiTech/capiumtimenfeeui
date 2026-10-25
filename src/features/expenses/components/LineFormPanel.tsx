@@ -4,6 +4,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import {
+  AddAnotherButton,
   Button,
   DateField,
   Input,
@@ -11,6 +12,7 @@ import {
   Select,
   Switch,
   Textarea,
+  useAddAnother,
   useToast,
 } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
@@ -80,6 +82,7 @@ function LineForm({
   const { organization, can } = useOrg();
   const { toast } = useToast();
   const formId = useId();
+  const again = useAddAnother();
   const save = useSaveLine();
   const types = useExpenseTypes();
   const vatCodes = useVatCodes();
@@ -108,7 +111,9 @@ function LineForm({
     handleSubmit,
     setError,
     setValue,
+    setFocus,
     getValues,
+    reset,
     control,
     formState: { errors, isDirty },
   } = useForm<LineValues>({
@@ -216,6 +221,15 @@ function LineForm({
         {
           onSuccess: () => {
             toast({ tone: 'success', title: 'Expense added' });
+            if (again.consume()) {
+              // The next expense is usually of the same type, day and client: keep those, and
+              // start the amounts and the text again.
+              reset({ ...getValues(), description: '', supplier: '', miles: '' });
+              amounts.clear();
+              // reset() unregisters the fields until the next render, so focus after it.
+              setTimeout(() => setFocus('description'), 0);
+              return;
+            }
             onClose();
           },
           onError,
@@ -486,9 +500,18 @@ function LineForm({
       </form>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
+        {line ? null : (
+          <AddAnotherButton
+            formId={formId}
+            flagRef={again.flagRef}
+            loading={save.isPending}
+            disabled={retryIn > 0}
+          />
+        )}
         <Button
           type="submit"
           form={formId}
+          {...again.primaryProps}
           variant="primary"
           loading={save.isPending}
           disabled={(line !== null && !isDirty && !correcting) || retryIn > 0}

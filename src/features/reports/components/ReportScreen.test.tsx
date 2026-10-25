@@ -338,6 +338,18 @@ describe('the table', () => {
     );
   });
 
+  it('opens the same records with one click on the row', async () => {
+    const user = userEvent.setup();
+    setup(<UtilisationReportPage />, utilisation());
+    const body = await table('Utilisation');
+    await waitFor(() => expect(screen.getByLabelText('Dates to')).toHaveValue('2026-10-18'));
+
+    await user.click(within(rowsOf(body)[0] as HTMLElement).getByText('Ada Lovelace'));
+    expect(location()).toHaveTextContent(
+      `/acme/time/entries?person=${IDS.ada}&from=2026-10-01&to=2026-10-18`,
+    );
+  });
+
   it('offers no actions on a row that has nothing behind it', async () => {
     setup(<RecoveryReportPage />, {
       recoverability: { rows: recoveryRows(), totals: recoveryTotals() },

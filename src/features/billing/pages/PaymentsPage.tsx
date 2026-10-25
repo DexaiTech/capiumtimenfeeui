@@ -20,7 +20,8 @@ import {
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { ClientPicker } from '@/features/clients';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { todayInZone } from '@/utils/dates';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 
 import { flattenPages, usePaymentList } from '../api';
 import { FilterPopover } from '../components/FilterPopover';
@@ -80,9 +81,16 @@ function PaymentList() {
   );
   const payments = usePaymentList(filters);
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('payments');
   const [openId, setOpenId] = useState<string | null>(null);
-  const [recording, setRecording] = useState(false);
+  // `?new=1` is the link of the "+" menu: open the form at once, as the other lists do.
+  const [recording, setRecording] = useState(
+    () => can(P.paymentRecord) && params.get('new') === '1',
+  );
+  const closeRecording = () => {
+    setRecording(false);
+    if (params.has('new')) setParam({ new: null });
+  };
 
   const columns = useMemo(() => paymentColumns(organization.currency), [organization.currency]);
   const sortParam = params.get('sort');
@@ -125,7 +133,7 @@ function PaymentList() {
 
   return (
     <>
-      <RecordPaymentPanel open={recording} onClose={() => setRecording(false)} />
+      <RecordPaymentPanel open={recording} onClose={closeRecording} />
       <DataTable
         caption="Payments"
         columns={columns}
@@ -180,6 +188,8 @@ function PaymentList() {
                   />
                   <DateRangeField
                     label="Date received"
+                    presetsFrom={todayInZone(organization.timezone)}
+                    weekStartsOn={organization.week_start}
                     value={{ from: from || null, to: to || null }}
                     onChange={(range) => setParam({ from: range.from, to: range.to })}
                   />

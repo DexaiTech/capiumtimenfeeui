@@ -247,6 +247,28 @@ describe('adding an expense', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('keeps the type and the day for the next expense with "Save and add another"', async () => {
+    const user = userEvent.setup();
+    const { backend } = setup({ claim: draft({ lines: [] }) });
+    const form = await openForm(user);
+
+    await user.selectOptions(within(form).getByLabelText('Expense type'), 'Subsistence');
+    fireEvent.change(within(form).getByLabelText('Date'), { target: { value: DAY } });
+    await user.type(within(form).getByLabelText('Description'), 'Lunch');
+    await user.type(within(form).getByLabelText('Net (£)'), '12.50');
+    await user.click(within(form).getByRole('button', { name: 'Save and add another' }));
+
+    expect(await screen.findByText('Expense added')).toBeInTheDocument();
+    await waitFor(() => expect(within(form).getByLabelText('Description')).toHaveValue(''));
+    expect(within(form).getByLabelText('Net (£)')).toHaveValue('');
+    expect(within(form).getByLabelText('Gross (£)')).toHaveValue('');
+    expect(within(form).getByLabelText('Expense type')).toHaveValue(IDS.subsistence);
+    expect(within(form).getByLabelText('Date')).toHaveValue(DAY);
+    expect(
+      backend.calls.filter((call) => call.method === 'POST' && call.path.endsWith('/lines')),
+    ).toHaveLength(1);
+  });
+
   it('links net, VAT and gross as they are typed', async () => {
     const user = userEvent.setup();
     setup({ claim: draft({ lines: [] }) });

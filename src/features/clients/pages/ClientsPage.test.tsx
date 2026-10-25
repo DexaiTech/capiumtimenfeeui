@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { tokenStore } from '@/services/api';
@@ -12,6 +13,11 @@ import { CLIENTS_PREFS_KEY, INITIAL_CLIENTS_PREFS, useClientsPrefs } from '../st
 import { mutual, techwave, techwaveDetail } from '../test/fixtures';
 import { clientsHandlers } from '../test/handlers';
 import ClientsPage from './ClientsPage';
+
+function Where() {
+  const location = useLocation();
+  return <p data-testid="location">{`${location.pathname}${location.search}`}</p>;
+}
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -366,6 +372,29 @@ describe('ClientsPage actions', () => {
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Add Client' })).toBeNull());
     expect(await screen.findByText('Client created')).toBeInTheDocument();
     await waitFor(() => expect(lists).toBeGreaterThan(1));
+  });
+
+  it('opens the new client on its own page after creating it', async () => {
+    server.use(
+      ...clientsHandlers(),
+      http.post(orgApiPath('/clients'), () => ok(techwaveDetail, { status: 201 })),
+    );
+    const user = userEvent.setup();
+    renderInOrg(
+      <>
+        <ClientsPage />
+        <Where />
+      </>,
+      { route: '/acme/clients?new=1' },
+    );
+    const dialog = await screen.findByRole('region', { name: 'Add Client' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Client name' }), 'Techwave');
+    await user.click(within(dialog).getByRole('button', { name: 'Add Client' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        `/acme/clients/${techwaveDetail.id}`,
+      ),
+    );
   });
 
   it('adds the primary contact from the "+ Add" pill', async () => {

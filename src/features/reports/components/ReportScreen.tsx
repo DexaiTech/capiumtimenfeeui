@@ -267,6 +267,15 @@ function Report<TRow, TTotals>({ config }: { config: ReportConfig<TRow, TTotals>
             onSortChange={setSort}
             loading={report.isPending}
             rowActions={rowActions}
+            // The same step as the menu's first item, one click: the row opens what is behind it.
+            onRowClick={
+              config.drill
+                ? (row) => {
+                    const target = config.drill?.(row, ctx, shown);
+                    if (target) void navigate(target.to);
+                  }
+                : undefined
+            }
             empty={
               filterCount > 0 ? (
                 <EmptyState

@@ -46,6 +46,7 @@ import { downloadBlob, todayIn } from '../format';
 import { useClientsPrefs, type FilterPreset } from '../store';
 import type {
   ClientBulkRequest,
+  ClientDetail,
   ClientFilters,
   ClientListItem,
   ClientRead,
@@ -144,6 +145,12 @@ export default function ClientsPage() {
 
   // The top bar's "+" can open the Add Client dialog with `?new=1`.
   const addRequested = canCreate && searchParams.get('new') === '1';
+  /** A new client opens on its own page, ready for its contacts and services; an edit stays here. */
+  const openCreated = (saved: ClientDetail) => {
+    if (formClient) return;
+    // After the form has closed and dropped `?new=1`, so this is the last navigation.
+    setTimeout(() => void navigate(routes.org.client(organization.slug, saved.id)), 0);
+  };
   const closeForm = () => {
     setFormClient(undefined);
     if (searchParams.has('new')) {
@@ -462,6 +469,7 @@ export default function ClientsPage() {
         open={formClient !== undefined || addRequested}
         client={formClient ?? null}
         onClose={closeForm}
+        onSaved={openCreated}
       />
       <ContactFormPanel target={contactTarget} onClose={() => setContactTarget(null)} />
       <ClientsToolbar

@@ -23,7 +23,7 @@ import {
 import { ORG_SEGMENTS, modulePath } from '@/constants/routes';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatBasisPoints } from '@/utils/money';
 
 import { useDeleteVatRate, useUpdateVatRate, useVatRates } from '../api/billingHooks';
@@ -66,7 +66,7 @@ function VatCodeList() {
   const update = useUpdateVatRate();
   const remove = useDeleteVatRate();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('vat-codes');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const close = () => setDialog(null);

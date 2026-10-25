@@ -98,7 +98,7 @@ export function TopBar({ user, onLogout }: TopBarProps) {
               <span className="hidden sm:contents">
                 <ApplicationTestingMenu />
               </span>
-              <Tooltip content="Search (/)" side="bottom">
+              <Tooltip content="Search (/ or Ctrl+K)" side="bottom">
                 <button
                   type="button"
                   aria-label="Search"

@@ -31,7 +31,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker } from '@/features/team';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { todayInZone } from '@/utils/dates';
 
 import { flattenPages, useDeleteJob, useJobList, useMemberNames, useMembers } from '../api';
@@ -91,7 +91,7 @@ export default function JobsPage() {
   const list = useJobList(filters);
   const remove = useDeleteJob();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(['service', 'created']));
+  const [hidden, setHidden] = usePersistentColumns('jobs', ['service', 'created']);
   const [creating, setCreating] = useState(() => canCreate && params.get('new') === '1');
   const [editing, setEditing] = useState<Job | null>(null);
   const [copying, setCopying] = useState<Job | null>(null);
@@ -242,6 +242,7 @@ export default function JobsPage() {
       ) : (
         <DataTable
           caption="Jobs"
+          onRowClick={(job) => void navigate(routes.org.job(organization.slug, job.id))}
           columns={columns}
           rows={rows}
           rowKey={(job) => job.id}
@@ -277,6 +278,14 @@ export default function JobsPage() {
                 }
                 actions={
                   <>
+                    <Button
+                      size="sm"
+                      variant={manager === 'me' ? 'primary' : 'secondary'}
+                      aria-pressed={manager === 'me'}
+                      onClick={() => setParam({ manager: manager === 'me' ? null : 'me' })}
+                    >
+                      My jobs
+                    </Button>
                     <FilterPopover
                       title="Filter jobs"
                       count={activeFilters}

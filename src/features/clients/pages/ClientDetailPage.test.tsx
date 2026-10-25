@@ -178,6 +178,15 @@ describe('ClientHeader', () => {
     expect(card.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     expect(card.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
     expect(card.getByRole('button', { name: 'More actions' })).toBeInTheDocument();
+    // A new job opens with this client already chosen.
+    expect(card.getByRole('link', { name: 'New job' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/\/jobs\?new=1&client_id=.+/),
+    );
+    expect(card.getByRole('link', { name: 'Bill client' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/\/billing\/prepare\?client=.+/),
+    );
     // A local client has nothing to synchronise.
     expect(card.queryByRole('button', { name: 'Sync with central' })).toBeNull();
     expect(card.queryByRole('button', { name: 'Restore' })).toBeNull();

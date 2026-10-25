@@ -62,6 +62,8 @@ export {
 } from './InitialsAvatar';
 export { Input, type InputProps } from './Input';
 export { FormPanel, type FormPanelProps } from './FormPanel';
+export { AddAnotherButton, type AddAnotherButtonProps } from './AddAnother';
+export { useAddAnother } from './useAddAnother';
 export { Modal, type ModalProps, type ModalSize } from './Modal';
 export {
   OptionPicker,

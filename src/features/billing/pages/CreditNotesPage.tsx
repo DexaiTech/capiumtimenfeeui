@@ -18,7 +18,7 @@ import {
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { ClientPicker } from '@/features/clients';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 
 import { billingApi, flattenPages, useCreditNoteList } from '../api';
 import { creditNoteColumns } from '../components/creditNotes/creditNoteColumns';
@@ -53,7 +53,7 @@ function CreditNoteList() {
   );
   const notes = useCreditNoteList(filters);
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('credit-notes');
   const [openNote, setOpenNote] = useState<CreditNote | null>(null);
   const [starting, setStarting] = useState(false);
   const [raisingFor, setRaisingFor] = useState<string | null>(null);

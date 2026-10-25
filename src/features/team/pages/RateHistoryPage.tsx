@@ -1,5 +1,5 @@
 import { Download, History, SearchX } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import {
   Button,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { downloadText, toCsv } from '@/utils/csv';
 import { formatUkDateTime } from '@/utils/dates';
 
@@ -73,7 +73,7 @@ function HistoryList() {
   const grades = useGradeOptions({ enabled: canPickPeople });
   const services = useServices();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('rate-history');
 
   const filterCount = [action, staffId, gradeId, clientId, serviceId, from, to].filter(
     Boolean,

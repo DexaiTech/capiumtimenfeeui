@@ -5,6 +5,10 @@ import { cn } from '@/utils/cn';
 
 import { Skeleton } from './Skeleton';
 
+/** What inside a row handles its own clicks. */
+const INTERACTIVE =
+  'a, button, input, select, textarea, label, summary, [role="menu"], [role="listbox"], [role="dialog"], [role="checkbox"], [role="switch"]';
+
 export type DataTableSortDirection = 'asc' | 'desc';
 
 export interface DataTableSort {
@@ -162,6 +166,14 @@ export function DataTable<TRow>({
   );
   const bodyCell = 'h-[57px] border-b border-row-border px-4 py-2 align-middle';
 
+  // A click on a control inside the row (a link, a menu, a checkbox, a status picker) is that
+  // control's own: only the bare row, or plain text in it, opens the record.
+  const onRowPointer = (row: TRow) => (event: MouseEvent<HTMLTableRowElement>) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest(INTERACTIVE)) return;
+    onRowClick?.(row);
+  };
+
   const onRowKeyDown = (row: TRow) => (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (event.target !== event.currentTarget) return;
     if (event.key === 'Enter' || event.key === ' ') {
@@ -283,7 +295,7 @@ export function DataTable<TRow>({
                     <tr
                       key={key}
                       tabIndex={onRowClick ? 0 : undefined}
-                      onClick={onRowClick ? () => onRowClick(row) : undefined}
+                      onClick={onRowClick ? onRowPointer(row) : undefined}
                       onKeyDown={onRowClick ? onRowKeyDown(row) : undefined}
                       className={cn(
                         'transition-colors duration-fast ease-standard hover:bg-brand/5',

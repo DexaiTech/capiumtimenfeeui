@@ -4,6 +4,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import {
+  AddAnotherButton,
   Button,
   DateField,
   DurationInput,
@@ -12,6 +13,7 @@ import {
   SegmentedControl,
   Select,
   Textarea,
+  useAddAnother,
   useToast,
   type SelectOption,
 } from '@/components/ui';
@@ -55,6 +57,7 @@ function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
   const create = useCreateTask();
   const update = useUpdateTask();
   const [assignees, setAssignees] = useState<string[]>([]);
+  const again = useAddAnother();
   const schema = useMemo(
     () => taskSchema({ jobStart: job.start_date, jobDue: job.due_date }),
     [job.start_date, job.due_date],
@@ -64,6 +67,9 @@ function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
     handleSubmit,
     setError,
     setValue,
+    setFocus,
+    getValues,
+    reset,
     control,
     formState: { errors, isDirty },
   } = useForm<TaskValues>({ resolver: zodResolver(schema), defaultValues: taskDefaults(task) });
@@ -82,6 +88,13 @@ function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
         {
           onSuccess: () => {
             toast({ tone: 'success', title: 'Task added', description: values.title });
+            if (again.consume()) {
+              // Keep the due date, status and people: a run of tasks usually shares them.
+              reset({ ...getValues(), title: '', description: '' });
+              // reset() unregisters the fields until the next render, so focus after it.
+              setTimeout(() => setFocus('title'), 0);
+              return;
+            }
             onClose();
           },
           onError,
@@ -178,9 +191,18 @@ function TaskForm({ job, task, onClose, formId }: TaskFormProps) {
       </form>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
+        {task ? null : (
+          <AddAnotherButton
+            formId={formId}
+            flagRef={again.flagRef}
+            loading={create.isPending}
+            disabled={retryIn > 0}
+          />
+        )}
         <Button
           type="submit"
           form={formId}
+          {...again.primaryProps}
           variant="primary"
           loading={create.isPending || update.isPending}
           disabled={(task !== null && !isDirty) || retryIn > 0}

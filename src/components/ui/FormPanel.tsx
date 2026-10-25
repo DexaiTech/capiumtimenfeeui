@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { cn } from '@/utils/cn';
 
@@ -29,23 +29,52 @@ function Panel({
 }: Omit<FormPanelProps, 'open'>) {
   const ref = useRef<HTMLElement>(null);
   const titleId = useId();
+  // Set by the first edit; Escape and the close button then ask before throwing the text away.
+  const [dirty, setDirty] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
-  // Opens in the page flow, so bring it into view and put the cursor in the first field.
+  // Opens in the page flow, so bring it into view and put the cursor in the first field. When it
+  // closes, the focus goes back to what opened it (the button), not to the top of the page.
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     node.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
     node.querySelector<HTMLElement>(FIELD)?.focus({ preventScroll: true });
+    return () => {
+      const active = document.activeElement;
+      const lost = active === document.body || (active !== null && node.contains(active));
+      if (opener && opener !== document.body && opener.isConnected && lost) {
+        opener.focus({ preventScroll: true });
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (confirming) ref.current?.querySelector<HTMLElement>('[data-keep-editing]')?.focus();
+  }, [confirming]);
+
+  const requestClose = () => {
+    if (dirty) setConfirming(true);
+    else onClose();
+  };
 
   return (
     <section
       ref={ref}
       aria-labelledby={titleId}
+      onInput={() => setDirty(true)}
       onKeyDown={(event) => {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && !event.defaultPrevented) {
           event.stopPropagation();
-          onClose();
+          requestClose();
+        } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+          // Ctrl/Cmd+Enter saves from any field, as in mail and chat.
+          const form = ref.current?.querySelector('form');
+          if (form) {
+            event.preventDefault();
+            form.requestSubmit();
+          }
         }
       }}
       className={cn('scroll-mt-4', className)}
@@ -62,12 +91,28 @@ function Panel({
             variant="ghost"
             size="icon"
             aria-label={`Close ${title}`}
-            onClick={onClose}
+            onClick={requestClose}
             className="-mt-1 -mr-2"
           >
             <X className="size-5" aria-hidden="true" />
           </Button>
         </header>
+        {confirming ? (
+          <div
+            role="alert"
+            className="flex flex-col gap-2 border-b border-row-border bg-surface-sunken px-5 py-3 text-sm text-text sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>Discard what you typed?</span>
+            <span className="flex gap-2">
+              <Button size="sm" data-keep-editing onClick={() => setConfirming(false)}>
+                Keep editing
+              </Button>
+              <Button size="sm" variant="danger" onClick={onClose}>
+                Discard
+              </Button>
+            </span>
+          </div>
+        ) : null}
         {children ? <div className="px-5 py-5">{children}</div> : null}
         {footer ? (
           <footer className="flex flex-col-reverse gap-2 border-t border-row-border px-5 py-4 sm:flex-row sm:justify-end">

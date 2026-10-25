@@ -93,6 +93,26 @@ describe('correcting an issued invoice from the list', () => {
     expect(third).not.toContain('Void invoice…');
   });
 
+  it('offers to record a payment while something is owed', async () => {
+    const user = userEvent.setup();
+    setupList();
+    expect(await menuOf(user, 'INV-0001')).toContain('Record payment…');
+    await user.keyboard('{Escape}');
+    expect(await menuOf(user, 'INV-0002')).toContain('Record payment…');
+    await user.keyboard('{Escape}');
+    expect(await menuOf(user, 'INV-0003')).not.toContain('Record payment…');
+  });
+
+  it('opens the invoice with the payment form ready', async () => {
+    const user = userEvent.setup();
+    setupList();
+    await menuOf(user, 'INV-0001');
+    await user.click(screen.getByRole('menuitem', { name: 'Record payment…' }));
+    expect(await screen.findByTestId('location')).toHaveTextContent(
+      `${INVOICES}/i-1?action=payment`,
+    );
+  });
+
   it('opens the invoice with the chosen correction ready', async () => {
     const user = userEvent.setup();
     setupList();
@@ -145,6 +165,19 @@ describe('an invoice opened to correct it', () => {
     setupDetail('void');
     expect(await screen.findByRole('dialog', { name: 'Void invoice?' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('location')).not.toHaveTextContent('action='));
+  });
+
+  it('shows the payment form at once for an invoice that is owed', async () => {
+    setupDetail('payment');
+    expect(await screen.findByRole('region', { name: 'Record a payment' })).toBeInTheDocument();
+  });
+
+  it('offers the usual reasons to void with one click each', async () => {
+    const user = userEvent.setup();
+    setupDetail('void');
+    const dialog = await screen.findByRole('dialog', { name: 'Void invoice?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Wrong client' }));
+    expect(within(dialog).getByLabelText(/Reason for voiding/)).toHaveValue('Wrong client');
   });
 
   it('shows the credit note dialog at once', async () => {

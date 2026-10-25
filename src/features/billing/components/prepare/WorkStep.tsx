@@ -12,6 +12,7 @@ import {
 } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { formatMoney } from '@/utils/money';
+import { usePersistentColumns } from '@/hooks';
 
 import type { ClientWip } from '../../types';
 import { dateCell, plural } from '../../utils/format';
@@ -41,7 +42,7 @@ export function WorkStep({
   const { organization } = useOrg();
   const currency = organization.currency;
   const [jobId, setJobId] = useState(ALL_JOBS);
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('prepare-work');
   const columns = useMemo(() => workColumns(currency), [currency]);
 
   const jobs = useMemo(() => {

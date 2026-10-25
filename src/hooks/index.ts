@@ -13,3 +13,4 @@ export {
   type FileIntakeOptions,
 } from './useFileIntake';
 export { useObjectUrl } from './useObjectUrl';
+export { usePersistentColumns } from './usePersistentColumns';

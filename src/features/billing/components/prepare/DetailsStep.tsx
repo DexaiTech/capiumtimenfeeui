@@ -5,14 +5,14 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Card, Input, Textarea, useToast } from '@/components/ui';
+import { Button, Card, Checkbox, Input, Textarea, useToast } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { addDays, todayInZone } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
-import { useCreateInvoice, useIssueInvoice, useSubmitInvoice } from '../../api';
+import { useCreateInvoice, useIssueInvoice, useSendInvoice, useSubmitInvoice } from '../../api';
 import { prepareDetailsSchema, type PrepareDetailsValues } from '../../schemas/forms';
 import type { InvoiceCreate, InvoiceDetail } from '../../types';
 import { approvalPolicyOf, needsApproval } from '../../utils/approval';
@@ -24,6 +24,8 @@ type Finish = 'draft' | 'issue' | 'approval';
 
 export interface DetailsStepProps {
   clientName: string;
+  /** The client's invoice email; empty when it has none. Issuing then offers to send to it. */
+  invoiceEmail?: string;
   /** The client's payment terms in days, else the practice's: the default due date. */
   termsDays: number;
   itemCount: number;
@@ -38,6 +40,7 @@ export interface DetailsStepProps {
 /** Step three: the dates, the reference and the notes, then the draft is made (and issued or sent). */
 export function DetailsStep({
   clientName,
+  invoiceEmail = '',
   termsDays,
   itemCount,
   totals,
@@ -50,7 +53,11 @@ export function DetailsStep({
   const create = useCreateInvoice();
   const issue = useIssueInvoice();
   const submitForApproval = useSubmitInvoice();
+  const send = useSendInvoice();
   const [running, setRunning] = useState<Finish | null>(null);
+  // Emailing the invoice is the usual next step: on by default when the client has an address.
+  const [sendChoice, setSendChoice] = useState<boolean | null>(null);
+  const sendAfter = sendChoice ?? invoiceEmail !== '';
   const today = todayInZone(organization.timezone);
   const currency = organization.currency;
   const approval = needsApproval(approvalPolicyOf(organization), totals.gross);
@@ -113,6 +120,26 @@ export function DetailsStep({
             title: issued.number ? `Invoice ${issued.number} issued` : 'Invoice issued',
             description: `${formatMoney(issued.gross_total, issued.currency)} to ${clientName}`,
           });
+          if (sendAfter) {
+            // The invoice is issued either way: a refused email is reported, not undone.
+            try {
+              const sent = await send.mutateAsync({ invoiceId: issued.id });
+              toast({
+                tone: 'success',
+                title: sent.queued ? 'Invoice email queued' : 'Invoice email already queued',
+                description:
+                  sent.to.length > 0
+                    ? `The PDF goes to ${sent.to.join(', ')}.`
+                    : 'The PDF goes to the client’s billing contacts.',
+              });
+            } catch {
+              toast({
+                tone: 'warning',
+                title: 'The invoice was issued, but the email was not sent',
+                description: 'Send it from the invoice page.',
+              });
+            }
+          }
           open(issued);
         } else if (how === 'approval') {
           const submitted = await submitForApproval.mutateAsync({ invoiceId: draft.id });
@@ -190,6 +217,19 @@ export function DetailsStep({
         ) : null}
       </form>
 
+      {canIssue && !approval ? (
+        <Checkbox
+          label="Email it to the client after issuing"
+          description={
+            invoiceEmail
+              ? `The PDF goes to ${invoiceEmail}.`
+              : 'The client has no invoice email: it goes to the billing contacts, if there are any.'
+          }
+          checked={sendAfter}
+          onChange={(event) => setSendChoice(event.target.checked)}
+        />
+      ) : null}
+
       <Card padding="sm" className="flex flex-col gap-1">
         <p className="text-sm text-text">
           {plural(itemCount, 'item', 'items')} for {clientName}: about{' '}
@@ -235,7 +275,7 @@ export function DetailsStep({
               disabled={busy || retryIn > 0}
               onClick={() => void finish('issue')}
             >
-              Save and issue
+              {sendAfter ? 'Save, issue and send' : 'Save and issue'}
             </Button>
           ) : null}
         </div>

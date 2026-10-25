@@ -18,7 +18,7 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker } from '@/features/team';
-import { useUrlParams } from '@/hooks';
+import { usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatMoney } from '@/utils/money';
 
 import {
@@ -126,7 +126,7 @@ export function AdjustmentsView({ onCreate }: AdjustmentsViewProps) {
   const [deciding, setDeciding] = useState<{ adjustment: Adjustment; action: Action } | null>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const [viewing, setViewing] = useState<Adjustment | null>(null);
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(['requested']));
+  const [hidden, setHidden] = usePersistentColumns('wip-adjustments', ['requested']);
 
   const canApprove = can(PERMISSIONS.wipApprove);
   const canAdjust = can(PERMISSIONS.wipAdjust);

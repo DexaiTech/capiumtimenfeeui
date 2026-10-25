@@ -242,11 +242,12 @@ describe('TopBar', () => {
           'Prepare invoice',
           'Record payment',
           'Add staff member',
+          'New ticket',
         ],
       ],
       [['client.read', 'client.create'], ['New client']],
       [['member.invite'], ['Add staff member']],
-      [STAFF_PERMISSIONS, ['Log time', 'New expense']],
+      [STAFF_PERMISSIONS, ['Log time', 'New expense', 'New ticket']],
     ])('offers what %j may create', async (permissions, expected) => {
       const user = userEvent.setup();
       renderShell(permissions);
@@ -296,7 +297,7 @@ describe('TopBar', () => {
       expect(labels.slice(0, 3)).toEqual(['Dashboard', 'Overview', 'My Actions']);
       expect(labels).toContain('Document Numbering');
       expect(labels).toContain('Audit Logs');
-      expect(labels.at(-1)).toBe('Add staff member');
+      expect(labels.at(-1)).toBe('New ticket');
     });
 
     it('offers only what the role may open', async () => {
@@ -311,6 +312,14 @@ describe('TopBar', () => {
         'Client List',
         'Client 360',
       ]);
+    });
+
+    it('opens from Ctrl+K, even while a field has the focus', async () => {
+      const user = userEvent.setup();
+      renderShell(ownerContext.permissions);
+      expect(screen.queryByRole('combobox', { name: 'Search pages' })).not.toBeInTheDocument();
+      await user.keyboard('{Control>}k{/Control}');
+      expect(await screen.findByRole('combobox', { name: 'Search pages' })).toBeInTheDocument();
     });
 
     it('finds a page by its name and opens it', async () => {

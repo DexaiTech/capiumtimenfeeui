@@ -18,7 +18,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { useAuth } from '@/features/auth';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker } from '@/features/team';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 
 import { flattenPages, useChangeTaskStatus, useMembers, useTaskList } from '../api';
 import { FilterPopover } from '../components/FilterPopover';
@@ -72,7 +72,7 @@ export default function TasksPage() {
   };
   const list = useTaskList(filters);
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('tasks');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const rows = flattenPages(list.data);
   const canEdit = can(PERMISSIONS.jobUpdate);

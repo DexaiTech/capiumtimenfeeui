@@ -1,14 +1,16 @@
-import { Briefcase } from 'lucide-react';
+import { Briefcase, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
 
 import {
+  buttonClasses,
   PageToolbar,
   SearchField,
   Select,
   type DataTableColumn,
   type DataTableSort,
 } from '@/components/ui';
+import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useUrlParams } from '@/hooks';
@@ -45,7 +47,7 @@ export interface JobsTabProps {
 
 /** The client's jobs (`GET /jobs?client_id=`, `job.read`): search, status and server-side sort. */
 export function JobsTab({ clientId, clientName, overview }: JobsTabProps) {
-  const { organization } = useOrg();
+  const { organization, can } = useOrg();
   const { params, setParam } = useUrlParams();
   const { text, setText, searched } = useUrlSearch();
   const status = oneOf(params.get('status'), JOB_STATUSES);
@@ -164,14 +166,25 @@ export function JobsTab({ clientId, clientName, overview }: JobsTabProps) {
               />
             }
             actions={
-              <Select
-                label="Status"
-                hideLabel
-                options={STATUS_OPTIONS}
-                value={status}
-                onChange={(event) => setParam({ status: event.target.value })}
-                className="w-full sm:w-44"
-              />
+              <>
+                <Select
+                  label="Status"
+                  hideLabel
+                  options={STATUS_OPTIONS}
+                  value={status}
+                  onChange={(event) => setParam({ status: event.target.value })}
+                  className="w-full sm:w-44"
+                />
+                {can(PERMISSIONS.jobCreate) ? (
+                  <Link
+                    to={`${routes.org.jobs(slug)}?new=1&client_id=${clientId}`}
+                    className={buttonClasses({ variant: 'primary', size: 'sm' })}
+                  >
+                    <Plus aria-hidden="true" className="size-4" />
+                    New job
+                  </Link>
+                ) : null}
+              </>
             }
           />
         }

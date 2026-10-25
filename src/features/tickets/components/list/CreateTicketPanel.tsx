@@ -2,9 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CloudUpload, X } from 'lucide-react';
 import { useCallback, useId, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useNavigate } from 'react-router';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, FormPanel, RichTextEditor, Select, Textarea, useToast } from '@/components/ui';
+import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { cn } from '@/utils/cn';
 
@@ -48,6 +50,7 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
   const create = useCreateTicket();
   const { organization } = useOrg();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const formId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const counter = useRef(0);
@@ -131,7 +134,14 @@ function CreateTicketForm({ onClose }: { onClose: () => void }) {
       onSuccess: (ticket) => {
         setUploading(true);
         void uploadAll(ticket.id).finally(() => {
-          toast({ tone: 'success', title: `Ticket ${ticket.code} created` });
+          toast({
+            tone: 'success',
+            title: `Ticket ${ticket.code} created`,
+            action: {
+              label: 'Open ticket',
+              onClick: () => void navigate(routes.org.ticket(organization.slug, ticket.id)),
+            },
+          });
           onClose();
         });
       },

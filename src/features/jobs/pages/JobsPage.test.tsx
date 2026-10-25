@@ -117,6 +117,28 @@ describe('the job list', () => {
     expect(screen.getByText('Showing 3 jobs · End of the list')).toBeInTheDocument();
   });
 
+  it('shows only the jobs of the caller with one click on "My jobs"', async () => {
+    const user = userEvent.setup();
+    const backend = setup();
+    await table();
+    const button = screen.getByRole('button', { name: 'My jobs' });
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    await user.click(button);
+    await waitFor(() => expect(lists(backend).at(-1)?.params?.get('manager_user_id')).toBe('me'));
+    expect(screen.getByRole('button', { name: 'My jobs' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'My jobs' }));
+    await waitFor(() => expect(lists(backend).at(-1)?.params?.get('manager_user_id')).toBeNull());
+  });
+
+  it('opens a job from any plain part of its row', async () => {
+    const user = userEvent.setup();
+    setup();
+    const rows = rowsOf(await table());
+    // The client's name is plain text in the row: no need to aim at the job's link.
+    await user.click(within(rows[0] as HTMLElement).getByText('Globex plc'));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/acme/jobs/j-2'));
+  });
+
   it('filters by status, by search and by the filters of the popover, and says when nothing matches', async () => {
     const user = userEvent.setup();
     const backend = setup();

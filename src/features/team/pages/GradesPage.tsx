@@ -19,7 +19,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatBasisPoints } from '@/utils/money';
 
 import { flattenPages, useDeleteGrade, useGrades, useSetGradeActive } from '../api';
@@ -68,7 +68,7 @@ function GradeList() {
   const setActive = useSetGradeActive();
   const remove = useDeleteGrade();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('grades');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const close = () => setDialog(null);

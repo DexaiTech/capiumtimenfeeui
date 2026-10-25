@@ -1,14 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, useToast } from '@/components/ui';
+import { Button, Checkbox, Input, Modal, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
-import { useIssueInvoice } from '../api';
+import { useClientBilling, useIssueInvoice, useSendInvoice } from '../api';
 import { issueSchema, type IssueValues } from '../schemas/forms';
 import type { InvoiceDetail, InvoiceSummary } from '../types';
 import { toFormError } from '../utils/errors';
@@ -26,7 +26,13 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
   const { organization } = useOrg();
   const { toast } = useToast();
   const issue = useIssueInvoice();
+  const send = useSendInvoice();
   const formId = useId();
+  // The usual next step is to email it: offered here, and on when the client has an invoice email.
+  const billing = useClientBilling(invoice.client?.id ?? null);
+  const invoiceEmail = billing.data?.invoice_email ?? '';
+  const [sendChoice, setSendChoice] = useState<boolean | null>(null);
+  const sendAfter = sendChoice ?? invoiceEmail !== '';
   const {
     register,
     handleSubmit,
@@ -60,6 +66,28 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
             title: issued.number ? `Invoice ${issued.number} issued` : 'Invoice issued',
             description: `${formatMoney(issued.gross_total, issued.currency)} to ${issued.client?.name ?? 'the client'}`,
           });
+          if (sendAfter) {
+            send.mutate(
+              { invoiceId: issued.id },
+              {
+                onSuccess: (result) =>
+                  toast({
+                    tone: 'success',
+                    title: result.queued ? 'Invoice email queued' : 'Invoice email already queued',
+                    description:
+                      result.to.length > 0
+                        ? `The PDF goes to ${result.to.join(', ')}.`
+                        : 'The PDF goes to the client’s billing contacts.',
+                  }),
+                onError: () =>
+                  toast({
+                    tone: 'error',
+                    title: 'The invoice was issued, but the email was not sent',
+                    description: 'Send it from the invoice page.',
+                  }),
+              },
+            );
+          }
           onIssued?.(issued);
           onClose();
         },
@@ -97,6 +125,16 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
             {...register('due_date')}
           />
         </div>
+        <Checkbox
+          label="Email it to the client after issuing"
+          description={
+            invoiceEmail
+              ? `The PDF goes to ${invoiceEmail}.`
+              : 'The client has no invoice email: it goes to the billing contacts, if there are any.'
+          }
+          checked={sendAfter}
+          onChange={(event) => setSendChoice(event.target.checked)}
+        />
         {submitError ? (
           <FormAlert message={submitError.message} requestId={submitError.requestId} />
         ) : null}
@@ -110,7 +148,7 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
           loading={issue.isPending}
           disabled={retryIn > 0}
         >
-          Issue invoice
+          {sendAfter ? 'Issue and send' : 'Issue invoice'}
         </Button>
       </DialogActions>
     </>

@@ -124,6 +124,7 @@ export function PrepareFlow({ clientId }: { clientId: string }) {
       {step === 'details' ? (
         <DetailsStep
           clientName={wip.data.client.name}
+          invoiceEmail={billing.data?.invoice_email ?? ''}
           termsDays={billing.data?.payment_terms_days ?? organization.payment_terms_days}
           itemCount={items.length}
           totals={totals}

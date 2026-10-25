@@ -1,5 +1,4 @@
 import { Gauge, SearchX } from 'lucide-react';
-import { useState } from 'react';
 import { Link } from 'react-router';
 
 import {
@@ -20,7 +19,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker } from '@/features/team';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatUkDate } from '@/utils/dates';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
 
@@ -118,7 +117,7 @@ export default function BudgetTrackingPage() {
     ...(rag === 'all' ? {} : RAG_RANGE[rag]),
   };
   const list = useBudgetList(filters);
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('budget-tracking');
 
   const rows = list.data?.pages.flatMap((page) => page.data.rows) ?? [];
   const totals = list.data?.pages[0]?.data.totals;

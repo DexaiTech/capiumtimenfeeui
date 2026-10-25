@@ -3,7 +3,14 @@ import { useId } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, FormPanel, useToast } from '@/components/ui';
+import {
+  AddAnotherButton,
+  Button,
+  FormPanel,
+  Input,
+  useAddAnother,
+  useToast,
+} from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
 
@@ -35,10 +42,14 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open
   const add = useAddInvoiceLine(invoiceId);
   const update = useUpdateInvoiceLine(invoiceId);
   const formId = useId();
+  const again = useAddAnother();
   const {
     register,
     handleSubmit,
     setError,
+    setFocus,
+    getValues,
+    reset,
     control,
     formState: { errors, isDirty },
   } = useForm<ManualLineValues>({
@@ -83,6 +94,13 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open
         {
           onSuccess: () => {
             toast({ tone: 'success', title: 'Line added' });
+            if (again.consume()) {
+              // Lines of one invoice usually share the quantity and the VAT code: keep them.
+              reset({ ...getValues(), description: '', unit_amount: '' });
+              // reset() unregisters the fields until the next render, so focus after it.
+              setTimeout(() => setFocus('description'), 0);
+              return;
+            }
             onClose();
           },
           onError,
@@ -167,9 +185,18 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open
       </form>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
+        {line ? null : (
+          <AddAnotherButton
+            formId={formId}
+            flagRef={again.flagRef}
+            loading={saving}
+            disabled={retryIn > 0}
+          />
+        )}
         <Button
           type="submit"
           form={formId}
+          {...again.primaryProps}
           variant="primary"
           loading={saving}
           disabled={(line !== null && !isDirty) || retryIn > 0}

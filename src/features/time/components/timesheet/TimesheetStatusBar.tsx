@@ -9,7 +9,7 @@ import { formatMinutes } from '@/utils/minutes';
 import { useRecallTimesheet, useSubmitTimesheet } from '../../api';
 import { EDITABLE_SHEET_STATUSES } from '../../constants';
 import type { TimesheetDetail, WeekGrid } from '../../types';
-import { dialogError } from '../../utils/errors';
+import { describeFailure, dialogError } from '../../utils/errors';
 import { describeVariance, formatDayList, formatShare } from '../../utils/format';
 import { formatWeekRange } from '../../utils/weeks';
 import { SheetStatusBadge } from '../badges';
@@ -45,6 +45,41 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
   const close = () => {
     setConfirming(null);
     setRefusal(null);
+  };
+
+  const recalled = () =>
+    toast({
+      tone: 'success',
+      title: 'Timesheet recalled',
+      description: 'It is open again: you can change it and submit it again.',
+    });
+
+  // A complete week goes in with one click: nothing needs checking, and Undo recalls it. A week
+  // with days missing still asks first, because that is what the question is for.
+  const submitAtOnce = () => {
+    if (!timesheetId) return;
+    submit.mutate(timesheetId, {
+      onSuccess: () =>
+        toast({
+          tone: 'success',
+          title: 'Timesheet submitted',
+          description: 'Your manager can now approve it.',
+          action: {
+            label: 'Undo',
+            onClick: () =>
+              recall.mutate(timesheetId, {
+                onSuccess: recalled,
+                onError: (error) =>
+                  toast({ tone: 'error', ...describeFailure(error, 'Could not recall it') }),
+              }),
+          },
+        }),
+      // The API refused: show why in the usual dialog, where it can be retried.
+      onError: (error) => {
+        setConfirming('submit');
+        setRefusal(dialogError(error));
+      },
+    });
   };
 
   const act = () => {
@@ -122,7 +157,10 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
               variant="primary"
               leftIcon={<Send className="size-4" aria-hidden="true" />}
               disabled={timesheetId === null || grid.total_minutes === 0}
-              onClick={() => setConfirming('submit')}
+              loading={submit.isPending && confirming === null}
+              onClick={() =>
+                grid.missing_days.length === 0 ? submitAtOnce() : setConfirming('submit')
+              }
             >
               Submit for approval
             </Button>

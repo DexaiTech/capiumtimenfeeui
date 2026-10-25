@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatMoney } from '@/utils/money';
 
 import { flattenPages, useWipItems } from '../api';
@@ -90,7 +90,7 @@ export default function WipDetailsPage() {
 
   const canWriteOff = can(PERMISSIONS.wipWriteOff);
   const canTransfer = can(PERMISSIONS.wipTransfer);
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(['rate']));
+  const [hidden, setHidden] = usePersistentColumns('wip-details', ['rate']);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [writingOff, setWritingOff] = useState(false);
   const [transferring, setTransferring] = useState(false);

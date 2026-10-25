@@ -214,6 +214,9 @@ export function DayView({ date, canRecord, onAddEntry }: DayViewProps) {
 
       <DataTable
         caption={`Time recorded on ${formatLongDay(date)}`}
+        onRowClick={(entry) => {
+          if (canRecord && !entry.is_locked) setEditing(entry);
+        }}
         columns={columns}
         rows={data?.entries ?? []}
         rowKey={(entry) => entry.id}

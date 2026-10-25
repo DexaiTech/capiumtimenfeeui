@@ -517,6 +517,31 @@ describe('AddStaffPanel', () => {
     );
   });
 
+  it('keeps the grade and the start date for the next person with "Save and add another"', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(orgApiPath('/staff'), async ({ request }) => {
+        bodies.push(await request.json());
+        return ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    const dialog = await openAddDialog(user);
+    await fillRequired(dialog, user);
+    await user.click(within(dialog).getByRole('button', { name: 'Save and add another' }));
+
+    expect(await screen.findByText('Katherine Johnson added')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(dialog).getByRole('textbox', { name: 'Full name' })).toHaveValue(''),
+    );
+    expect(within(dialog).getByRole('combobox', { name: 'Grade' })).toHaveValue(seniorGrade.id);
+    expect(within(dialog).getByLabelText('Start date')).toHaveValue('2026-10-19');
+    expect(screen.getByRole('region', { name: 'Add staff member' })).toBeInTheDocument();
+    expect(bodies).toHaveLength(1);
+  });
+
   it('sets the cost and charge-out rate with the person, from the date given', async () => {
     let body: unknown;
     server.use(

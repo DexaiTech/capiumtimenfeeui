@@ -43,6 +43,8 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   tokenStore.clear();
+  // Remembered choices (hidden columns, saved filters) must not leak from one test to the next.
+  window.localStorage.clear();
 });
 
 afterAll(() => server.close());

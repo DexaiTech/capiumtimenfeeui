@@ -1,9 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useId } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useNavigate } from 'react-router';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import {
+  AddAnotherButton,
   Button,
   Checkbox,
   ErrorState,
@@ -11,8 +13,10 @@ import {
   FormPanel,
   Select,
   Skeleton,
+  useAddAnother,
   useToast,
 } from '@/components/ui';
+import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { roleOptions, useRoles, type Role } from '@/features/settings';
 import { useRoleName } from '@/features/system';
@@ -100,7 +104,9 @@ function AddStaffForm({
   const { organization, role: myRole, can } = useOrg();
   const roleName = useRoleName();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const formId = useId();
+  const again = useAddAnother();
   const create = useCreateStaff();
   const invite = useInviteStaff();
   const link = useLinkLogin();
@@ -143,6 +149,25 @@ function AddStaffForm({
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
     useSubmitError<StaffFormValues>({ setError, fields: FIELDS });
 
+  /** Closes the panel, or, for "add another", empties the person's own fields and stays. */
+  const finish = (result: CreatedStaff) => {
+    // A temporary password is shown once, in a dialog of the page: that always closes the panel.
+    if (again.consume() && result.secret === null) {
+      form.reset({
+        ...form.getValues(),
+        full_name: '',
+        code: '',
+        email: '',
+        initials: '',
+        login_email: '',
+      });
+      // reset() unregisters the fields until the next render, so focus after it.
+      setTimeout(() => form.setFocus('full_name'), 0);
+      return;
+    }
+    onCreated(result);
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     clearSubmitError();
     const body: StaffCreate = {
@@ -176,9 +201,16 @@ function AddStaffForm({
       handleSubmitError(toFormError(error, FIELD_NAMES));
       return;
     }
-    toast({ tone: 'success', title: `${created.full_name} added` });
+    toast({
+      tone: 'success',
+      title: `${created.full_name} added`,
+      action: {
+        label: 'Open profile',
+        onClick: () => void navigate(routes.org.staffMember(organization.slug, created.id)),
+      },
+    });
     if (values.login === 'none') {
-      onCreated({ staff: created, secret: null });
+      finish({ staff: created, secret: null });
       return;
     }
 
@@ -191,7 +223,7 @@ function AddStaffForm({
           body: values.login_email ? { email: values.login_email } : {},
         });
         toast({ tone: 'success', title: `Invitation sent to ${signInEmail}` });
-        onCreated({ staff: created, secret: null });
+        finish({ staff: created, secret: null });
         return;
       }
       const box: { password: string | null } = { password: null };
@@ -204,7 +236,7 @@ function AddStaffForm({
         },
         onSecret: (password) => (box.password = password),
       });
-      onCreated({
+      finish({
         staff: created,
         secret:
           box.password === null
@@ -222,7 +254,7 @@ function AddStaffForm({
         tone: 'error',
         ...describeFailure(error, 'Staff member added, but the login could not be created'),
       });
-      onCreated({ staff: created, secret: null });
+      finish({ staff: created, secret: null });
     }
   });
 
@@ -328,9 +360,16 @@ function AddStaffForm({
       </form>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
+        <AddAnotherButton
+          formId={formId}
+          flagRef={again.flagRef}
+          loading={isSubmitting}
+          disabled={retryIn > 0}
+        />
         <Button
           type="submit"
           form={formId}
+          {...again.primaryProps}
           variant="primary"
           loading={isSubmitting}
           disabled={retryIn > 0}

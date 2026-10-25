@@ -24,7 +24,7 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { useUrlParams } from '@/hooks';
+import { usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatUkDate } from '@/utils/dates';
 
 import {
@@ -121,7 +121,7 @@ export function RateRulesView({ kind }: RateRulesViewProps) {
   const grades = useGradeOptions({ enabled: canPickPeople });
   const services = useServices();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('rate-rules');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const close = () => setDialog(null);

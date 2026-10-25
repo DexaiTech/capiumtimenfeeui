@@ -231,6 +231,24 @@ describe('writing items off', () => {
     expect(screen.queryByText(/selected, £/)).not.toBeInTheDocument();
   });
 
+  it('fills the reason from a common one with a single click', async () => {
+    const user = userEvent.setup();
+    const backend = setup();
+    await table();
+
+    await user.click(pick('VAT return'));
+    await user.click(screen.getByRole('button', { name: 'Write off' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Write off WIP' });
+    await user.click(within(dialog).getByRole('button', { name: 'Goodwill to the client' }));
+    expect(within(dialog).getByLabelText('Reason')).toHaveValue('Goodwill to the client');
+    await user.click(within(dialog).getByRole('button', { name: 'Write off' }));
+
+    expect(await screen.findByText('WIP written off')).toBeInTheDocument();
+    expect(callsOf(backend, 'POST')[0]).toMatchObject({
+      body: { reason: 'Goodwill to the client' },
+    });
+  });
+
   it('refuses items of two clients, and says why', async () => {
     const user = userEvent.setup();
     setup();

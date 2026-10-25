@@ -21,7 +21,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 
 import {
   useDeleteInvoiceTemplate,
@@ -72,7 +72,7 @@ function TemplateList() {
   const makeDefault = useMakeDefaultInvoiceTemplate();
   const remove = useDeleteInvoiceTemplate();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('invoice-templates');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const close = () => setDialog(null);

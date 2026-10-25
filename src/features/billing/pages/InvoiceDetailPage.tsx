@@ -124,15 +124,18 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const canSend = isIssued && can(P.invoiceIssue);
   const title = invoice.number ?? 'Draft invoice';
 
-  // The invoice list's "Raise credit note…" and "Void invoice…" open this page with the matching
-  // dialog already showing (`?action=credit` or `?action=void`), when the person may do it.
+  // The invoice list's "Record payment…", "Raise credit note…" and "Void invoice…" open this page
+  // with the matching form already showing (`?action=payment`, `credit` or `void`), when the
+  // person may do it.
   const requested = searchParams.get('action');
   const [dialog, setDialog] = useState<DialogState>(() =>
     requested === 'credit' && canCredit
       ? { type: 'credit' }
       : requested === 'void' && canVoid
         ? { type: 'void' }
-        : null,
+        : requested === 'payment' && canRecord
+          ? { type: 'payment' }
+          : null,
   );
   const close = () => setDialog(null);
   useEffect(() => {
@@ -326,6 +329,7 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
         description={`${title} for ${invoice.client?.name ?? 'the client'} keeps its number but is cancelled.`}
         label="Reason for voiding"
         hint="Kept in the audit log."
+        suggestions={['Issued in error', 'Wrong client', 'Duplicate invoice', 'Wrong amount']}
         confirmLabel="Void invoice"
         onSubmit={async (reason) => {
           await voidInvoice.mutateAsync({ invoiceId: invoice.id, reason });

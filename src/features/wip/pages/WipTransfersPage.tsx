@@ -17,7 +17,7 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker } from '@/features/team';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatMoney } from '@/utils/money';
 
 import { flattenPages, useReverseTransfer, useTransfers } from '../api';
@@ -77,7 +77,7 @@ export default function WipTransfersPage() {
   const [viewing, setViewing] = useState<Transfer | null>(null);
   const [reversing, setReversing] = useState<Transfer | null>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(['by']));
+  const [hidden, setHidden] = usePersistentColumns('wip-transfers', ['by']);
 
   const activeFilters =
     Number(clientId !== null) +

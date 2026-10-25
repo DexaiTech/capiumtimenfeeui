@@ -169,7 +169,7 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Search over the pages of the practice; opened by the top-bar button or the "/" key. */
+/** Search over the pages of the practice; opened by the top-bar button, the "/" key or Ctrl/Cmd+K. */
 export function SearchDialog() {
   const open = useShellStore((state) => state.searchOpen);
   const setSearchOpen = useShellStore((state) => state.setSearchOpen);
@@ -178,6 +178,12 @@ export function SearchDialog() {
   useEffect(() => {
     if (!practice) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      // Cmd/Ctrl+K opens the search from anywhere, even from a field; "/" only outside fields.
+      if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey) && !event.altKey) {
+        event.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
       if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;

@@ -246,6 +246,32 @@ describe('the tasks of a job', () => {
     );
   });
 
+  it('keeps the form open for the next task with "Save and add another"', async () => {
+    const user = userEvent.setup();
+    const backend = setup();
+    await tasksTable();
+    await user.click(screen.getByRole('button', { name: 'Add task' }));
+    const form = await panel('Add task');
+
+    await user.type(within(form).getByLabelText('Title'), 'First task');
+    await user.click(within(form).getByRole('button', { name: 'Save and add another' }));
+    await waitFor(() => expect(callsOf(backend, 'POST')).toHaveLength(1));
+    // Still open, emptied and ready for the next title.
+    await waitFor(() => expect(within(form).getByLabelText('Title')).toHaveValue(''));
+    await waitFor(() => expect(within(form).getByLabelText('Title')).toHaveFocus());
+
+    await user.type(within(form).getByLabelText('Title'), 'Second task');
+    await user.click(within(form).getByRole('button', { name: 'Add task' }));
+    await waitFor(() => expect(callsOf(backend, 'POST')).toHaveLength(2));
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Add task' })).not.toBeInTheDocument(),
+    );
+    expect(callsOf(backend, 'POST').map((call) => (call.body as { title: string }).title)).toEqual([
+      'First task',
+      'Second task',
+    ]);
+  });
+
   it('changes the status of a task from its row', async () => {
     const user = userEvent.setup();
     const backend = setup();

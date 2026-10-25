@@ -32,7 +32,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, StaffPicker } from '@/features/team';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatMoney } from '@/utils/money';
 
 import { flattenPages, useClaimList, useDeleteClaim, useExpenseSummary } from '../api';
@@ -140,7 +140,7 @@ export default function ExpenseClaimsPage() {
   const list = useClaimList(filters, { enabled: canSee });
   const remove = useDeleteClaim();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('expense-claims');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);

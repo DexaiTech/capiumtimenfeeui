@@ -18,6 +18,9 @@ import { DialogActions } from './DialogActions';
 
 const FIELDS = ['reason', 'written_off_on'] as const;
 
+/** The usual reasons, one click each instead of typing. */
+const REASONS = ['Uncollectable', 'Goodwill to the client', 'Entered in error', 'Over budget'];
+
 export interface WriteOffDialogProps {
   open: boolean;
   onClose: () => void;
@@ -41,6 +44,7 @@ function WriteOffForm({ items, onClose, onDone, formId }: FormProps) {
     register,
     handleSubmit,
     setError,
+    setValue,
     control,
     formState: { errors },
   } = useForm<WriteOffValues>({
@@ -83,6 +87,19 @@ function WriteOffForm({ items, onClose, onDone, formId }: FormProps) {
           {client ? ` for ${client.name}` : ''} will leave the work in progress without being
           billed.
         </p>
+        <div role="group" aria-label="Common reasons" className="flex flex-wrap gap-2">
+          {REASONS.map((reason) => (
+            <Button
+              key={reason}
+              size="sm"
+              onClick={() =>
+                setValue('reason', reason, { shouldDirty: true, shouldValidate: true })
+              }
+            >
+              {reason}
+            </Button>
+          ))}
+        </div>
         <Textarea
           label="Reason"
           required

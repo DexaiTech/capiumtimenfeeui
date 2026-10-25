@@ -88,9 +88,15 @@ describe('WIP summary', () => {
   it('links each row to the items behind it', async () => {
     setup();
     const rows = rowsOf(await table());
-    expect(within(rows[0] as HTMLElement).getByRole('link')).toHaveAttribute(
+    const row = within(rows[0] as HTMLElement);
+    expect(row.getByRole('link', { name: /see the WIP items/ })).toHaveAttribute(
       'href',
       `/acme/wip/details?client_id=${IDS.acme}`,
+    );
+    // One click from the WIP of a client to its invoice, with the client chosen.
+    expect(row.getByRole('link', { name: /^Bill / })).toHaveAttribute(
+      'href',
+      `/acme/billing/prepare?client=${IDS.acme}`,
     );
   });
 

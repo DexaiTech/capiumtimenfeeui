@@ -2,8 +2,11 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { http } from 'msw';
+
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
-import { server } from '@/test/server';
+import { orgApiPath } from '@/test/renderInOrg';
+import { ok, server } from '@/test/server';
 import type { Organization } from '@/types/organization';
 
 import { harbour } from '../test/fixtures';
@@ -444,6 +447,32 @@ describe('making the draft', () => {
     expect(await screen.findByTestId('location')).toHaveTextContent(
       '/acme/billing/invoices/inv-new-1',
     );
+  });
+
+  it('emails the issued invoice too when the box is ticked', async () => {
+    const user = userEvent.setup();
+    const sent: string[] = [];
+    const backend = setup();
+    server.use(
+      http.post(orgApiPath('/invoices/:invoiceId/send'), ({ params }) => {
+        sent.push(String(params.invoiceId));
+        return ok({
+          invoice_id: String(params.invoiceId),
+          to: ['a@harbour.example'],
+          queued: true,
+        });
+      }),
+    );
+    await toDetails(user, /Bank reconciliation/);
+    // The client has no invoice email, so the box starts empty.
+    const box = screen.getByRole('checkbox', { name: /Email it to the client/ });
+    expect(box).not.toBeChecked();
+    await user.click(box);
+    await user.click(screen.getByRole('button', { name: 'Save, issue and send' }));
+
+    expect(await screen.findByText('Invoice email queued')).toBeInTheDocument();
+    expect(postsOf(backend, '/invoices/inv-new-1/issue')).toHaveLength(1);
+    expect(sent).toEqual(['inv-new-1']);
   });
 
   it('sends the draft for approval when the practice approves invoices first', async () => {

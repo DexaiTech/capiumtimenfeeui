@@ -33,7 +33,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { useAuth } from '@/features/auth';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker, StaffPicker } from '@/features/team';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { downloadText, toCsv } from '@/utils/csv';
 import { formatUkDate, todayInZone } from '@/utils/dates';
 import { formatMinutes, formatDecimalHours } from '@/utils/minutes';
@@ -48,7 +48,7 @@ import {
   useTimeEntryList,
 } from '../api';
 import { BillableBadge, BillingStatusBadge, SheetStatusBadge } from '../components/badges';
-import { EntryPanel } from '../components/EntryPanel';
+import { EntryPanel, type EntryDefaults } from '../components/EntryPanel';
 import { FilterPopover } from '../components/FilterPopover';
 import { HistoryDrawer } from '../components/HistoryDrawer';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
@@ -133,7 +133,7 @@ function List() {
   const staff = useStaffDirectory({ enabled: canReadAll && can(PERMISSIONS.memberRead) });
   const remove = useDeleteEntry();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('time-entries');
   const [sort, setSort] = useState<DataTableSort | null>(null);
   const [editing, setEditing] = useState<TimeEntry | null>(null);
   const [correcting, setCorrecting] = useState<TimeEntry | null>(null);
@@ -263,6 +263,36 @@ function List() {
 
   const loaded = flattenPages(list.data);
   const rows = sortRows(loaded, columns, sort);
+
+  // New time starts from the client and job the list is filtered to, so it is not chosen again.
+  const sample = jobId
+    ? loaded.find((entry) => entry.job_id === jobId)
+    : clientId
+      ? loaded.find((entry) => entry.client_id === clientId)
+      : undefined;
+  const addDefaults: EntryDefaults = { date: today };
+  const defaultClientId = clientId || sample?.client_id || '';
+  if (defaultClientId) {
+    addDefaults.client = {
+      id: defaultClientId,
+      label:
+        sample?.client_id === defaultClientId
+          ? refLabel({ code: sample.client_code, name: sample.client_name })
+          : undefined,
+    };
+  }
+  if (jobId && sample?.job_id) {
+    addDefaults.job = {
+      id: sample.job_id,
+      number: sample.job_number ?? '',
+      name: sample.job_name ?? '',
+      client_id: sample.client_id ?? '',
+      client_code: sample.client_code ?? '',
+      client_name: sample.client_name ?? '',
+      service_id: sample.service_id,
+      service_name: sample.service_name,
+    };
+  }
   const totals = loaded.reduce(
     (sum, entry) => ({
       minutes: sum.minutes + entry.minutes,
@@ -407,7 +437,7 @@ function List() {
 
   return (
     <>
-      <EntryPanel open={adding} onClose={() => setAdding(false)} defaults={{ date: today }} />
+      <EntryPanel open={adding} onClose={() => setAdding(false)} defaults={addDefaults} />
       <EntryPanel open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
       <EntryPanel
         open={correcting !== null}
@@ -417,6 +447,9 @@ function List() {
       />
       <DataTable
         caption="Time entries"
+        onRowClick={(entry) => {
+          if (canEdit(entry)) setEditing(entry);
+        }}
         columns={columns}
         rows={rows}
         rowKey={(entry) => entry.id}
@@ -439,6 +472,8 @@ function List() {
                 label="Date"
                 hideLabel
                 prefix="Date"
+                presetsFrom={today}
+                weekStartsOn={organization.week_start}
                 value={{ from, to }}
                 onChange={(range) => setParam({ from: range.from, to: range.to })}
                 className="w-full sm:w-80"

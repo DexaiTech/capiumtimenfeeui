@@ -1,16 +1,27 @@
-import { Archive, ArchiveRestore, Ellipsis, Link2Off, Pencil, RefreshCw } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  Ellipsis,
+  Link2Off,
+  Pencil,
+  Plus,
+  ReceiptText,
+  RefreshCw,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import {
   Button,
+  buttonClasses,
   Dropdown,
   HealthBar,
   InitialsAvatar,
   useToast,
   type DropdownItem,
 } from '@/components/ui';
-import { routes } from '@/constants/routes';
+import { PERMISSIONS } from '@/constants/permissions';
+import { modulePath, ORG_SEGMENTS, routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 
 import { useStaffDirectory } from '../api';
@@ -36,6 +47,10 @@ export function ClientHeader({ client }: ClientHeaderProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const abilities = clientAbilities(client, can);
+  // A new job for this client opens with the client already chosen.
+  const canBill = can(PERMISSIONS.invoiceCreate) && !abilities.readOnly;
+  const canStartJob =
+    can(PERMISSIONS.jobCreate) && !abilities.readOnly && client.status !== 'archived';
   const staff = useStaffDirectory();
   const lifecycle = useClientLifecycle(client);
   const { sync, syncing } = useSyncAction(client);
@@ -111,6 +126,24 @@ export function ClientHeader({ client }: ClientHeaderProps) {
           </dl>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {canStartJob ? (
+            <Link
+              to={`${routes.org.jobs(organization.slug)}?new=1&client_id=${client.id}`}
+              className={buttonClasses({ variant: 'primary' })}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              New job
+            </Link>
+          ) : null}
+          {canBill ? (
+            <Link
+              to={`${modulePath(organization.slug, ORG_SEGMENTS.billing, 'prepare')}?client=${client.id}`}
+              className={buttonClasses({ variant: 'secondary' })}
+            >
+              <ReceiptText aria-hidden="true" className="size-4" />
+              Bill client
+            </Link>
+          ) : null}
           {abilities.edit ? (
             <Button
               leftIcon={<Pencil aria-hidden="true" className="size-4" />}

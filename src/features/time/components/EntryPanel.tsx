@@ -4,7 +4,17 @@ import { useId, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
+import {
+  AddAnotherButton,
+  Button,
+  Checkbox,
+  FormPanel,
+  Input,
+  Select,
+  Textarea,
+  useAddAnother,
+  useToast,
+} from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker, useActivityTypes, useServices } from '@/features/team';
@@ -51,7 +61,7 @@ interface PickedJob {
 export interface EntryDefaults {
   date?: string;
   minutes?: number;
-  client?: { id: string; label: string } | null;
+  client?: { id: string; label?: string } | null;
   job?: PickedJob | null;
   activityId?: string | null;
   /** Fixes the billable status instead of working it out. */
@@ -107,6 +117,7 @@ function EntryForm({
   const correct = useCorrectEntry();
   const { toast } = useToast();
   const formId = useId();
+  const again = useAddAnother();
   const readOnly = !correction && (entry?.is_locked ?? false);
 
   const [job, setJob] = useState<PickedJob | null>(jobOf(entry) ?? defaults?.job ?? null);
@@ -123,6 +134,9 @@ function EntryForm({
     handleSubmit,
     setError,
     setValue,
+    setFocus,
+    getValues,
+    reset,
     control,
     formState: { errors, isDirty },
   } = useForm<CorrectionValues>({
@@ -226,6 +240,13 @@ function EntryForm({
         description: `${formatMinutes(result.minutes)} at ${formatMoney(result.charge_rate, currency)} an hour: ${formatMoney(result.charge_value, currency)}`,
       });
       onSaved?.(result);
+      if (!entry && again.consume()) {
+        // The next entry is usually for the same day, client, job and activity: keep those.
+        reset({ ...getValues(), time: '', description: '', internal_note: '' });
+        // reset() unregisters the fields until the next render, so focus after it.
+        setTimeout(() => setFocus('time'), 0);
+        return;
+      }
       onClose();
     };
 
@@ -541,10 +562,19 @@ function EntryForm({
       </form>
       <DialogActions>
         <Button onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>
+        {readOnly || entry ? null : (
+          <AddAnotherButton
+            formId={formId}
+            flagRef={again.flagRef}
+            loading={saving}
+            disabled={retryIn > 0}
+          />
+        )}
         {readOnly ? null : (
           <Button
             type="submit"
             form={formId}
+            {...again.primaryProps}
             variant="primary"
             loading={saving}
             disabled={(entry && !correction && !isDirty && billableChoice === null) || retryIn > 0}

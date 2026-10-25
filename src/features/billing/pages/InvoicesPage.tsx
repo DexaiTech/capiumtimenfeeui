@@ -23,7 +23,7 @@ import {
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { MAX_BULK_IDS } from '@/utils/bulk';
 import { todayInZone } from '@/utils/dates';
 
@@ -116,7 +116,7 @@ function InvoiceList() {
   const remove = useDeleteInvoice();
   const bulkDelete = useBulkInvoices();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('invoices');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
@@ -201,8 +201,15 @@ function InvoiceList() {
     }
     // An issued invoice is locked, not deletable: it is corrected with a credit note, or, when
     // nothing was paid or credited against it, voided. Both open on the invoice's own page.
-    const correct = (action: 'credit' | 'void') =>
+    const correct = (action: 'payment' | 'credit' | 'void') =>
       void navigate(`${routes.org.invoice(slug, invoice.id)}?action=${action}`);
+    if (invoice.status === 'issued' && invoice.balance > 0 && can(P.paymentRecord)) {
+      items.push({
+        id: 'payment',
+        label: 'Record payment…',
+        onSelect: () => correct('payment'),
+      });
+    }
     if (invoice.status === 'issued' && invoice.balance > 0 && can(P.creditNoteCreate)) {
       items.push({
         id: 'credit',

@@ -11,6 +11,7 @@ import {
   Pagination,
   SearchField,
 } from '@/components/ui';
+import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { useUrlParams } from '@/hooks';
 import { formatUkDate } from '@/utils/dates';
@@ -80,7 +81,7 @@ function ageingStats(totals: WipGroupTotals, currency: string): Stat[] {
 
 /** The body of WIP Summary and WIP Ageing: the same grouped WIP, read for what each page asks. */
 export function SummaryView({ variant }: { variant: SummaryVariant }) {
-  const { organization } = useOrg();
+  const { organization, can } = useOrg();
   const { params, setParam } = useUrlParams();
   const { text: searchText, setText: setSearchText, searched } = useUrlSearch();
   const { filters: base, active, setFilters, clear } = useWipFilters();
@@ -110,7 +111,12 @@ export function SummaryView({ variant }: { variant: SummaryVariant }) {
   const filtered = searched !== '' || active > 0;
   const currency = organization.currency;
 
-  const columnOptions = { slug: organization.slug, currency, group };
+  const columnOptions = {
+    slug: organization.slug,
+    currency,
+    group,
+    canBill: can(PERMISSIONS.invoiceCreate),
+  };
   const columns =
     variant === 'ageing' ? ageingColumns(columnOptions) : summaryColumns(columnOptions);
   const noun = GROUP_META[group].items;

@@ -20,7 +20,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatMoney } from '@/utils/money';
 
 import {
@@ -70,7 +70,7 @@ function ServiceList() {
   const setActive = useSetServiceActive();
   const remove = useDeleteService();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('services');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const close = () => setDialog(null);

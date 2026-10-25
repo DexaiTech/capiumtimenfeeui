@@ -2,6 +2,8 @@ import { useId, type Ref } from 'react';
 
 import { cn } from '@/utils/cn';
 
+import { Button } from './Button';
+import { datePresets } from './dateRangePresets';
 import { Input, type InputProps } from './Input';
 
 export interface DateFieldProps extends Omit<
@@ -46,6 +48,13 @@ export interface DateRangeFieldProps {
   hideLabel?: boolean;
   /** Short visible text before the inputs (for example "Due") when the legend is hidden. */
   prefix?: string;
+  /**
+   * Today (`YYYY-MM-DD`, in the practice's zone): when given, buttons fill the range with
+   * this week, last week, this month or last month in one click.
+   */
+  presetsFrom?: string;
+  /** The practice's first day of the week, 1 (Monday) to 7 (Sunday); Monday when left out. */
+  weekStartsOn?: number;
   error?: string;
   className?: string;
 }
@@ -59,6 +68,8 @@ export function DateRangeField({
   toLabel = 'to',
   hideLabel = false,
   prefix,
+  presetsFrom,
+  weekStartsOn,
   error,
   className,
 }: DateRangeFieldProps) {
@@ -96,6 +107,20 @@ export function DateRangeField({
           className="min-w-0 flex-1"
         />
       </div>
+      {presetsFrom ? (
+        <div role="group" aria-label={`${label}, quick ranges`} className="flex flex-wrap gap-1.5">
+          {datePresets(presetsFrom, weekStartsOn).map((preset) => (
+            <Button
+              key={preset.label}
+              size="sm"
+              variant="ghost"
+              onClick={() => onChange({ from: preset.from, to: preset.to })}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      ) : null}
       {error ? (
         <p id={errorId} role="alert" className="text-xs font-medium text-danger">
           {error}

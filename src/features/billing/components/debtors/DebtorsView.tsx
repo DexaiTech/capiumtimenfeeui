@@ -17,7 +17,7 @@ import {
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { useUrlParams } from '@/hooks';
+import { usePersistentColumns, useUrlParams } from '@/hooks';
 import { todayInZone } from '@/utils/dates';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
 
@@ -77,7 +77,7 @@ export function DebtorsView() {
   const { rows, first } = debtorsView(list.data);
   const totals = first?.totals;
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(['ageing']));
+  const [hidden, setHidden] = usePersistentColumns('debtors', ['ageing']);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [drilling, setDrilling] = useState<ClientRef | null>(null);
   const [reminding, setReminding] = useState<ReminderTarget | null>(null);

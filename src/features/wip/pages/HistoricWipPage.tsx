@@ -15,7 +15,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatUkDate, formatUkDateTime, todayInZone } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
@@ -61,7 +61,7 @@ export default function HistoricWipPage() {
   const report = useHistoricReport(filters, { enabled: allowed });
   const exporter = useExportHistoric();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(['hours']));
+  const [hidden, setHidden] = usePersistentColumns('historic-wip', ['hours']);
   const [drilling, setDrilling] = useState<{ title: string; filters: HistoricItemFilters } | null>(
     null,
   );

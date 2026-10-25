@@ -18,7 +18,7 @@ import {
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { useUrlParams } from '@/hooks';
+import { usePersistentColumns, useUrlParams } from '@/hooks';
 import { todayInZone } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
@@ -87,7 +87,7 @@ export function StatementsView() {
   const { rows, first } = statementsView(list.data);
   const totals = first?.totals;
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('statements');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [sending, setSending] = useState<StatementSendTarget | null>(null);
 

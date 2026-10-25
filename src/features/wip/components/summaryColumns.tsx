@@ -14,6 +14,8 @@ export interface SummaryColumnsOptions {
   slug: string;
   currency: string;
   group: WipGroup;
+  /** The caller may prepare invoices: a client row then offers "Bill" (`invoice.create`). */
+  canBill?: boolean;
 }
 
 const amount = (pence: number, currency: string) => (
@@ -65,7 +67,7 @@ function nameColumn({ slug, group }: SummaryColumnsOptions): DataTableColumn<Wip
 
 /** WIP by time, fixed fee and expense, with the oldest item and the share over 90 days. */
 export function summaryColumns(options: SummaryColumnsOptions): DataTableColumn<WipGroupRow>[] {
-  const { currency } = options;
+  const { currency, slug, group, canBill = false } = options;
   return [
     nameColumn(options),
     {
@@ -133,6 +135,27 @@ export function summaryColumns(options: SummaryColumnsOptions): DataTableColumn<
       sortable: true,
       cell: (row) => <span className="text-text tabular-nums">{row.item_count}</span>,
     },
+    // One click from the client's WIP to its invoice, with the client already chosen.
+    ...(canBill && group === 'client'
+      ? [
+          {
+            id: 'bill',
+            header: 'Bill',
+            hideable: false,
+            align: 'end' as const,
+            cell: (row: WipGroupRow) =>
+              row.key && row.total > 0 ? (
+                <Link
+                  to={`${modulePath(slug, ORG_SEGMENTS.billing, 'prepare')}?client=${encodeURIComponent(row.key)}`}
+                  aria-label={`Bill ${row.name}`}
+                  className="font-semibold whitespace-nowrap text-brand-text hover:underline"
+                >
+                  Bill
+                </Link>
+              ) : null,
+          },
+        ]
+      : []),
   ];
 }
 

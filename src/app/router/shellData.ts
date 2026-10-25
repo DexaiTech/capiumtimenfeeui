@@ -1,4 +1,5 @@
 import {
+  Bug,
   Briefcase,
   Clock,
   CreditCard,
@@ -70,6 +71,7 @@ export function quickCreateItems(
     `${routes.org.staff(slug)}?new=1`,
     can(P.memberInvite),
   );
+  add('ticket', 'New ticket', Bug, `${routes.org.tickets(slug)}?new=1`, can(P.ticketCreate));
   return items;
 }
 

@@ -20,7 +20,7 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 
 import { flattenPages, useClaimList, useDeleteClaim, useRecallClaim } from '../api';
 import {
@@ -87,7 +87,7 @@ export default function MyExpensesPage() {
   const recall = useRecallClaim();
   const remove = useDeleteClaim();
 
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [hidden, setHidden] = usePersistentColumns('my-expenses');
   const [creating, setCreating] = useState(() => canLog && params.get('new') === '1');
   const [deleting, setDeleting] = useState<ExpenseClaim | null>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
