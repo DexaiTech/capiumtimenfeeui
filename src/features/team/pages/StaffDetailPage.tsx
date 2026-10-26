@@ -26,6 +26,7 @@ import { formatBasisPoints } from '@/utils/money';
 import { flattenPages, useRateRules, useStaffMember } from '../api';
 import { LoginStatusBadge, RuleStatusBadge, StaffStatusBadge } from '../components/badges';
 import { LoadError, NoAccess } from '../components/PageShell';
+import { StaffPermissionsCard } from '../components/staff/StaffPermissionsCard';
 import { StaffRatePanel } from '../components/staff/StaffRatePanel';
 import {
   TemporaryPasswordDialog,
@@ -385,6 +386,7 @@ function StaffDetailView({ staffId }: { staffId: string }) {
       {editPanel}
       <ProfileCard staff={member} canEdit={canUpdate} onEdit={() => edit(member)} />
       {can(PERMISSIONS.rateRead) ? <RatesCard staff={member} /> : null}
+      {can(PERMISSIONS.roleRead) ? <StaffPermissionsCard staff={member} /> : null}
       <SignInCard staff={member} />
       <UsageCard staff={member} />
       {can(PERMISSIONS.auditLogRead) ? (

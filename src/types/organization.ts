@@ -35,6 +35,8 @@ export interface Organization {
   default_charge_rate: number;
   time_increment_minutes: number;
   require_timesheet_approval: boolean;
+  /** Time of people who hold `timesheet.exempt` (Owner, Admin and Partner) needs no approval. */
+  auto_approve_privileged_time: boolean;
   fixed_fee_wip_mode: FixedFeeWipMode;
   /** A WIP write-on or write-off above this (pence) needs approval; 0 means every one does. */
   wip_adjustment_approval_threshold: number;
@@ -97,6 +99,7 @@ export type OrganizationUpdate = Partial<
     | 'payment_terms_days'
     | 'default_charge_rate'
     | 'require_timesheet_approval'
+    | 'auto_approve_privileged_time'
     | 'fixed_fee_wip_mode'
     | 'wip_adjustment_approval_threshold'
     | 'wip_write_off_approval_threshold_percent'

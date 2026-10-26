@@ -20,6 +20,8 @@ export const teamKeys = {
     [...queryKeys.org.staff(organizationId), 'list', filters] as const,
   staffMember: (organizationId: string, staffId: string) =>
     [...queryKeys.org.staff(organizationId), 'detail', staffId] as const,
+  memberPermissions: (organizationId: string, staffId: string) =>
+    [...queryKeys.org.staff(organizationId), 'permissions', staffId] as const,
   staffLookup: (organizationId: string, filters: StaffFilters) =>
     [...queryKeys.org.staff(organizationId), 'lookup', filters] as const,
 

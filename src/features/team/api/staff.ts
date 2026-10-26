@@ -1,8 +1,15 @@
-import { keepPreviousData, useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { useOrg } from '@/features/organizations';
 
 import type {
+  MemberPermissionsUpdate,
   StaffBulkRequest,
   StaffCreate,
   StaffDetail,
@@ -52,6 +59,29 @@ export function useStaffMember(staffId: string | null | undefined) {
     queryFn: ({ signal }) => teamApi.getStaff(organization.id, staffId ?? '', signal),
     enabled: Boolean(staffId),
     staleTime: 30_000,
+  });
+}
+
+/** What one person can do beyond, or without, their role. Needs `role.read` and `member.read`. */
+export function useMemberPermissions(staffId: string, enabled: boolean) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: teamKeys.memberPermissions(organization.id, staffId),
+    queryFn: ({ signal }) => teamApi.getMemberPermissions(organization.id, staffId, signal),
+    enabled,
+  });
+}
+
+export function useSetMemberPermissions(staffId: string) {
+  const { organization } = useOrg();
+  const queryClient = useQueryClient();
+  const invalidate = useTeamInvalidation();
+  return useMutation({
+    mutationFn: (body: MemberPermissionsUpdate) =>
+      teamApi.setMemberPermissions(organization.id, staffId, body),
+    onSuccess: (saved) =>
+      queryClient.setQueryData(teamKeys.memberPermissions(organization.id, staffId), saved),
+    onSettled: invalidate.staff,
   });
 }
 

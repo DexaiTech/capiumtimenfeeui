@@ -54,6 +54,8 @@ export const billingKeys = {
     [...queryKeys.org.debtors(organizationId), 'reminders', filters] as const,
   clientWip: (organizationId: string, clientId: string, jobId: string) =>
     [...queryKeys.org.wip(organizationId), 'billing-items', clientId, jobId] as const,
+  clientBillingSummary: (organizationId: string, clientId: string) =>
+    [...queryKeys.org.wip(organizationId), 'billing-summary', clientId] as const,
   clientBilling: (organizationId: string, clientId: string) =>
     [...queryKeys.org.clients(organizationId), 'billing-defaults', clientId] as const,
   estimateList: (organizationId: string, filters: EstimateListFilters) =>

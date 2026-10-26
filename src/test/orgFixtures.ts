@@ -20,6 +20,7 @@ export const testOrganization: Organization = {
   default_charge_rate: 9500,
   time_increment_minutes: 6,
   require_timesheet_approval: false,
+  auto_approve_privileged_time: true,
   fixed_fee_wip_mode: 'on_completion',
   wip_adjustment_approval_threshold: 50000,
   wip_write_off_approval_threshold_percent: 1000,

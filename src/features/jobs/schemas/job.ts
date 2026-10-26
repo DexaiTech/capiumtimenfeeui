@@ -43,6 +43,8 @@ export const jobSchema = z
     hourly_rate: z.string(),
     budget_minutes: z.number().int().min(0).max(MAX_MINUTES).nullable(),
     budget_fee: z.string(),
+    /** Pounds; the cost the work is expected to take. */
+    budget_cost: z.string(),
     start_date: z.string(),
     due_date: z.string(),
     period_start: z.string(),
@@ -56,7 +58,7 @@ export const jobSchema = z
     const issue = (path: string, message: string) =>
       ctx.addIssue({ code: 'custom', path: [path], message });
 
-    for (const field of ['fixed_fee', 'hourly_rate', 'budget_fee'] as const) {
+    for (const field of ['fixed_fee', 'hourly_rate', 'budget_fee', 'budget_cost'] as const) {
       if (!blank(values[field]) && pence(values[field]) === null) issue(field, AMOUNT_MESSAGE);
     }
     if (values.start_date && values.due_date && values.start_date > values.due_date) {
@@ -81,6 +83,7 @@ export function jobDefaults(job: Job | null, clientId = ''): JobValues {
     hourly_rate: penceToPoundsInput(job?.hourly_rate),
     budget_minutes: job?.budget_minutes ?? null,
     budget_fee: penceToPoundsInput(job?.budget_fee),
+    budget_cost: penceToPoundsInput(job?.budget_cost),
     start_date: job?.start_date ?? '',
     due_date: job?.due_date ?? '',
     period_start: job?.period_start ?? '',
@@ -108,6 +111,8 @@ export function toJobInput(values: JobValues): JobInput {
   if (values.budget_minutes !== null) input.budget_minutes = values.budget_minutes;
   const budgetFee = money(values.budget_fee);
   if (budgetFee !== null) input.budget_fee = budgetFee;
+  const budgetCost = money(values.budget_cost);
+  if (budgetCost !== null) input.budget_cost = budgetCost;
   for (const field of [
     'start_date',
     'due_date',
@@ -132,6 +137,7 @@ export function toJobUpdate(values: JobValues, job: Job): JobUpdate {
     hourly_rate: values.billing_basis === 'hourly' ? money(values.hourly_rate) : null,
     budget_minutes: values.budget_minutes,
     budget_fee: money(values.budget_fee),
+    budget_cost: money(values.budget_cost),
     period_start: orNull(values.period_start),
     period_end: orNull(values.period_end),
     start_date: orNull(values.start_date),

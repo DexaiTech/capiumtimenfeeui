@@ -8,36 +8,60 @@ import type { IsoDate, IsoDateTime } from '@/types/api';
 /* ------------------------------- Period lock ------------------------------- */
 
 export type PeriodLockEventType = 'locked' | 'reopened';
+/** A calendar month, quarter or year; `legacy` is a lock set through a date before periods. */
+export type PeriodType = 'month' | 'quarter' | 'year' | 'legacy';
+export type LockablePeriodType = Exclude<PeriodType, 'legacy'>;
 
 export interface PeriodLockEvent {
   id: string;
   event_type: PeriodLockEventType;
-  /** The last locked day before the event; null when nothing was locked. */
+  /** The period the event is about; null on events from before periods existed. */
+  period_type: PeriodType | null;
+  period_start: IsoDate | null;
+  period_end: IsoDate | null;
+  /** "March 2026", "Q1 2026", "2026". */
+  period_label: string | null;
+  /** Events from before periods only: the single lock date before the event. */
   previous_locked_through: IsoDate | null;
-  /** The last locked day after the event; null when nothing is locked any more. */
+  /** Events from before periods only: the single lock date after the event. */
   locked_through: IsoDate | null;
-  /** Optional for a lock, always there for a reopening. */
+  /** Optional for a lock, always there for an unlock. */
   reason: string | null;
   actor_user_id: string;
   actor_name: string | null;
   created_at: IsoDateTime;
 }
 
+export interface LockedPeriod {
+  id: string;
+  period_type: PeriodType;
+  start_date: IsoDate;
+  end_date: IsoDate;
+  /** "March 2026", "Q1 2026", "2026", "Through 31/08/2026" for a legacy lock. */
+  label: string;
+  reason: string | null;
+  locked_by: string | null;
+  locked_by_name: string | null;
+  locked_at: IsoDateTime;
+}
+
 export interface PeriodLock {
-  /** Every day on or before it is closed; null when nothing is locked. */
-  locked_through: IsoDate | null;
-  updated_at: IsoDateTime | null;
+  /** Oldest first. Every day inside any of them is closed. */
+  periods: LockedPeriod[];
   last_event: PeriodLockEvent | null;
 }
 
 export interface PeriodLockCreate {
-  locked_through: IsoDate;
+  period_type: LockablePeriodType;
+  year: number;
+  /** The month (1-12) or quarter (1-4); left out for a year. */
+  period?: number;
   reason?: string | null;
 }
 
 export interface PeriodLockReopen {
-  /** The new last locked day, or null to remove the lock. */
-  reopen_to: IsoDate | null;
+  /** The locked period to unlock. */
+  lock_id: string;
   reason: string;
 }
 

@@ -12,6 +12,7 @@ import type { Organization } from '@/types/organization';
 import { harbour } from '../test/fixtures';
 import {
   createPrepareBackend,
+  harbourSummary,
   postsOf,
   prepareHandlers,
   timeItem,
@@ -561,5 +562,130 @@ describe('making the draft', () => {
     expect(await screen.findByTestId('location')).toHaveTextContent(
       '/acme/billing/invoices/inv-new-1',
     );
+  });
+});
+
+describe('the billing summary', () => {
+  it('shows each job with its contract terms and the hours spent, before anything is chosen', async () => {
+    setup();
+    await work();
+
+    const summary = screen.getByRole('region', { name: 'Billing summary' });
+    const books = within(summary).getByRole('group', { name: 'J00001 Bookkeeping 2026/27' });
+    expect(books).toHaveTextContent('Hourly at the rates agreed with the client');
+    expect(books).toHaveTextContent('Hours logged7:00');
+    expect(books).toHaveTextContent('Non-billable0:30');
+    expect(books).toHaveTextContent('1:00 awaiting approval');
+    const accounts = within(summary).getByRole('group', { name: 'J00003 Partnership accounts' });
+    expect(accounts).toHaveTextContent('Fixed fee of £2,400.00');
+    expect(accounts).toHaveTextContent('£400.00 billed');
+  });
+
+  it('splits the value into company rates, contract rates, fixed fee and other costs', async () => {
+    setup();
+    await work();
+
+    const books = screen.getByRole('group', { name: 'J00001 Bookkeeping 2026/27' });
+    expect(books).toHaveTextContent('Time at company rates£120.00');
+    expect(books).toHaveTextContent('Time at contract rates£240.00');
+    expect(books).toHaveTextContent('Other costs£34.00');
+  });
+
+  it('keeps the actual cost, the budgeted cost and the agreed price apart', async () => {
+    setup();
+    await work();
+
+    const books = screen.getByRole('group', { name: 'J00001 Bookkeeping 2026/27' });
+    expect(books).toHaveTextContent('Actual cost£280.00');
+    expect(books).toHaveTextContent('Budgeted cost£300.00');
+    expect(books).toHaveTextContent('Agreed price£500.00');
+  });
+
+  it('shows the hours even when there is nothing to bill', async () => {
+    const empty = wipOf([]);
+    const summary = harbourSummary();
+    setup({ wip: { [harbour.id]: empty }, summary: { [harbour.id]: summary } });
+
+    expect(await screen.findByText('Nothing to bill')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'J00003 Partnership accounts' })).toHaveTextContent(
+      'Hours logged5:00',
+    );
+  });
+
+  it('offers the three bases with what each would bill', async () => {
+    setup();
+    await work();
+
+    const picker = screen.getByRole('group', { name: 'Value the invoice on' });
+    expect(within(picker).getByRole('button', { name: /Contract value £2,394.00/ })).toBeVisible();
+    expect(within(picker).getByRole('button', { name: /Job value £2,534.00/ })).toBeVisible();
+    expect(within(picker).getByRole('button', { name: /Team value £354.00/ })).toBeVisible();
+  });
+
+  it('bills the cost of the team when the team value is chosen', async () => {
+    const user = userEvent.setup();
+    setup();
+    await work();
+
+    await user.click(screen.getByRole('button', { name: /Team value/ }));
+    const lines = await review(user, /Bank reconciliation/, /Payroll queries/);
+
+    // 1.5 hours cost £60 and 1 hour £40: the line bills the cost, not the £300 of the rates.
+    const rows = rowsOf(lines);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('£100.00');
+    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£100.00');
+  });
+
+  it('bills the value set for the job when the job value is chosen', async () => {
+    const user = userEvent.setup();
+    setup();
+    await work();
+
+    await user.click(screen.getByRole('button', { name: /Job value/ }));
+    const lines = await review(user, /Bank reconciliation/);
+
+    // The fee budget of £500, less nothing billed so far: the time line bills that.
+    expect(rowsOf(lines)[0]).toHaveTextContent('£500.00');
+  });
+
+  it('keeps the contract value as the default, which changes nothing', async () => {
+    const user = userEvent.setup();
+    setup();
+    const lines = await review(user, /Bank reconciliation/);
+    expect(rowsOf(lines)[0]).toHaveTextContent('£180.00');
+  });
+
+  it('does not offer the team value to someone who cannot see cost', async () => {
+    const summary = harbourSummary();
+    summary.show_cost = false;
+    summary.time_costs = null;
+    summary.totals.basis_values.team = null;
+    setup({ summary: { [harbour.id]: summary } });
+    await work();
+
+    const picker = screen.getByRole('group', { name: 'Value the invoice on' });
+    expect(within(picker).queryByRole('button', { name: /Team value/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('time picked on the Time Entries page', () => {
+  it('opens with that time already chosen', async () => {
+    setup({}, { route: `${PREPARE}?client=${harbour.id}&time=t-1,t-2` });
+
+    const table = await work();
+    await waitFor(() =>
+      expect(screen.getByText('2 items chosen, £300.00 of work in progress.')).toBeInTheDocument(),
+    );
+    expect(within(rowOf(table, /Bank reconciliation/)).getByRole('checkbox')).toBeChecked();
+    expect(within(rowOf(table, /Payroll queries/)).getByRole('checkbox')).toBeChecked();
+    expect(within(rowOf(table, /VAT workings/)).getByRole('checkbox')).not.toBeChecked();
+  });
+
+  it('chooses nothing for time that is not in the client’s work in progress', async () => {
+    setup({}, { route: `${PREPARE}?client=${harbour.id}&time=somebody-else` });
+
+    await work();
+    expect(screen.getByText('Nothing chosen yet.')).toBeInTheDocument();
   });
 });

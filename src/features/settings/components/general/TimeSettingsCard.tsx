@@ -18,6 +18,7 @@ const FIELDS = [
   'week_start',
   'working_days',
   'require_timesheet_approval',
+  'auto_approve_privileged_time',
 ] as const;
 /** API field → form field, for 422 details. */
 const FIELD_NAMES = { minutes_per_day: 'hours_per_day' };
@@ -32,6 +33,7 @@ function toValues(organization: Organization): TimeSettingsValues {
     week_start: String(organization.week_start) as TimeSettingsValues['week_start'],
     working_days: sortedDays(organization.working_days),
     require_timesheet_approval: organization.require_timesheet_approval,
+    auto_approve_privileged_time: organization.auto_approve_privileged_time,
   };
 }
 
@@ -48,6 +50,9 @@ function toUpdate(values: TimeSettingsValues, organization: Organization): Organ
   }
   if (values.require_timesheet_approval !== organization.require_timesheet_approval) {
     body.require_timesheet_approval = values.require_timesheet_approval;
+  }
+  if (values.auto_approve_privileged_time !== organization.auto_approve_privileged_time) {
+    body.auto_approve_privileged_time = values.auto_approve_privileged_time;
   }
   return body;
 }
@@ -140,6 +145,27 @@ export function TimeSettingsCard({ organization, editable }: GeneralCardProps) {
           />
         )}
       />
+      {approval ? (
+        <Controller
+          control={control}
+          name="auto_approve_privileged_time"
+          render={({ field }) => (
+            <Switch
+              ref={field.ref}
+              checked={field.value}
+              onChange={field.onChange}
+              disabled={!editable}
+              label="No approval for admins and partners"
+              description={
+                field.value
+                  ? 'On: time recorded by people whose role holds the “Own time needs no approval” permission (Owner, Admin and Partner by default) can be billed without a timesheet approval. Give the permission to a manager or a custom role to include them.'
+                  : 'Off: everybody’s time needs an approved timesheet, whoever records it.'
+              }
+              className="rounded-md border border-border px-3 py-2"
+            />
+          )}
+        />
+      ) : null}
     </SettingsCard>
   );
 }

@@ -1,13 +1,15 @@
-import { Plus, X } from 'lucide-react';
+import { Plus, Trash2, Undo2, X } from 'lucide-react';
 import { useState } from 'react';
 
 import {
+  Badge,
   Button,
   Card,
+  ConfirmDialog,
   DataTable,
   Sheet,
   Skeleton,
-  Badge,
+  useToast,
   type DataTableColumn,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
@@ -15,8 +17,9 @@ import { useOrg } from '@/features/organizations';
 import { addDays, formatUkDate, todayInZone } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 
-import { useTimesheet, useWeek } from '../../api';
+import { useReopenTimesheet, useRemoveEntry, useTimesheet, useWeek } from '../../api';
 import type { StaffPerson, TimeEntry } from '../../types';
+import { dialogError } from '../../utils/errors';
 import { describeVariance, formatDayList, refLabel } from '../../utils/format';
 import { buildRows, entriesByCell, servicesByJob } from '../../utils/grid';
 import type { TeamRow } from '../../utils/team';
@@ -24,6 +27,7 @@ import { formatWeekRange } from '../../utils/weeks';
 import { BillableBadge, SheetStatusBadge } from '../badges';
 import { EntryPanel } from '../EntryPanel';
 import { LoadError } from '../PageShell';
+import { ReasonDialog } from '../ReasonDialog';
 import { WeekGridTable } from '../timesheet/WeekGridTable';
 
 export interface PersonSheetDrawerProps {
@@ -45,6 +49,12 @@ function Content({
   const week = useWeek(person.userId, weekStart);
   const sheet = useTimesheet(week.data?.timesheet_id);
   const [recording, setRecording] = useState(false);
+  const { toast } = useToast();
+  const reopen = useReopenTimesheet();
+  const remove = useRemoveEntry();
+  const [unapproving, setUnapproving] = useState(false);
+  const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | undefined>();
+  const [removing, setRemoving] = useState<TimeEntry | null>(null);
 
   const names = new Map((staff ?? []).map((member) => [member.id, member.full_name]));
   const entries = [...(sheet.data?.entries ?? [])].sort(
@@ -54,6 +64,10 @@ function Content({
   const variance = describeVariance(
     (grid?.total_minutes ?? 0) - (grid?.targets?.weekly_minutes ?? 0),
   );
+
+  const canFix = can(PERMISSIONS.timesheetApprove);
+  const approved = (grid?.timesheet_status ?? person.status) === 'approved';
+  const canRemove = approved && (canFix || can(PERMISSIONS.timeManageAll));
 
   const columns: DataTableColumn<TimeEntry>[] = [
     {
@@ -113,6 +127,28 @@ function Content({
         );
       },
     },
+    ...(canRemove
+      ? [
+          {
+            id: 'remove',
+            header: '',
+            align: 'end' as const,
+            hideable: false,
+            cell: (entry: TimeEntry) =>
+              entry.billing_status === 'unbilled' ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Remove the entry of ${formatUkDate(entry.entry_date)}`}
+                  leftIcon={<Trash2 className="size-4" aria-hidden="true" />}
+                  onClick={() => setRemoving(entry)}
+                >
+                  Remove
+                </Button>
+              ) : null,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -129,6 +165,50 @@ function Content({
               : weekStart,
         }}
       />
+      <ConfirmDialog
+        open={unapproving}
+        onClose={() => setUnapproving(false)}
+        onConfirm={() => {
+          if (!grid?.timesheet_id) return;
+          reopen.mutate(grid.timesheet_id, {
+            onSuccess: () => {
+              toast({ tone: 'success', title: 'Timesheet unapproved' });
+              setUnapproving(false);
+            },
+            onError: (error) => setRefusal(dialogError(error)),
+          });
+        }}
+        title="Unapprove this week?"
+        confirmLabel="Unapprove week"
+        tone="default"
+        loading={reopen.isPending}
+        error={refusal}
+      >
+        <p>
+          {person.name}, week of {formatWeekRange(weekStart)}. The week goes back to open, so the
+          time on it can be changed or deleted and the week submitted again. It cannot be unapproved
+          once any of its time is billed.
+        </p>
+      </ConfirmDialog>
+      <ReasonDialog
+        open={removing !== null}
+        onClose={() => setRemoving(null)}
+        title="Remove this time"
+        description={
+          removing
+            ? `${formatMinutes(removing.minutes)} on ${formatUkDate(removing.entry_date)}, ${person.name}`
+            : undefined
+        }
+        label="Reason"
+        hint="Required. It is kept in the audit log. The week stays approved."
+        requiredMessage="Say why the time is being removed"
+        submitLabel="Remove time"
+        onSubmit={async (reason) => {
+          if (!removing) return;
+          await remove.mutateAsync({ entryId: removing.id, reason });
+          toast({ tone: 'success', title: 'Time removed' });
+        }}
+      />
       <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="text-base font-semibold text-text">{person.name}</h2>
@@ -143,6 +223,19 @@ function Content({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {approved && canFix ? (
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Undo2 className="size-4" aria-hidden="true" />}
+              onClick={() => {
+                setRefusal(undefined);
+                setUnapproving(true);
+              }}
+            >
+              Unapprove week
+            </Button>
+          ) : null}
           {can(PERMISSIONS.timeManageAll) ? (
             <Button
               variant="brand-outline"

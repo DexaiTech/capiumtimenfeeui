@@ -82,6 +82,25 @@ export interface StaffUsage {
   count: number;
 }
 
+/** `GET {org}/members/{id}/permissions`: a person's permissions on top of their role. */
+export interface MemberPermissions {
+  user_id: string;
+  role: RoleSummary;
+  /** What the person's role gives them. */
+  role_permissions: string[];
+  /** Given to this person although their role does not give them. */
+  grants: string[];
+  /** Taken from this person although their role gives them. */
+  denies: string[];
+  /** What they can do: the role's, plus the grants, less the denials. */
+  effective: string[];
+}
+
+export interface MemberPermissionsUpdate {
+  grants: string[];
+  denies: string[];
+}
+
 export interface StaffDetail extends StaffMember {
   usage: StaffUsage[];
   can_delete: boolean;

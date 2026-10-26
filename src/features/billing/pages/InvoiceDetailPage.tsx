@@ -18,12 +18,14 @@ import { useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
 import { isApiError } from '@/services/api';
 import { todayInZone } from '@/utils/dates';
+import { formatMoney } from '@/utils/money';
 
 import {
   billingApi,
   useDeleteInvoice,
   useDeleteInvoiceLine,
   useInvoice,
+  useRemoveAllocation,
   useVoidInvoice,
 } from '../api';
 import { InvoiceStatusBadge } from '../components/badges';
@@ -60,6 +62,7 @@ type DialogState =
   | { type: 'delete' }
   | { type: 'credit' }
   | { type: 'payment' }
+  | { type: 'unmatch'; payment: InvoiceDetail['payments'][number] }
   | null;
 
 /** A status message above the figures: what the invoice's state means for what can be done. */
@@ -101,6 +104,7 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const voidInvoice = useVoidInvoice();
   const removeInvoice = useDeleteInvoice();
   const removeLine = useDeleteInvoiceLine(invoice.id);
+  const unmatch = useRemoveAllocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
 
@@ -225,6 +229,24 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
       onError: (error) => setRefusal(dialogError(error)),
     });
 
+  const confirmUnmatch = () => {
+    if (dialog?.type !== 'unmatch') return;
+    unmatch.mutate(
+      { paymentId: dialog.payment.payment_id, allocationId: dialog.payment.allocation_id },
+      {
+        onSuccess: () => {
+          toast({
+            tone: 'success',
+            title: 'Payment unmatched',
+            description: 'The money is on account again, and the invoice owes it.',
+          });
+          close();
+        },
+        onError: (error) => setRefusal(dialogError(error)),
+      },
+    );
+  };
+
   const confirmRemoveLine = () => {
     if (dialog?.type !== 'remove-line') return;
     removeLine.mutate(dialog.line.id, {
@@ -307,6 +329,14 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
               <InvoicePaymentsCard
                 invoice={invoice}
                 onRecord={canRecord ? () => setDialog({ type: 'payment' }) : undefined}
+                onUnmatch={
+                  can(P.paymentRecord)
+                    ? (payment) => {
+                        setRefusal(null);
+                        setDialog({ type: 'unmatch', payment });
+                      }
+                    : undefined
+                }
               />
             ) : null}
             {!isDraft && !isVoid ? (
@@ -355,6 +385,23 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
         error={refusal}
       >
         <p>The draft is removed and the work on it goes back to unbilled WIP.</p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={dialog?.type === 'unmatch'}
+        onClose={close}
+        onConfirm={confirmUnmatch}
+        title="Unmatch this payment?"
+        confirmLabel="Unmatch payment"
+        loading={unmatch.isPending}
+        error={refusal}
+      >
+        <p>
+          {dialog?.type === 'unmatch'
+            ? `${formatMoney(dialog.payment.amount, invoice.currency)} received on ${dateCell(dialog.payment.received_on)}`
+            : ''}{' '}
+          is taken off {title}. The invoice owes that money again, and the payment stays on the
+          client&apos;s account so it can be matched to the right invoice.
+        </p>
       </ConfirmDialog>
       <ConfirmDialog
         open={dialog?.type === 'remove-line'}

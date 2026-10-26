@@ -191,3 +191,62 @@ describe('an invoice opened to correct it', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
+
+describe('unmatching a payment from a paid invoice', () => {
+  const paidDetail = {
+    ...detail,
+    paid_total: 12000,
+    balance: 0,
+    display_status: 'paid',
+    payments: [
+      {
+        allocation_id: 'al-1',
+        payment_id: 'pay-1',
+        received_on: '2026-10-20',
+        method: 'bank_transfer',
+        reference: null,
+        amount: 12000,
+      },
+    ],
+  } as unknown as InvoiceDetail;
+
+  function setupPaid(permissions = OWNER_PERMISSIONS) {
+    const calls: string[] = [];
+    server.use(
+      http.get(orgApiPath('/invoices/inv-1'), () => ok(paidDetail)),
+      http.delete(orgApiPath('/payments/pay-1/allocations/al-1'), () => {
+        calls.push('unmatch');
+        return ok({});
+      }),
+      http.get(apiPath('/organizations/:organizationId/*'), () => ok([])),
+    );
+    renderBillingPage(<InvoiceDetailPage />, {
+      permissions,
+      route: `${INVOICES}/inv-1`,
+      path: `${INVOICES}/:invoiceId`,
+    });
+    return calls;
+  }
+
+  it('takes the payment off the invoice after a confirmation, though nothing is owed', async () => {
+    const user = userEvent.setup();
+    const calls = setupPaid();
+
+    await user.click(await screen.findByRole('button', { name: /^Unmatch the payment of/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Unmatch this payment?' });
+    expect(dialog).toHaveTextContent('stays on the client');
+    await user.click(within(dialog).getByRole('button', { name: 'Unmatch payment' }));
+
+    await waitFor(() => expect(calls).toEqual(['unmatch']));
+    expect(await screen.findByText('Payment unmatched')).toBeInTheDocument();
+  });
+
+  it('is not offered to someone who may not record payments', async () => {
+    setupPaid(['organization.read', 'invoice.read']);
+
+    await screen.findByRole('list', { name: 'Payments on the invoice' });
+    expect(
+      screen.queryByRole('button', { name: /^Unmatch the payment of/ }),
+    ).not.toBeInTheDocument();
+  });
+});

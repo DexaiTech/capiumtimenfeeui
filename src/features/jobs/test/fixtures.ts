@@ -138,6 +138,7 @@ export function job(overrides: Partial<Job> = {}): Job {
     hourly_rate: null,
     budget_minutes: 2400,
     budget_fee: null,
+    budget_cost: null,
     period_start: null,
     period_end: null,
     start_date: '2026-10-01',

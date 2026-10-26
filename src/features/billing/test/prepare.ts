@@ -3,7 +3,17 @@ import { http, type HttpHandler } from 'msw';
 import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
 
-import type { ClientWip, InvoiceCreate, InvoiceDetail, JobRef, VatOption, WipItem } from '../types';
+import type {
+  Breakdown,
+  ClientBillingSummary,
+  ClientWip,
+  InvoiceCreate,
+  InvoiceDetail,
+  JobBilling,
+  JobRef,
+  VatOption,
+  WipItem,
+} from '../types';
 import type { Call, Refusal } from './handlers';
 import { clients, harbour } from './fixtures';
 
@@ -190,6 +200,104 @@ export function wipOf(items: WipItem[], client = harbour): ClientWip {
   };
 }
 
+const NOTHING: Breakdown = {
+  logged_minutes: 0,
+  billable_minutes: 0,
+  non_billable_minutes: 0,
+  billed_minutes: 0,
+  ready_minutes: 0,
+  awaiting_approval_minutes: 0,
+  company_time_value: 0,
+  contract_time_value: 0,
+  ready_time_value: 0,
+  billed_time_value: 0,
+  fixed_fee: null,
+  fixed_fee_billed: 0,
+  other_costs: 0,
+  billable_total: 0,
+  actual_cost: null,
+  budgeted_cost: null,
+  agreed_price: null,
+  basis_values: { contract: 0, job: null, team: null },
+};
+
+export function jobBilling(overrides: Partial<JobBilling> = {}): JobBilling {
+  return {
+    job_id: 'j-books',
+    number: 'J00001',
+    name: 'Bookkeeping 2026/27',
+    status: 'in_progress',
+    billing_basis: 'hourly',
+    fixed_fee: null,
+    hourly_rate: null,
+    budget_minutes: null,
+    terms: 'Hourly at the rates agreed with the client or the practice’s own rates',
+    breakdown: NOTHING,
+    ...overrides,
+  };
+}
+
+/** Bookkeeping (hourly, 3h of time ready, worth £360 at its rates, costing £120) and a fixed fee job. */
+export function harbourSummary(): ClientBillingSummary {
+  const books = jobBilling({
+    breakdown: {
+      ...NOTHING,
+      logged_minutes: 420,
+      billable_minutes: 390,
+      non_billable_minutes: 30,
+      ready_minutes: 180,
+      awaiting_approval_minutes: 60,
+      company_time_value: 12000,
+      contract_time_value: 24000,
+      ready_time_value: 36000,
+      other_costs: 3400,
+      billable_total: 39400,
+      actual_cost: 28000,
+      budgeted_cost: 30000,
+      agreed_price: 50000,
+      basis_values: { contract: 39400, job: 53400, team: 15400 },
+    },
+  });
+  const accounts = jobBilling({
+    job_id: 'j-accs',
+    number: 'J00003',
+    name: 'Partnership accounts',
+    billing_basis: 'fixed',
+    fixed_fee: 240000,
+    terms: 'Fixed fee of £2,400.00',
+    breakdown: {
+      ...NOTHING,
+      logged_minutes: 300,
+      billable_minutes: 300,
+      ready_minutes: 300,
+      ready_time_value: 60000,
+      fixed_fee: 240000,
+      fixed_fee_billed: 40000,
+      billable_total: 200000,
+      actual_cost: 20000,
+      agreed_price: 240000,
+      basis_values: { contract: 200000, job: 200000, team: 20000 },
+    },
+  });
+  return {
+    client: harbour,
+    jobs: [books, accounts],
+    totals: {
+      ...NOTHING,
+      logged_minutes: 720,
+      billable_minutes: 690,
+      non_billable_minutes: 30,
+      ready_minutes: 480,
+      other_costs: 3400,
+      billable_total: 239400,
+      basis_values: { contract: 239400, job: 253400, team: 35400 },
+    },
+    show_cost: true,
+    // t-1 (1.5h) costs £60, t-2 (1h) £40, t-3 (2h) £80, t-4 (0.5h) £20; t-5 and t-6 sit on the fixed fee.
+    time_costs: { 't-1': 6000, 't-2': 4000, 't-3': 8000, 't-4': 2000, 't-5': 8000, 't-6': 12000 },
+  };
+}
+
 export const vatCodes: VatOption[] = [
   {
     id: 'vat-std',
@@ -206,6 +314,8 @@ export const vatCodes: VatOption[] = [
 export interface PrepareBackend {
   /** The client's WIP, by client id. */
   wip: Record<string, ClientWip>;
+  /** The billing summary, by client id. */
+  summary: Record<string, ClientBillingSummary>;
   vat: VatOption[];
   /** The client's payment terms in days. */
   termsDays: number;
@@ -217,6 +327,7 @@ export interface PrepareBackend {
 export function createPrepareBackend(initial: Partial<PrepareBackend> = {}): PrepareBackend {
   return {
     wip: { [harbour.id]: wipOf(harbourItems()) },
+    summary: { [harbour.id]: harbourSummary() },
     vat: vatCodes,
     termsDays: 30,
     calls: [],
@@ -255,6 +366,11 @@ export function prepareHandlers(backend: PrepareBackend): HttpHandler[] {
       record('GET', `/clients/${String(params.clientId)}/wip`);
       const failed = refusal('GET', '/clients/wip');
       if (failed) return failed;
+      return found ? ok(found) : fail(404, 'RESOURCE_NOT_FOUND', 'Client not found.');
+    }),
+    http.get(orgApiPath('/clients/:clientId/billing-summary'), ({ params }) => {
+      const found = backend.summary[String(params.clientId)];
+      record('GET', `/clients/${String(params.clientId)}/billing-summary`);
       return found ? ok(found) : fail(404, 'RESOURCE_NOT_FOUND', 'Client not found.');
     }),
     http.get(orgApiPath('/clients/:clientId'), ({ params }) => {

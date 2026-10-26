@@ -122,6 +122,17 @@ export function useDeleteEntry() {
   });
 }
 
+/** Remove approved, unbilled time posted by mistake, with a reason. */
+export function useRemoveEntry() {
+  const { organization } = useOrg();
+  const invalidate = useTimeInvalidation();
+  return useMutation({
+    mutationFn: ({ entryId, reason }: { entryId: string; reason: string }) =>
+      timeApi.removeEntry(organization.id, entryId, reason),
+    onSettled: invalidate.entries,
+  });
+}
+
 export function useCopyWeek() {
   const { organization } = useOrg();
   const invalidate = useTimeInvalidation();

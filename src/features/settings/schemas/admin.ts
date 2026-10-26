@@ -1,59 +1,53 @@
 import * as z from 'zod';
 
-import { formatUkDate } from '@/utils/dates';
-
+import type { LockedPeriod } from '../adminTypes';
 import { MAPPING_CODE_PATTERN } from '../utils/integrations';
+import { lockBlocker } from '../utils/periodLock';
 
 export const REASON_MAX = 500;
-/** The API refuses a lock earlier than this (`EARLIEST_LOCK_DATE`). */
-export const EARLIEST_LOCK_DATE = '2000-01-01';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** The API refuses a year before this (`EARLIEST_LOCK_YEAR`). */
+export const EARLIEST_LOCK_YEAR = 2000;
 
 const reasonOf = (required: boolean) => {
   const text = z.string().trim().max(REASON_MAX, `Use at most ${REASON_MAX} characters`);
-  return required ? text.min(1, 'Say why the period is reopened') : text;
+  return required ? text.min(1, 'Say why the period is unlocked') : text;
 };
 
-/** Locking a period: a day after the lock there is now, and not after today. */
-export function lockSchema(currentLock: string | null, today: string) {
-  return z.object({
-    locked_through: z.string().superRefine((value, ctx) => {
-      const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
-      if (!ISO_DATE.test(value)) issue('Choose the last day to lock');
-      else if (value < EARLIEST_LOCK_DATE) issue('Choose a day from 01/01/2000');
-      else if (value > today) issue('Choose a day that is not in the future');
-      else if (currentLock !== null && value <= currentLock) {
-        issue(`Choose a day after ${formatUkDate(currentLock)}, which is already locked`);
+export const LOCK_TYPES = ['month', 'quarter', 'year'] as const;
+
+/** Locking a month, quarter or year that has ended and does not overlap a locked one. */
+export function lockSchema(periods: ReadonlyArray<LockedPeriod>, today: string) {
+  return z
+    .object({
+      period_type: z.enum(LOCK_TYPES),
+      year: z.string(),
+      period: z.string(),
+      reason: reasonOf(false),
+    })
+    .superRefine((values, ctx) => {
+      const issue = (path: string, message: string) =>
+        ctx.addIssue({ code: 'custom', path: [path], message });
+      const year = Number(values.year);
+      if (!Number.isInteger(year) || year < EARLIEST_LOCK_YEAR) {
+        issue('year', `Choose a year from ${String(EARLIEST_LOCK_YEAR)}`);
+        return;
       }
-    }),
-    reason: reasonOf(false),
-  });
+      const index = values.period_type === 'year' ? 1 : Number(values.period);
+      const max = values.period_type === 'quarter' ? 4 : 12;
+      if (!Number.isInteger(index) || index < 1 || index > max) {
+        issue('period', `Choose the ${values.period_type}`);
+        return;
+      }
+      const blocker = lockBlocker(periods, values.period_type, year, index, today);
+      if (blocker)
+        issue(values.period_type === 'year' ? 'year' : 'period', `That period is ${blocker}`);
+    });
 }
 export type LockValues = z.infer<ReturnType<typeof lockSchema>>;
 
-export const REOPEN_MODES = ['to_date', 'remove'] as const;
-
-/** Reopening: back to an earlier day or the lock removed altogether, always with a reason. */
-export function reopenSchema(currentLock: string) {
-  return z
-    .object({
-      mode: z.enum(REOPEN_MODES),
-      reopen_to: z.string(),
-      reason: reasonOf(true),
-    })
-    .superRefine((values, ctx) => {
-      if (values.mode !== 'to_date') return;
-      const issue = (message: string) =>
-        ctx.addIssue({ code: 'custom', path: ['reopen_to'], message });
-      if (!ISO_DATE.test(values.reopen_to)) issue('Choose the new last locked day');
-      else if (values.reopen_to < EARLIEST_LOCK_DATE) issue('Choose a day from 01/01/2000');
-      else if (values.reopen_to >= currentLock) {
-        issue(`Choose a day before ${formatUkDate(currentLock)}, the day locked through now`);
-      }
-    });
-}
-export type ReopenValues = z.infer<ReturnType<typeof reopenSchema>>;
+/** Unlocking a period: always with a reason. */
+export const unlockSchema = z.object({ reason: reasonOf(true) });
+export type UnlockValues = z.infer<typeof unlockSchema>;
 
 /** A code of the bookkeeping system, or nothing: a row without one is not mapped. */
 const mappingCode = z

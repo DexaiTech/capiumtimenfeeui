@@ -1,12 +1,13 @@
 import { Lock, LockOpen } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button, Card, Skeleton } from '@/components/ui';
+import { Badge, Button, Card, Skeleton } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { formatUkDate } from '@/utils/dates';
 
 import { usePeriodLock } from '../../api/adminHooks';
+import type { LockedPeriod } from '../../adminTypes';
 import { LoadError } from '../LoadError';
 import { RelativeTime } from '../RelativeTime';
 import { LockDialog } from './LockDialog';
@@ -39,7 +40,8 @@ function LockSkeleton() {
 export function PeriodLockView() {
   const { can } = useOrg();
   const lock = usePeriodLock();
-  const [dialog, setDialog] = useState<'lock' | 'reopen' | null>(null);
+  const [locking, setLocking] = useState(false);
+  const [unlocking, setUnlocking] = useState<LockedPeriod | null>(null);
 
   if (lock.isPending) return <LockSkeleton />;
   if (lock.isError && !lock.data) {
@@ -54,54 +56,75 @@ export function PeriodLockView() {
   }
   const current = lock.data;
   if (!current) return null;
-  const through = current.locked_through;
-  const last = current.last_event;
+  const periods = current.periods;
   const canLock = can(P.periodLockManage);
   const canReopen = can(P.periodLockReopen);
 
   return (
     <>
-      <Card padding="lg" role="region" aria-label="Current lock" className="flex flex-col gap-4">
+      <Card padding="lg" role="region" aria-label="Locked periods" className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
-          {through ? (
+          {periods.length > 0 ? (
             <Lock aria-hidden="true" className="mt-1 size-6 shrink-0 text-warning" />
           ) : (
             <LockOpen aria-hidden="true" className="mt-1 size-6 shrink-0 text-success" />
           )}
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="text-lg font-semibold text-text">
-              {through ? `Locked through ${formatUkDate(through)}` : 'Nothing is locked'}
+              {periods.length > 0 ? 'Locked periods' : 'Nothing is locked'}
             </h2>
             <p className="text-sm text-text-muted">
-              {through
-                ? 'Time, expenses and WIP dated on or before this day cannot be created, changed or deleted by anybody.'
-                : 'Every day is open. Lock a period once its time, expenses and WIP have been reported.'}
+              {periods.length > 0
+                ? 'Time, expenses and WIP dated inside a locked period cannot be created, changed or deleted by anybody. Unlock a period to make changes.'
+                : 'Every day is open. Lock a month, quarter or year once its time, expenses and WIP have been reported.'}
             </p>
-            {last ? (
-              <p className="text-xs text-text-subtle">
-                {last.event_type === 'locked' ? 'Locked' : 'Reopened'}{' '}
-                <RelativeTime iso={last.created_at} />
-                {last.actor_name ? ` by ${last.actor_name}` : ''}
-                {last.reason ? `: ${last.reason}` : ''}
-              </p>
-            ) : null}
           </div>
         </div>
+        {periods.length > 0 ? (
+          <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+            {periods.map((period) => (
+              <li key={period.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex items-center gap-2 font-medium text-text">
+                    {period.label}
+                    {period.period_type === 'legacy' ? (
+                      <Badge tone="neutral" size="sm">
+                        Earlier lock
+                      </Badge>
+                    ) : null}
+                  </span>
+                  <span className="text-xs text-text-muted">
+                    {formatUkDate(period.start_date)} to {formatUkDate(period.end_date)}
+                    {' · Locked '}
+                    <RelativeTime iso={period.locked_at} />
+                    {period.locked_by_name ? ` by ${period.locked_by_name}` : ''}
+                    {period.reason ? `: ${period.reason}` : ''}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={!canReopen}
+                  aria-label={`Unlock ${period.label}`}
+                  onClick={() => setUnlocking(period)}
+                >
+                  Unlock
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="primary" disabled={!canLock} onClick={() => setDialog('lock')}>
+          <Button variant="primary" disabled={!canLock} onClick={() => setLocking(true)}>
             Lock a period
-          </Button>
-          <Button disabled={!canReopen || through === null} onClick={() => setDialog('reopen')}>
-            Reopen a period
           </Button>
         </div>
         {canLock && canReopen ? null : (
           <p className="text-sm text-text-muted">
             {canLock
-              ? 'Reopening a period needs its own permission.'
+              ? 'Unlocking a period needs its own permission.'
               : canReopen
                 ? 'Locking a period needs its own permission.'
-                : 'Locking and reopening periods need their own permissions.'}
+                : 'Locking and unlocking periods need their own permissions.'}
           </p>
         )}
       </Card>
@@ -129,14 +152,8 @@ export function PeriodLockView() {
 
       <LockHistory />
 
-      <LockDialog open={dialog === 'lock'} onClose={() => setDialog(null)} currentLock={through} />
-      {through ? (
-        <ReopenDialog
-          open={dialog === 'reopen'}
-          onClose={() => setDialog(null)}
-          currentLock={through}
-        />
-      ) : null}
+      <LockDialog open={locking} onClose={() => setLocking(false)} periods={periods} />
+      <ReopenDialog period={unlocking} onClose={() => setUnlocking(null)} />
     </>
   );
 }

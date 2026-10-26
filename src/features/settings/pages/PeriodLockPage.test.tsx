@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +7,15 @@ import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { server } from '@/test/server';
 
-import { historyOf, lockedThrough, NOT_LOCKED, reopenedEvent } from '../test/adminFixtures';
+import {
+  historyOf,
+  lockedPeriod,
+  lockedWith,
+  lockEvent,
+  NOT_LOCKED,
+  PERIODS,
+  q2Event,
+} from '../test/adminFixtures';
 import { adminHandlers, callsOf, createBackend, type AdminBackend } from '../test/adminHandlers';
 import PeriodLockPage from './PeriodLockPage';
 
@@ -16,7 +24,7 @@ const PARTNER = [...READ, 'period_lock.manage'];
 
 function setup(init: Partial<AdminBackend> = {}, permissions = OWNER_PERMISSIONS) {
   const backend = createBackend({
-    lock: lockedThrough('2026-02-28', reopenedEvent()),
+    lock: lockedWith(PERIODS, q2Event()),
     history: historyOf(),
     ...init,
   });
@@ -41,9 +49,9 @@ async function openLockDialog(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole('dialog', { name: 'Lock a period' });
 }
 
-async function openReopenDialog(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: 'Reopen a period' }));
-  return screen.findByRole('dialog', { name: 'Reopen a period' });
+async function openUnlockDialog(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(await screen.findByRole('button', { name: `Unlock ${label}` }));
+  return screen.findByRole('dialog', { name: `Unlock ${label}` });
 }
 
 beforeEach(() => {
@@ -56,26 +64,51 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('where the lock stands', () => {
-  it('says the day the practice is locked through, and who last changed it', async () => {
+describe('where the locks stand', () => {
+  it('lists each locked period, with who locked it and why', async () => {
     setup();
 
-    expect(
-      await screen.findByRole('heading', { name: 'Locked through 28/02/2026' }),
-    ).toBeInTheDocument();
-    const current = screen.getByRole('region', { name: 'Current lock' });
-    expect(current).toHaveTextContent('cannot be created, changed or deleted by anybody');
-    expect(current).toHaveTextContent('Reopened');
-    expect(current).toHaveTextContent('by Ada Lovelace: Late invoice from the supplier');
+    expect(await screen.findByRole('heading', { name: 'Locked periods' })).toBeInTheDocument();
+    const region = screen.getByRole('region', { name: 'Locked periods' });
+    const items = within(region).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent('January 2026');
+    expect(items[0]).toHaveTextContent('01/01/2026 to 31/01/2026');
+    expect(items[0]).toHaveTextContent('by Ada Lovelace: January VAT return filed');
+    expect(items[1]).toHaveTextContent('Q2 2026');
+    expect(items[1]).toHaveTextContent('01/04/2026 to 30/06/2026');
   });
 
-  it('says that nothing is locked, and has no period to reopen', async () => {
+  it('says that nothing is locked, and has nothing to unlock', async () => {
     setup({ lock: NOT_LOCKED, history: [] });
 
     expect(await screen.findByRole('heading', { name: 'Nothing is locked' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reopen a period' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^Unlock/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock a period' })).toBeEnabled();
     expect(await screen.findByText('Nothing has been locked yet')).toBeInTheDocument();
+  });
+
+  it('marks a lock from before periods existed', async () => {
+    setup({
+      lock: lockedWith(
+        [
+          {
+            ...lockedPeriod(),
+            id: 'lp-old',
+            period_type: 'legacy',
+            start_date: '2000-01-01',
+            end_date: '2026-08-31',
+            label: 'Through 31/08/2026',
+          },
+        ],
+        q2Event(),
+      ),
+    });
+
+    const region = await screen.findByRole('region', { name: 'Locked periods' });
+    const item = within(region).getByRole('listitem');
+    expect(item).toHaveTextContent('Through 31/08/2026');
+    expect(item).toHaveTextContent('Earlier lock');
   });
 
   it('explains what a lock closes and what stays open', async () => {
@@ -89,55 +122,54 @@ describe('where the lock stands', () => {
 });
 
 describe('the history', () => {
-  it('lists every lock and reopening, newest first, with who did it and why', async () => {
+  it('lists every lock and unlock, newest first, with who did it and why', async () => {
     setup();
     const rows = rowsOf(await history());
 
-    expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent('Reopened');
-    expect(rows[0]).toHaveTextContent('Reopened to 28/02/2026');
-    expect(rows[0]).toHaveTextContent('Was locked through 31/03/2026');
-    expect(rows[0]).toHaveTextContent('Ada Lovelace');
-    expect(rows[0]).toHaveTextContent('Late invoice from the supplier');
-    expect(rows[1]).toHaveTextContent('Locked through 31/03/2026');
-    expect(rows[1]).toHaveTextContent('Was locked through 28/02/2026');
-    expect(rows[1]).toHaveTextContent('March VAT return filed');
-    expect(rows[2]).toHaveTextContent('Locked through 28/02/2026');
-    expect(rows[2]).toHaveTextContent('Nothing was locked before');
-    expect(rows[2]).toHaveTextContent('—');
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toHaveTextContent('Locked Q2 2026');
+    expect(rows[0]).toHaveTextContent('Q2 VAT return filed');
+    expect(rows[1]).toHaveTextContent('Unlocked');
+    expect(rows[1]).toHaveTextContent('Unlocked March 2026');
+    expect(rows[1]).toHaveTextContent('Ada Lovelace');
+    expect(rows[1]).toHaveTextContent('Late invoice from the supplier');
+    expect(rows[2]).toHaveTextContent('Locked March 2026');
+    expect(rows[3]).toHaveTextContent('Locked January 2026');
   });
 
-  it('says when a lock was removed', async () => {
+  it('still reads the events from before periods existed', async () => {
     setup({
-      lock: NOT_LOCKED,
       history: [
         {
-          ...reopenedEvent(),
-          id: 'ev-9',
-          locked_through: null,
+          ...lockEvent(),
+          id: 'ev-old',
+          period_type: null,
+          period_start: null,
+          period_end: null,
+          period_label: null,
           previous_locked_through: '2026-02-28',
-          reason: 'Starting again',
+          locked_through: '2026-03-31',
         },
       ],
     });
     const rows = rowsOf(await history());
 
-    expect(rows[0]).toHaveTextContent('Lock removed');
+    expect(rows[0]).toHaveTextContent('Locked through 31/03/2026');
     expect(rows[0]).toHaveTextContent('Was locked through 28/02/2026');
   });
 
   it('loads older changes a page at a time', async () => {
     const user = userEvent.setup();
-    const backend = setup({ pageSize: 2 });
-    expect(rowsOf(await history())).toHaveLength(2);
+    const backend = setup({ pageSize: 3 });
+    expect(rowsOf(await history())).toHaveLength(3);
 
     await user.click(screen.getByRole('button', { name: 'Load older changes' }));
 
     await waitFor(() =>
-      expect(rowsOf(screen.getByRole('table', { name: 'Lock history' }))).toHaveLength(3),
+      expect(rowsOf(screen.getByRole('table', { name: 'Lock history' }))).toHaveLength(4),
     );
     expect(callsOf(backend, 'GET', '/period-locks/history')).toHaveLength(2);
-    expect(callsOf(backend, 'GET', '/period-locks/history')[1]?.params?.get('cursor')).toBe('2');
+    expect(callsOf(backend, 'GET', '/period-locks/history')[1]?.params?.get('cursor')).toBe('3');
   });
 
   it('shows the error with a retry', async () => {
@@ -151,26 +183,26 @@ describe('the history', () => {
     expect(await screen.findByText('Could not load the history')).toBeInTheDocument();
     backend.refusals = {};
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(rowsOf(await history())).toHaveLength(3);
+    expect(rowsOf(await history())).toHaveLength(4);
   });
 });
 
 describe('locking a period', () => {
-  it('suggests the end of last month, and limits the day to after the lock and up to today', async () => {
+  it('suggests the month that has just ended, and rules out what is locked or not over yet', async () => {
     const user = userEvent.setup();
     setup();
     const dialog = await openLockDialog(user);
 
-    const day = within(dialog).getByLabelText('Lock through');
-    expect(day).toHaveValue('2026-09-30');
-    expect(day).toHaveAttribute('min', '2026-03-01');
-    expect(day).toHaveAttribute('max', '2026-10-18');
-    expect(dialog).toHaveTextContent(
-      'Now locked through 28/02/2026. Choose a later day, up to today.',
-    );
+    expect(within(dialog).getByLabelText(/^Year/)).toHaveValue('2026');
+    const month = within(dialog).getByLabelText(/^Month/);
+    expect(month).toHaveValue('9');
+    expect(within(month).getByRole('option', { name: 'January (already locked)' })).toBeDisabled();
+    expect(within(month).getByRole('option', { name: 'February' })).toBeEnabled();
+    expect(within(month).getByRole('option', { name: 'May (already locked)' })).toBeDisabled();
+    expect(within(month).getByRole('option', { name: 'October (not ended yet)' })).toBeDisabled();
   });
 
-  it('locks through a day with a reason, and the page follows', async () => {
+  it('locks the month with a reason, and the page follows', async () => {
     const user = userEvent.setup();
     const backend = setup();
     const dialog = await openLockDialog(user);
@@ -180,74 +212,86 @@ describe('locking a period', () => {
 
     await waitFor(() => expect(callsOf(backend, 'POST', '/period-locks')).toHaveLength(1));
     expect(callsOf(backend, 'POST', '/period-locks')[0]?.body).toEqual({
-      locked_through: '2026-09-30',
+      period_type: 'month',
+      year: 2026,
+      period: 9,
       reason: 'September filed',
     });
-    expect(await screen.findByText('Period locked through 30/09/2026')).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: 'Locked through 30/09/2026' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('September 2026 locked')).toBeInTheDocument();
+    const region = screen.getByRole('region', { name: 'Locked periods' });
+    await waitFor(() => expect(within(region).getAllByRole('listitem')).toHaveLength(3));
     await closed('Lock a period');
     await waitFor(() =>
       expect(rowsOf(screen.getByRole('table', { name: 'Lock history' }))[0]).toHaveTextContent(
-        'Locked through 30/09/2026',
+        'Locked September 2026',
       ),
     );
   });
 
-  it('sends no reason when none is given', async () => {
+  it('locks a quarter, which has no month to send', async () => {
     const user = userEvent.setup();
     const backend = setup({ lock: NOT_LOCKED, history: [] });
     const dialog = await openLockDialog(user);
 
-    expect(dialog).toHaveTextContent('The last day to close, up to today. That day is locked too.');
+    await user.click(within(dialog).getByRole('button', { name: 'Quarter' }));
+    expect(within(dialog).queryByLabelText(/^Month/)).not.toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByLabelText(/^Quarter/), '2');
     await user.click(within(dialog).getByRole('button', { name: 'Lock period' }));
 
     await waitFor(() => expect(callsOf(backend, 'POST', '/period-locks')).toHaveLength(1));
     expect(callsOf(backend, 'POST', '/period-locks')[0]?.body).toEqual({
-      locked_through: '2026-09-30',
+      period_type: 'quarter',
+      year: 2026,
+      period: 2,
       reason: null,
     });
   });
 
-  it('refuses a day that is already locked, a day to come and no day, without asking the API', async () => {
+  it('locks a year with only the year to choose', async () => {
     const user = userEvent.setup();
-    const backend = setup();
+    const backend = setup({ lock: NOT_LOCKED, history: [] });
     const dialog = await openLockDialog(user);
-    const day = within(dialog).getByLabelText('Lock through');
-    const submit = within(dialog).getByRole('button', { name: 'Lock period' });
 
-    fireEvent.change(day, { target: { value: '2026-02-01' } });
-    await user.click(submit);
-    expect(
-      await within(dialog).findByText('Choose a day after 28/02/2026, which is already locked'),
-    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Year' }));
+    expect(within(dialog).queryByLabelText(/^Month/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText(/^Quarter/)).not.toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByLabelText(/^Year/), '2025');
+    await user.click(within(dialog).getByRole('button', { name: 'Lock period' }));
 
-    fireEvent.change(day, { target: { value: '2026-10-19' } });
-    await user.click(submit);
-    expect(
-      await within(dialog).findByText('Choose a day that is not in the future'),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(callsOf(backend, 'POST', '/period-locks')).toHaveLength(1));
+    expect(callsOf(backend, 'POST', '/period-locks')[0]?.body).toEqual({
+      period_type: 'year',
+      year: 2025,
+      reason: null,
+    });
+  });
 
-    fireEvent.change(day, { target: { value: '' } });
-    await user.click(submit);
-    expect(await within(dialog).findByText('Choose the last day to lock')).toBeInTheDocument();
+  it('refuses a year that has not ended, without asking the API', async () => {
+    const user = userEvent.setup();
+    const backend = setup({ lock: NOT_LOCKED, history: [] });
+    const dialog = await openLockDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Year' }));
+    await user.selectOptions(within(dialog).getByLabelText(/^Year/), '2026');
+    await user.click(within(dialog).getByRole('button', { name: 'Lock period' }));
+
+    expect(await within(dialog).findByText('That period is not ended yet')).toBeInTheDocument();
     expect(callsOf(backend, 'POST', '/period-locks')).toHaveLength(0);
   });
 
-  it('shows the refusal of the API on the day field', async () => {
+  it('shows the refusal of the API on the period field', async () => {
     const user = userEvent.setup();
     setup({
       refusals: {
         'POST /period-locks': {
           status: 422,
-          code: 'PERIOD_LOCK_NOT_FORWARD',
-          message: 'The date must be later than the current lock.',
+          code: 'PERIOD_LOCK_OVERLAPS',
+          message: 'That overlaps a locked period.',
           details: [
             {
-              field: 'locked_through',
-              code: 'PERIOD_LOCK_NOT_FORWARD',
-              message: 'The date must be later than the current lock (28/02/2026).',
+              field: 'period',
+              code: 'PERIOD_LOCK_OVERLAPS',
+              message: 'September 2026 overlaps a period that is already locked (Q3 2026).',
             },
           ],
         },
@@ -258,7 +302,9 @@ describe('locking a period', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Lock period' }));
 
     expect(
-      await within(dialog).findByText('The date must be later than the current lock (28/02/2026).'),
+      await within(dialog).findByText(
+        'September 2026 overlaps a period that is already locked (Q3 2026).',
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Lock a period' })).toBeInTheDocument();
   });
@@ -275,94 +321,72 @@ describe('locking a period', () => {
   });
 });
 
-describe('reopening a period', () => {
-  it('moves the lock back to an earlier day, with a reason', async () => {
+describe('unlocking a period', () => {
+  it('unlocks that period only, with a reason', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    const dialog = await openReopenDialog(user);
+    const dialog = await openUnlockDialog(user, 'January 2026');
 
-    const day = within(dialog).getByLabelText('New last locked day');
-    expect(day).toHaveAttribute('max', '2026-02-27');
-    fireEvent.change(day, { target: { value: '2026-01-31' } });
+    expect(dialog).toHaveTextContent('01/01/2026 to 31/01/2026');
     await user.type(within(dialog).getByLabelText('Reason'), 'Supplier invoice');
-    await user.click(within(dialog).getByRole('button', { name: 'Reopen period' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Unlock period' }));
 
     await waitFor(() => expect(callsOf(backend, 'POST', '/period-locks/reopen')).toHaveLength(1));
     expect(callsOf(backend, 'POST', '/period-locks/reopen')[0]?.body).toEqual({
-      reopen_to: '2026-01-31',
+      lock_id: 'lp-jan',
       reason: 'Supplier invoice',
     });
-    expect(await screen.findByText('Period reopened to 31/01/2026')).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: 'Locked through 31/01/2026' }),
-    ).toBeInTheDocument();
-    await closed('Reopen a period');
+    expect(await screen.findByText('January 2026 unlocked')).toBeInTheDocument();
+    const region = screen.getByRole('region', { name: 'Locked periods' });
+    await waitFor(() => expect(within(region).getAllByRole('listitem')).toHaveLength(1));
+    expect(within(region).getByText('Q2 2026')).toBeInTheDocument();
+    await closed('Unlock January 2026');
   });
 
-  it('removes the lock altogether, with a reason', async () => {
+  it('says that nothing is locked once the last period is unlocked', async () => {
     const user = userEvent.setup();
-    const backend = setup();
-    const dialog = await openReopenDialog(user);
+    setup({ lock: lockedWith([lockedPeriod()], q2Event()) });
+    const dialog = await openUnlockDialog(user, 'January 2026');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Remove the lock' }));
-    expect(within(dialog).queryByLabelText('New last locked day')).not.toBeInTheDocument();
     await user.type(within(dialog).getByLabelText('Reason'), 'Starting again');
-    await user.click(within(dialog).getByRole('button', { name: 'Reopen period' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Unlock period' }));
 
-    await waitFor(() => expect(callsOf(backend, 'POST', '/period-locks/reopen')).toHaveLength(1));
-    expect(callsOf(backend, 'POST', '/period-locks/reopen')[0]?.body).toEqual({
-      reopen_to: null,
-      reason: 'Starting again',
-    });
-    // The toast and the new row of the history both say it.
-    await waitFor(() => expect(screen.getAllByText('Lock removed')).toHaveLength(2));
     expect(await screen.findByRole('heading', { name: 'Nothing is locked' })).toBeInTheDocument();
   });
 
-  it('needs a reason, and a day before the lock, without asking the API', async () => {
+  it('needs a reason, without asking the API', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    const dialog = await openReopenDialog(user);
-    const submit = within(dialog).getByRole('button', { name: 'Reopen period' });
+    const dialog = await openUnlockDialog(user, 'Q2 2026');
 
-    await user.click(submit);
-    expect(await within(dialog).findByText('Choose the new last locked day')).toBeInTheDocument();
-    expect(within(dialog).getByText('Say why the period is reopened')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Unlock period' }));
 
-    fireEvent.change(within(dialog).getByLabelText('New last locked day'), {
-      target: { value: '2026-03-15' },
-    });
-    await user.click(submit);
-    expect(
-      await within(dialog).findByText('Choose a day before 28/02/2026, the day locked through now'),
-    ).toBeInTheDocument();
+    expect(await within(dialog).findByText('Say why the period is unlocked')).toBeInTheDocument();
     expect(callsOf(backend, 'POST', '/period-locks/reopen')).toHaveLength(0);
   });
 });
 
 describe('the permissions', () => {
-  it('lets someone who may only read see the lock but not change it', async () => {
+  it('lets someone who may only read see the locks but not change them', async () => {
     setup({}, READ);
 
-    expect(
-      await screen.findByRole('heading', { name: 'Locked through 28/02/2026' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Locked periods' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock a period' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Reopen a period' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Unlock January 2026' })).toBeDisabled();
     expect(
-      screen.getByText('Locking and reopening periods need their own permissions.'),
+      screen.getByText('Locking and unlocking periods need their own permissions.'),
     ).toBeInTheDocument();
   });
 
-  it('lets a partner lock but not reopen', async () => {
+  it('lets a partner lock but not unlock', async () => {
     setup({}, PARTNER);
 
     expect(await screen.findByRole('button', { name: 'Lock a period' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Reopen a period' })).toBeDisabled();
-    expect(screen.getByText('Reopening a period needs its own permission.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unlock Q2 2026' })).toBeDisabled();
+    expect(screen.getByText('Unlocking a period needs its own permission.')).toBeInTheDocument();
   });
 
-  it('needs permission to read the lock, and asks the API for nothing without it', async () => {
+  it('needs permission to read the locks, and asks the API for nothing without it', async () => {
     const backend = setup({}, ['organization.read']);
 
     expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
@@ -380,26 +404,21 @@ describe('a failed load', () => {
     expect(await screen.findByText('Could not load the period lock')).toBeInTheDocument();
     backend.refusals = {};
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(
-      await screen.findByRole('heading', { name: 'Locked through 28/02/2026' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Locked periods' })).toBeInTheDocument();
   });
 });
 
 describe('mandatory fields of the period lock dialogs', () => {
-  it('stars the day to lock through, not the reason', async () => {
+  it('stars the year and the month, not the reason', async () => {
     setup();
     const dialog = await openLockDialog(userEvent.setup());
-    expectRequiredFields(dialog, { required: ['Lock through'], optional: ['Reason (optional)'] });
+    expectRequiredFields(dialog, { required: ['Year', 'Month'], optional: ['Reason (optional)'] });
   });
 
-  it('stars the reason always, and the day only when moving the lock back', async () => {
+  it('stars the reason of an unlock', async () => {
     const user = userEvent.setup();
     setup();
-    const dialog = await openReopenDialog(user);
-    expectRequiredFields(dialog, { required: ['New last locked day', 'Reason'] });
-    await user.click(within(dialog).getByRole('button', { name: 'Remove the lock' }));
-    expect(within(dialog).queryByLabelText('New last locked day')).not.toBeInTheDocument();
+    const dialog = await openUnlockDialog(user, 'January 2026');
     expectRequiredFields(dialog, { required: ['Reason'] });
   });
 });

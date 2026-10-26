@@ -9,7 +9,7 @@ import type { PeriodLockEvent } from '../../adminTypes';
 import { describeEvent } from '../../utils/periodLock';
 import { LoadError } from '../LoadError';
 
-/** Every lock and reopening, newest first: the history is append-only. */
+/** Every lock and unlock, newest first: the history is append-only. */
 export function LockHistory() {
   const { organization } = useOrg();
   const history = usePeriodLockHistory();
@@ -37,7 +37,7 @@ export function LockHistory() {
           <div className="flex flex-col gap-0.5">
             <span className="flex items-center gap-2">
               <Badge tone={event.event_type === 'locked' ? 'warning' : 'info'} size="sm">
-                {event.event_type === 'locked' ? 'Locked' : 'Reopened'}
+                {event.event_type === 'locked' ? 'Locked' : 'Unlocked'}
               </Badge>
               <span className="font-medium text-text">{change.title}</span>
             </span>
@@ -94,7 +94,7 @@ export function LockHistory() {
           <EmptyState
             icon={<Lock className="size-6" />}
             title="Nothing has been locked yet"
-            description="Every lock and every reopening is listed here, with who did it and why."
+            description="Every lock and every unlock is listed here, with who did it and why."
           />
         }
       />

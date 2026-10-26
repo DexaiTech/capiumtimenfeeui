@@ -73,7 +73,13 @@ export {
   useScheduleRuns,
   useUpdateSchedule,
 } from './recurring';
-export { useClientBilling, useClientWip, useStatement, useVatOptions } from './lookups';
+export {
+  useClientBilling,
+  useClientBillingSummary,
+  useClientWip,
+  useStatement,
+  useVatOptions,
+} from './lookups';
 export { useBillingInvalidation } from './invalidation';
 export { billingKeys } from './keys';
 export { fetchEverything, flattenPages, nextCursor, type ListPage } from './pages';

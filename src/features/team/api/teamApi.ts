@@ -32,6 +32,8 @@ import type {
   ServiceActivityTypes,
   ServiceCreate,
   ServiceUpdate,
+  MemberPermissions,
+  MemberPermissionsUpdate,
   StaffBulkRequest,
   StaffCreate,
   StaffDeactivate,
@@ -70,6 +72,12 @@ export const teamApi = {
     }),
   getStaff: (organizationId: string, staffId: string, signal?: AbortSignal) =>
     api.get<StaffDetail>(`${org(organizationId)}/staff/${seg(staffId)}`, { signal }),
+  getMemberPermissions: (organizationId: string, staffId: string, signal?: AbortSignal) =>
+    api.get<MemberPermissions>(`${org(organizationId)}/members/${seg(staffId)}/permissions`, {
+      signal,
+    }),
+  setMemberPermissions: (organizationId: string, staffId: string, body: MemberPermissionsUpdate) =>
+    api.put<MemberPermissions>(`${org(organizationId)}/members/${seg(staffId)}/permissions`, body),
   createStaff: (organizationId: string, body: StaffCreate) =>
     api.post<StaffDetail>(`${org(organizationId)}/staff`, body),
   updateStaff: (organizationId: string, staffId: string, body: StaffUpdate) =>

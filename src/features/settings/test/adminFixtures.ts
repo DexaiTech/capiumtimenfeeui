@@ -2,6 +2,7 @@ import type {
   IntegrationCard,
   IntegrationKey,
   Mappings,
+  LockedPeriod,
   Onboarding,
   OnboardingStep,
   PeriodLock,
@@ -17,52 +18,87 @@ export const ADA = '0198c1f2-0000-7000-8000-000000000001';
 export const lockEvent = (overrides: Partial<PeriodLockEvent> = {}): PeriodLockEvent => ({
   id: 'ev-1',
   event_type: 'locked',
+  period_type: 'month',
+  period_start: '2026-01-01',
+  period_end: '2026-01-31',
+  period_label: 'January 2026',
   previous_locked_through: null,
-  locked_through: '2026-03-31',
-  reason: 'March VAT return filed',
+  locked_through: null,
+  reason: 'January VAT return filed',
   actor_user_id: ADA,
   actor_name: 'Ada Lovelace',
-  created_at: '2026-04-02T09:30:00Z',
+  created_at: '2026-02-02T09:30:00Z',
   ...overrides,
 });
 
-/** The newest event of the history: the lock moved back to the end of February. */
-export const reopenedEvent = (): PeriodLockEvent =>
+/** The newest event of the history: Q2 was locked. */
+export const q2Event = (): PeriodLockEvent =>
+  lockEvent({
+    id: 'ev-4',
+    period_type: 'quarter',
+    period_start: '2026-04-01',
+    period_end: '2026-06-30',
+    period_label: 'Q2 2026',
+    reason: 'Q2 VAT return filed',
+    created_at: '2026-07-10T14:00:00Z',
+  });
+
+/** Four events, newest first: January locked, March locked then unlocked, Q2 locked. */
+export const historyOf = (): PeriodLockEvent[] => [
+  q2Event(),
   lockEvent({
     id: 'ev-3',
     event_type: 'reopened',
-    previous_locked_through: '2026-03-31',
-    locked_through: '2026-02-28',
+    period_start: '2026-03-01',
+    period_end: '2026-03-31',
+    period_label: 'March 2026',
     reason: 'Late invoice from the supplier',
     created_at: '2026-04-10T14:00:00Z',
-  });
-
-/** Three events, newest first: locked to February, locked to March, reopened to February. */
-export const historyOf = (): PeriodLockEvent[] => [
-  reopenedEvent(),
+  }),
   lockEvent({
     id: 'ev-2',
-    previous_locked_through: '2026-02-28',
-    locked_through: '2026-03-31',
+    period_start: '2026-03-01',
+    period_end: '2026-03-31',
+    period_label: 'March 2026',
     reason: 'March VAT return filed',
     created_at: '2026-04-02T09:30:00Z',
   }),
-  lockEvent({
-    id: 'ev-1',
-    previous_locked_through: null,
-    locked_through: '2026-02-28',
-    reason: null,
-    created_at: '2026-03-03T08:00:00Z',
+  lockEvent(),
+];
+
+export const lockedPeriod = (overrides: Partial<LockedPeriod> = {}): LockedPeriod => ({
+  id: 'lp-jan',
+  period_type: 'month',
+  start_date: '2026-01-01',
+  end_date: '2026-01-31',
+  label: 'January 2026',
+  reason: 'January VAT return filed',
+  locked_by: ADA,
+  locked_by_name: 'Ada Lovelace',
+  locked_at: '2026-02-02T09:30:00Z',
+  ...overrides,
+});
+
+/** January 2026 and Q2 2026 are locked; February and March are open. */
+export const PERIODS: LockedPeriod[] = [
+  lockedPeriod(),
+  lockedPeriod({
+    id: 'lp-q2',
+    period_type: 'quarter',
+    start_date: '2026-04-01',
+    end_date: '2026-06-30',
+    label: 'Q2 2026',
+    reason: 'Q2 VAT return filed',
+    locked_at: '2026-07-10T14:00:00Z',
   }),
 ];
 
-export const lockedThrough = (day: string, last: PeriodLockEvent): PeriodLock => ({
-  locked_through: day,
-  updated_at: last.created_at,
+export const lockedWith = (periods: LockedPeriod[], last: PeriodLockEvent): PeriodLock => ({
+  periods,
   last_event: last,
 });
 
-export const NOT_LOCKED: PeriodLock = { locked_through: null, updated_at: null, last_event: null };
+export const NOT_LOCKED: PeriodLock = { periods: [], last_event: null };
 
 /* -------------------------------- Onboarding -------------------------------- */
 

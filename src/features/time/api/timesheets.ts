@@ -81,6 +81,16 @@ export function useRecallTimesheet() {
   });
 }
 
+/** Unapprove a week so its time can be changed again. */
+export function useReopenTimesheet() {
+  const { organization } = useOrg();
+  const invalidate = useTimeInvalidation();
+  return useMutation({
+    mutationFn: (timesheetId: string) => timeApi.reopenTimesheet(organization.id, timesheetId),
+    onSettled: invalidate.sheets,
+  });
+}
+
 export function useApproveTimesheet() {
   const { organization } = useOrg();
   const invalidate = useTimeInvalidation();

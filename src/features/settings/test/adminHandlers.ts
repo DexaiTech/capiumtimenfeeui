@@ -11,6 +11,8 @@ import type {
   MappingsWrite,
   Onboarding,
   OpeningBalanceTimeImportResult,
+  LockablePeriodType,
+  LockedPeriod,
   PeriodLock,
   PeriodLockEvent,
   StepState,
@@ -27,6 +29,7 @@ import {
   onboardingSteps,
   withSummary,
 } from './adminFixtures';
+import { periodName, periodRange } from '../utils/periodLock';
 
 export { orgApiPath };
 
@@ -139,8 +142,6 @@ function pageOf<T>(rows: T[], params: URLSearchParams, size: number) {
   };
 }
 
-const ukDate = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`;
-
 const invalid = (code: string, field: string, message: string) =>
   fail(422, code, message, { details: [{ field, code, message }] });
 
@@ -155,24 +156,24 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
   };
   const cardOf = (key: unknown) => backend.cards.find((entry) => entry.key === key);
 
-  const changeLock = (
-    type: 'locked' | 'reopened',
-    next: string | null,
-    reason: string | null,
-  ): PeriodLock => {
-    const event: PeriodLockEvent = {
+  const record_event = (event: Partial<PeriodLockEvent>): PeriodLockEvent => {
+    const made: PeriodLockEvent = {
       id: `ev-new-${String(backend.history.length + 1)}`,
-      event_type: type,
-      previous_locked_through: backend.lock.locked_through,
-      locked_through: next,
-      reason,
+      event_type: 'locked',
+      period_type: null,
+      period_start: null,
+      period_end: null,
+      period_label: null,
+      previous_locked_through: null,
+      locked_through: null,
+      reason: null,
       actor_user_id: ADA,
       actor_name: 'Ada Lovelace',
       created_at: NOW,
+      ...event,
     };
-    backend.history = [event, ...backend.history];
-    backend.lock = { locked_through: next, updated_at: NOW, last_event: event };
-    return backend.lock;
+    backend.history = [made, ...backend.history];
+    return made;
   };
 
   const markStep = (key: string, state: StepState): Onboarding | null => {
@@ -218,50 +219,80 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
       return refusal('GET', '/period-locks') ?? ok(backend.lock);
     }),
     http.post(orgApiPath('/period-locks/reopen'), async ({ request }) => {
-      const body = (await request.json()) as { reopen_to: string | null; reason?: string | null };
+      const body = (await request.json()) as { lock_id: string; reason?: string | null };
       record('POST', '/period-locks/reopen', body);
       const failed = refusal('POST', '/period-locks/reopen');
       if (failed) return failed;
-      const current = backend.lock.locked_through;
       if (!body.reason?.trim()) {
-        return invalid('PERIOD_LOCK_REASON_REQUIRED', 'reason', 'Say why the period is reopened.');
+        return invalid('PERIOD_LOCK_REASON_REQUIRED', 'reason', 'Say why the period is unlocked.');
       }
-      if (current === null || (body.reopen_to !== null && body.reopen_to >= current)) {
-        return invalid(
-          'PERIOD_LOCK_NOT_BACKWARD',
-          'reopen_to',
-          current === null
-            ? 'Nothing is locked.'
-            : `The date must be earlier than the current lock (${ukDate(current)}).`,
-        );
-      }
-      return ok(changeLock('reopened', body.reopen_to, body.reason.trim()), {
-        message: 'Period reopened',
+      const found = backend.lock.periods.find((entry) => entry.id === body.lock_id);
+      if (!found) return fail(404, 'RESOURCE_NOT_FOUND', 'That period is not locked.');
+      const event = record_event({
+        event_type: 'reopened',
+        period_type: found.period_type,
+        period_start: found.start_date,
+        period_end: found.end_date,
+        period_label: found.label,
+        reason: body.reason.trim(),
       });
+      backend.lock = {
+        periods: backend.lock.periods.filter((entry) => entry.id !== found.id),
+        last_event: event,
+      };
+      return ok(backend.lock, { message: 'Period unlocked' });
     }),
     http.post(orgApiPath('/period-locks'), async ({ request }) => {
-      const body = (await request.json()) as { locked_through: string; reason?: string | null };
+      const body = (await request.json()) as {
+        period_type: LockablePeriodType;
+        year: number;
+        period?: number;
+        reason?: string | null;
+      };
       record('POST', '/period-locks', body);
       const failed = refusal('POST', '/period-locks');
       if (failed) return failed;
-      const current = backend.lock.locked_through;
-      if (current !== null && body.locked_through <= current) {
+      const index = body.period ?? 1;
+      const { start, end } = periodRange(body.period_type, body.year, index);
+      const label = periodName(body.period_type, body.year, index);
+      if (end > TODAY) {
+        return invalid('PERIOD_LOCK_IN_FUTURE', 'period', `${label} has not ended yet.`);
+      }
+      const clash = backend.lock.periods.find(
+        (entry) => entry.start_date <= end && entry.end_date >= start,
+      );
+      if (clash) {
         return invalid(
-          'PERIOD_LOCK_NOT_FORWARD',
-          'locked_through',
-          `The date must be later than the current lock (${ukDate(current)}).`,
+          'PERIOD_LOCK_OVERLAPS',
+          'period',
+          `${label} overlaps a period that is already locked (${clash.label}).`,
         );
       }
-      if (body.locked_through > TODAY) {
-        return invalid(
-          'PERIOD_LOCK_IN_FUTURE',
-          'locked_through',
-          'The date cannot be in the future.',
-        );
-      }
-      return ok(changeLock('locked', body.locked_through, body.reason?.trim() || null), {
-        message: 'Period locked',
+      const event = record_event({
+        period_type: body.period_type,
+        period_start: start,
+        period_end: end,
+        period_label: label,
+        reason: body.reason?.trim() || null,
       });
+      const period: LockedPeriod = {
+        id: `lp-new-${String(backend.lock.periods.length + 1)}`,
+        period_type: body.period_type,
+        start_date: start,
+        end_date: end,
+        label,
+        reason: event.reason,
+        locked_by: ADA,
+        locked_by_name: 'Ada Lovelace',
+        locked_at: NOW,
+      };
+      backend.lock = {
+        periods: [...backend.lock.periods, period].sort((a, b) =>
+          a.start_date.localeCompare(b.start_date),
+        ),
+        last_event: event,
+      };
+      return ok(backend.lock, { message: 'Period locked' });
     }),
 
     /* ----------------------------- Onboarding ------------------------------ */

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
-import { fail, ok, server } from '@/test/server';
+import { apiPath, fail, ok, server } from '@/test/server';
 
 import { detailOf, futureRule, sam, samChargeRule, samCostRule } from '../test/fixtures';
 import { orgApiPath, teamHandlers } from '../test/handlers';
@@ -174,5 +174,155 @@ describe('StaffDetailPage', () => {
 
     renderDetail(['client.read']);
     expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
+  });
+});
+
+describe('StaffDetailPage: permissions of one person', () => {
+  const CATALOGUE = [
+    { code: 'time.log', category: 'Time', description: 'Log own time and run a timer' },
+    { code: 'wip.read', category: 'Billing', description: 'View work in progress' },
+    { code: 'invoice.read', category: 'Billing', description: 'View invoices and credit notes' },
+  ];
+
+  function permissionsOf(overrides: { grants?: string[]; denies?: string[] } = {}) {
+    const grants = overrides.grants ?? [];
+    const denies = overrides.denies ?? [];
+    const role = ['time.log'];
+    return {
+      user_id: sam.id,
+      role: sam.role,
+      role_permissions: role,
+      grants,
+      denies,
+      effective: [...role.filter((code) => !denies.includes(code)), ...grants],
+    };
+  }
+
+  function serve(initial = permissionsOf()) {
+    const bodies: unknown[] = [];
+    let current = initial;
+    server.use(
+      ...teamHandlers(),
+      http.get(apiPath('/permissions'), () => ok(CATALOGUE)),
+      http.get(orgApiPath(`/members/${sam.id}/permissions`), () => ok(current)),
+      http.put(orgApiPath(`/members/${sam.id}/permissions`), async ({ request }) => {
+        const body = (await request.json()) as { grants: string[]; denies: string[] };
+        bodies.push(body);
+        current = permissionsOf(body);
+        return ok(current);
+      }),
+    );
+    return bodies;
+  }
+
+  it('shows the role and what was added or taken away for this person', async () => {
+    serve(permissionsOf({ grants: ['wip.read'], denies: ['time.log'] }));
+    renderDetail();
+
+    const card = await region('Permissions');
+    expect(await within(card).findByRole('list', { name: 'Also allowed' })).toHaveTextContent(
+      'View work in progress',
+    );
+    expect(within(card).getByRole('list', { name: 'Not allowed' })).toHaveTextContent(
+      'Log own time and run a timer',
+    );
+  });
+
+  it('says when the person has exactly what their role gives', async () => {
+    serve();
+    renderDetail();
+
+    const card = await region('Permissions');
+    expect(await within(card).findByText(/exactly what their role gives/)).toBeInTheDocument();
+  });
+
+  it('gives this person a permission their role does not, without touching the role', async () => {
+    const user = userEvent.setup();
+    const bodies = serve();
+    renderDetail();
+
+    const card = await region('Permissions');
+    await user.click(await within(card).findByRole('button', { name: 'Edit permissions' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Permissions of Sam Staff' });
+    await user.click(within(sheet).getByRole('checkbox', { name: /View work in progress/ }));
+    expect(within(sheet).getByText('1 more than the role, 0 fewer.')).toBeInTheDocument();
+    await user.click(within(sheet).getByRole('button', { name: 'Save permissions' }));
+
+    await waitFor(() => expect(bodies).toEqual([{ grants: ['wip.read'], denies: [] }]));
+    expect(await screen.findByText("Sam Staff's permissions saved")).toBeInTheDocument();
+    expect(await within(card).findByRole('list', { name: 'Also allowed' })).toHaveTextContent(
+      'View work in progress',
+    );
+  });
+
+  it('takes a permission from this person that their role gives', async () => {
+    const user = userEvent.setup();
+    const bodies = serve();
+    renderDetail();
+
+    await user.click(
+      await within(await region('Permissions')).findByRole('button', { name: 'Edit permissions' }),
+    );
+    const sheet = await screen.findByRole('dialog', { name: 'Permissions of Sam Staff' });
+    await user.click(within(sheet).getByRole('checkbox', { name: /Log own time/ }));
+    await user.click(within(sheet).getByRole('button', { name: 'Save permissions' }));
+
+    await waitFor(() => expect(bodies).toEqual([{ grants: [], denies: ['time.log'] }]));
+  });
+
+  it('puts the person back on their role with one click', async () => {
+    const user = userEvent.setup();
+    const bodies = serve(permissionsOf({ grants: ['wip.read'] }));
+    renderDetail();
+
+    await user.click(
+      await within(await region('Permissions')).findByRole('button', { name: 'Edit permissions' }),
+    );
+    const sheet = await screen.findByRole('dialog', { name: 'Permissions of Sam Staff' });
+    await user.click(within(sheet).getByRole('button', { name: 'Reset to the role' }));
+    await user.click(within(sheet).getByRole('button', { name: 'Save permissions' }));
+
+    await waitFor(() => expect(bodies).toEqual([{ grants: [], denies: [] }]));
+  });
+
+  it('cannot be edited by someone who may not manage roles', async () => {
+    serve();
+    renderDetail(OWNER_PERMISSIONS.filter((code) => code !== 'role.manage'));
+
+    const card = await region('Permissions');
+    await within(card).findByText(/exactly what their role gives/);
+    expect(
+      within(card).queryByRole('button', { name: 'Edit permissions' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('is not shown to someone who may not read roles', async () => {
+    serve();
+    renderDetail(OWNER_PERMISSIONS.filter((code) => code !== 'role.read'));
+
+    await screen.findByRole('heading', { level: 1, name: 'Sam Staff' });
+    expect(screen.queryByRole('region', { name: 'Permissions' })).not.toBeInTheDocument();
+  });
+
+  it('shows the refusal of the server and keeps the grid open', async () => {
+    const user = userEvent.setup();
+    serve();
+    server.use(
+      http.put(orgApiPath(`/members/${sam.id}/permissions`), () =>
+        fail(403, 'PERMISSION_DENIED', 'You cannot grant permissions you do not have.'),
+      ),
+    );
+    renderDetail();
+
+    await user.click(
+      await within(await region('Permissions')).findByRole('button', { name: 'Edit permissions' }),
+    );
+    const sheet = await screen.findByRole('dialog', { name: 'Permissions of Sam Staff' });
+    await user.click(within(sheet).getByRole('checkbox', { name: /View invoices/ }));
+    await user.click(within(sheet).getByRole('button', { name: 'Save permissions' }));
+
+    expect(
+      await within(sheet).findByText('You cannot grant permissions you do not have.'),
+    ).toBeInTheDocument();
   });
 });

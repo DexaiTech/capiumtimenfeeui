@@ -1,57 +1,41 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useId } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Input, Modal, SegmentedControl, Textarea, useToast } from '@/components/ui';
-import { dayBefore, formatUkDate } from '@/utils/dates';
+import { Button, Modal, Textarea, useToast } from '@/components/ui';
+import { formatUkDate } from '@/utils/dates';
 
 import { useReopenPeriod } from '../../api/adminHooks';
-import {
-  reopenSchema,
-  REASON_MAX,
-  type ReopenValues,
-  type REOPEN_MODES,
-} from '../../schemas/admin';
+import type { LockedPeriod } from '../../adminTypes';
+import { REASON_MAX, unlockSchema, type UnlockValues } from '../../schemas/admin';
 import { DialogActions } from '../DialogActions';
 
-const FIELDS = ['reopen_to', 'reason'] as const;
+const FIELDS = ['reason'] as const;
 
-const MODES: ReadonlyArray<{ value: (typeof REOPEN_MODES)[number]; label: string }> = [
-  { value: 'to_date', label: 'Move the lock back' },
-  { value: 'remove', label: 'Remove the lock' },
-];
-
-function ReopenForm({ currentLock, onClose }: { currentLock: string; onClose: () => void }) {
+function UnlockForm({ period, onClose }: { period: LockedPeriod; onClose: () => void }) {
   const { toast } = useToast();
-  const reopen = useReopenPeriod();
+  const unlock = useReopenPeriod();
   const formId = useId();
   const {
     register,
     handleSubmit,
     setError,
-    setValue,
-    control,
     formState: { errors },
-  } = useForm<ReopenValues>({
-    resolver: zodResolver(reopenSchema(currentLock)),
-    defaultValues: { mode: 'to_date', reopen_to: '', reason: '' },
+  } = useForm<UnlockValues>({
+    resolver: zodResolver(unlockSchema),
+    defaultValues: { reason: '' },
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
-    useSubmitError<ReopenValues>({ setError, fields: FIELDS });
-  const mode = useWatch({ control, name: 'mode' });
+    useSubmitError<UnlockValues>({ setError, fields: FIELDS });
 
   const onSubmit = handleSubmit((values) => {
     clearSubmitError();
-    const target = values.mode === 'remove' ? null : values.reopen_to;
-    reopen.mutate(
-      { reopen_to: target, reason: values.reason },
+    unlock.mutate(
+      { lock_id: period.id, reason: values.reason },
       {
         onSuccess: () => {
-          toast({
-            tone: 'success',
-            title: target ? `Period reopened to ${formatUkDate(target)}` : 'Lock removed',
-          });
+          toast({ tone: 'success', title: `${period.label} unlocked` });
           onClose();
         },
         onError: handleSubmitError,
@@ -67,27 +51,11 @@ function ReopenForm({ currentLock, onClose }: { currentLock: string; onClose: ()
         onSubmit={(event) => void onSubmit(event)}
         className="flex flex-col gap-4"
       >
-        <SegmentedControl
-          label="What to reopen"
-          options={MODES}
-          value={mode}
-          onChange={(value) => setValue('mode', value, { shouldValidate: false })}
-        />
-        {mode === 'to_date' ? (
-          <Input
-            label="New last locked day"
-            required
-            type="date"
-            max={dayBefore(currentLock)}
-            hint={`Now locked through ${formatUkDate(currentLock)}. Days after the one you choose are open again.`}
-            error={errors.reopen_to?.message}
-            {...register('reopen_to')}
-          />
-        ) : (
-          <p className="text-sm text-text-muted">
-            Nothing will be locked: every day is open again, back to the first.
-          </p>
-        )}
+        <p className="text-sm text-text-muted">
+          {period.label} runs {formatUkDate(period.start_date)} to {formatUkDate(period.end_date)}.
+          Once it is unlocked, time, expenses and WIP dated inside it can be changed again. Lock it
+          again when you are done.
+        </p>
         <Textarea
           label="Reason"
           required
@@ -107,10 +75,10 @@ function ReopenForm({ currentLock, onClose }: { currentLock: string; onClose: ()
           type="submit"
           form={formId}
           variant="primary"
-          loading={reopen.isPending}
+          loading={unlock.isPending}
           disabled={retryIn > 0}
         >
-          Reopen period
+          Unlock period
         </Button>
       </DialogActions>
     </>
@@ -118,24 +86,23 @@ function ReopenForm({ currentLock, onClose }: { currentLock: string; onClose: ()
 }
 
 export interface ReopenDialogProps {
-  open: boolean;
+  /** The locked period to unlock; the dialog is closed while it is null. */
+  period: LockedPeriod | null;
   onClose: () => void;
-  /** The day the practice is locked through now. */
-  currentLock: string;
 }
 
-/** Move the lock back to an earlier day, or remove it, saying why. */
-export function ReopenDialog({ open, onClose, currentLock }: ReopenDialogProps) {
+/** Unlock one locked period so its days can be changed, saying why. */
+export function ReopenDialog({ period, onClose }: ReopenDialogProps) {
   return (
     <Modal
-      open={open}
+      open={period !== null}
       onClose={onClose}
-      title="Reopen a period"
-      description="Moves the lock back so the days after it can be changed again."
+      title={period ? `Unlock ${period.label}` : 'Unlock a period'}
+      description="Opens this period again. Other locked periods stay locked."
       size="md"
       closeOnBackdrop={false}
     >
-      {open ? <ReopenForm currentLock={currentLock} onClose={onClose} /> : null}
+      {period ? <UnlockForm period={period} onClose={onClose} /> : null}
     </Modal>
   );
 }

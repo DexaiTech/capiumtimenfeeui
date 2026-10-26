@@ -36,7 +36,11 @@ export default function PrepareInvoicePage() {
           </Card>
           {clientId ? (
             // Another client starts again from the first step.
-            <PrepareFlow key={clientId} clientId={clientId} />
+            <PrepareFlow
+              key={clientId}
+              clientId={clientId}
+              preselect={params.get('time')?.split(',').filter(Boolean) ?? []}
+            />
           ) : (
             <Card padding="none">
               <EmptyState

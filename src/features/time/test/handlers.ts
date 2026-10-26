@@ -741,6 +741,19 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       found.cost_value = poundsFor(minutes, COST_RATE);
       return ok(view(found), { message: 'Time entry updated' });
     }),
+    http.post(orgApiPath('/time-entries/:entryId/remove'), async ({ request, params }) => {
+      const body = (await record(request)) as { reason?: string } | undefined;
+      const found = backend.entries.find((item) => item.id === params.entryId);
+      if (!found) return notFound();
+      if (!body?.reason?.trim()) {
+        return fail(422, 'TIME_CORRECTION_REASON_REQUIRED', 'Say why the time is removed.');
+      }
+      if (found.timesheet_status !== 'approved' || found.billing_status !== 'unbilled') {
+        return fail(409, 'TIME_NOT_CORRECTABLE', 'Only approved, unbilled time can be removed.');
+      }
+      backend.entries = backend.entries.filter((item) => item.id !== found.id);
+      return ok(null, { message: 'Time entry removed' });
+    }),
     http.delete(orgApiPath('/time-entries/:entryId'), async ({ request, params }) => {
       await record(request);
       const found = backend.entries.find((item) => item.id === params.entryId);
@@ -930,6 +943,29 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       sheet.status = 'approved';
       sheet.decided_at = NOW;
       return ok(detail(sheet), { message: 'Timesheet approved' });
+    }),
+    http.post(orgApiPath('/timesheets/:sheetId/reopen'), async ({ request, params }) => {
+      await record(request);
+      const sheet = backend.sheets.find((candidate) => candidate.id === params.sheetId);
+      if (!sheet) return notFound();
+      if (sheet.status !== 'approved') {
+        return fail(409, 'INVALID_STATUS_TRANSITION', 'That status change is not allowed.');
+      }
+      if (
+        backend.entries.some(
+          (item) => item.timesheet_id === sheet.id && item.billing_status !== 'unbilled',
+        )
+      ) {
+        return fail(409, 'TIMESHEET_HAS_BILLED_TIME', 'Some of this time has been billed.');
+      }
+      sheet.status = 'open';
+      sheet.decided_at = null;
+      backend.entries = backend.entries.map((item) =>
+        item.timesheet_id === sheet.id
+          ? { ...item, timesheet_status: 'open', is_locked: false }
+          : item,
+      );
+      return ok(detail(sheet), { message: 'Timesheet reopened' });
     }),
     http.post(orgApiPath('/timesheets/:sheetId/reject'), async ({ request, params }) => {
       const body = (await record(request)) as { decision_note?: string } | undefined;

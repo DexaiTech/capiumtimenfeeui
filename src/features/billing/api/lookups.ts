@@ -35,6 +35,18 @@ export function useClientWip(clientId: string | null, jobId: string | null) {
   });
 }
 
+/** The client's jobs with their terms, hours and value by source, read with the work to bill. */
+export function useClientBillingSummary(clientId: string | null) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: billingKeys.clientBillingSummary(organization.id, clientId ?? ''),
+    queryFn: ({ signal }) =>
+      billingApi.getClientBillingSummary(organization.id, clientId ?? '', signal),
+    enabled: clientId !== null,
+    staleTime: 0,
+  });
+}
+
 /** What the client's billing settings give an invoice: terms, VAT code, template. */
 export function useClientBilling(clientId: string | null) {
   const { organization } = useOrg();

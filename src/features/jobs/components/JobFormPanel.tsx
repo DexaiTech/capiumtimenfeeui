@@ -38,6 +38,7 @@ const FIELDS = [
   'hourly_rate',
   'budget_minutes',
   'budget_fee',
+  'budget_cost',
   'start_date',
   'due_date',
   'period_start',
@@ -294,6 +295,14 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
             autoComplete="off"
             error={errors.budget_fee?.message}
             {...register('budget_fee')}
+          />
+          <Input
+            label="Budgeted cost (£)"
+            inputMode="decimal"
+            autoComplete="off"
+            hint="What the work is expected to cost; compared with the actual cost when billing."
+            error={errors.budget_cost?.message}
+            {...register('budget_cost')}
           />
         </FormSection>
         <FormSection title="Dates" className="grid gap-4 sm:grid-cols-2">

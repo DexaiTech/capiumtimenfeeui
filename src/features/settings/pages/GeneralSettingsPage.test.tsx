@@ -118,6 +118,8 @@ describe('GeneralSettingsPage', () => {
     await user.click(time.getByRole('button', { name: 'Friday' }));
     await user.click(time.getByRole('button', { name: 'Saturday' }));
     await user.click(time.getByRole('switch', { name: 'Timesheet approval' }));
+    // Approval is now required, so the exemption for admins and partners shows (on by default).
+    expect(time.getByRole('switch', { name: 'No approval for admins and partners' })).toBeChecked();
     expect(screen.getByText('You have unsaved changes.')).toBeInTheDocument();
     await user.click(save('Time recording', 'Save time settings'));
 
@@ -481,5 +483,35 @@ describe('GeneralSettingsPage: mandatory fields', () => {
     expectRequiredFields(card('Expenses'), {
       required: [/^Mileage rate/, 'Expense mark-up (%)', /^Receipt required above/],
     });
+  });
+});
+
+describe('GeneralSettingsPage: time that needs no approval', () => {
+  it('turns the exemption off and saves only that change', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />, {
+      context: {
+        ...orgContext(),
+        organization: { ...testOrganization, require_timesheet_approval: true },
+      },
+    });
+
+    const time = within(card('Time recording'));
+    await user.click(time.getByRole('switch', { name: 'No approval for admins and partners' }));
+    await user.click(save('Time recording', 'Save time settings'));
+
+    expect(await screen.findByText('Time settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ auto_approve_privileged_time: false }]);
+  });
+
+  it('is not offered while timesheet approval is off', async () => {
+    renderSettings(<GeneralSettingsPage />);
+
+    const time = within(card('Time recording'));
+    await time.findByRole('switch', { name: 'Timesheet approval' });
+    expect(
+      time.queryByRole('switch', { name: 'No approval for admins and partners' }),
+    ).not.toBeInTheDocument();
   });
 });

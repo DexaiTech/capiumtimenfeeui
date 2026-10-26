@@ -360,10 +360,9 @@ function EditRateForm({ rule, onClose }: { rule: RateRule; onClose: () => void }
             label="Effective from"
             required
             type="date"
-            disabled={rule.is_used}
             hint={
               rule.is_used
-                ? 'Time has been recorded under this rate, so its start date cannot change.'
+                ? 'Time has been recorded under this rate. Changing the start date does not change those entries until you re-rate them.'
                 : undefined
             }
             error={errors.effective_from?.message}
@@ -379,8 +378,8 @@ function EditRateForm({ rule, onClose }: { rule: RateRule; onClose: () => void }
         </div>
         {rule.is_used ? (
           <p className="text-xs text-text-muted">
-            A rate in use can be end-dated and its amount changed. Entries already recorded keep
-            their rates.
+            A rate in use can be changed, but not deleted. Entries already recorded keep their rates
+            until unbilled time is re-rated, so the time does not need to be entered again.
           </p>
         ) : null}
         {submitError ? (

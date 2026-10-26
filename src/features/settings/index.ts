@@ -3,9 +3,11 @@
  * `pages/` (one chunk each); other features import only what is listed here.
  */
 export { MemberPicker, type MemberPickerProps } from './components/MemberPicker';
-export { useMemberDirectory, useMembers, useRoles } from './api/hooks';
+export { useMemberDirectory, useMembers, usePermissionCatalogue, useRoles } from './api/hooks';
+// The permission grid of a role, reused for one person's own permissions (Team > Staff).
+export { PermissionPicker, type PermissionPickerProps } from './components/roles/PermissionPicker';
 export { roleOptions, type RoleOption } from './utils/roles';
-export type { Member, MemberStatus, Role } from './types';
+export type { Member, MemberStatus, Permission, Role } from './types';
 // The invoice templates a client's billing settings can choose from (`GET /invoice-templates`).
 export { useInvoiceTemplates } from './api/billingHooks';
 export type { InvoiceLayout, InvoiceTemplate } from './billingTypes';

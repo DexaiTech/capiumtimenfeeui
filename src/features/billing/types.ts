@@ -452,6 +452,67 @@ export interface ClientWip {
   totals: WipTotals;
 }
 
+/* ------------------------------ Billing summary ------------------------------ */
+
+/** What billing the work ready to bill would come to on each basis. */
+export type BillingBasis = 'contract' | 'job' | 'team';
+
+export interface BasisValues {
+  /** The work at the rates in force (agreed with the client where there is a rate), plus disbursements. */
+  contract: Pence;
+  /** What is left of the value set for the job, plus disbursements; null without such a value. */
+  job: Pence | null;
+  /** The cost of the people who did the work, plus disbursements; null without `rate.read`. */
+  team: Pence | null;
+}
+
+/** One job's figures, or the client's total (`GET /clients/{id}/billing-summary`). */
+export interface Breakdown {
+  logged_minutes: number;
+  billable_minutes: number;
+  non_billable_minutes: number;
+  billed_minutes: number;
+  ready_minutes: number;
+  awaiting_approval_minutes: number;
+  company_time_value: Pence;
+  contract_time_value: Pence;
+  ready_time_value: Pence;
+  billed_time_value: Pence;
+  fixed_fee: Pence | null;
+  fixed_fee_billed: Pence;
+  other_costs: Pence;
+  billable_total: Pence;
+  /** Null without `rate.read`. */
+  actual_cost: Pence | null;
+  budgeted_cost: Pence | null;
+  agreed_price: Pence | null;
+  basis_values: BasisValues;
+}
+
+export interface JobBilling {
+  /** Null for time on the client without a job. */
+  job_id: string | null;
+  number: string | null;
+  name: string;
+  status: string | null;
+  billing_basis: string | null;
+  fixed_fee: Pence | null;
+  hourly_rate: Pence | null;
+  budget_minutes: number | null;
+  /** The contract terms in words, "Fixed fee of £2,000.00". */
+  terms: string;
+  breakdown: Breakdown;
+}
+
+export interface ClientBillingSummary {
+  client: ClientRef;
+  jobs: JobBilling[];
+  totals: Breakdown;
+  show_cost: boolean;
+  /** The cost of each time entry ready to bill, by entry id; null without `rate.read`. */
+  time_costs: Record<string, Pence> | null;
+}
+
 /* ---------------------------- Credit notes and WIP ---------------------------- */
 
 export type CreditNoteWipMode = 'return' | 'write_off';

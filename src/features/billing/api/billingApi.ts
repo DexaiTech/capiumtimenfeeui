@@ -3,6 +3,7 @@ import type { BulkResult } from '@/types';
 
 import type {
   AllocateBody,
+  ClientBillingSummary,
   ClientWip,
   CreditNote,
   CreditNoteCreate,
@@ -285,6 +286,13 @@ export const billingApi = {
       query: { job_id: jobId },
       signal,
     }),
+  getClientBillingSummary: (organizationId: string, clientId: string, signal?: AbortSignal) =>
+    api.get<ClientBillingSummary>(
+      `${org(organizationId)}/clients/${seg(clientId)}/billing-summary`,
+      {
+        signal,
+      },
+    ),
   getClientBilling: (organizationId: string, clientId: string, signal?: AbortSignal) =>
     api.get<ClientBillingDefaults>(`${org(organizationId)}/clients/${seg(clientId)}`, { signal }),
   listVatRates: (organizationId: string, signal?: AbortSignal) =>

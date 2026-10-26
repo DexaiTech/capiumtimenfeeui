@@ -42,6 +42,8 @@ export interface Job {
   hourly_rate: Pence | null;
   budget_minutes: Minutes | null;
   budget_fee: Pence | null;
+  /** The cost the work is expected to take, to compare with the cost of the people who did it. */
+  budget_cost: Pence | null;
   period_start: IsoDate | null;
   period_end: IsoDate | null;
   start_date: IsoDate | null;
@@ -78,6 +80,7 @@ export interface JobInput {
   hourly_rate?: Pence | null;
   budget_minutes?: Minutes | null;
   budget_fee?: Pence | null;
+  budget_cost?: Pence | null;
   period_start?: IsoDate | null;
   period_end?: IsoDate | null;
   start_date?: IsoDate | null;

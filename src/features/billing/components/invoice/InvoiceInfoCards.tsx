@@ -71,7 +71,9 @@ export function InvoiceWipCard({ invoice }: { invoice: InvoiceDetail }) {
                   </td>
                   <td className={`${cell} text-right tabular-nums`}>{money(wip.wip_value)}</td>
                   <td className={`${cell} text-right tabular-nums`}>{money(wip.billed_value)}</td>
-                  <td className={`${cell} text-right tabular-nums`}>{adjustment(wip.adjustment)}</td>
+                  <td className={`${cell} text-right tabular-nums`}>
+                    {adjustment(wip.adjustment)}
+                  </td>
                 </tr>
               );
             })}
@@ -82,7 +84,9 @@ export function InvoiceWipCard({ invoice }: { invoice: InvoiceDetail }) {
                 Total
               </th>
               <td className={`${cell} text-right tabular-nums`}>{money(invoice.wip.wip_value)}</td>
-              <td className={`${cell} text-right tabular-nums`}>{money(invoice.wip.billed_value)}</td>
+              <td className={`${cell} text-right tabular-nums`}>
+                {money(invoice.wip.billed_value)}
+              </td>
               <td className={`${cell} text-right tabular-nums`}>
                 {adjustment(invoice.wip.adjustment)}
               </td>
@@ -131,7 +135,10 @@ export function InvoiceDetailsCard({ invoice, today, onEdit }: InvoiceDetailsCar
     ],
     ['Reference', invoice.reference ?? '—'],
     ['Notes', invoice.notes ? <span className="whitespace-pre-line">{invoice.notes}</span> : '—'],
-    ['Emailed', invoice.sent_at ? formatUkDateTime(invoice.sent_at, organization.timezone) : 'Not yet'],
+    [
+      'Emailed',
+      invoice.sent_at ? formatUkDateTime(invoice.sent_at, organization.timezone) : 'Not yet',
+    ],
     ['Created', formatUkDateTime(invoice.created_at, organization.timezone)],
   ];
   return (
@@ -162,10 +169,12 @@ export interface InvoicePaymentsCardProps {
   invoice: InvoiceDetail;
   /** Shown to people who may record a payment on an invoice that is still owed. */
   onRecord?: () => void;
+  /** Shown to people who may record payments: takes the payment off this invoice again. */
+  onUnmatch?: (payment: InvoiceDetail['payments'][number]) => void;
 }
 
 /** The payments allocated to the invoice. */
-export function InvoicePaymentsCard({ invoice, onRecord }: InvoicePaymentsCardProps) {
+export function InvoicePaymentsCard({ invoice, onRecord, onUnmatch }: InvoicePaymentsCardProps) {
   const money = (pence: number) => formatMoney(pence, invoice.currency);
   return (
     <Card padding="none">
@@ -196,7 +205,20 @@ export function InvoicePaymentsCard({ invoice, onRecord }: InvoicePaymentsCardPr
                   {payment.reference ? ` · ${payment.reference}` : ''}
                 </span>
               </div>
-              <span className="font-semibold tabular-nums text-text">{money(payment.amount)}</span>
+              <div className="flex items-center gap-3">
+                <span className="font-semibold tabular-nums text-text">
+                  {money(payment.amount)}
+                </span>
+                {onUnmatch ? (
+                  <Button
+                    size="sm"
+                    aria-label={`Unmatch the payment of ${dateCell(payment.received_on)}`}
+                    onClick={() => onUnmatch(payment)}
+                  >
+                    Unmatch
+                  </Button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
@@ -233,10 +255,7 @@ export function InvoiceCreditNotesCard({ invoice, onRaise }: InvoiceCreditNotesC
       ) : (
         <ul aria-label="Credit notes of the invoice" className="divide-y divide-row-border">
           {invoice.credit_notes.map((note) => (
-            <li
-              key={note.id}
-              className="flex items-start justify-between gap-3 px-5 py-3 text-sm"
-            >
+            <li key={note.id} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
               <div className="flex min-w-0 flex-col">
                 <span className="font-semibold text-text">{note.number}</span>
                 <span className="text-xs text-text-muted">
@@ -244,7 +263,9 @@ export function InvoiceCreditNotesCard({ invoice, onRaise }: InvoiceCreditNotesC
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="font-semibold tabular-nums text-text">{money(note.gross_total)}</span>
+                <span className="font-semibold tabular-nums text-text">
+                  {money(note.gross_total)}
+                </span>
                 <Button
                   size="icon-sm"
                   variant="ghost"

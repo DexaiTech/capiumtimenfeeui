@@ -37,6 +37,7 @@ export const timeSettingsSchema = z.object({
   week_start: z.enum(['1', '2', '3', '4', '5', '6', '7'], 'Choose the first day of the week'),
   working_days: z.array(z.number().int().min(1).max(7)).min(1, 'Choose at least one working day'),
   require_timesheet_approval: z.boolean(),
+  auto_approve_privileged_time: z.boolean(),
 });
 export type TimeSettingsValues = z.infer<typeof timeSettingsSchema>;
 

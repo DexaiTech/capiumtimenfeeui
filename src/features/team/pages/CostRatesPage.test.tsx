@@ -544,18 +544,16 @@ describe('CostRatesPage edit, end-date and delete', () => {
     expect(body).toEqual({ effective_to: null });
   });
 
-  it('keeps the start date of a used rate and still lets the amount change', async () => {
+  it('lets the start date of a used rate change, saying the entries keep their rates', async () => {
     const user = userEvent.setup();
     renderPage();
 
     const menu = await openActions(user, 'Senior grade');
     await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
     const dialog = await screen.findByRole('region', { name: 'Edit rate' });
-    expect(within(dialog).getByLabelText('Effective from')).toBeDisabled();
+    expect(within(dialog).getByLabelText('Effective from')).toBeEnabled();
     expect(
-      within(dialog).getByText(
-        /Time has been recorded under this rate, so its start date cannot change/,
-      ),
+      within(dialog).getByText(/Changing the start date does not change those entries/),
     ).toBeInTheDocument();
     expect(within(dialog).getByRole('textbox', { name: 'Rate per hour (£)' })).toBeEnabled();
   });

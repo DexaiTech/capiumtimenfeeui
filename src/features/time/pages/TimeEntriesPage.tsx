@@ -1,6 +1,7 @@
 import {
   Download,
   Ellipsis,
+  FilePlus2,
   History,
   Lock,
   Pencil,
@@ -10,6 +11,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import {
   Button,
@@ -30,6 +32,7 @@ import {
   type DropdownItem,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
+import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
 import { useAuth } from '@/features/auth';
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker, StaffPicker } from '@/features/team';
@@ -144,6 +147,9 @@ function List() {
   );
   const [adding, setAdding] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+  const navigate = useNavigate();
+  const canBill = can(PERMISSIONS.invoiceCreate) && can(PERMISSIONS.wipRead);
 
   const names = new Map((staff.data ?? []).map((member) => [member.id, member.full_name]));
   const personName = (userId: string) =>
@@ -263,6 +269,24 @@ function List() {
 
   const loaded = flattenPages(list.data);
   const rows = sortRows(loaded, columns, sort);
+
+  // Time that can go on an invoice: billable, unbilled, for a client. One client per invoice.
+  const chosen = loaded.filter((entry) => picked.has(entry.id));
+  const billableChosen = chosen.filter(
+    (entry) => entry.is_billable && entry.billing_status === 'unbilled' && entry.client_id,
+  );
+  const billClients = new Set(billableChosen.map((entry) => entry.client_id));
+  const billClient = billClients.size === 1 ? billableChosen[0] : undefined;
+  const createInvoice = () => {
+    if (!billClient?.client_id) return;
+    const query = new URLSearchParams({
+      client: billClient.client_id,
+      time: billableChosen.map((entry) => entry.id).join(','),
+    });
+    void navigate(
+      `${modulePath(organization.slug, ORG_SEGMENTS.billing, 'prepare')}?${query.toString()}`,
+    );
+  };
 
   // New time starts from the client and job the list is filtered to, so it is not chosen again.
   const sample = jobId
@@ -445,8 +469,46 @@ function List() {
         correction
         onClose={() => setCorrecting(null)}
       />
+      {canBill && picked.size > 0 ? (
+        <div
+          role="region"
+          aria-label="Bill the selected time"
+          className="flex flex-wrap items-center gap-2 rounded-xl border border-brand/30 bg-brand-soft px-3 py-2"
+        >
+          <p aria-live="polite" className="mr-1 text-xs font-semibold text-brand-text">
+            {picked.size} selected
+          </p>
+          <p className="text-xs text-text-muted">
+            {billClients.size > 1
+              ? 'The time belongs to more than one client: choose the time of one client to bill it.'
+              : billableChosen.length === 0
+                ? 'None of it can be billed: only billable time that is not billed yet can go on an invoice.'
+                : billableChosen.length < chosen.length
+                  ? `${billableChosen.length} of ${chosen.length} can be billed; the rest is left out.`
+                  : `${billableChosen.length} ${billableChosen.length === 1 ? 'entry' : 'entries'} for ${billClient?.client_name ?? 'the client'}.`}
+          </p>
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<FilePlus2 className="size-4" aria-hidden="true" />}
+            disabled={billClient === undefined}
+            onClick={createInvoice}
+          >
+            Create invoice
+          </Button>
+          <Button size="sm" onClick={() => setPicked(new Set())}>
+            Clear
+          </Button>
+        </div>
+      ) : null}
       <DataTable
         caption="Time entries"
+        selectable={canBill}
+        selected={picked}
+        onSelectedChange={setPicked}
+        selectLabel={(entry) =>
+          `Select the entry of ${formatUkDate(entry.entry_date)}, ${formatMinutes(entry.minutes)}`
+        }
         onRowClick={(entry) => {
           if (canEdit(entry)) setEditing(entry);
         }}

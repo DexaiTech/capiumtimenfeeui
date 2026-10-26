@@ -101,6 +101,9 @@ export const timeApi = {
     api.post<TimeEntry>(`${org(organizationId)}/time-entries`, body),
   updateEntry: (organizationId: string, entryId: string, body: TimeEntryUpdate) =>
     api.patch<TimeEntry>(`${org(organizationId)}/time-entries/${seg(entryId)}`, body),
+  /** Deletes approved, unbilled time posted by mistake; the reason is kept in the audit log. */
+  removeEntry: (organizationId: string, entryId: string, reason: string) =>
+    api.post<null>(`${org(organizationId)}/time-entries/${seg(entryId)}/remove`, { reason }),
   deleteEntry: (organizationId: string, entryId: string) =>
     api.delete<null>(`${org(organizationId)}/time-entries/${seg(entryId)}`),
   copyWeek: (organizationId: string, body: CopyWeekRequest) =>
@@ -142,6 +145,9 @@ export const timeApi = {
     api.post<TimesheetDetail>(`${org(organizationId)}/timesheets/${seg(timesheetId)}/submit`),
   recallTimesheet: (organizationId: string, timesheetId: string) =>
     api.post<TimesheetDetail>(`${org(organizationId)}/timesheets/${seg(timesheetId)}/recall`),
+  /** Unapprove: an approved sheet goes back to open while none of its time is billed. */
+  reopenTimesheet: (organizationId: string, timesheetId: string) =>
+    api.post<TimesheetDetail>(`${org(organizationId)}/timesheets/${seg(timesheetId)}/reopen`),
   approveTimesheet: (organizationId: string, timesheetId: string, note?: string) =>
     api.post<TimesheetDetail>(
       `${org(organizationId)}/timesheets/${seg(timesheetId)}/approve`,
