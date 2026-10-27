@@ -170,6 +170,7 @@ export function PrepareFlow({
             ...selectionOf(items),
             group_by: groupBy,
             overrides: overridesOf(planned, allEdits),
+            valuation_basis: basis,
             ...header,
           })}
           onBack={() => setStep('review')}

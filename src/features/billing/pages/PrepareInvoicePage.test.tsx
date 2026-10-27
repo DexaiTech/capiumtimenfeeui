@@ -378,6 +378,7 @@ describe('making the draft', () => {
       disbursement_ids: [],
       group_by: 'job',
       overrides: [],
+      valuation_basis: 'contract',
       issue_date: '2026-10-18',
       due_date: '2026-11-17',
       reference: 'PO-1234',
@@ -647,6 +648,19 @@ describe('the billing summary', () => {
 
     // The fee budget of £500, less nothing billed so far: the time line bills that.
     expect(rowsOf(lines)[0]).toHaveTextContent('£500.00');
+  });
+
+  it('sends the basis the invoice was valued on with the draft', async () => {
+    const user = userEvent.setup();
+    const backend = setup();
+    await work();
+
+    await user.click(screen.getByRole('button', { name: /Team value/ }));
+    await toDetails(user, /Bank reconciliation/);
+    await user.click(screen.getByRole('button', { name: 'Save as draft' }));
+
+    await screen.findByText('Draft invoice saved');
+    expect(postsOf(backend, '/invoices')[0]?.body).toMatchObject({ valuation_basis: 'team' });
   });
 
   it('keeps the contract value as the default, which changes nothing', async () => {

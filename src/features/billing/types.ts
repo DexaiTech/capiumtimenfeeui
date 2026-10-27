@@ -188,6 +188,8 @@ export interface InvoiceCreate {
   expense_line_ids?: string[];
   group_by: GroupBy;
   overrides: LineOverride[];
+  /** What the lines were valued on (kept in the audit entry of the draft). */
+  valuation_basis?: BillingBasis;
 }
 
 /** PATCH of the header: a draft takes all four, an issued invoice is not editable. */
