@@ -23,7 +23,7 @@
   --color-surface-hover: #f5f3fa;
   --color-surface-sunken: #f7f6fb;
   --color-glass: rgb(255 255 255 / 0.85);
-  --color-overlay: rgb(20 16 48 / 0.45);
+  --color-overlay: rgb(24 14 64 / 0.5);
   --color-border: #eaedf1;
   --color-border-strong: #cfd5de;
   /* The soft separator between table rows. */
@@ -42,14 +42,19 @@
   --color-brand-soft: #f0edf7;
   --color-brand-text: #694baf;
 
+  /* The gold accent: the current module in the top bar, small highlights. */
+  --color-gold: #e0a526;
+  --color-gold-soft: rgb(224 165 38 / 0.14);
+  --color-gold-text: #8a5a00;
+
   /* The full-width top bar (solid violet) and its parts. */
   --color-topbar: #694baf;
-  --color-topbar-to: #694baf;
+  --color-topbar-to: #7d5fc8;
   --color-topbar-fg: #ffffff;
   --color-topbar-muted: rgb(255 255 255 / 0.88);
-  --color-topbar-subtle: #b4a5d7;
-  --color-topbar-pill: rgb(255 255 255 / 0.2);
-  --color-topbar-hover: rgb(255 255 255 / 0.12);
+  --color-topbar-subtle: #c3b6ee;
+  --color-topbar-pill: rgb(255 255 255 / 0.22);
+  --color-topbar-hover: rgb(255 255 255 / 0.13);
   --color-topbar-chip: #ffffff;
   --color-topbar-chip-fg: #694baf;
 
@@ -61,6 +66,18 @@
   --color-primary-soft: #f0edf7;
   --color-accent: #0e7490;
   --color-accent-soft: rgb(14 116 144 / 0.1);
+
+  /* ---- One accent colour per module: the marker of its menu, its page titles and its icons ---- */
+  --color-module-dashboard: #694baf;
+  --color-module-clients: #0d9488;
+  --color-module-time: #2563eb;
+  --color-module-jobs: #4f46e5;
+  --color-module-expenses: #db2777;
+  --color-module-wip: #d97706;
+  --color-module-billing: #059669;
+  --color-module-reports: #0891b2;
+  --color-module-team: #c026d3;
+  --color-module-settings: #64748b;
 
   /* ---- Status (style guide: success, warning, danger, info with 10% tints) ---- */
   --color-success: #069668;
@@ -134,8 +151,8 @@
   --color-aurora-3: rgb(160 140 255 / 0.18);
 
   /* ---- Gradients ---- */
-  --gradient-primary: linear-gradient(135deg, #694baf 0%, #5a3f9c 100%);
-  --gradient-topbar: linear-gradient(90deg, #694baf 0%, #694baf 100%);
+  --gradient-primary: linear-gradient(135deg, #7556bd 0%, #5a3f9c 100%);
+  --gradient-topbar: linear-gradient(100deg, #4b3585 0%, #694baf 50%, #7d5fc8 100%);
   --gradient-border: linear-gradient(135deg, rgb(107 78 219 / 0.55) 0%, rgb(94 67 208 / 0.2) 100%);
   --gradient-surface: linear-gradient(
     180deg,
@@ -147,8 +164,8 @@
   /* ---- Shadows: the card shadow and the floating shadow of the style guide ---- */
   --shadow-sm: 0 0 0 rgb(0 0 0 / 0);
   --shadow-card: 0 0 10px rgb(0 0 0 / 0.05);
-  --shadow-md: 0 2px 10px rgb(0 0 0 / 0.2);
-  --shadow-lg: 0 2px 10px rgb(0 0 0 / 0.2);
+  --shadow-md: 0 4px 14px -2px rgb(40 24 100 / 0.22);
+  --shadow-lg: 0 18px 44px -14px rgb(40 24 100 / 0.38);
   --shadow-glow-primary: 0 6px 16px -8px rgb(105 75 175 / 0.6);
   --shadow-glow-focus: 0 0 0 2px var(--color-bg), 0 0 0 4px rgb(105 75 175 / 0.7);
 
@@ -253,6 +270,21 @@
   --color-brand-soft: rgb(123 98 234 / 0.18);
   --color-brand-text: #b3a4ff;
 
+  --color-gold: #f0be4a;
+  --color-gold-soft: rgb(240 190 74 / 0.16);
+  --color-gold-text: #f5d27a;
+
+  --color-module-dashboard: #9b87f5;
+  --color-module-clients: #2dd4bf;
+  --color-module-time: #60a5fa;
+  --color-module-jobs: #818cf8;
+  --color-module-expenses: #f472b6;
+  --color-module-wip: #fbbf24;
+  --color-module-billing: #34d399;
+  --color-module-reports: #22d3ee;
+  --color-module-team: #e879f9;
+  --color-module-settings: #94a3b8;
+
   --color-topbar: #3d2c8c;
   --color-topbar-to: #33257a;
   --color-topbar-chip: #efedf8;
@@ -319,7 +351,7 @@
   --color-avatar-8: rgb(148 163 184 / 0.2);
   --color-avatar-8-fg: #e2e8f0;
 
-  --gradient-topbar: linear-gradient(90deg, #3d2c8c 0%, #33257a 100%);
+  --gradient-topbar: linear-gradient(100deg, #1f1456 0%, #3d2c8c 52%, #5a3fc4 100%);
   --gradient-surface: linear-gradient(
     180deg,
     rgb(255 255 255 / 0.04) 0%,
@@ -328,7 +360,7 @@
   --gradient-text: linear-gradient(120deg, #c4b5fd 0%, #93b4ff 100%);
 
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 20px -12px rgb(0 0 0 / 0.5);
   --shadow-md: 0 6px 18px -4px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.4);
   --shadow-lg: 0 24px 60px -16px rgb(0 0 0 / 0.65), 0 8px 20px -8px rgb(0 0 0 / 0.5);
   --shadow-glow-focus: 0 0 0 2px var(--color-bg), 0 0 0 4px rgb(155 135 245 / 0.85);

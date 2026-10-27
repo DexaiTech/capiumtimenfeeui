@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 
 import type { DataTableColumn } from '@/components/ui';
+import { ClientName } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { cn } from '@/utils/cn';
 import { formatMoney } from '@/utils/money';
@@ -58,14 +59,12 @@ export function invoiceColumns({
       header: 'Client',
       sortable: true,
       sortValue: (invoice) => invoice.client?.name ?? '',
-      cell: (invoice) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-text">{invoice.client?.name ?? '—'}</span>
-          {invoice.client ? (
-            <span className="text-xs text-text-muted">{invoice.client.code}</span>
-          ) : null}
-        </div>
-      ),
+      cell: (invoice) =>
+        invoice.client ? (
+          <ClientName name={invoice.client.name} code={invoice.client.code} />
+        ) : (
+          <span className="text-text-muted">—</span>
+        ),
     },
     {
       id: 'date',
@@ -82,7 +81,8 @@ export function invoiceColumns({
       sortValue: (invoice) => invoice.due_date ?? '',
       className: 'whitespace-nowrap',
       cell: (invoice) => {
-        const late = invoice.display_status === 'overdue' ? daysOverdue(invoice.due_date, today) : 0;
+        const late =
+          invoice.display_status === 'overdue' ? daysOverdue(invoice.due_date, today) : 0;
         return (
           <div className="flex flex-col">
             <span>{dateCell(invoice.due_date)}</span>

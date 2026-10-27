@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 
-import type { DataTableColumn } from '@/components/ui';
+import { InitialsAvatar, type DataTableColumn } from '@/components/ui';
 import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
@@ -18,9 +18,8 @@ export interface SummaryColumnsOptions {
   canBill?: boolean;
 }
 
-const amount = (pence: number, currency: string) => (
-  <span className="text-text tabular-nums">{formatMoney(pence, currency)}</span>
-);
+// A plain string: the grid colours it by its column (time, fixed fee, expense, total).
+const amount = (pence: number, currency: string) => formatMoney(pence, currency);
 
 const oldest = (row: WipGroupRow) =>
   row.oldest_date ? (
@@ -44,22 +43,28 @@ function nameColumn({ slug, group }: SummaryColumnsOptions): DataTableColumn<Wip
       const detail = secondary(row);
       const content = (
         <>
-          <span className="truncate font-semibold text-text" title={row.name}>
-            {row.name}
+          <InitialsAvatar name={row.name} size="sm" />
+          <span className="flex min-w-0 flex-col gap-[3px]">
+            <span
+              className={`truncate text-xs font-semibold text-text${group === 'client' ? ' uppercase' : ''}`}
+              title={row.name}
+            >
+              {row.name}
+            </span>
+            {detail ? <span className="truncate text-2xs text-text-muted">{detail}</span> : null}
           </span>
-          {detail ? <span className="truncate text-xs text-text-muted">{detail}</span> : null}
         </>
       );
       return row.key ? (
         <Link
           to={`${modulePath(slug, ORG_SEGMENTS.wip, 'details')}?${meta.filter}=${encodeURIComponent(row.key)}`}
-          className="flex min-w-0 flex-col hover:text-brand-text"
+          className="flex min-w-0 items-center gap-1.5 hover:text-brand-text"
           aria-label={`${row.name}: see the WIP items`}
         >
           {content}
         </Link>
       ) : (
-        <div className="flex min-w-0 flex-col">{content}</div>
+        <div className="flex min-w-0 items-center gap-1.5">{content}</div>
       );
     },
   };
@@ -107,7 +112,7 @@ export function summaryColumns(options: SummaryColumnsOptions): DataTableColumn<
       header: 'Hours',
       align: 'end',
       className: 'whitespace-nowrap',
-      cell: (row) => <span className="text-text tabular-nums">{row.hours}</span>,
+      cell: (row) => row.hours,
     },
     {
       id: 'oldest',
@@ -122,11 +127,8 @@ export function summaryColumns(options: SummaryColumnsOptions): DataTableColumn<
       align: 'end',
       sortable: true,
       className: 'whitespace-nowrap',
-      cell: (row) => (
-        <span className="text-text tabular-nums">
-          {formatMoney(row.ages.days_90_plus, currency)} ({shareText(row.over_90_bp)})
-        </span>
-      ),
+      cell: (row) =>
+        `${formatMoney(row.ages.days_90_plus, currency)} (${shareText(row.over_90_bp)})`,
     },
     {
       id: 'items',

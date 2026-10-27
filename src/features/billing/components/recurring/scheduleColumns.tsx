@@ -1,6 +1,6 @@
 import { TriangleAlert } from 'lucide-react';
 
-import { Badge, type DataTableColumn } from '@/components/ui';
+import { Badge, type DataTableColumn, ClientName } from '@/components/ui';
 import { formatMoney } from '@/utils/money';
 
 import { SCHEDULE_FREQUENCY_LABELS } from '../../constants';
@@ -40,14 +40,12 @@ export function scheduleColumns({
     {
       id: 'client',
       header: 'Client',
-      cell: (schedule) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-text">{schedule.client?.name ?? '—'}</span>
-          {schedule.client ? (
-            <span className="text-xs text-text-muted">{schedule.client.code}</span>
-          ) : null}
-        </div>
-      ),
+      cell: (schedule) =>
+        schedule.client ? (
+          <ClientName name={schedule.client.name} code={schedule.client.code} />
+        ) : (
+          <span className="text-text-muted">—</span>
+        ),
     },
     {
       id: 'frequency',

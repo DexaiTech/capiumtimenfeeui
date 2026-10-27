@@ -19,7 +19,9 @@ const outline =
   'border border-border bg-surface text-text-muted hover:border-border-strong hover:bg-surface-hover hover:text-text';
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-brand font-semibold text-brand-fg hover:bg-brand-hover active:bg-brand-strong',
+  primary:
+    'bg-gradient-primary bg-brand font-semibold text-brand-fg shadow-glow-primary ' +
+    'hover:brightness-110 active:brightness-95',
   secondary: outline,
   outline,
   'brand-outline':

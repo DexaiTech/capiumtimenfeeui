@@ -99,7 +99,7 @@ describe('TopBar', () => {
     expect(hrefOf('Clients')).toBe('/acme/clients');
     expect(hrefOf('Time')).toBe('/acme/time');
     expect(hrefOf('Work in Progress')).toBe('/acme/wip');
-    expect(hrefOf('Billing & Fees')).toBe('/acme/billing/prepare');
+    expect(hrefOf('Billing & Fees')).toBe('/acme/billing/invoices');
     expect(hrefOf('Team & Rates')).toBe('/acme/team/staff');
     expect(hrefOf('Settings')).toBe('/acme/settings/general');
   });
@@ -157,8 +157,8 @@ describe('TopBar', () => {
       'Team Timesheets',
       'Timesheet Approvals',
     ]);
+    // Creating an invoice is a button on Invoices, not a page of the menu.
     expect(labels(ownerContext.permissions, 'billing')).toEqual([
-      'Create Invoice',
       'Invoices',
       'Credit Notes',
       'Recurring Invoices',

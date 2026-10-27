@@ -4,6 +4,7 @@ import { Fragment, useId, useState, type ReactNode } from 'react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/utils/cn';
 
+import { styleCell } from './cellStyle';
 import { Skeleton } from './Skeleton';
 
 export type SortDirection = 'asc' | 'desc';
@@ -204,7 +205,7 @@ export function Table<TRow>({
                       <div className="flex min-w-0 flex-col gap-1">
                         {titleColumns.map((column) => (
                           <div key={column.id} className="min-w-0">
-                            {column.cell(row)}
+                            {styleCell(column.header, column.cell(row))}
                           </div>
                         ))}
                       </div>
@@ -216,7 +217,9 @@ export function Table<TRow>({
                       {fieldColumns.map((column) => (
                         <Fragment key={column.id}>
                           <dt className="text-xs font-medium text-text-muted">{column.header}</dt>
-                          <dd className="min-w-0 text-sm text-text">{column.cell(row)}</dd>
+                          <dd className="min-w-0 text-sm text-text">
+                            {styleCell(column.header, column.cell(row))}
+                          </dd>
                         </Fragment>
                       ))}
                     </dl>
@@ -336,17 +339,19 @@ export function Table<TRow>({
               return (
                 <Fragment key={key}>
                   <tr className="transition-colors duration-fast ease-standard hover:bg-brand/5">
-                    {columns.map((column) => (
+                    {columns.map((column, columnIndex) => (
                       <td
                         key={column.id}
                         className={cn(
-                          'px-4 py-3 align-middle text-text',
+                          'h-[57px] px-4 py-2 align-middle',
+                          // The first column is the name of the row, in the strong colour.
+                          columnIndex === 0 ? 'text-text' : 'text-text-muted',
                           cellBorder,
                           column.align === 'end' && 'text-right',
                           column.className,
                         )}
                       >
-                        {column.cell(row)}
+                        {styleCell(column.header, column.cell(row))}
                       </td>
                     ))}
                     {expansion ? (

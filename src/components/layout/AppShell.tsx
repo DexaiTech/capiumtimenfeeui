@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
+import type { CSSProperties } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
 import { pageTransition } from '@/components/common/motion';
+import { moduleIdForPath } from '@/constants/navigation';
 import type { User } from '@/types/models';
 
 import { MobileDrawer } from './MobileDrawer';
@@ -26,10 +28,15 @@ export function AppShell({ user, onLogout, shell }: AppShellProps) {
   const location = useLocation();
   // Animate once per module (/:slug/<module>), not on every sub-page change.
   const sectionKey = location.pathname.split('/').slice(0, 3).join('/');
+  // The colour of the module being used: its menu marker and page titles pick it up.
+  const moduleId = moduleIdForPath(location.pathname);
+  const accent = (
+    moduleId ? { '--module-accent': `var(--color-module-${moduleId})` } : undefined
+  ) as CSSProperties | undefined;
 
   return (
     <ShellContext.Provider value={shell}>
-      <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg">
+      <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg" style={accent}>
         <a
           href="#main-content"
           className="sr-only z-[80] rounded-md bg-surface-raised px-4 py-2 text-sm font-medium text-text focus:not-sr-only focus:fixed focus:top-3 focus:left-3"

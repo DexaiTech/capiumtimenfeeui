@@ -1,4 +1,4 @@
-import { Badge, type DataTableColumn } from '@/components/ui';
+import { Badge, type DataTableColumn, ClientName } from '@/components/ui';
 import { cn } from '@/utils/cn';
 import { formatMoney } from '@/utils/money';
 
@@ -10,12 +10,16 @@ export interface StatementColumnOptions {
 }
 
 const money = (pence: number, currency: string) =>
-  pence === 0 ? <span className="text-text-subtle">—</span> : (
+  pence === 0 ? (
+    <span className="text-text-subtle">—</span>
+  ) : (
     <span className="tabular-nums text-text">{formatMoney(pence, currency)}</span>
   );
 
 /** The column ids are the API's `sort` values where the server sorts. */
-export function statementColumns({ currency }: StatementColumnOptions): DataTableColumn<StatementRow>[] {
+export function statementColumns({
+  currency,
+}: StatementColumnOptions): DataTableColumn<StatementRow>[] {
   return [
     {
       id: 'client',
@@ -23,14 +27,7 @@ export function statementColumns({ currency }: StatementColumnOptions): DataTabl
       sortable: true,
       hideable: false,
       className: 'min-w-44 max-w-72',
-      cell: (row) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-medium text-text" title={row.client.name}>
-            {row.client.name}
-          </span>
-          <span className="text-xs text-text-muted">{row.client.code}</span>
-        </div>
-      ),
+      cell: (row) => <ClientName name={row.client.name} code={row.client.code} />,
     },
     {
       id: 'outstanding',

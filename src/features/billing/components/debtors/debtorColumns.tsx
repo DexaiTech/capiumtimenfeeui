@@ -1,4 +1,5 @@
 import type { DataTableColumn } from '@/components/ui';
+import { ClientName } from '@/components/ui';
 import { cn } from '@/utils/cn';
 import { formatMoney } from '@/utils/money';
 
@@ -48,14 +49,7 @@ export function debtorColumns({ currency }: DebtorColumnOptions): DataTableColum
       sortable: true,
       hideable: false,
       className: 'min-w-44 max-w-72',
-      cell: (row) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-medium text-text" title={row.client.name}>
-            {row.client.name}
-          </span>
-          <span className="text-xs text-text-muted">{row.client.code}</span>
-        </div>
-      ),
+      cell: (row) => <ClientName name={row.client.name} code={row.client.code} />,
     },
     {
       id: 'total',

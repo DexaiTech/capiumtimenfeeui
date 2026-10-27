@@ -7,7 +7,7 @@ import { formatBasisPoints, formatMoney } from '@/utils/money';
 import type { ReportConfig } from '../config';
 import type { WipReportRow, WipReportTotals } from '../types';
 import { linkTo } from '../utils/format';
-import { date, money, named } from './cells';
+import { date, money, named, clientNamed } from './cells';
 
 const share = (part: number, whole: number) =>
   whole > 0 ? formatBasisPoints(Math.round((part / whole) * 10_000)) : '0%';
@@ -33,7 +33,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       sortable: true,
       sortValue: (row) => row.client_name,
       className: 'min-w-44 max-w-72',
-      cell: (row) => named(row.client_name, row.client_code),
+      cell: (row) => clientNamed(row.client_name, row.client_code),
     },
     {
       id: 'job',

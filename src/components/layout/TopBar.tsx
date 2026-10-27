@@ -56,7 +56,7 @@ export function TopBar({ user, onLogout }: TopBarProps) {
   );
 
   return (
-    <header className="sticky top-0 z-30 bg-topbar text-topbar-fg shadow-md">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-gradient-topbar bg-topbar text-topbar-fg shadow-md">
       <div className="flex h-15 w-full items-center gap-2 px-2 min-[400px]:gap-3 min-[400px]:px-3 sm:px-4 lg:gap-4 lg:px-6 2xl:px-8">
         {modules.length > 0 ? (
           <button

@@ -246,6 +246,18 @@ describe('practice route (/:orgSlug)', () => {
     expect(within(sidebar).queryByRole('link', { name: 'Create Invoice' })).not.toBeInTheDocument();
   });
 
+  it('has no Create Invoice entry in the Billing menu; Invoices stays marked while one is created', async () => {
+    mockOrganizations([contextWith(['invoice.read', 'invoice.create', 'client.read', 'wip.read'])]);
+    renderApp('/acme/billing/prepare');
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Billing & Fees pages' });
+    expect(within(sidebar).queryByRole('link', { name: 'Create Invoice' })).not.toBeInTheDocument();
+    expect(within(sidebar).getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
   it('shows the work in progress pages in a grouped sidebar with only the current page marked', async () => {
     mockOrganizations([contextWith(['wip.read'])]);
     renderApp('/acme/wip/details');

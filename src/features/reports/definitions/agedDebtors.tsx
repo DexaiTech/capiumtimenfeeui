@@ -6,7 +6,7 @@ import { formatBasisPoints, formatMoney } from '@/utils/money';
 import type { ReportConfig } from '../config';
 import type { AgedDebtorRow, AgedDebtorTotals } from '../types';
 import { linkTo, plural } from '../utils/format';
-import { count, date, money, named } from './cells';
+import { clientNamed, count, date, money } from './cells';
 
 const share = (part: number, whole: number) =>
   whole > 0 ? formatBasisPoints(Math.round((part / whole) * 10_000)) : '0%';
@@ -31,7 +31,7 @@ export const agedDebtorsReport: ReportConfig<AgedDebtorRow, AgedDebtorTotals> = 
       sortable: true,
       sortValue: (row) => row.client_name,
       className: 'min-w-44 max-w-72',
-      cell: (row) => named(row.client_name, row.client_code),
+      cell: (row) => clientNamed(row.client_name, row.client_code),
     },
     {
       id: 'invoices',

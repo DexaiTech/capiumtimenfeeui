@@ -3,6 +3,7 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 
 import { cn } from '@/utils/cn';
 
+import { styleCell } from './cellStyle';
 import { Skeleton } from './Skeleton';
 
 /** What inside a row handles its own clicks. */
@@ -30,6 +31,8 @@ export interface DataTableColumn<TRow> {
   className?: string;
   /** False for columns that cannot be hidden (the name). Default true. */
   hideable?: boolean;
+  /** Draw plain-text values as they are: no automatic pill or avatar. */
+  plain?: boolean;
 }
 
 export interface DataTableProps<TRow> {
@@ -319,17 +322,21 @@ export function DataTable<TRow>({
                           />
                         </td>
                       ) : null}
-                      {visible.map((column) => (
+                      {visible.map((column, columnIndex) => (
                         <td
                           key={column.id}
                           className={cn(
                             bodyCell,
-                            'text-text',
+                            'text-xs font-medium',
+                            // The first column is the name of the row, in the strong colour.
+                            columnIndex === 0 ? 'text-text' : 'text-text-muted',
                             alignClass(column.align),
                             column.className,
                           )}
                         >
-                          {column.cell(row)}
+                          {column.plain
+                            ? column.cell(row)
+                            : styleCell(column.header, column.cell(row))}
                         </td>
                       ))}
                       {rowActions ? (

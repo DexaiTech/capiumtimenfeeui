@@ -64,7 +64,7 @@ function DrawerPanel({ onClose }: { onClose: () => void }) {
         exit="hidden"
         className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col bg-surface shadow-lg"
       >
-        <div className="flex h-15 items-center justify-between gap-3 bg-topbar px-4 text-topbar-fg">
+        <div className="flex h-15 items-center justify-between gap-3 bg-gradient-topbar bg-topbar px-4 text-topbar-fg">
           <span className="flex min-w-0 items-center gap-2.5">
             <LogoMark tone="inverse" />
             <span className="flex min-w-0 flex-col leading-tight">

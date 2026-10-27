@@ -6,6 +6,7 @@ export { normaliseLink } from './richTextLink';
 export { plainTextToHtml } from './richTextPlain';
 export { PersonAvatar, type PersonAvatarProps } from './PersonAvatar';
 export { AvatarStack, type AvatarStackProps, type AvatarStackUser } from './AvatarStack';
+export { ClientName, type ClientNameProps } from './ClientName';
 export { Badge, type BadgeProps, type BadgeSize, type BadgeTone } from './Badge';
 export { Button, type ButtonProps } from './Button';
 export { buttonClasses, type ButtonSize, type ButtonVariant } from './buttonStyles';

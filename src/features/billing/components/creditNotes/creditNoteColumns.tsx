@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 
 import type { DataTableColumn } from '@/components/ui';
+import { ClientName } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { formatMoney } from '@/utils/money';
 
@@ -33,12 +34,12 @@ export function creditNoteColumns(slug: string, currency: string): DataTableColu
       header: 'Client',
       sortable: true,
       sortValue: (note) => note.client?.name ?? '',
-      cell: (note) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-text">{note.client?.name ?? '—'}</span>
-          {note.client ? <span className="text-xs text-text-muted">{note.client.code}</span> : null}
-        </div>
-      ),
+      cell: (note) =>
+        note.client ? (
+          <ClientName name={note.client.name} code={note.client.code} />
+        ) : (
+          <span className="text-text-muted">—</span>
+        ),
     },
     {
       id: 'invoice',

@@ -1,4 +1,4 @@
-import { Badge, type DataTableColumn } from '@/components/ui';
+import { Badge, type DataTableColumn, ClientName } from '@/components/ui';
 import { cn } from '@/utils/cn';
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
@@ -40,16 +40,7 @@ export function adjustmentColumns({
       header: 'Client',
       className: 'min-w-40 max-w-64',
       cell: (row) =>
-        row.client ? (
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate font-semibold text-text" title={row.client.name}>
-              {row.client.name}
-            </span>
-            <span className="truncate text-xs text-text-muted">{row.client.code}</span>
-          </div>
-        ) : (
-          dash
-        ),
+        row.client ? <ClientName name={row.client.name} code={row.client.code} /> : dash,
     },
     {
       id: 'job',

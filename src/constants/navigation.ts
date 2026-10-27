@@ -98,6 +98,8 @@ export interface SubPage extends AccessRule {
   detail?: boolean;
   /** Not offered in menus or search; the page and its address still exist. */
   hidden?: boolean;
+  /** Other segments this page's menu entry stays marked on (a hidden page that belongs to it). */
+  alsoActiveOn?: ReadonlyArray<string>;
   /** Groups the page under a heading in the "More" overflow menu; ungrouped pages get none. */
   group?: string;
   /** One line in plain words on what the page is for: the tooltip of its menu entry. */
@@ -141,6 +143,7 @@ interface PageDef {
   segment?: string;
   detail?: boolean;
   hidden?: boolean;
+  alsoActiveOn?: ReadonlyArray<string>;
   /** Groups the page under a heading in the "More" overflow menu; ungrouped pages get none. */
   group?: string;
 }
@@ -159,6 +162,7 @@ function pagesOf(
       segment,
       detail: def.detail,
       hidden: def.hidden,
+      alsoActiveOn: def.alsoActiveOn,
       group: def.group,
       description: PAGE_DESCRIPTIONS[`${moduleId}/${def.id}`],
       anyOf: def.anyOf ?? [],
@@ -499,6 +503,9 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         id: 'prepare',
         label: 'Create Invoice',
         icon: FilePlus2,
+        // Reached from the Invoices page ("Create invoice"), from Time Entries and from the
+        // quick-add menu; not a page of its own in the menu.
+        hidden: true,
         anyOf: [P.invoiceCreate],
         group: 'Invoicing',
       },
@@ -506,6 +513,8 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         id: 'invoices',
         label: 'Invoices',
         icon: FileText,
+        // Creating an invoice (the hidden "prepare" page) is a step of this page.
+        alsoActiveOn: ['prepare'],
         anyOf: [P.invoiceRead],
         group: 'Invoicing',
       },
@@ -862,7 +871,9 @@ export function activePageId(module: Pick<NavModule, 'pages'>, pathname: string)
   const rest = pathname.split('/').slice(3).filter(Boolean);
   const [first] = rest;
   const exact = module.pages.find((page) =>
-    page.segment === '' ? rest.length === 0 : page.segment === first,
+    page.segment === ''
+      ? rest.length === 0
+      : page.segment === first || (first !== undefined && page.alsoActiveOn?.includes(first)),
   );
   if (exact) return exact.id;
   return rest.length > 0 ? (module.pages.find((page) => page.detail)?.id ?? null) : null;

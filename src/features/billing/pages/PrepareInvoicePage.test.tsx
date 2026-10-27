@@ -13,6 +13,7 @@ import { harbour } from '../test/fixtures';
 import {
   createPrepareBackend,
   harbourSummary,
+  jobBilling,
   postsOf,
   prepareHandlers,
   timeItem,
@@ -20,6 +21,7 @@ import {
   type PrepareBackend,
 } from '../test/prepare';
 import { BILLING, renderBillingPage } from '../test/render';
+import type { JobBilling } from '../types';
 import PrepareInvoicePage from './PrepareInvoicePage';
 
 const PREPARE = `${BILLING}/prepare`;
@@ -567,39 +569,99 @@ describe('making the draft', () => {
 });
 
 describe('the billing summary', () => {
-  it('shows each job with its contract terms and the hours spent, before anything is chosen', async () => {
+  const jobsTable = async () => {
+    const element = await screen.findByRole('table', { name: 'Jobs of the client' });
+    return element;
+  };
+
+  it('lists each job with its terms and the hours spent, before anything is chosen', async () => {
     setup();
     await work();
+
+    const rows = rowsOf(await jobsTable());
+    expect(rows).toHaveLength(2);
+    // Most work ready to bill first.
+    expect(rows[0]).toHaveTextContent('Partnership accounts');
+    expect(rows[0]).toHaveTextContent('Fixed £2,400.00');
+    expect(rows[0]).toHaveTextContent('5:00');
+    expect(rows[1]).toHaveTextContent('Bookkeeping 2026/27');
+    expect(rows[1]).toHaveTextContent('Hourly');
+    expect(rows[1]).toHaveTextContent('7:00');
+    expect(rows[1]).toHaveTextContent('+1:00 awaiting approval');
+  });
+
+  it('totals the client above the jobs', async () => {
+    setup();
+    await work();
+
+    const totals = screen.getByLabelText('Totals for the client');
+    expect(totals).toHaveTextContent('Hours logged12:00');
+    expect(totals).toHaveTextContent('Ready to bill8:00');
+    expect(totals).toHaveTextContent('£2,394.00');
+  });
+
+  it('keeps the detailed figures behind Show/Hide Columns', async () => {
+    const user = userEvent.setup();
+    setup();
+    await work();
+
+    const table = await jobsTable();
+    expect(
+      within(table).queryByRole('columnheader', { name: /Non-billable/ }),
+    ).not.toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: /Actual cost/ })).toBeInTheDocument();
 
     const summary = screen.getByRole('region', { name: 'Billing summary' });
-    const books = within(summary).getByRole('group', { name: 'J00001 Bookkeeping 2026/27' });
-    expect(books).toHaveTextContent('Hourly at the rates agreed with the client');
-    expect(books).toHaveTextContent('Hours logged7:00');
-    expect(books).toHaveTextContent('Non-billable0:30');
-    expect(books).toHaveTextContent('1:00 awaiting approval');
-    const accounts = within(summary).getByRole('group', { name: 'J00003 Partnership accounts' });
-    expect(accounts).toHaveTextContent('Fixed fee of £2,400.00');
-    expect(accounts).toHaveTextContent('£400.00 billed');
+    await user.click(within(summary).getByRole('button', { name: 'Show/Hide Columns' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Time at company rates' }));
+
+    const books = rowsOf(table)[1] as HTMLElement;
+    expect(books).toHaveTextContent('£120.00');
   });
 
-  it('splits the value into company rates, contract rates, fixed fee and other costs', async () => {
-    setup();
+  it('shows five jobs at first, with search and a way to see the rest', async () => {
+    const user = userEvent.setup();
+    const summary = harbourSummary();
+    const template = summary.jobs[0] as JobBilling;
+    summary.jobs = Array.from({ length: 12 }, (_, index) => ({
+      ...template,
+      job_id: `j-${String(index)}`,
+      number: `J${String(100 + index)}`,
+      name: `Client job ${String(index + 1)}`,
+      breakdown: { ...template.breakdown, ready_minutes: index === 11 ? 600 : 0 },
+    }));
+    setup({ summary: { [harbour.id]: summary } });
     await work();
 
-    const books = screen.getByRole('group', { name: 'J00001 Bookkeeping 2026/27' });
-    expect(books).toHaveTextContent('Time at company rates£120.00');
-    expect(books).toHaveTextContent('Time at contract rates£240.00');
-    expect(books).toHaveTextContent('Other costs£34.00');
+    const table = await jobsTable();
+    expect(rowsOf(table)).toHaveLength(5);
+    // Sorted by work ready to bill: the one with work comes first.
+    expect(rowsOf(table)[0]).toHaveTextContent('Client job 12');
+    expect(screen.getByText('12 jobs')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show 7 more' }));
+    expect(rowsOf(await jobsTable())).toHaveLength(12);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search jobs' }), 'job 3');
+    expect(rowsOf(await jobsTable())).toHaveLength(1);
   });
 
-  it('keeps the actual cost, the budgeted cost and the agreed price apart', async () => {
-    setup();
+  it('can be limited to the jobs with work ready to bill', async () => {
+    const user = userEvent.setup();
+    const summary = harbourSummary();
+    const idle = jobBilling({
+      job_id: 'j-idle',
+      number: 'J00009',
+      name: 'Idle job',
+      breakdown: { ...(summary.jobs[0] as JobBilling).breakdown, ready_minutes: 0, other_costs: 0 },
+    });
+    summary.jobs = [...summary.jobs, idle];
+    setup({ summary: { [harbour.id]: summary } });
     await work();
 
-    const books = screen.getByRole('group', { name: 'J00001 Bookkeeping 2026/27' });
-    expect(books).toHaveTextContent('Actual cost£280.00');
-    expect(books).toHaveTextContent('Budgeted cost£300.00');
-    expect(books).toHaveTextContent('Agreed price£500.00');
+    expect(rowsOf(await jobsTable())).toHaveLength(3);
+    await user.click(screen.getByRole('button', { name: 'Work ready to bill only' }));
+    expect(rowsOf(await jobsTable())).toHaveLength(2);
   });
 
   it('shows the hours even when there is nothing to bill', async () => {
@@ -608,9 +670,7 @@ describe('the billing summary', () => {
     setup({ wip: { [harbour.id]: empty }, summary: { [harbour.id]: summary } });
 
     expect(await screen.findByText('Nothing to bill')).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'J00003 Partnership accounts' })).toHaveTextContent(
-      'Hours logged5:00',
-    );
+    expect(rowsOf(await jobsTable())[0]).toHaveTextContent('Partnership accounts');
   });
 
   it('offers the three bases with what each would bill', async () => {

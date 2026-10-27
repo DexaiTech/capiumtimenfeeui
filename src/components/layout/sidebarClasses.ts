@@ -6,7 +6,7 @@ export const sidebarLinkClasses = (active: boolean, tone: 'default' | 'danger' =
     'flex h-9 items-center gap-2.5 rounded-md px-3 text-sm font-medium whitespace-nowrap',
     'transition-colors duration-fast ease-standard',
     active
-      ? 'bg-brand-soft text-brand-text'
+      ? 'bg-brand-soft text-brand-text shadow-[inset_3px_0_0_0_var(--module-accent,var(--color-brand))]'
       : tone === 'danger'
         ? 'text-danger hover:bg-danger/10'
         : 'text-text-muted hover:bg-surface-hover hover:text-text',

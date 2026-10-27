@@ -1,4 +1,5 @@
 import type { DataTableColumn } from '@/components/ui';
+import { ClientName } from '@/components/ui';
 import { cn } from '@/utils/cn';
 import { formatMoney } from '@/utils/money';
 
@@ -42,14 +43,12 @@ export function estimateColumns({
     {
       id: 'client',
       header: 'Client',
-      cell: (estimate) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-text">{estimate.client?.name ?? '—'}</span>
-          {estimate.client ? (
-            <span className="text-xs text-text-muted">{estimate.client.code}</span>
-          ) : null}
-        </div>
-      ),
+      cell: (estimate) =>
+        estimate.client ? (
+          <ClientName name={estimate.client.name} code={estimate.client.code} />
+        ) : (
+          <span className="text-text-muted">—</span>
+        ),
     },
     {
       id: 'reference',

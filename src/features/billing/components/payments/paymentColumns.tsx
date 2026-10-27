@@ -1,4 +1,5 @@
 import type { DataTableColumn } from '@/components/ui';
+import { ClientName } from '@/components/ui';
 import { formatMoney } from '@/utils/money';
 
 import { PAYMENT_METHOD_LABELS } from '../../constants';
@@ -17,21 +18,21 @@ export function paymentColumns(currency: string): DataTableColumn<Payment>[] {
       hideable: false,
       sortValue: (payment) => payment.received_on,
       className: 'whitespace-nowrap',
-      cell: (payment) => <span className="font-semibold text-text">{dateCell(payment.received_on)}</span>,
+      cell: (payment) => (
+        <span className="font-semibold text-text">{dateCell(payment.received_on)}</span>
+      ),
     },
     {
       id: 'client',
       header: 'Client',
       sortable: true,
       sortValue: (payment) => payment.client?.name ?? '',
-      cell: (payment) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-text">{payment.client?.name ?? '—'}</span>
-          {payment.client ? (
-            <span className="text-xs text-text-muted">{payment.client.code}</span>
-          ) : null}
-        </div>
-      ),
+      cell: (payment) =>
+        payment.client ? (
+          <ClientName name={payment.client.name} code={payment.client.code} />
+        ) : (
+          <span className="text-text-muted">—</span>
+        ),
     },
     {
       id: 'amount',

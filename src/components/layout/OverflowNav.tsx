@@ -37,7 +37,7 @@ const itemClasses = (variant: OverflowNavProps['variant'], active: boolean) =>
     'transition-colors duration-fast ease-standard',
     variant === 'topbar'
       ? active
-        ? 'bg-topbar-pill text-topbar-fg'
+        ? 'bg-topbar-pill text-topbar-fg shadow-[inset_0_-2px_0_0_var(--color-gold)]'
         : 'text-topbar-muted hover:bg-topbar-hover hover:text-topbar-fg'
       : active
         ? 'bg-brand-soft text-brand-text'

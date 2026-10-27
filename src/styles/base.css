@@ -3,6 +3,57 @@
 
 @layer components {
   /*
+   * Headline figures (a <dl> of cards) are coloured tiles: a tint, a coloured top edge and a
+   * coloured figure, cycling through the palette so a row of them reads at a glance. A figure
+   * that sets its own colour (an overdue amount in red) keeps it: utilities come later.
+   */
+  #main-content dl > .rounded-xl:has(> dt) {
+    --tile: var(--color-brand);
+    border-top: 3px solid var(--tile);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tile) 9%, var(--color-surface)),
+      var(--color-surface) 70%
+    );
+  }
+  #main-content dl > .rounded-xl:has(> dt):nth-child(6n + 2) {
+    --tile: var(--color-success);
+  }
+  #main-content dl > .rounded-xl:has(> dt):nth-child(6n + 3) {
+    --tile: var(--color-warning);
+  }
+  #main-content dl > .rounded-xl:has(> dt):nth-child(6n + 4) {
+    --tile: var(--color-info);
+  }
+  #main-content dl > .rounded-xl:has(> dt):nth-child(6n + 5) {
+    --tile: var(--color-module-expenses);
+  }
+  #main-content dl > .rounded-xl:has(> dt):nth-child(6n + 6) {
+    --tile: var(--color-module-reports);
+  }
+  #main-content dl > .rounded-xl:has(> dt) > dd:first-of-type {
+    color: var(--tile);
+  }
+
+  /*
+   * Tables a page draws by hand (the week grid, the lines of an invoice, the history drawers)
+   * wear the same header and row hover as the shared grid.
+   */
+  table thead th {
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+  table tbody > tr:hover {
+    background-color: color-mix(in srgb, var(--color-brand) 5%, transparent);
+  }
+
+  /* The row under the pointer, or ticked, gets the violet marker of the style guide. */
+  tbody > tr:hover > td:first-child,
+  tbody > tr[aria-selected='true'] > td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--module-accent, var(--color-brand));
+  }
+
+  /*
    * A required field: a red star after its label. It is drawn by CSS, so the label's text (and the
    * control's accessible name) stay as written; the control carries aria-required for assistive
    * technology. The second `content` has empty alternative text where that is supported.
@@ -28,6 +79,13 @@
   body {
     min-height: 100dvh;
     background-color: var(--color-bg);
+    /* A soft wash of the brand colour under the top bar. */
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-brand) 7%, transparent) 0,
+      transparent 420px
+    );
+    background-repeat: no-repeat;
     color: var(--color-text);
     font-family: var(--font-sans);
     font-size: var(--text-sm);
@@ -60,6 +118,25 @@
     flex: 1 1 auto;
     flex-direction: column;
     justify-content: center;
+  }
+
+  /* The title of a page carries the colour of its module. */
+  #main-content h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  #main-content h1::before {
+    content: '';
+    flex: none;
+    width: 4px;
+    height: 1.1em;
+    border-radius: 2px;
+    background: linear-gradient(
+      180deg,
+      var(--module-accent, var(--color-brand)),
+      color-mix(in srgb, var(--module-accent, var(--color-brand)) 45%, white)
+    );
   }
 
   /* One visible focus ring everywhere; it is never removed. */

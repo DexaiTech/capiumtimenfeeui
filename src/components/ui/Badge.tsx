@@ -52,7 +52,8 @@ const tones: Record<BadgeTone, string> = {
 };
 
 const sizes: Record<BadgeSize, string> = {
-  sm: 'h-5 px-2 text-2xs',
+  // The pill of the Clients grid: 22 px high, 10 px text.
+  sm: 'h-[22px] px-[7px] text-2xs',
   md: 'h-[22px] px-2.5 text-2xs',
 };
 

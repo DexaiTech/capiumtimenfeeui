@@ -33,7 +33,7 @@ export function SegmentedControl<TValue extends string = string>({
       role="group"
       aria-label={label}
       className={cn(
-        'inline-flex min-h-11 max-w-full shrink-0 flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 md:min-h-10',
+        'inline-flex min-h-11 max-w-full shrink-0 flex-wrap items-center gap-0.5 rounded-md border border-brand/20 bg-brand-soft p-0.5 md:min-h-10',
         className,
       )}
     >
@@ -51,8 +51,8 @@ export function SegmentedControl<TValue extends string = string>({
               'inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-sm px-2.5 text-sm font-medium md:h-9',
               'transition-colors duration-fast ease-standard',
               selected
-                ? 'bg-primary-soft text-text'
-                : 'text-text-muted hover:bg-surface-hover hover:text-text',
+                ? 'bg-brand text-brand-fg shadow-glow-primary'
+                : 'text-brand-text hover:bg-surface/70',
             )}
           >
             {option.icon}

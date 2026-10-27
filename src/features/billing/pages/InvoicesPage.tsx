@@ -487,7 +487,7 @@ function InvoiceList() {
                   className={buttonClasses({ variant: 'primary', size: 'sm' })}
                 >
                   <FilePlus2 aria-hidden="true" className="size-4" />
-                  Prepare invoice
+                  Create invoice
                 </Link>
               ) : undefined
             }
@@ -522,7 +522,7 @@ function InvoiceList() {
               action={
                 can(P.invoiceCreate) ? (
                   <Link to={prepareLink} className={buttonClasses({ variant: 'primary' })}>
-                    Prepare invoice
+                    Create invoice
                   </Link>
                 ) : undefined
               }

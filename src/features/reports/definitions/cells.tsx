@@ -1,3 +1,4 @@
+import { ClientName } from '@/components/ui';
 import type { ReactNode } from 'react';
 
 import { formatUkDate } from '@/utils/dates';
@@ -31,6 +32,11 @@ export function count(value: number): ReactNode {
 
 export function date(value: string | null | undefined): ReactNode {
   return value ? <span className="text-text">{formatUkDate(value)}</span> : dash;
+}
+
+/** A client with its code under the name, drawn as the Clients grid draws it. */
+export function clientNamed(name: string, code?: string | null): ReactNode {
+  return <ClientName name={name} code={code} />;
 }
 
 /** A name with its code (client code, job number) under it. */

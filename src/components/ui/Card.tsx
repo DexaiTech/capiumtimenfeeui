@@ -58,12 +58,12 @@ export function CardHeader({ title, description, actions, className }: CardHeade
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 border-b border-row-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between',
+        'flex flex-col gap-3 rounded-t-xl border-b border-border bg-brand-soft/70 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between',
         className,
       )}
     >
       <div className="flex min-w-0 flex-col gap-0.5">
-        <h2 className="text-sm font-semibold text-text">{title}</h2>
+        <h2 className="text-sm font-semibold text-brand-strong dark:text-text">{title}</h2>
         {description ? <p className="text-xs text-text-muted">{description}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

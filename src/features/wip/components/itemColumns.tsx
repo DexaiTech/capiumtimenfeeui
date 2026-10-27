@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 
-import { Badge, type DataTableColumn } from '@/components/ui';
+import { Badge, type DataTableColumn, ClientName } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
@@ -44,12 +44,7 @@ export function itemColumns({
       className: 'min-w-40 max-w-64',
       cell: (item) =>
         item.client ? (
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate font-semibold text-text" title={item.client.name}>
-              {item.client.name}
-            </span>
-            <span className="truncate text-xs text-text-muted">{item.client.code}</span>
-          </div>
+          <ClientName name={item.client.name} code={item.client.code} />
         ) : (
           <span className="text-text-muted">—</span>
         ),
