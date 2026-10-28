@@ -338,7 +338,7 @@ export function Table<TRow>({
               const cellBorder = last && !expanded ? null : 'border-b border-border';
               return (
                 <Fragment key={key}>
-                  <tr className="transition-colors duration-fast ease-standard hover:bg-brand/5">
+                  <tr className="row-glow">
                     {columns.map((column, columnIndex) => (
                       <td
                         key={column.id}
@@ -395,7 +395,7 @@ export function Table<TRow>({
   return (
     <div
       className={cn(
-        'min-w-0 flex-1 rounded-xl border border-border bg-surface shadow-card',
+        'list-card min-w-0 flex-1 rounded-xl bg-surface',
         // `clip` rounds the corners but, unlike `hidden`, is not a scroll container, so a sticky
         // header still sticks to the page.
         stickyHeader ? 'overflow-clip' : 'overflow-hidden',

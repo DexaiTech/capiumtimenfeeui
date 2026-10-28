@@ -190,7 +190,7 @@ export function DataTable<TRow>({
       {toolbar}
       <div
         className={cn(
-          'flex flex-1 flex-col rounded-xl border border-border bg-surface shadow-card',
+          'list-card flex flex-1 flex-col rounded-xl bg-surface',
           // `clip` still rounds the corners but, unlike `hidden`, is not a scroll container.
           stickyHeader ? 'overflow-clip' : 'overflow-hidden',
         )}
@@ -301,7 +301,7 @@ export function DataTable<TRow>({
                       onClick={onRowClick ? onRowPointer(row) : undefined}
                       onKeyDown={onRowClick ? onRowKeyDown(row) : undefined}
                       className={cn(
-                        'transition-colors duration-fast ease-standard hover:bg-brand/5',
+                        'row-glow',
                         isSelected && 'bg-brand/5',
                         onRowClick && 'cursor-pointer',
                       )}

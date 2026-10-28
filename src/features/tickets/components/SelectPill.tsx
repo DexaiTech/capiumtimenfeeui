@@ -53,7 +53,7 @@ function SelectPill<TValue extends string>({
   const pill = (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full font-medium whitespace-nowrap',
+        'pill-glow inline-flex items-center gap-1.5 rounded-full font-medium whitespace-nowrap',
         size === 'sm' ? 'h-6 px-2.5 text-2xs' : 'h-8 px-3 text-xs',
         current.tone.soft,
         current.tone.text,

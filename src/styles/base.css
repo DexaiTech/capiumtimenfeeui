@@ -251,3 +251,38 @@
   pointer-events: none;
   color: var(--color-text-subtle, var(--color-text-muted));
 }
+
+/*
+ * Glow, used sparingly: status pills, list rows on hover and the lifted list cards. The pill glow
+ * follows the pill's own text colour, so every tone glows in its own hue.
+ */
+.pill-glow {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, currentColor 26%, transparent),
+    0 2px 9px -2px color-mix(in srgb, currentColor 45%, transparent);
+}
+.row-glow {
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+.row-glow:hover,
+.row-glow:focus-visible {
+  position: relative;
+  z-index: 1;
+  background-color: color-mix(in srgb, var(--color-brand) 7%, var(--color-surface));
+  box-shadow:
+    inset 3px 0 0 var(--color-brand),
+    0 6px 18px -8px color-mix(in srgb, var(--color-brand) 55%, transparent);
+}
+.list-card {
+  border: 1px solid color-mix(in srgb, var(--color-brand) 10%, var(--color-border));
+  box-shadow:
+    0 4px 18px -6px color-mix(in srgb, var(--color-brand) 28%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-brand) 4%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-glow {
+    transition: none;
+  }
+}

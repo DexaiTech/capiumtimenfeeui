@@ -17,10 +17,10 @@
   --color-black: #000000;
 
   /* ---- Surfaces and text (light, default) ---- */
-  --color-bg: #fbfafd;
+  --color-bg: #f7f5fd;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
-  --color-surface-hover: #f5f3fa;
+  --color-surface-hover: #f1edfc;
   --color-surface-sunken: #f7f6fb;
   --color-glass: rgb(255 255 255 / 0.85);
   --color-overlay: rgb(24 14 64 / 0.5);
@@ -39,7 +39,7 @@
   --color-brand-hover: #5a3f9c;
   --color-brand-strong: #4b3585;
   --color-brand-fg: #ffffff;
-  --color-brand-soft: #f0edf7;
+  --color-brand-soft: #ece6fb;
   --color-brand-text: #694baf;
 
   /* The gold accent: the current module in the top bar, small highlights. */
@@ -63,7 +63,7 @@
   --color-primary-hover: #5a3f9c;
   --color-primary-fg: #ffffff;
   --color-primary-text: #694baf;
-  --color-primary-soft: #f0edf7;
+  --color-primary-soft: #ece6fb;
   --color-accent: #0e7490;
   --color-accent-soft: rgb(14 116 144 / 0.1);
 
@@ -81,31 +81,31 @@
 
   /* ---- Status (style guide: success, warning, danger, info with 10% tints) ---- */
   --color-success: #069668;
-  --color-success-soft: rgb(6 150 104 / 0.1);
+  --color-success-soft: rgb(6 150 104 / 0.15);
   --color-warning: #d97707;
-  --color-warning-soft: rgb(217 119 7 / 0.1);
+  --color-warning-soft: rgb(245 158 11 / 0.18);
   --color-danger: #ef4444;
-  --color-danger-soft: rgb(239 68 68 / 0.1);
+  --color-danger-soft: rgb(239 68 68 / 0.14);
   --color-danger-solid: #ef4444;
   --color-danger-solid-hover: #dc2626;
   --color-info: #2663eb;
-  --color-info-soft: rgb(38 99 235 / 0.1);
+  --color-info-soft: rgb(38 99 235 / 0.14);
 
   /* ---- Badges: the status hue on its 10% tint ("Limited", "Sole Trader", "Overdue", "Clear") ---- */
-  --color-badge-orange: #d97707;
-  --color-badge-orange-soft: rgb(217 119 7 / 0.1);
-  --color-badge-blue: #2663eb;
-  --color-badge-blue-soft: rgb(38 99 235 / 0.1);
+  --color-badge-orange: #e07000;
+  --color-badge-orange-soft: rgb(245 140 20 / 0.17);
+  --color-badge-blue: #1f5ce6;
+  --color-badge-blue-soft: rgb(38 99 235 / 0.15);
   --color-badge-red: #ef4444;
-  --color-badge-red-soft: rgb(239 68 68 / 0.1);
+  --color-badge-red-soft: rgb(239 68 68 / 0.15);
   --color-badge-amber: #d97707;
-  --color-badge-amber-soft: rgb(217 119 7 / 0.1);
-  --color-badge-green: #069668;
-  --color-badge-green-soft: rgb(6 150 104 / 0.1);
+  --color-badge-amber-soft: rgb(245 158 11 / 0.2);
+  --color-badge-green: #059062;
+  --color-badge-green-soft: rgb(16 185 129 / 0.17);
   --color-badge-violet: #694baf;
-  --color-badge-violet-soft: rgb(105 75 175 / 0.1);
+  --color-badge-violet-soft: rgb(124 92 220 / 0.15);
   --color-badge-grey: #5d7186;
-  --color-badge-grey-soft: rgb(93 113 134 / 0.1);
+  --color-badge-grey-soft: rgb(93 113 134 / 0.13);
   --color-badge-bronze: #975100;
   --color-badge-bronze-soft: rgb(151 81 0 / 0.1);
 
@@ -163,10 +163,10 @@
 
   /* ---- Shadows: the card shadow and the floating shadow of the style guide ---- */
   --shadow-sm: 0 0 0 rgb(0 0 0 / 0);
-  --shadow-card: 0 0 10px rgb(0 0 0 / 0.05);
+  --shadow-card: 0 2px 14px -2px rgb(105 75 175 / 0.14), 0 0 0 1px rgb(105 75 175 / 0.04);
   --shadow-md: 0 4px 14px -2px rgb(40 24 100 / 0.22);
   --shadow-lg: 0 18px 44px -14px rgb(40 24 100 / 0.38);
-  --shadow-glow-primary: 0 6px 16px -8px rgb(105 75 175 / 0.6);
+  --shadow-glow-primary: 0 6px 18px -6px rgb(105 75 175 / 0.75), 0 0 14px -4px rgb(125 95 200 / 0.45);
   --shadow-glow-focus: 0 0 0 2px var(--color-bg), 0 0 0 4px rgb(105 75 175 / 0.7);
 
   /* ---- Radii: control 5px, menu 8px, card 10px, pill ---- */

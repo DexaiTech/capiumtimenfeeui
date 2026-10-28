@@ -18,7 +18,7 @@ export function LoginPage() {
 
   return (
     <>
-      <AuthHeading title="Welcome back">Sign in to Capium Time &amp; Fees.</AuthHeading>
+      <AuthHeading title="Sign in">Use your Capium email and password.</AuthHeading>
       {notice ? (
         <p
           role="status"
