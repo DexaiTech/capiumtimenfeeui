@@ -15,6 +15,7 @@ import { toFormError } from '../../utils/errors';
 import { clientLabel } from '../../utils/format';
 import { DialogActions } from '../DialogActions';
 import { LineItemsEditor } from '../documents/LineItemsEditor';
+import { addDays, todayInZone } from '@/utils/dates';
 
 export interface EstimateFormPanelProps {
   open: boolean;
@@ -43,7 +44,10 @@ function EstimateForm({ estimate, onClose, onSaved }: Omit<EstimateFormPanelProp
     resolver: zodResolver(estimateSchema),
     defaultValues: {
       client_id: estimate?.client?.id ?? '',
-      expiry_date: estimate?.expiry_date ?? '',
+      // A new estimate is open for 30 days unless the person says otherwise.
+      expiry_date: estimate
+        ? (estimate.expiry_date ?? '')
+        : addDays(todayInZone(organization.timezone), 30),
       reference: estimate?.reference ?? '',
       notes: estimate?.notes ?? '',
       lines: estimate ? linesToValues(estimate.lines) : [emptyLine()],

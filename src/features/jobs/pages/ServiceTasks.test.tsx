@@ -78,6 +78,8 @@ describe('starting a job with the default tasks of its service', () => {
     setupList();
     const form = await openNewJob(user);
     await user.selectOptions(await within(form).findByLabelText('Service'), 'Payroll');
+    // The start date opens on today: empty it to see the hint for a job without one.
+    fireEvent.change(within(form).getByLabelText('Start date'), { target: { value: '' } });
     expect(
       await within(form).findByText(/Set a start date to give these tasks due dates/),
     ).toBeInTheDocument();

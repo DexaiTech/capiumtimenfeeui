@@ -27,6 +27,7 @@ import { BILLING_BASES, type Job } from '../types';
 import { toFormError } from '../utils/errors';
 import { jobLabel } from '../utils/format';
 import { DialogActions } from './DialogActions';
+import { todayInZone } from '@/utils/dates';
 
 const FIELDS = [
   'client_id',
@@ -73,7 +74,7 @@ interface JobFormProps extends Omit<JobFormPanelProps, 'open'> {
 }
 
 function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
-  const { can } = useOrg();
+  const { can, organization } = useOrg();
   const { toast } = useToast();
   const create = useCreateJob();
   const update = useUpdateJob();
@@ -91,7 +92,7 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
     formState: { errors, isDirty },
   } = useForm<JobValues>({
     resolver: zodResolver(jobSchema),
-    defaultValues: jobDefaults(job, clientId),
+    defaultValues: jobDefaults(job, clientId, todayInZone(organization.timezone)),
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } = useSubmitError<JobValues>({
     setError,

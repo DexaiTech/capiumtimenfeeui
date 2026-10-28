@@ -503,7 +503,8 @@ describe('ServicesCard', () => {
           service_id: PAYROLL?.id,
           fee: 123450,
           frequency: 'monthly',
-          start_date: null,
+          // A new service starts today (the practice's date) unless told otherwise.
+          start_date: expect.any(String) as string,
           end_date: null,
           is_active: true,
           auto_create_jobs: false,
@@ -646,7 +647,11 @@ describe('RatesCard', () => {
     await user.type(within(dialog).getByRole('textbox', { name: 'Rate per hour (£)' }), '95');
     await user.click(within(dialog).getByRole('button', { name: 'Add rate' }));
 
-    await waitFor(() => expect(posted).toEqual([{ user_id: null, hourly_rate: 9500 }]));
+    await waitFor(() =>
+      expect(posted).toEqual([
+        { user_id: null, hourly_rate: 9500, effective_from: expect.any(String) as string },
+      ]),
+    );
     expect(await screen.findByText('Rate added')).toBeInTheDocument();
   });
 

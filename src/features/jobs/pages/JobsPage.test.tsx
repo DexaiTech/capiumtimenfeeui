@@ -250,6 +250,8 @@ describe('starting a job', () => {
       name: 'Audit 2026',
       billing_basis: 'hourly',
       budget_fee: 200000,
+      // A new job starts today (the clock of this file is 2026-10-18).
+      start_date: '2026-10-18',
       status: 'planned',
     });
     expect(backend.jobs.at(-1)?.number).toBe('J00101');

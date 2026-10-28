@@ -55,7 +55,9 @@ function ClientRateForm({ target, onClose }: { target: ClientRateTarget; onClose
     formState: { errors },
   } = useForm<ClientRateFormValues>({
     resolver: zodResolver(clientRateFormSchema),
-    defaultValues: editing ? clientRateToForm(editing) : EMPTY_CLIENT_RATE_FORM,
+    defaultValues: editing
+      ? clientRateToForm(editing)
+      : { ...EMPTY_CLIENT_RATE_FORM, effective_from: todayInZone(organization.timezone) },
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
     useSubmitError<ClientRateFormValues>({ setError, fields: CLIENT_RATE_FORM_FIELDS });

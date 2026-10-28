@@ -4,6 +4,7 @@ import { cn } from '@/utils/cn';
 
 import { Field } from './Field';
 import { controlClasses, describedBy, fieldIds } from './fieldUtils';
+import { suggestPlaceholder } from './placeholders';
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: ReactNode;
@@ -25,6 +26,7 @@ export function Textarea({
   rows = 4,
   className,
   ref,
+  placeholder,
   ...rest
 }: TextareaProps) {
   const generatedId = useId();
@@ -48,6 +50,10 @@ export function Textarea({
         aria-required={required || undefined}
         aria-describedby={describedBy(ids, hint, error)}
         className={cn(controlClasses, 'min-h-24 resize-y px-3 py-2.5')}
+        placeholder={
+          placeholder ??
+          (rest.readOnly || rest.disabled ? undefined : suggestPlaceholder(label, 'text', true))
+        }
         {...rest}
       />
     </Field>

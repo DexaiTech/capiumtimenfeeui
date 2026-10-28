@@ -4,6 +4,7 @@ import { cn } from '@/utils/cn';
 
 import { Field } from './Field';
 import { controlClasses, describedBy, fieldIds } from './fieldUtils';
+import { suggestInputMode, suggestPlaceholder } from './placeholders';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label: ReactNode;
@@ -33,6 +34,8 @@ export function Input({
   className,
   ref,
   'aria-describedby': extraDescribedBy,
+  placeholder,
+  inputMode,
   ...rest
 }: InputProps) {
   const generatedId = useId();
@@ -72,6 +75,12 @@ export function Input({
             leftIcon ? 'pl-10' : null,
             rightSlot ? 'pr-12' : null,
           )}
+          // A hint and the right on-screen keyboard unless the form says otherwise.
+          placeholder={
+            placeholder ??
+            (rest.readOnly || rest.disabled ? undefined : suggestPlaceholder(label, rest.type))
+          }
+          inputMode={inputMode ?? suggestInputMode(rest.type)}
           {...rest}
         />
         {rightSlot ? (

@@ -33,6 +33,7 @@ import { RadioGroupField } from '../RadioGroupField';
 import { StaffFormFields } from './StaffFormFields';
 import type { TemporaryPassword } from './TemporaryPasswordDialog';
 import { DialogActions } from '../DialogActions';
+import { todayInZone } from '@/utils/dates';
 
 const FIELDS = [
   'full_name',
@@ -125,7 +126,7 @@ function AddStaffForm({
       hours_per_day: minutesToHours(organization.minutes_per_day),
       working_days: organization.working_days,
       target_percent: '',
-      start_date: '',
+      start_date: todayInZone(organization.timezone),
       leaving_date: '',
       status: 'active',
       login: 'none',
@@ -134,7 +135,7 @@ function AddStaffForm({
       send_email: true,
       cost_rate: '',
       charge_rate: '',
-      rate_effective_from: '',
+      rate_effective_from: todayInZone(organization.timezone),
     },
   });
   const {

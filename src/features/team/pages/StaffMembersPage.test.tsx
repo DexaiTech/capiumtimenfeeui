@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -53,7 +53,10 @@ async function openAddDialog(user: User) {
 async function fillRequired(dialog: HTMLElement, user: User) {
   await user.type(within(dialog).getByRole('textbox', { name: 'Full name' }), 'Katherine Johnson');
   await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Grade' }), 'Senior');
-  await user.type(within(dialog).getByLabelText('Start date'), '2026-10-19');
+  // The start date opens on today; a date input is set, not typed into.
+  fireEvent.change(within(dialog).getByLabelText('Start date'), {
+    target: { value: '2026-10-19' },
+  });
 }
 
 function renderPage(options: Parameters<typeof renderInOrg>[1] = {}) {
@@ -560,7 +563,9 @@ describe('AddStaffPanel', () => {
       within(dialog).getByRole('textbox', { name: 'Charge-out rate (£/h)' }),
       '95.50',
     );
-    await user.type(within(dialog).getByLabelText('Rates start'), '2026-11-01');
+    fireEvent.change(within(dialog).getByLabelText('Rates start'), {
+      target: { value: '2026-11-01' },
+    });
     await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
 
     expect(await screen.findByText('Katherine Johnson added')).toBeInTheDocument();
@@ -660,6 +665,8 @@ describe('AddStaffPanel', () => {
     for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
       await user.click(within(dialog).getByRole('checkbox', { name: day }));
     }
+    // The start date opens on today: empty it to see it asked for.
+    fireEvent.change(within(dialog).getByLabelText('Start date'), { target: { value: '' } });
     await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
 
     expect(await within(dialog).findByText('Enter the full name')).toBeInTheDocument();

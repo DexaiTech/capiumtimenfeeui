@@ -70,7 +70,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
     resolver: zodResolver(engagementFormSchema),
     defaultValues: editing
       ? engagementToForm(editing, (pence) => penceToPoundsInput(pence, currency))
-      : EMPTY_ENGAGEMENT_FORM,
+      : { ...EMPTY_ENGAGEMENT_FORM, start_date: todayInZone(organization.timezone) },
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
     useSubmitError<EngagementFormValues>({ setError, fields: ENGAGEMENT_FORM_FIELDS });

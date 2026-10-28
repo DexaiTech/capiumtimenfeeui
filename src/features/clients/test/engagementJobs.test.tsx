@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -73,6 +73,8 @@ describe('EngagementFormPanel: automatic jobs', () => {
     const user = userEvent.setup();
     const dialog = await open(null);
     await user.click(within(dialog).getByRole('switch'));
+    // The start date opens on today: empty it to see it asked for.
+    fireEvent.change(within(dialog).getByLabelText('Start date'), { target: { value: '' } });
     await user.clear(within(dialog).getByLabelText(LEAD));
     await user.type(within(dialog).getByLabelText(LEAD), '400');
     await user.click(within(dialog).getByRole('button', { name: 'Add service' }));
@@ -90,7 +92,9 @@ describe('EngagementFormPanel: automatic jobs', () => {
       within(dialog).getByRole('combobox', { name: 'Frequency' }),
       'Monthly',
     );
-    await user.type(within(dialog).getByLabelText('Start date'), '2099-10-01');
+    fireEvent.change(within(dialog).getByLabelText('Start date'), {
+      target: { value: '2099-10-01' },
+    });
     await user.clear(within(dialog).getByLabelText(LEAD));
     await user.type(within(dialog).getByLabelText(LEAD), '6');
     expect(
@@ -139,7 +143,9 @@ describe('EngagementFormPanel: automatic jobs', () => {
       within(dialog).getByRole('combobox', { name: 'Frequency' }),
       'Monthly',
     );
-    await user.type(within(dialog).getByLabelText('Start date'), '2026-10-01');
+    fireEvent.change(within(dialog).getByLabelText('Start date'), {
+      target: { value: '2026-10-01' },
+    });
     await user.click(within(dialog).getByRole('switch'));
     await user.clear(within(dialog).getByLabelText(LEAD));
     await user.type(within(dialog).getByLabelText(LEAD), '6');
