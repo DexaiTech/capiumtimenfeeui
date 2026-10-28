@@ -674,7 +674,8 @@
 }
 
 .cc-col-action {
-  width: 71px;
+  /* Room for up to five 24px icon buttons (the actions of a client). */
+  width: 140px;
 }
 
 .cc-table th,

@@ -12,6 +12,8 @@ export interface RowActionsProps {
   items: ReadonlyArray<DropdownItem>;
   /** Shown instead of the buttons while the row is working ("Downloading…"). */
   status?: ReactNode;
+  /** `sm` for dense tables with a narrow actions column (the clients grid). */
+  size?: 'md' | 'sm';
   className?: string;
 }
 
@@ -23,7 +25,7 @@ function isAction(item: DropdownItem): item is DropdownActionItem {
  * The actions of a grid row as icon buttons in the row itself, each named by a tooltip and an
  * accessible label, so nothing hides behind a menu. A destructive action turns red on hover.
  */
-export function RowActions({ label, items, status, className }: RowActionsProps) {
+export function RowActions({ label, items, status, size = 'md', className }: RowActionsProps) {
   const actions = items.filter(isAction);
   if (actions.length === 0 && !status) return null;
   return (
@@ -46,7 +48,8 @@ export function RowActions({ label, items, status, className }: RowActionsProps)
                 disabled={action.disabled}
                 onClick={action.onSelect}
                 className={cn(
-                  'inline-flex size-8 items-center justify-center rounded-md text-text-muted',
+                  'inline-flex shrink-0 items-center justify-center rounded-md text-text-muted',
+                  size === 'sm' ? 'size-6' : 'size-7',
                   'transition-colors duration-fast ease-standard disabled:pointer-events-none disabled:opacity-45',
                   action.tone === 'danger'
                     ? 'hover:bg-danger-soft hover:text-danger'
@@ -54,7 +57,9 @@ export function RowActions({ label, items, status, className }: RowActionsProps)
                   'focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none',
                 )}
               >
-                {action.icon ?? <Icon aria-hidden="true" className="size-4" />}
+                {action.icon ?? (
+                  <Icon aria-hidden="true" className={size === 'sm' ? 'size-3.5' : 'size-4'} />
+                )}
               </button>
             );
           })}

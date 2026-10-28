@@ -117,7 +117,11 @@ export function ClientsGrid({
                     ) : null}
                   </span>
                 </span>
-                <RowActions label={`Actions for ${client.name}`} items={actionsFor(client)} />
+                <RowActions
+                  label={`Actions for ${client.name}`}
+                  items={actionsFor(client)}
+                  size="sm"
+                />
               </div>
               <dl>
                 <dt>Reg No</dt>

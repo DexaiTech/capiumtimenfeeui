@@ -334,6 +334,7 @@ export function ClientsTable({
                         <RowActions
                           label={`Actions for ${client.name}`}
                           items={actionsFor(client)}
+                          size="sm"
                         />
                       </td>
                     ) : null}
