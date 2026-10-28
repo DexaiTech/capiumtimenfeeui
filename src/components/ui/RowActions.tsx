@@ -57,7 +57,18 @@ export function RowActions({ label, items, status, size = 'md', className }: Row
                   'focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none',
                 )}
               >
-                {action.icon ?? (
+                {action.icon ? (
+                  // An icon the action brings is sized here, whatever size it was drawn at.
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'inline-flex items-center justify-center',
+                      size === 'sm' ? '[&>svg]:size-3.5' : '[&>svg]:size-4',
+                    )}
+                  >
+                    {action.icon}
+                  </span>
+                ) : (
                   <Icon aria-hidden="true" className={size === 'sm' ? 'size-3.5' : 'size-4'} />
                 )}
               </button>

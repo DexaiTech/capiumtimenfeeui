@@ -72,6 +72,32 @@ describe('RowActions', () => {
     );
     expect(screen.getByTestId('mine')).toBeInTheDocument();
   });
+
+  it('sizes an icon an action brings, however large it was drawn', () => {
+    const { rerender } = render(
+      <RowActions
+        label="Actions for Acme"
+        items={[
+          { id: 'x', label: 'Edit', icon: <svg width="24" height="24" />, onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    const wrapper = () => screen.getByRole('button', { name: 'Edit' }).firstElementChild;
+    expect(wrapper()?.className).toContain('[&>svg]:size-4');
+    expect(screen.getByRole('button', { name: 'Edit' }).className).toContain('size-7');
+
+    rerender(
+      <RowActions
+        label="Actions for Acme"
+        size="sm"
+        items={[
+          { id: 'x', label: 'Edit', icon: <svg width="24" height="24" />, onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    expect(wrapper()?.className).toContain('[&>svg]:size-3.5');
+    expect(screen.getByRole('button', { name: 'Edit' }).className).toContain('size-6');
+  });
 });
 
 describe('rowActionIcon', () => {
