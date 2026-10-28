@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import type { DataTableColumn } from '@/components/ui';
 import { ClientName } from '@/components/ui';
 import { formatMoney } from '@/utils/money';
@@ -41,7 +42,11 @@ export function paymentColumns(currency: string): DataTableColumn<Payment>[] {
       sortable: true,
       sortValue: (payment) => payment.amount,
       className: 'font-semibold tabular-nums',
-      cell: (payment) => money(payment.amount),
+      cell: (payment) => (
+        <MoneyTone kind="in" value={payment.amount}>
+          {money(payment.amount)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'method',
@@ -64,7 +69,11 @@ export function paymentColumns(currency: string): DataTableColumn<Payment>[] {
       header: 'Allocated',
       align: 'end',
       className: 'tabular-nums',
-      cell: (payment) => money(payment.allocated_total),
+      cell: (payment) => (
+        <MoneyTone kind="in" value={payment.allocated_total}>
+          {money(payment.allocated_total)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'unallocated',
@@ -73,7 +82,11 @@ export function paymentColumns(currency: string): DataTableColumn<Payment>[] {
       sortable: true,
       sortValue: (payment) => payment.unallocated,
       className: 'tabular-nums',
-      cell: (payment) => money(payment.unallocated),
+      cell: (payment) => (
+        <MoneyTone kind="in" value={payment.unallocated}>
+          {money(payment.unallocated)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'state',

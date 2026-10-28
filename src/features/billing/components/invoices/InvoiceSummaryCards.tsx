@@ -15,7 +15,7 @@ export function InvoiceSummaryCards({ summary, currency }: InvoiceSummaryCardsPr
   if (!summary) return null;
   const money = (pence: number) => formatMoney(pence, currency);
   const figures = [
-    { label: 'Outstanding', value: money(summary.outstanding), alert: false },
+    { label: 'Outstanding', value: money(summary.outstanding), alert: summary.outstanding > 0 },
     { label: 'Overdue', value: money(summary.overdue), alert: summary.overdue > 0 },
     { label: 'Awaiting approval', value: money(summary.awaiting_approval_gross), alert: false },
   ];

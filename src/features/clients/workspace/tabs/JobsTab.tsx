@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Briefcase, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
@@ -116,7 +117,11 @@ export function JobsTab({ clientId, clientName, overview }: JobsTabProps) {
       header: 'Billed',
       align: 'end',
       className: 'tabular-nums',
-      cell: (job) => formatMoney(job.billed_value, currency),
+      cell: (job) => (
+        <MoneyTone kind="in" value={job.billed_value}>
+          {formatMoney(job.billed_value, currency)}
+        </MoneyTone>
+      ),
     },
   ];
 

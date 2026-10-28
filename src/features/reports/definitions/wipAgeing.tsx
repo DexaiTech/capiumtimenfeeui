@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { DonutChart } from '@/components/charts';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -100,7 +101,11 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       sortable: true,
       sortValue: (row) => row.age_61_90,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.age_61_90, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.age_61_90}>
+          {money(row.age_61_90, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'age-91',
@@ -109,7 +114,11 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       sortable: true,
       sortValue: (row) => row.age_91_plus,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.age_91_plus, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.age_91_plus}>
+          {money(row.age_91_plus, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'oldest',

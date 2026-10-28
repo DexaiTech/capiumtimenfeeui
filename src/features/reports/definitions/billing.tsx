@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { BarChart } from '@/components/charts';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -77,7 +78,11 @@ export const billingReport: ReportConfig<BillingRow, BillingTotals> = {
       sortable: true,
       sortValue: (row) => row.credited_net,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.credited_net, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.credited_net}>
+          {money(row.credited_net, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'billed',
@@ -86,7 +91,11 @@ export const billingReport: ReportConfig<BillingRow, BillingTotals> = {
       sortable: true,
       sortValue: (row) => row.net_billed,
       className: 'whitespace-nowrap',
-      cell: (row) => <strong>{money(row.net_billed, currency)}</strong>,
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.net_billed}>
+          {<strong>{money(row.net_billed, currency)}</strong>}
+        </MoneyTone>
+      ),
     },
     {
       id: 'receipts',
@@ -95,7 +104,11 @@ export const billingReport: ReportConfig<BillingRow, BillingTotals> = {
       sortable: true,
       sortValue: (row) => row.receipts,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.receipts, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.receipts}>
+          {money(row.receipts, currency, false)}
+        </MoneyTone>
+      ),
     },
   ],
   stats: (totals, { currency }) => [

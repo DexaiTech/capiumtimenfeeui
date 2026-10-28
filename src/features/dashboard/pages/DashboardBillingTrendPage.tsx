@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { PageHeader } from '@/components/layout';
 import { SegmentedControl, Table, type TableColumn } from '@/components/ui';
 import { useDocumentTitle } from '@/hooks';
@@ -23,15 +24,46 @@ const COLUMNS: ReadonlyArray<TableColumn<BillingMonth>> = [
     align: 'end',
     cell: (row) => <span className="tabular-nums">{String(row.invoice_count)}</span>,
   },
-  { id: 'billed', header: 'Billed', align: 'end', cell: (row) => money(row.billed) },
+  {
+    id: 'billed',
+    header: 'Billed',
+    align: 'end',
+    cell: (row) => (
+      <MoneyTone kind="in" value={row.billed}>
+        {money(row.billed)}
+      </MoneyTone>
+    ),
+  },
   {
     id: 'credits',
     header: 'Credit notes',
     align: 'end',
-    cell: (row) => money(row.credit_notes),
+    cell: (row) => (
+      <MoneyTone kind="out" value={row.credit_notes}>
+        {money(row.credit_notes)}
+      </MoneyTone>
+    ),
   },
-  { id: 'net', header: 'Net billed', align: 'end', cell: (row) => money(row.net_billed) },
-  { id: 'receipts', header: 'Receipts', align: 'end', cell: (row) => money(row.receipts) },
+  {
+    id: 'net',
+    header: 'Net billed',
+    align: 'end',
+    cell: (row) => (
+      <MoneyTone kind="in" value={row.net_billed}>
+        {money(row.net_billed)}
+      </MoneyTone>
+    ),
+  },
+  {
+    id: 'receipts',
+    header: 'Receipts',
+    align: 'end',
+    cell: (row) => (
+      <MoneyTone kind="in" value={row.receipts}>
+        {money(row.receipts)}
+      </MoneyTone>
+    ),
+  },
 ];
 
 /**

@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Badge, type DataTableColumn, ClientName } from '@/components/ui';
 import { cn } from '@/utils/cn';
 import { formatMoney } from '@/utils/money';
@@ -34,14 +35,22 @@ export function statementColumns({
       header: 'Outstanding',
       align: 'end',
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.outstanding, currency),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.outstanding}>
+          {money(row.outstanding, currency)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'on_account',
       header: 'On account',
       align: 'end',
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.on_account, currency),
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.on_account}>
+          {money(row.on_account, currency)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'balance',

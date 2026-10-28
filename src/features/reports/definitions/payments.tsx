@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { BarChart } from '@/components/charts';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -51,7 +52,11 @@ export const paymentsReport: ReportConfig<PaymentReportRow, PaymentReportTotals>
       sortable: true,
       sortValue: (row) => row.received,
       className: 'whitespace-nowrap',
-      cell: (row) => <strong>{money(row.received, currency)}</strong>,
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.received}>
+          {<strong>{money(row.received, currency)}</strong>}
+        </MoneyTone>
+      ),
     },
     {
       id: 'allocated',
@@ -60,7 +65,11 @@ export const paymentsReport: ReportConfig<PaymentReportRow, PaymentReportTotals>
       sortable: true,
       sortValue: (row) => row.allocated,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.allocated, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.allocated}>
+          {money(row.allocated, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'on-account',
@@ -69,7 +78,11 @@ export const paymentsReport: ReportConfig<PaymentReportRow, PaymentReportTotals>
       sortable: true,
       sortValue: (row) => row.on_account,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.on_account, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.on_account}>
+          {money(row.on_account, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'void',

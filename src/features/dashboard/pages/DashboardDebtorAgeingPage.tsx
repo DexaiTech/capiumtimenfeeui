@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Link } from 'react-router';
 
 import { PageHeader } from '@/components/layout';
@@ -55,14 +56,36 @@ export default function DashboardDebtorAgeingPage() {
       align: 'end',
       cell: (row) => <span className="tabular-nums">{String(row.invoice_count)}</span>,
     },
-    { id: 'total', header: 'Owed', align: 'end', cell: (row) => money(row.total) },
-    { id: 'overdue', header: 'Overdue', align: 'end', cell: (row) => money(row.overdue) },
+    {
+      id: 'total',
+      header: 'Owed',
+      align: 'end',
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.total}>
+          {money(row.total)}
+        </MoneyTone>
+      ),
+    },
+    {
+      id: 'overdue',
+      header: 'Overdue',
+      align: 'end',
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.overdue}>
+          {money(row.overdue)}
+        </MoneyTone>
+      ),
+    },
     ...(['current', 'days_1_30', 'days_31_60', 'days_61_90', 'days_90_plus'] as const).map(
       (key): TableColumn<DebtorRow> => ({
         id: key,
         header: BUCKET_META[key].label,
         align: 'end',
-        cell: (row) => money(row[key]),
+        cell: (row) => (
+          <MoneyTone kind="out" value={row[key]}>
+            {money(row[key])}
+          </MoneyTone>
+        ),
       }),
     ),
     {

@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { DonutChart } from '@/components/charts';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -48,7 +49,11 @@ export const agedDebtorsReport: ReportConfig<AgedDebtorRow, AgedDebtorTotals> = 
       sortable: true,
       sortValue: (row) => row.current,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.current, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.current}>
+          {money(row.current, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'days-1',
@@ -57,7 +62,11 @@ export const agedDebtorsReport: ReportConfig<AgedDebtorRow, AgedDebtorTotals> = 
       sortable: true,
       sortValue: (row) => row.days_1_30,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.days_1_30, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.days_1_30}>
+          {money(row.days_1_30, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'days-31',
@@ -66,7 +75,11 @@ export const agedDebtorsReport: ReportConfig<AgedDebtorRow, AgedDebtorTotals> = 
       sortable: true,
       sortValue: (row) => row.days_31_60,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.days_31_60, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.days_31_60}>
+          {money(row.days_31_60, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'days-61',
@@ -75,7 +88,11 @@ export const agedDebtorsReport: ReportConfig<AgedDebtorRow, AgedDebtorTotals> = 
       sortable: true,
       sortValue: (row) => row.days_61_90,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.days_61_90, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.days_61_90}>
+          {money(row.days_61_90, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'days-91',
@@ -84,7 +101,11 @@ export const agedDebtorsReport: ReportConfig<AgedDebtorRow, AgedDebtorTotals> = 
       sortable: true,
       sortValue: (row) => row.days_90_plus,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.days_90_plus, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.days_90_plus}>
+          {money(row.days_90_plus, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'total',
@@ -93,7 +114,11 @@ export const agedDebtorsReport: ReportConfig<AgedDebtorRow, AgedDebtorTotals> = 
       sortable: true,
       sortValue: (row) => row.total,
       className: 'whitespace-nowrap',
-      cell: (row) => <strong>{money(row.total, currency)}</strong>,
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.total}>
+          {<strong>{money(row.total, currency)}</strong>}
+        </MoneyTone>
+      ),
     },
     {
       id: 'oldest',

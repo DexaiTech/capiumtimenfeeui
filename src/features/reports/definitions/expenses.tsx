@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { HorizontalBarList } from '@/components/charts';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -104,7 +105,11 @@ export const expensesReport: ReportConfig<ExpenseReportRow, ExpenseReportTotals>
       sortable: true,
       sortValue: (row) => row.recharge_amount,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.recharge_amount, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.recharge_amount}>
+          {money(row.recharge_amount, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'recharged',
@@ -113,7 +118,11 @@ export const expensesReport: ReportConfig<ExpenseReportRow, ExpenseReportTotals>
       sortable: true,
       sortValue: (row) => row.recharged_amount,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.recharged_amount, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.recharged_amount}>
+          {money(row.recharged_amount, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'reimburse',
@@ -122,7 +131,11 @@ export const expensesReport: ReportConfig<ExpenseReportRow, ExpenseReportTotals>
       sortable: true,
       sortValue: (row) => row.reimbursable,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.reimbursable, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.reimbursable}>
+          {money(row.reimbursable, currency, false)}
+        </MoneyTone>
+      ),
     },
   ],
   stats: (totals, { currency }) => [

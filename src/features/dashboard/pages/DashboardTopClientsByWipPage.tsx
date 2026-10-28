@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Link } from 'react-router';
 
 import { PageHeader } from '@/components/layout';
@@ -85,7 +86,11 @@ export default function DashboardTopClientsByWipPage() {
       id: 'over90',
       header: 'Over 90 days',
       align: 'end',
-      cell: (row) => <span className="tabular-nums">{formatMoney(row.over_90_days)}</span>,
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.over_90_days}>
+          {<span className="tabular-nums">{formatMoney(row.over_90_days)}</span>}
+        </MoneyTone>
+      ),
     },
     {
       id: 'share',

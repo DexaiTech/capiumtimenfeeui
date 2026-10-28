@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Receipt } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -86,7 +87,11 @@ export function ExpensesTab({ clientId, clientName, overview }: ExpensesTabProps
       sortable: true,
       sortValue: (expense) => expense.amount,
       className: 'whitespace-nowrap tabular-nums',
-      cell: (expense) => formatMoney(expense.amount, currency),
+      cell: (expense) => (
+        <MoneyTone kind="out" value={expense.amount}>
+          {formatMoney(expense.amount, currency)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'billable',

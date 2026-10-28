@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
@@ -51,7 +52,11 @@ export const recoveryReport: ReportConfig<RecoveryRow, RecoveryTotals> = {
       sortable: true,
       sortValue: (row) => row.billed_value,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.billed_value, currency),
+      cell: (row) => (
+        <MoneyTone kind="in" value={row.billed_value}>
+          {money(row.billed_value, currency)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'adjustment',
@@ -60,7 +65,11 @@ export const recoveryReport: ReportConfig<RecoveryRow, RecoveryTotals> = {
       sortable: true,
       sortValue: (row) => row.billing_adjustment,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.billing_adjustment, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="auto" value={row.billing_adjustment}>
+          {money(row.billing_adjustment, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'written-off',
@@ -69,7 +78,11 @@ export const recoveryReport: ReportConfig<RecoveryRow, RecoveryTotals> = {
       sortable: true,
       sortValue: (row) => row.written_off_value,
       className: 'whitespace-nowrap',
-      cell: (row) => money(row.written_off_value, currency, false),
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.written_off_value}>
+          {money(row.written_off_value, currency, false)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'recovery',

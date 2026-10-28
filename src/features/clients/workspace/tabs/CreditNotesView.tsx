@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { FileMinus2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
@@ -95,7 +96,11 @@ export function CreditNotesView({ clientId, clientName }: CreditNotesViewProps) 
       sortable: true,
       sortValue: (note) => note.gross_total,
       className: 'font-semibold tabular-nums',
-      cell: (note) => money(note.gross_total),
+      cell: (note) => (
+        <MoneyTone kind="out" value={note.gross_total}>
+          {money(note.gross_total)}
+        </MoneyTone>
+      ),
     },
   ];
 

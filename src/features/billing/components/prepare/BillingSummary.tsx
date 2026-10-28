@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { useMemo, useState } from 'react';
 
 import {
@@ -191,7 +192,11 @@ function columnsFor(
       header: 'Other costs',
       sortable: true,
       ...amount((job) => job.breakdown.other_costs),
-      cell: (job) => money(job.breakdown.other_costs),
+      cell: (job) => (
+        <MoneyTone kind="out" value={job.breakdown.other_costs}>
+          {money(job.breakdown.other_costs)}
+        </MoneyTone>
+      ),
     },
   ];
   if (showCost) {

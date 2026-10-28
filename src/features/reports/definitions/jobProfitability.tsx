@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { formatMinutes } from '@/utils/minutes';
@@ -71,7 +72,11 @@ export const jobProfitabilityReport: ReportConfig<JobProfitabilityRow, JobProfit
               sortable: true,
               sortValue: (row: JobProfitabilityRow) => row.cost_value,
               className: 'whitespace-nowrap',
-              cell: (row: JobProfitabilityRow) => money(row.cost_value, currency),
+              cell: (row: JobProfitabilityRow) => (
+                <MoneyTone kind="out" value={row.cost_value}>
+                  {money(row.cost_value, currency)}
+                </MoneyTone>
+              ),
             } as const,
           ]
         : []),
@@ -82,7 +87,11 @@ export const jobProfitabilityReport: ReportConfig<JobProfitabilityRow, JobProfit
         sortable: true,
         sortValue: (row) => row.billed_value,
         className: 'whitespace-nowrap',
-        cell: (row) => money(row.billed_value, currency),
+        cell: (row) => (
+          <MoneyTone kind="in" value={row.billed_value}>
+            {money(row.billed_value, currency)}
+          </MoneyTone>
+        ),
       },
       {
         id: 'written-off',
@@ -91,7 +100,11 @@ export const jobProfitabilityReport: ReportConfig<JobProfitabilityRow, JobProfit
         sortable: true,
         sortValue: (row) => row.written_off_value,
         className: 'whitespace-nowrap',
-        cell: (row) => money(row.written_off_value, currency, false),
+        cell: (row) => (
+          <MoneyTone kind="out" value={row.written_off_value}>
+            {money(row.written_off_value, currency, false)}
+          </MoneyTone>
+        ),
       },
       ...(showCost
         ? [
@@ -104,7 +117,9 @@ export const jobProfitabilityReport: ReportConfig<JobProfitabilityRow, JobProfit
               className: 'whitespace-nowrap',
               cell: (row: JobProfitabilityRow) => (
                 <div className="flex flex-col items-end">
-                  {money(row.margin, currency)}
+                  <MoneyTone kind="auto" value={row.margin}>
+                    {money(row.margin, currency)}
+                  </MoneyTone>
                   <span className="text-xs text-text-muted">
                     {formatBasisPoints(row.margin_bp)}
                   </span>

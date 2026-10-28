@@ -7,6 +7,8 @@ export interface Stat {
   hint?: string;
   /** Draws the figure in the danger colour (money that is overdue). */
   danger?: boolean;
+  /** Colours the figure by what the money means: `in` is green (received), `out` is red (owed). */
+  tone?: 'in' | 'out';
 }
 
 export interface StatCardsProps {
@@ -26,7 +28,11 @@ export function StatCards({ label, stats, className }: StatCardsProps) {
           <dd
             className={cn(
               'text-xl font-semibold tabular-nums',
-              stat.danger ? 'text-danger' : 'text-text',
+              stat.danger || stat.tone === 'out'
+                ? 'text-danger'
+                : stat.tone === 'in'
+                  ? 'text-success'
+                  : 'text-text',
             )}
           >
             {stat.value}

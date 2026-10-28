@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Link } from 'react-router';
 
 import type { DataTableColumn } from '@/components/ui';
@@ -129,14 +130,9 @@ export function invoiceColumns({
       className: 'tabular-nums',
       cell: (invoice) =>
         ISSUED.has(invoice.display_status) ? (
-          <span
-            className={cn(
-              'font-semibold',
-              invoice.display_status === 'overdue' ? 'text-danger' : 'text-text',
-            )}
-          >
+          <MoneyTone kind="out" value={invoice.balance} className="font-semibold">
             {money(invoice.balance)}
-          </span>
+          </MoneyTone>
         ) : (
           <span className="text-text-muted">—</span>
         ),

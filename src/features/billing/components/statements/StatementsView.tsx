@@ -107,6 +107,7 @@ export function StatementsView() {
         {
           label: 'Outstanding',
           value: formatMoney(totals.outstanding, currency),
+          tone: totals.outstanding > 0 ? 'out' : undefined,
           hint: 'On issued invoices',
         },
         {
@@ -118,6 +119,7 @@ export function StatementsView() {
         {
           label: 'Cash on account',
           value: formatMoney(totals.on_account, currency),
+          tone: totals.on_account > 0 ? 'in' : undefined,
           hint: 'Received, not allocated',
         },
       ]

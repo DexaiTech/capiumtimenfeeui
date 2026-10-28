@@ -93,6 +93,7 @@ export function DebtorsView() {
         {
           label: 'Total owed',
           value: formatMoney(totals.total, currency),
+          tone: totals.total > 0 ? 'out' : undefined,
           hint: `${plural(totals.client_count, 'client', 'clients')}, ${plural(totals.invoice_count, 'invoice', 'invoices')}`,
         },
         {
@@ -104,6 +105,7 @@ export function DebtorsView() {
         {
           label: 'Current',
           value: formatMoney(totals.current, currency),
+          tone: totals.current > 0 ? 'out' : undefined,
           hint: 'Not yet due',
         },
         {

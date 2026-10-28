@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Link } from 'react-router';
 
 import type { DataTableColumn } from '@/components/ui';
@@ -87,7 +88,11 @@ export function creditNoteColumns(slug: string, currency: string): DataTableColu
       sortable: true,
       sortValue: (note) => note.gross_total,
       className: 'font-semibold tabular-nums',
-      cell: (note) => money(note.gross_total),
+      cell: (note) => (
+        <MoneyTone kind="out" value={note.gross_total}>
+          {money(note.gross_total)}
+        </MoneyTone>
+      ),
     },
   ];
 }

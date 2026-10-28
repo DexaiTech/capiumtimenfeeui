@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Mail } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
@@ -14,9 +15,15 @@ import { LoadError } from '../PageShell';
 import { AgeingBar } from './AgeingSummary';
 
 function invoiceColumns(slug: string, currency: string): DataTableColumn<DebtorInvoice>[] {
-  const money = (pick: (row: DebtorInvoice) => number) => (row: DebtorInvoice) => (
-    <span className="tabular-nums text-text">{formatMoney(pick(row), currency)}</span>
-  );
+  const money =
+    (pick: (row: DebtorInvoice) => number, kind?: 'in' | 'out') => (row: DebtorInvoice) =>
+      kind ? (
+        <MoneyTone kind={kind} value={pick(row)}>
+          {formatMoney(pick(row), currency)}
+        </MoneyTone>
+      ) : (
+        <span className="tabular-nums text-text">{formatMoney(pick(row), currency)}</span>
+      );
   return [
     {
       id: 'number',
@@ -67,8 +74,8 @@ function invoiceColumns(slug: string, currency: string): DataTableColumn<DebtorI
       ),
     },
     { id: 'gross', header: 'Total', align: 'end', cell: money((row) => row.gross_total) },
-    { id: 'paid', header: 'Paid', align: 'end', cell: money((row) => row.paid) },
-    { id: 'credited', header: 'Credited', align: 'end', cell: money((row) => row.credited) },
+    { id: 'paid', header: 'Paid', align: 'end', cell: money((row) => row.paid, 'in') },
+    { id: 'credited', header: 'Credited', align: 'end', cell: money((row) => row.credited, 'out') },
     {
       id: 'outstanding',
       header: 'Outstanding',

@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { Link } from 'react-router';
 
 import { InitialsAvatar, type DataTableColumn } from '@/components/ui';
@@ -127,8 +128,11 @@ export function summaryColumns(options: SummaryColumnsOptions): DataTableColumn<
       align: 'end',
       sortable: true,
       className: 'whitespace-nowrap',
-      cell: (row) =>
-        `${formatMoney(row.ages.days_90_plus, currency)} (${shareText(row.over_90_bp)})`,
+      cell: (row) => (
+        <MoneyTone kind="out" value={row.ages.days_90_plus}>
+          {`${formatMoney(row.ages.days_90_plus, currency)} (${shareText(row.over_90_bp)})`}
+        </MoneyTone>
+      ),
     },
     {
       id: 'items',

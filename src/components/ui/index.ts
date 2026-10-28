@@ -1,6 +1,8 @@
 export { AnchoredPanel, type AnchoredPanelProps } from './AnchoredPanel';
 export { Avatar, type AvatarProps, type AvatarSize } from './Avatar';
 export { RichText, type RichTextProps } from './RichText';
+export { MoneyTone, type MoneyToneProps } from './MoneyTone';
+export { moneyToneClass, type MoneyKind } from './moneyToneClass';
 export { RichTextEditor, type RichTextEditorProps, type RichTextValue } from './RichTextEditor';
 export { normaliseLink } from './richTextLink';
 export { plainTextToHtml } from './richTextPlain';

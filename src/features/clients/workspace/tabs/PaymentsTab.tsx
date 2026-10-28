@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { CreditCard } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -73,7 +74,11 @@ export function PaymentsTab({ clientId, clientName, overview }: PaymentsTabProps
       sortable: true,
       sortValue: (payment) => payment.amount,
       className: 'font-semibold tabular-nums',
-      cell: (payment) => money(payment.amount),
+      cell: (payment) => (
+        <MoneyTone kind="in" value={payment.amount}>
+          {money(payment.amount)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'method',
@@ -86,7 +91,11 @@ export function PaymentsTab({ clientId, clientName, overview }: PaymentsTabProps
       header: 'Allocated',
       align: 'end',
       className: 'tabular-nums',
-      cell: (payment) => money(payment.allocated_total),
+      cell: (payment) => (
+        <MoneyTone kind="in" value={payment.allocated_total}>
+          {money(payment.allocated_total)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'unallocated',
@@ -95,7 +104,11 @@ export function PaymentsTab({ clientId, clientName, overview }: PaymentsTabProps
       sortable: true,
       sortValue: (payment) => payment.unallocated,
       className: 'tabular-nums',
-      cell: (payment) => money(payment.unallocated),
+      cell: (payment) => (
+        <MoneyTone kind="in" value={payment.unallocated}>
+          {money(payment.unallocated)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'state',

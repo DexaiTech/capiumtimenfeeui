@@ -1,3 +1,4 @@
+import { MoneyTone } from '@/components/ui/MoneyTone';
 import { FileText } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link } from 'react-router';
@@ -100,7 +101,11 @@ export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
       header: 'Paid',
       align: 'end',
       className: 'tabular-nums',
-      cell: (invoice) => money(invoice.paid_total),
+      cell: (invoice) => (
+        <MoneyTone kind="in" value={invoice.paid_total}>
+          {money(invoice.paid_total)}
+        </MoneyTone>
+      ),
     },
     {
       id: 'balance',
