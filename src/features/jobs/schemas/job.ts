@@ -72,7 +72,7 @@ export const jobSchema = z
 export type JobValues = z.infer<typeof jobSchema>;
 
 /** The form's starting values: a new job, or the job being edited. */
-/** `today` (the practice's date) is the start date of a new job; an existing job keeps its own. */
+/** `today` (the practice's date) is the start date and period start of a new job; an existing job keeps its own. */
 export function jobDefaults(job: Job | null, clientId = '', today = ''): JobValues {
   return {
     client_id: job?.client_id ?? clientId,
@@ -87,7 +87,7 @@ export function jobDefaults(job: Job | null, clientId = '', today = ''): JobValu
     budget_cost: penceToPoundsInput(job?.budget_cost),
     start_date: job ? (job.start_date ?? '') : today,
     due_date: job?.due_date ?? '',
-    period_start: job?.period_start ?? '',
+    period_start: job ? (job.period_start ?? '') : today,
     period_end: job?.period_end ?? '',
     partner_user_id: job?.partner_user_id ?? '',
     manager_user_id: job?.manager_user_id ?? '',
