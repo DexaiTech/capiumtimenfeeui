@@ -15,15 +15,14 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const row = (name: RegExp) => screen.findByRole('row', { name });
 
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
+async function openActions(name: string) {
+  return screen.findByRole('group', { name: `Actions for ${name}` });
 }
 
 const menuItems = (menu: HTMLElement) =>
   within(menu)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
+    .getAllByRole('button')
+    .map((item) => item.getAttribute('aria-label'));
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add activity type' }));
@@ -34,8 +33,8 @@ async function openAdd(user: User) {
 }
 
 async function openEdit(user: User, name: string) {
-  const menu = await openActions(user, name);
-  await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+  const menu = await openActions(name);
+  await user.click(within(menu).getByRole('button', { name: 'Edit' }));
   const dialog = await screen.findByRole('region', { name: 'Edit activity type' });
   await within(dialog).findByRole('option', { name: /Standard 20%/ });
   return dialog;
@@ -143,7 +142,7 @@ describe('ActivityTypesPage list', () => {
     renderInOrg(<ActivityTypesPage />, { context: contextWith(MEMBER) });
     expect(await row(/^Bookkeeping/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add activity type' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 
   it('activates and deactivates, and offers the matching action', async () => {
@@ -158,14 +157,14 @@ describe('ActivityTypesPage list', () => {
     const user = userEvent.setup();
     renderInOrg(<ActivityTypesPage />);
 
-    const reviewMenu = await openActions(user, 'Review');
+    const reviewMenu = await openActions('Review');
     expect(menuItems(reviewMenu)).toEqual(['Edit', 'Deactivate', 'Delete']);
-    await user.click(within(reviewMenu).getByRole('menuitem', { name: 'Deactivate' }));
+    await user.click(within(reviewMenu).getByRole('button', { name: 'Deactivate' }));
     expect(await screen.findByText('Review deactivated')).toBeInTheDocument();
 
-    const trainingMenu = await openActions(user, 'Training');
+    const trainingMenu = await openActions('Training');
     expect(menuItems(trainingMenu)).toEqual(['Edit', 'Activate', 'Delete']);
-    await user.click(within(trainingMenu).getByRole('menuitem', { name: 'Activate' }));
+    await user.click(within(trainingMenu).getByRole('button', { name: 'Activate' }));
     expect(await screen.findByText('Training activated')).toBeInTheDocument();
   });
 });
@@ -345,9 +344,7 @@ describe('ActivityTypesPage delete', () => {
     renderInOrg(<ActivityTypesPage />);
 
     // A service lists Review, but the flag from the API decides, and it says unused.
-    await user.click(
-      within(await openActions(user, 'Review')).getByRole('menuitem', { name: 'Delete' }),
-    );
+    await user.click(within(await openActions('Review')).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete activity type?' });
     expect(
       within(dialog).getByText(/is not used by any time entry, timer or service/),
@@ -368,7 +365,7 @@ describe('ActivityTypesPage delete', () => {
     renderInOrg(<ActivityTypesPage />);
 
     await user.click(
-      within(await openActions(user, 'Bookkeeping')).getByRole('menuitem', { name: 'Delete' }),
+      within(await openActions('Bookkeeping')).getByRole('button', { name: 'Delete' }),
     );
     const dialog = await screen.findByRole('dialog', { name: 'Deactivate activity type?' });
     expect(within(dialog).getByText(/cannot be deleted/)).toBeInTheDocument();
@@ -386,9 +383,7 @@ describe('ActivityTypesPage delete', () => {
     const user = userEvent.setup();
     renderInOrg(<ActivityTypesPage />);
 
-    await user.click(
-      within(await openActions(user, 'Review')).getByRole('menuitem', { name: 'Delete' }),
-    );
+    await user.click(within(await openActions('Review')).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete activity type?' });
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 

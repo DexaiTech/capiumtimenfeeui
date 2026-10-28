@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { archivedVat, exemptVat, reducedVat, standardVat, zeroVat } from '../test/billingFixtures';
@@ -21,19 +22,14 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const row = (name: RegExp) => screen.findByRole('row', { name });
 
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
+/** The names of the actions of a row, once it is on screen. */
+async function actionsOf(name: string) {
+  await screen.findByRole('group', { name: `Actions for ${name}` });
+  return rowActionNames(`Actions for ${name}`);
 }
 
-const menuItems = (menu: HTMLElement) =>
-  within(menu)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
-
 async function chooseAction(user: User, name: string, action: string) {
-  const menu = await openActions(user, name);
-  await user.click(within(menu).getByRole('menuitem', { name: action }));
+  await user.click(await findRowAction(`Actions for ${name}`, action));
 }
 
 const closed = (name: string) =>
@@ -198,31 +194,19 @@ describe('VatCodesPage: permissions', () => {
     renderInOrg(<VatCodesPage />, { context: contextWith(STAFF_PERMISSIONS) });
     expect(await row(/^Standard 20%/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add VAT code' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
     expect(
       screen.getByText(/Changing VAT codes needs permission to manage settings/),
     ).toBeInTheDocument();
   });
 
   it('offers the actions each code allows to a manager', async () => {
-    const user = userEvent.setup();
     renderInOrg(<VatCodesPage />);
 
-    expect(menuItems(await openActions(user, 'Standard 20%'))).toEqual([
-      'Edit',
-      'Archive',
-      'Delete',
-    ]);
-    await user.keyboard('{Escape}');
-    expect(menuItems(await openActions(user, 'Reduced 5%'))).toEqual([
-      'Edit',
-      'Make default',
-      'Archive',
-      'Delete',
-    ]);
-    await user.keyboard('{Escape}');
+    expect(await actionsOf('Standard 20%')).toEqual(['Edit', 'Archive', 'Delete']);
+    expect(await actionsOf('Reduced 5%')).toEqual(['Edit', 'Make default', 'Archive', 'Delete']);
     // An archived code is not edited or made the default: it is restored or deleted.
-    expect(menuItems(await openActions(user, 'Old 17.5%'))).toEqual(['Restore', 'Delete']);
+    expect(await actionsOf('Old 17.5%')).toEqual(['Restore', 'Delete']);
   });
 });
 

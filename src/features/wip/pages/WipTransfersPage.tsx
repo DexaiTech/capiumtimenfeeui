@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Ellipsis, Eye, Plus, SearchX, Undo2 } from 'lucide-react';
+import { ArrowLeftRight, Eye, Plus, SearchX, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -7,12 +7,12 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
   useToast,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -214,10 +214,9 @@ export default function WipTransfersPage() {
             />
           }
           rowActions={(row) => (
-            <Dropdown
+            <RowActions
               label={`Actions for the transfer of ${formatMoney(row.amount, currency)}`}
               items={actionsFor(row)}
-              trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
             />
           )}
           empty={

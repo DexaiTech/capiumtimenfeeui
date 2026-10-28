@@ -24,10 +24,8 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const row = (name: RegExp) => screen.findByRole('row', { name });
 
-async function openActions(user: User, subject: string) {
-  const name = `Actions for the rate of ${subject}`;
-  await user.click(await screen.findByRole('button', { name }));
-  return screen.findByRole('menu', { name });
+async function openActions(subject: string) {
+  return screen.findByRole('group', { name: `Actions for the rate of ${subject}` });
 }
 
 async function openAdd(user: User) {
@@ -335,9 +333,9 @@ describe('ChargeOutRatesPage', () => {
     const user = userEvent.setup();
     renderPage({ context: contextWith(MANAGER) });
 
-    const menu = await openActions(user, 'Acme Ltd · Year-end accounts');
-    expect(within(menu).queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
-    await user.click(within(menu).getByRole('menuitem', { name: 'End-date' }));
+    const menu = await openActions('Acme Ltd · Year-end accounts');
+    expect(within(menu).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    await user.click(within(menu).getByRole('button', { name: 'End-date' }));
     const dialog = await screen.findByRole('dialog', { name: 'End-date rate' });
     // It already ends on 31/12/2026; the field starts from that and can be brought forward.
     expect(within(dialog).getByLabelText('Last day of the rate')).toHaveValue('2026-12-31');
@@ -351,8 +349,8 @@ describe('ChargeOutRatesPage', () => {
   it('opens the history of a client rate, narrowed to its client and service', async () => {
     const user = userEvent.setup();
     renderPage();
-    const menu = await openActions(user, 'Acme Ltd · Year-end accounts');
-    await user.click(within(menu).getByRole('menuitem', { name: 'View history' }));
+    const menu = await openActions('Acme Ltd · Year-end accounts');
+    await user.click(within(menu).getByRole('button', { name: 'View history' }));
     expect(screen.getByTestId('where')).toHaveTextContent(
       `/acme/team/rate-history?kind=charge&client=${acme.id}&service=${accounts.id}`,
     );

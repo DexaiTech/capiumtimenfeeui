@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { IDS, job as makeJob } from '../test/fixtures';
@@ -309,17 +310,21 @@ describe('starting a job', () => {
 });
 
 describe('the actions of a job', () => {
-  const menu = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+  const jobAction = async (
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+    action: string,
+  ) => {
     await table();
-    await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
+    await user.click(await findRowAction(`Actions for ${name}`, action));
   };
 
   it('offers open, edit, copy and delete to a role that may do all of them', async () => {
-    const user = userEvent.setup();
     setup();
-    await menu(user, 'J00001 Year-end accounts');
+    await table();
+    await screen.findByRole('group', { name: 'Actions for J00001 Year-end accounts' });
 
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+    expect(rowActionNames('Actions for J00001 Year-end accounts')).toEqual([
       'Open',
       'Edit',
       'Copy',
@@ -330,8 +335,7 @@ describe('the actions of a job', () => {
   it('copies a job and opens the copy', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    await menu(user, 'J00001 Year-end accounts');
-    await user.click(screen.getByRole('menuitem', { name: 'Copy' }));
+    await jobAction(user, 'J00001 Year-end accounts', 'Copy');
     const form = await screen.findByRole('dialog', { name: 'Copy job' });
 
     expect(within(form).getByLabelText('Name of the new job')).toHaveValue(
@@ -353,8 +357,7 @@ describe('the actions of a job', () => {
   it('edits a job and sends only what changed', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    await menu(user, 'J00001 Year-end accounts');
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await jobAction(user, 'J00001 Year-end accounts', 'Edit');
     const form = await screen.findByRole('region', { name: 'Edit job' });
 
     expect(within(form).getByLabelText('Job name')).toHaveValue('Year-end accounts');
@@ -373,8 +376,7 @@ describe('the actions of a job', () => {
   it('deletes a job after a confirmation, and keeps the confirmation open when the API refuses', async () => {
     const user = userEvent.setup();
     const backend = setup({ inUse: new Set(['j-1']) });
-    await menu(user, 'J00001 Year-end accounts');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await jobAction(user, 'J00001 Year-end accounts', 'Delete');
     let confirm = await screen.findByRole('dialog', { name: 'Delete this job?' });
     await user.click(within(confirm).getByRole('button', { name: 'Delete job' }));
     expect(await within(confirm).findByRole('alert')).toHaveTextContent(
@@ -382,8 +384,7 @@ describe('the actions of a job', () => {
     );
     await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
 
-    await user.click(await screen.findByRole('button', { name: 'Actions for J00003 VAT returns' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for J00003 VAT returns', 'Delete'));
     confirm = await screen.findByRole('dialog', { name: 'Delete this job?' });
     await user.click(within(confirm).getByRole('button', { name: 'Delete job' }));
 
@@ -397,11 +398,11 @@ describe('the actions of a job', () => {
   });
 
   it('offers a reader only to open the job and nothing to create', async () => {
-    const user = userEvent.setup();
     setup({}, { permissions: READ_ONLY });
-    await menu(user, 'J00001 Year-end accounts');
+    await table();
+    await screen.findByRole('group', { name: 'Actions for J00001 Year-end accounts' });
 
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Open']);
+    expect(rowActionNames('Actions for J00001 Year-end accounts')).toEqual(['Open']);
     expect(screen.queryByRole('button', { name: 'New job' })).not.toBeInTheDocument();
   });
 });

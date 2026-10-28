@@ -8,12 +8,7 @@ import { cn } from '@/utils/cn';
 
 import { useClient } from '../api';
 import { centralChip, type CentralTone } from '../central/format';
-import {
-  CLIENT_STATUS_LABELS,
-  CLIENT_TYPE_LABELS,
-  labelOf,
-  SOFTWARE_LABELS,
-} from '../constants';
+import { CLIENT_STATUS_LABELS, CLIENT_TYPE_LABELS, labelOf, SOFTWARE_LABELS } from '../constants';
 import { avatarColor, deadlinePill, healthTone } from '../format';
 import type { ClientRead, Deadlines, ServiceTag } from '../types';
 

@@ -1,4 +1,4 @@
-import { Ellipsis, PoundSterling, SearchX } from 'lucide-react';
+import { PoundSterling, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -9,7 +9,6 @@ import {
   ConfirmDialog,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   Input,
   PageToolbar,
@@ -20,6 +19,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
@@ -431,10 +431,9 @@ export function RateRulesView({ kind }: RateRulesViewProps) {
           />
         }
         rowActions={(rule) => (
-          <Dropdown
+          <RowActions
             label={`Actions for the rate of ${scopeNames(rule).join(' · ')}`}
             items={actionsFor(rule)}
-            trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
           />
         )}
         empty={

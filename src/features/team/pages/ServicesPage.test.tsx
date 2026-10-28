@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { findRowAction } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import {
@@ -26,15 +27,14 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const row = (name: RegExp) => screen.findByRole('row', { name });
 
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
+async function openActions(name: string) {
+  return screen.findByRole('group', { name: `Actions for ${name}` });
 }
 
 const menuItems = (menu: HTMLElement) =>
   within(menu)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
+    .getAllByRole('button')
+    .map((item) => item.getAttribute('aria-label'));
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add service' }));
@@ -45,8 +45,8 @@ async function openAdd(user: User) {
 }
 
 async function openEdit(user: User, name: string) {
-  const menu = await openActions(user, name);
-  await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+  const menu = await openActions(name);
+  await user.click(within(menu).getByRole('button', { name: 'Edit' }));
   const dialog = await screen.findByRole('region', { name: 'Edit service' });
   await within(dialog).findByRole('checkbox', { name: /Bookkeeping/ });
   return dialog;
@@ -206,24 +206,14 @@ describe('ServicesPage list', () => {
     renderInOrg(<ServicesPage />, { context: contextWith(MEMBER) });
     expect(await row(/^Year-end accounts/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add service' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 
   it('offers Deactivate to an active service and Activate to an inactive one', async () => {
-    const user = userEvent.setup();
     renderInOrg(<ServicesPage />);
 
-    expect(menuItems(await openActions(user, 'Tax advice'))).toEqual([
-      'Edit',
-      'Deactivate',
-      'Delete',
-    ]);
-    await user.keyboard('{Escape}');
-    expect(menuItems(await openActions(user, 'Legacy payroll'))).toEqual([
-      'Edit',
-      'Activate',
-      'Delete',
-    ]);
+    expect(menuItems(await openActions('Tax advice'))).toEqual(['Edit', 'Deactivate', 'Delete']);
+    expect(menuItems(await openActions('Legacy payroll'))).toEqual(['Edit', 'Activate', 'Delete']);
   });
 
   it('deactivates and activates a service, and explains a refusal', async () => {
@@ -243,16 +233,16 @@ describe('ServicesPage list', () => {
     renderInOrg(<ServicesPage />);
 
     await user.click(
-      within(await openActions(user, 'Tax advice')).getByRole('menuitem', { name: 'Deactivate' }),
+      within(await openActions('Tax advice')).getByRole('button', { name: 'Deactivate' }),
     );
     expect(await screen.findByText("You don't have permission to do that")).toBeInTheDocument();
     await user.click(
-      within(await openActions(user, 'Tax advice')).getByRole('menuitem', { name: 'Deactivate' }),
+      within(await openActions('Tax advice')).getByRole('button', { name: 'Deactivate' }),
     );
     expect(await screen.findByText('Tax advice deactivated')).toBeInTheDocument();
 
     await user.click(
-      within(await openActions(user, 'Legacy payroll')).getByRole('menuitem', { name: 'Activate' }),
+      within(await openActions('Legacy payroll')).getByRole('button', { name: 'Activate' }),
     );
     expect(await screen.findByText('Legacy payroll activated')).toBeInTheDocument();
   });
@@ -502,8 +492,7 @@ describe('ServiceFormPanel', () => {
     const user = userEvent.setup();
     renderInOrg(<ServicesPage />);
 
-    await user.click(await screen.findByRole('button', { name: 'Actions for Limited' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await findRowAction('Actions for Limited', 'Edit'));
     const dialog = await screen.findByRole('region', { name: 'Edit service' });
     const kept = await within(dialog).findByRole('checkbox', { name: /Training/ });
     expect(kept).toBeChecked();
@@ -831,7 +820,7 @@ describe('ServicesPage delete', () => {
     renderInOrg(<ServicesPage />);
 
     await user.click(
-      within(await openActions(user, 'Tax advice')).getByRole('menuitem', { name: 'Delete' }),
+      within(await openActions('Tax advice')).getByRole('button', { name: 'Delete' }),
     );
     const dialog = await screen.findByRole('dialog', { name: 'Delete service?' });
     expect(within(dialog).getByText(/is not used by any job/)).toBeInTheDocument();
@@ -852,7 +841,7 @@ describe('ServicesPage delete', () => {
     renderInOrg(<ServicesPage />);
 
     await user.click(
-      within(await openActions(user, 'Year-end accounts')).getByRole('menuitem', {
+      within(await openActions('Year-end accounts')).getByRole('button', {
         name: 'Delete',
       }),
     );
@@ -876,7 +865,7 @@ describe('ServicesPage delete', () => {
     renderInOrg(<ServicesPage />);
 
     await user.click(
-      within(await openActions(user, 'Tax advice')).getByRole('menuitem', { name: 'Delete' }),
+      within(await openActions('Tax advice')).getByRole('button', { name: 'Delete' }),
     );
     const dialog = await screen.findByRole('dialog', { name: 'Delete service?' });
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));

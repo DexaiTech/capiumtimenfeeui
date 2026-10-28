@@ -1,9 +1,11 @@
-import { Ellipsis, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
+
+import { RowActions } from '@/components/ui';
 
 import { formatActivity, initialsOf } from '../format';
 import type { ClientListItem } from '../types';
-import { ActionMenu, type MenuAction } from './ActionMenu';
+import { type MenuAction } from './ActionMenu';
 import {
   CentralCell,
   DeadlineCell,
@@ -115,13 +117,7 @@ export function ClientsGrid({
                     ) : null}
                   </span>
                 </span>
-                <ActionMenu
-                  label={`Actions for ${client.name}`}
-                  items={actionsFor(client)}
-                  triggerClassName="cc-more"
-                >
-                  <Ellipsis aria-hidden="true" />
-                </ActionMenu>
+                <RowActions label={`Actions for ${client.name}`} items={actionsFor(client)} />
               </div>
               <dl>
                 <dt>Reg No</dt>

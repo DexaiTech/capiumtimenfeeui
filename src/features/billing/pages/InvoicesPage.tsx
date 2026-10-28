@@ -1,4 +1,4 @@
-import { Download, Ellipsis, FilePlus2, FileText, Mail, SearchX, Trash2 } from 'lucide-react';
+import { Download, FilePlus2, FileText, Mail, SearchX, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -8,7 +8,6 @@ import {
   ConfirmDialog,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -19,6 +18,7 @@ import {
   useToast,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -494,15 +494,13 @@ function InvoiceList() {
           />
         }
         rowActions={(invoice) => (
-          <Dropdown
+          <RowActions
             label={`Actions for ${invoiceLabel(invoice)} of ${invoice.client?.name ?? 'client'}`}
             items={actionsFor(invoice)}
-            trigger={
+            status={
               busy === invoice.id ? (
                 <span className="text-xs text-text-muted">Downloading…</span>
-              ) : (
-                <Ellipsis aria-hidden="true" className="size-5 text-text-muted" />
-              )
+              ) : undefined
             }
           />
         )}

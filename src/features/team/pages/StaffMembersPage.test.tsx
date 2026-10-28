@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { findRowAction, rowAction } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import {
@@ -33,15 +34,14 @@ type User = ReturnType<typeof userEvent.setup>;
 const row = (name: RegExp) =>
   screen.findByRole('row', { name: new RegExp(`^Select ${name.source}`) });
 
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
+async function openActions(name: string) {
+  return screen.findByRole('group', { name: `Actions for ${name}` });
 }
 
 const menuItems = (menu: HTMLElement) =>
   within(menu)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
+    .getAllByRole('button')
+    .map((item) => item.getAttribute('aria-label'));
 
 async function openAddDialog(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add staff member' }));
@@ -357,28 +357,26 @@ describe('StaffMembersPage list', () => {
     renderPage({ context: contextWith(STAFF_PERMISSIONS) });
     await row(/Grace Hopper/);
     expect(screen.queryByRole('button', { name: 'Add staff member' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: /Cost rate/ })).not.toBeInTheDocument();
   });
 });
 
 describe('StaffMembersPage row actions', () => {
   it('offers the actions the person and the permissions allow', async () => {
-    const user = userEvent.setup();
     renderPage();
 
     // No login: invite, link, deactivate, delete; nothing that needs a login.
-    expect(menuItems(await openActions(user, 'Sam Staff'))).toEqual([
+    expect(menuItems(await openActions('Sam Staff'))).toEqual([
       'Edit',
       'Invite to sign in',
       'Link login',
       'Deactivate',
       'Delete',
     ]);
-    await user.keyboard('{Escape}');
 
     // A login: change role, unlink, reset password.
-    expect(menuItems(await openActions(user, 'Grace Hopper'))).toEqual([
+    expect(menuItems(await openActions('Grace Hopper'))).toEqual([
       'Edit',
       'Change role',
       'Unlink login',
@@ -386,10 +384,9 @@ describe('StaffMembersPage row actions', () => {
       'Deactivate',
       'Delete',
     ]);
-    await user.keyboard('{Escape}');
 
     // A pending invitation can be sent again.
-    expect(menuItems(await openActions(user, 'Ivy Invited'))).toEqual([
+    expect(menuItems(await openActions('Ivy Invited'))).toEqual([
       'Edit',
       'Change role',
       'Resend invitation',
@@ -397,10 +394,9 @@ describe('StaffMembersPage row actions', () => {
       'Deactivate',
       'Delete',
     ]);
-    await user.keyboard('{Escape}');
 
     // Nobody deactivates, deletes or un-logs themselves.
-    expect(menuItems(await openActions(user, 'Ada Lovelace'))).toEqual(['Edit']);
+    expect(menuItems(await openActions('Ada Lovelace'))).toEqual(['Edit']);
   });
 
   it('offers Reactivate to people who are inactive or have left', async () => {
@@ -409,7 +405,7 @@ describe('StaffMembersPage row actions', () => {
     await row(/Sam Staff/);
 
     await user.click(screen.getByRole('tab', { name: 'Inactive' }));
-    expect(menuItems(await openActions(user, 'Linus Torvalds'))).toEqual([
+    expect(menuItems(await openActions('Linus Torvalds'))).toEqual([
       'Edit',
       'Change role',
       'Unlink login',
@@ -417,9 +413,8 @@ describe('StaffMembersPage row actions', () => {
       'Deactivate',
       'Delete',
     ]);
-    await user.keyboard('{Escape}');
     await user.click(screen.getByRole('tab', { name: 'Left' }));
-    const menu = await openActions(user, 'Margaret Hamilton');
+    const menu = await openActions('Margaret Hamilton');
     expect(menuItems(menu)).toEqual(['Edit', 'Reactivate', 'Delete']);
   });
 
@@ -430,7 +425,6 @@ describe('StaffMembersPage row actions', () => {
       role: { id: 'role-owner', name: 'Owner', system_key: 'owner' },
     });
     server.use(...teamHandlers({ staff: [owner] }));
-    const user = userEvent.setup();
     renderPage({
       context: {
         ...contextWith(OWNER_PERMISSIONS),
@@ -438,7 +432,7 @@ describe('StaffMembersPage row actions', () => {
       },
     });
 
-    expect(menuItems(await openActions(user, 'Olivia Owner'))).toEqual(['Edit']);
+    expect(menuItems(await openActions('Olivia Owner'))).toEqual(['Edit']);
   });
 
   it('reactivates in one step and explains a refusal', async () => {
@@ -456,13 +450,11 @@ describe('StaffMembersPage row actions', () => {
     await row(/Sam Staff/);
     await user.click(screen.getByRole('tab', { name: 'Inactive' }));
 
-    await user.click(await screen.findByRole('button', { name: 'Actions for Linus Torvalds' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Reactivate' }));
+    await user.click(await findRowAction('Actions for Linus Torvalds', 'Reactivate'));
     expect(await screen.findByText('Could not reactivate')).toBeInTheDocument();
     expect(screen.getByText('Another active staff member uses this email.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Actions for Linus Torvalds' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Reactivate' }));
+    await user.click(rowAction('Actions for Linus Torvalds', 'Reactivate'));
     expect(await screen.findByText('Linus Torvalds reactivated')).toBeInTheDocument();
   });
 });
@@ -847,8 +839,7 @@ describe('AddStaffPanel', () => {
 describe('EditStaffPanel', () => {
   async function openEdit(user: User, name: string) {
     // "Edit" in the list opens the person's own page; the dialog opens from there.
-    await openActions(user, name);
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await findRowAction(`Actions for ${name}`, 'Edit'));
     await user.click(await screen.findByRole('button', { name: 'Edit details' }));
     const dialog = await screen.findByRole('region', { name: 'Edit staff member' });
     await within(dialog).findByRole('combobox', { name: 'Grade' });
@@ -1021,8 +1012,7 @@ describe('deactivating and deleting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Grace Hopper');
-    await user.click(screen.getByRole('menuitem', { name: 'Deactivate' }));
+    await user.click(await findRowAction('Actions for Grace Hopper', 'Deactivate'));
     const dialog = await screen.findByRole('dialog', { name: 'Deactivate staff member?' });
     expect(within(dialog).getByText(/signed out everywhere/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
@@ -1042,8 +1032,7 @@ describe('deactivating and deleting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Deactivate' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Deactivate'));
     const dialog = await screen.findByRole('dialog', { name: 'Deactivate staff member?' });
     await user.click(within(dialog).getByRole('radio', { name: /Mark as left/ }));
     const date = within(dialog).getByLabelText('Leaving date');
@@ -1066,8 +1055,7 @@ describe('deactivating and deleting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Grace Hopper');
-    await user.click(screen.getByRole('menuitem', { name: 'Deactivate' }));
+    await user.click(await findRowAction('Actions for Grace Hopper', 'Deactivate'));
     const dialog = await screen.findByRole('dialog', { name: 'Deactivate staff member?' });
     await user.click(within(dialog).getByRole('button', { name: 'Deactivate' }));
 
@@ -1090,8 +1078,7 @@ describe('deactivating and deleting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Delete'));
     const dialog = await screen.findByRole('dialog', { name: 'Delete staff member?' });
     expect(await within(dialog).findByText(/not used by any record/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -1122,8 +1109,7 @@ describe('deactivating and deleting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Delete'));
     const dialog = await screen.findByRole('dialog', { name: 'Delete staff member?' });
     expect(await within(dialog).findByText(/cannot be deleted/)).toBeInTheDocument();
     const usage = within(dialog).getByRole('list', { name: 'Records that refer to them' });
@@ -1149,8 +1135,7 @@ describe('deactivating and deleting', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Delete'));
     const dialog = await screen.findByRole('dialog', { name: 'Delete staff member?' });
     await user.click(await within(dialog).findByRole('button', { name: 'Delete' }));
 
@@ -1179,8 +1164,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Invite to sign in' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Invite to sign in'));
     const dialog = await screen.findByRole('dialog', { name: 'Invite to sign in' });
     expect(within(dialog).getByRole('textbox', { name: 'Sign-in email' })).toHaveValue(
       'sam@example.com',
@@ -1209,8 +1193,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Ivy Invited');
-    await user.click(screen.getByRole('menuitem', { name: 'Resend invitation' }));
+    await user.click(await findRowAction('Actions for Ivy Invited', 'Resend invitation'));
     const dialog = await screen.findByRole('dialog', { name: 'Resend invitation' });
     expect(
       within(dialog).queryByRole('textbox', { name: 'Sign-in email' }),
@@ -1240,8 +1223,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Link login' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Link login'));
     const dialog = await screen.findByRole('dialog', { name: 'Link a login' });
     await user.click(within(dialog).getByRole('radio', { name: /Link to an existing login/ }));
     expect(within(dialog).getByText(/Merging cannot be undone/)).toBeInTheDocument();
@@ -1280,8 +1262,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Link login' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Link login'));
     const dialog = await screen.findByRole('dialog', { name: 'Link a login' });
     await user.click(within(dialog).getByRole('checkbox', { name: /Email them a link/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Create login' }));
@@ -1306,8 +1287,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Link login' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Link login'));
     const dialog = await screen.findByRole('dialog', { name: 'Link a login' });
     await user.click(within(dialog).getByRole('radio', { name: /Link to an existing login/ }));
     const email = within(dialog).getByRole('textbox', { name: 'Email of their existing login' });
@@ -1333,8 +1313,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Grace Hopper');
-    await user.click(screen.getByRole('menuitem', { name: 'Unlink login' }));
+    await user.click(await findRowAction('Actions for Grace Hopper', 'Unlink login'));
     const confirm = await screen.findByRole('dialog', { name: 'Unlink login?' });
     await user.click(within(confirm).getByRole('button', { name: 'Unlink login' }));
     expect(
@@ -1355,8 +1334,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Grace Hopper');
-    await user.click(screen.getByRole('menuitem', { name: 'Reset password' }));
+    await user.click(await findRowAction('Actions for Grace Hopper', 'Reset password'));
     const confirm = await screen.findByRole('dialog', { name: 'Reset password?' });
     await user.click(within(confirm).getByRole('button', { name: 'Reset password' }));
 
@@ -1379,8 +1357,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Grace Hopper');
-    await user.click(screen.getByRole('menuitem', { name: 'Change role' }));
+    await user.click(await findRowAction('Actions for Grace Hopper', 'Change role'));
     const dialog = await screen.findByRole('dialog', { name: 'Change role' });
     expect(within(dialog).getByRole('button', { name: 'Change role' })).toBeDisabled();
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Role' }), 'Staff');
@@ -1399,8 +1376,7 @@ describe('logins', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await openActions(user, 'Grace Hopper');
-    await user.click(screen.getByRole('menuitem', { name: 'Change role' }));
+    await user.click(await findRowAction('Actions for Grace Hopper', 'Change role'));
     const dialog = await screen.findByRole('dialog', { name: 'Change role' });
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Role' }), 'Staff');
     await user.click(within(dialog).getByRole('button', { name: 'Change role' }));

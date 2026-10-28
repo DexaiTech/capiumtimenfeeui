@@ -1,4 +1,4 @@
-import { Ellipsis, HandCoins, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { HandCoins, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
@@ -9,7 +9,6 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -17,6 +16,7 @@ import {
   useToast,
   type DataTableColumn,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -351,11 +351,7 @@ export default function DisbursementsPage() {
           }
           rowActions={(row) =>
             mayChange(row) ? (
-              <Dropdown
-                label={`Actions for ${row.description}`}
-                items={actionsFor(row)}
-                trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-              />
+              <RowActions label={`Actions for ${row.description}`} items={actionsFor(row)} />
             ) : null
           }
           empty={

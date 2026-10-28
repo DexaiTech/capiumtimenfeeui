@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { findRowAction } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import {
@@ -26,16 +27,14 @@ type User = ReturnType<typeof userEvent.setup>;
 /** A rate row by what it shows (every row's name also carries its actions button). */
 const row = (name: RegExp) => screen.findByRole('row', { name });
 
-async function openActions(user: User, subject: string) {
-  const name = `Actions for the rate of ${subject}`;
-  await user.click(await screen.findByRole('button', { name }));
-  return screen.findByRole('menu', { name });
+async function openActions(subject: string) {
+  return screen.findByRole('group', { name: `Actions for the rate of ${subject}` });
 }
 
 const menuItems = (menu: HTMLElement) =>
   within(menu)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
+    .getAllByRole('button')
+    .map((item) => item.getAttribute('aria-label'));
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add rate' }));
@@ -231,12 +230,11 @@ describe('CostRatesPage list', () => {
   });
 
   it('hides Add rate and every change without rate.manage, keeping the history link', async () => {
-    const user = userEvent.setup();
     renderPage({ context: contextWith(READ_ONLY) });
     await row(/£35\.00\/h/);
 
     expect(screen.queryByRole('button', { name: 'Add rate' })).not.toBeInTheDocument();
-    expect(menuItems(await openActions(user, 'Sam Staff'))).toEqual(['View history']);
+    expect(menuItems(await openActions('Sam Staff'))).toEqual(['View history']);
   });
 
   it('offers the actions a rate allows: a used rate can be end-dated, never deleted', async () => {
@@ -250,23 +248,20 @@ describe('CostRatesPage list', () => {
       can_delete: true,
     });
     server.use(...teamHandlers({ rules: [...testCostRules, ended] }));
-    const user = userEvent.setup();
     renderPage();
 
     // Not used yet: everything.
-    expect(menuItems(await openActions(user, 'Sam Staff'))).toEqual(
+    expect(menuItems(await openActions('Sam Staff'))).toEqual(
       expect.arrayContaining(['Edit', 'End-date', 'View history', 'Delete']),
     );
-    await user.keyboard('{Escape}');
     // Used: it keeps its history, so no Delete.
-    expect(menuItems(await openActions(user, 'Senior grade'))).toEqual([
+    expect(menuItems(await openActions('Senior grade'))).toEqual([
       'Edit',
       'End-date',
       'View history',
     ]);
-    await user.keyboard('{Escape}');
     // Already ended: there is nothing left to end.
-    expect(menuItems(await openActions(user, 'Grace Hopper'))).toEqual([
+    expect(menuItems(await openActions('Grace Hopper'))).toEqual([
       'Edit',
       'View history',
       'Delete',
@@ -278,10 +273,7 @@ describe('CostRatesPage list', () => {
     renderPage();
     await row(/£32\.00\/h/);
 
-    await user.click(
-      await screen.findByRole('button', { name: 'Actions for the rate of Senior grade' }),
-    );
-    await user.click(screen.getByRole('menuitem', { name: 'View history' }));
+    await user.click(await findRowAction('Actions for the rate of Senior grade', 'View history'));
     expect(screen.getByTestId('where')).toHaveTextContent(
       `/acme/team/rate-history?kind=cost&grade=${seniorGrade.id}`,
     );
@@ -496,8 +488,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage({ context: contextWith(MANAGER) });
 
-    const menu = await openActions(user, 'Sam Staff');
-    await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+    const menu = await openActions('Sam Staff');
+    await user.click(within(menu).getByRole('button', { name: 'Edit' }));
     const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expect(within(dialog).getByText('Sam Staff')).toBeInTheDocument();
     const amount = within(dialog).getByRole('textbox', { name: 'Rate per hour (£)' });
@@ -533,8 +525,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const menu = await openActions(user, 'Sam Staff');
-    await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+    const menu = await openActions('Sam Staff');
+    await user.click(within(menu).getByRole('button', { name: 'Edit' }));
     const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expect(within(dialog).getByLabelText('Effective to')).toHaveValue('2026-12-31');
     setDate(dialog, 'Effective to', '');
@@ -548,8 +540,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const menu = await openActions(user, 'Senior grade');
-    await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+    const menu = await openActions('Senior grade');
+    await user.click(within(menu).getByRole('button', { name: 'Edit' }));
     const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expect(within(dialog).getByLabelText('Effective from')).toBeEnabled();
     expect(
@@ -571,8 +563,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const menu = await openActions(user, 'Sam Staff');
-    await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+    const menu = await openActions('Sam Staff');
+    await user.click(within(menu).getByRole('button', { name: 'Edit' }));
     const dialog = await screen.findByRole('region', { name: 'Edit rate' });
     setDate(dialog, 'Effective to', '2026-12-31');
     await user.click(within(dialog).getByRole('button', { name: 'Save rate' }));
@@ -596,8 +588,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const menu = await openActions(user, 'Senior grade');
-    await user.click(within(menu).getByRole('menuitem', { name: 'End-date' }));
+    const menu = await openActions('Senior grade');
+    await user.click(within(menu).getByRole('button', { name: 'End-date' }));
     const dialog = await screen.findByRole('dialog', { name: 'End-date rate' });
     // The last day defaults to today, and the rate cannot end before it starts.
     expect(within(dialog).getByLabelText('Last day of the rate')).toHaveValue('2026-10-20');
@@ -625,8 +617,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const menu = await openActions(user, 'Senior grade');
-    await user.click(within(menu).getByRole('menuitem', { name: 'End-date' }));
+    const menu = await openActions('Senior grade');
+    await user.click(within(menu).getByRole('button', { name: 'End-date' }));
     const dialog = await screen.findByRole('dialog', { name: 'End-date rate' });
     setDate(dialog, 'Last day of the rate', '2025-12-31');
     await user.click(within(dialog).getByRole('button', { name: 'End-date rate' }));
@@ -648,8 +640,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const menu = await openActions(user, 'Sam Staff');
-    await user.click(within(menu).getByRole('menuitem', { name: 'Delete' }));
+    const menu = await openActions('Sam Staff');
+    await user.click(within(menu).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete rate?' });
     expect(within(dialog).getByText(/£35\.00\/h from 01\/03\/2026/)).toBeInTheDocument();
     expect(deleted).toBe(0);
@@ -675,8 +667,8 @@ describe('CostRatesPage edit, end-date and delete', () => {
     const user = userEvent.setup();
     renderPage();
 
-    const menu = await openActions(user, 'Sam Staff');
-    await user.click(within(menu).getByRole('menuitem', { name: 'Delete' }));
+    const menu = await openActions('Sam Staff');
+    await user.click(within(menu).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete rate?' });
     await user.click(within(dialog).getByRole('button', { name: 'Delete rate' }));
 

@@ -1,4 +1,4 @@
-import { Award, Ellipsis, SearchX } from 'lucide-react';
+import { Award, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -7,7 +7,6 @@ import {
   ConfirmDialog,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -16,6 +15,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -292,11 +292,7 @@ function GradeList() {
         rowActions={
           canManage
             ? (grade) => (
-                <Dropdown
-                  label={`Actions for ${grade.name}`}
-                  items={actionsFor(grade)}
-                  trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-                />
+                <RowActions label={`Actions for ${grade.name}`} items={actionsFor(grade)} />
               )
             : undefined
         }

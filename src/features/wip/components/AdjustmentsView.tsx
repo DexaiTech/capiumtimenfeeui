@@ -1,4 +1,4 @@
-import { Check, Ellipsis, Eye, SearchX, SlidersHorizontal, Undo2, X } from 'lucide-react';
+import { Check, Eye, SearchX, SlidersHorizontal, Undo2, X } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -7,13 +7,13 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
   Select,
   useToast,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -332,10 +332,9 @@ export function AdjustmentsView({ onCreate }: AdjustmentsViewProps) {
             />
           }
           rowActions={(row) => (
-            <Dropdown
+            <RowActions
               label={`Actions for the ${ADJUSTMENT_KIND_META[row.kind].label.toLowerCase()} of ${signedMoney(row.signed_amount, currency)}`}
               items={actionsFor(row)}
-              trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
             />
           )}
           empty={

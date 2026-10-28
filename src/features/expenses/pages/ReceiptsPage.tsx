@@ -1,12 +1,4 @@
-import {
-  CircleCheck,
-  Download,
-  Ellipsis,
-  Eye,
-  Paperclip,
-  SearchX,
-  TriangleAlert,
-} from 'lucide-react';
+import { CircleCheck, Download, Eye, Paperclip, SearchX, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
@@ -17,7 +9,6 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -25,6 +16,7 @@ import {
   Select,
   type DataTableColumn,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -425,11 +417,7 @@ export default function ReceiptsPage() {
             loading={receipts.isPending}
             toolbar={toolbar}
             rowActions={(item) => (
-              <Dropdown
-                label={`Actions for ${item.file_name}`}
-                items={receiptActions(item)}
-                trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-              />
+              <RowActions label={`Actions for ${item.file_name}`} items={receiptActions(item)} />
             )}
             empty={
               filtered ? (

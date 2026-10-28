@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { findRowAction } from '@/test/rowActions';
 import { server } from '@/test/server';
 
 import AgedDebtorsReportPage from '../pages/AgedDebtorsReportPage';
@@ -67,8 +68,7 @@ const rowsOf = (element: HTMLElement) => within(element).getAllByRole('row').sli
 const location = () => screen.getByTestId('location');
 
 async function drill(user: ReturnType<typeof userEvent.setup>, row: string, item: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${row}` }));
-  await user.click(await screen.findByRole('menuitem', { name: item }));
+  await user.click(await findRowAction(`Actions for ${row}`, item));
 }
 
 beforeEach(() => {
@@ -388,7 +388,7 @@ describe('Billing', () => {
     await waitFor(() =>
       expect(screen.getByRole('table', { name: 'Billing' })).toHaveTextContent('Ada Lovelace'),
     );
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 });
 
@@ -455,7 +455,7 @@ describe('Expenses', () => {
     await waitFor(() =>
       expect(screen.getByRole('table', { name: 'Expenses' })).toHaveTextContent('No client'),
     );
-    expect(screen.getAllByRole('button', { name: /^Actions for/ })).toHaveLength(1);
+    expect(screen.getAllByRole('group', { name: /^Actions for/ })).toHaveLength(1);
 
     await drill(user, 'Acme Ltd', 'See the claims');
     expect(location()).toHaveTextContent(

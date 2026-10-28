@@ -1,3 +1,4 @@
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
@@ -65,49 +66,38 @@ function setupList(permissions = OWNER_PERMISSIONS) {
   renderBillingPage(<InvoicesPage />, { permissions, route: INVOICES, path: INVOICES });
 }
 
-async function menuOf(user: ReturnType<typeof userEvent.setup>, number: string) {
-  await user.click(
-    await screen.findByRole('button', { name: new RegExp(`Actions for ${number}`) }),
-  );
-  const menu = await screen.findByRole('menu');
-  return within(menu)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
+async function menuOf(number: string) {
+  const group = new RegExp(`Actions for ${number}`);
+  await screen.findByRole('group', { name: group });
+  return rowActionNames(group);
 }
 
 describe('correcting an issued invoice from the list', () => {
   it('offers a credit note while something is owed, and a void only before any payment', async () => {
-    const user = userEvent.setup();
     setupList();
-    const first = await menuOf(user, 'INV-0001');
+    const first = await menuOf('INV-0001');
     expect(first).toEqual(expect.arrayContaining(['Open', 'Raise credit note…', 'Void invoice…']));
-    await user.keyboard('{Escape}');
     // Part paid: still owed, so a credit note; but a payment was recorded, so no void.
-    const second = await menuOf(user, 'INV-0002');
+    const second = await menuOf('INV-0002');
     expect(second).toContain('Raise credit note…');
     expect(second).not.toContain('Void invoice…');
-    await user.keyboard('{Escape}');
     // Paid in full: nothing to credit and nothing to void.
-    const third = await menuOf(user, 'INV-0003');
+    const third = await menuOf('INV-0003');
     expect(third).not.toContain('Raise credit note…');
     expect(third).not.toContain('Void invoice…');
   });
 
   it('offers to record a payment while something is owed', async () => {
-    const user = userEvent.setup();
     setupList();
-    expect(await menuOf(user, 'INV-0001')).toContain('Record payment…');
-    await user.keyboard('{Escape}');
-    expect(await menuOf(user, 'INV-0002')).toContain('Record payment…');
-    await user.keyboard('{Escape}');
-    expect(await menuOf(user, 'INV-0003')).not.toContain('Record payment…');
+    expect(await menuOf('INV-0001')).toContain('Record payment…');
+    expect(await menuOf('INV-0002')).toContain('Record payment…');
+    expect(await menuOf('INV-0003')).not.toContain('Record payment…');
   });
 
   it('opens the invoice with the payment form ready', async () => {
     const user = userEvent.setup();
     setupList();
-    await menuOf(user, 'INV-0001');
-    await user.click(screen.getByRole('menuitem', { name: 'Record payment…' }));
+    await user.click(await findRowAction(/Actions for INV-0001/, 'Record payment…'));
     expect(await screen.findByTestId('location')).toHaveTextContent(
       `${INVOICES}/i-1?action=payment`,
     );
@@ -116,15 +106,13 @@ describe('correcting an issued invoice from the list', () => {
   it('opens the invoice with the chosen correction ready', async () => {
     const user = userEvent.setup();
     setupList();
-    await menuOf(user, 'INV-0001');
-    await user.click(screen.getByRole('menuitem', { name: 'Void invoice…' }));
+    await user.click(await findRowAction(/Actions for INV-0001/, 'Void invoice…'));
     expect(await screen.findByTestId('location')).toHaveTextContent(`${INVOICES}/i-1?action=void`);
   });
 
   it('leaves out what the role may not do', async () => {
-    const user = userEvent.setup();
     setupList(['organization.read', 'client.read', 'invoice.read']);
-    const items = await menuOf(user, 'INV-0001');
+    const items = await menuOf('INV-0001');
     expect(items).not.toContain('Raise credit note…');
     expect(items).not.toContain('Void invoice…');
   });

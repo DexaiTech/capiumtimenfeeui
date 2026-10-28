@@ -1,3 +1,4 @@
+import { findRowAction, rowAction, rowActionNames } from '@/test/rowActions';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -46,13 +47,8 @@ const table = async () => {
 
 const rowsOf = (element: HTMLElement) => within(element).getAllByRole('row').slice(1);
 
-async function openActions(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-}
-
 async function openStatement(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await openActions(user, name);
-  await user.click(await screen.findByRole('menuitem', { name: 'View the statement' }));
+  await user.click(await findRowAction(`Actions for ${name}`, 'View the statement'));
   const dialog = await screen.findByRole('dialog', { name: 'Client statement' });
   const entries = await within(dialog).findByRole('table', { name: `Statement of ${name}` });
   await waitFor(() => expect(entries).not.toHaveAttribute('aria-busy', 'true'));
@@ -300,8 +296,7 @@ describe('a client\u2019s statement', () => {
     setup();
     await table();
 
-    await openActions(user, 'Harbour & Co');
-    await user.click(await screen.findByRole('menuitem', { name: 'Download the PDF' }));
+    await user.click(await findRowAction('Actions for Harbour & Co', 'Download the PDF'));
     await waitFor(() => expect(names).toEqual(['statement-C0002-2026-10-18.pdf']));
   });
 
@@ -314,8 +309,7 @@ describe('a client\u2019s statement', () => {
     });
     await table();
 
-    await openActions(user, 'Harbour & Co');
-    await user.click(await screen.findByRole('menuitem', { name: 'View the statement' }));
+    await user.click(await findRowAction('Actions for Harbour & Co', 'View the statement'));
     expect(await screen.findByText('Could not load the statement')).toBeInTheDocument();
   });
 });
@@ -326,8 +320,7 @@ describe('emailing statements', () => {
     const backend = setup();
     await table();
 
-    await openActions(user, 'Harbour & Co');
-    await user.click(await screen.findByRole('menuitem', { name: 'Email the statement' }));
+    await user.click(await findRowAction('Actions for Harbour & Co', 'Email the statement'));
     const dialog = await screen.findByRole('dialog', { name: 'Email the statement' });
     expect(dialog).toHaveTextContent('Harbour & Co');
     expect(within(dialog).getByLabelText('From')).toHaveValue('2026-07-01');
@@ -347,8 +340,7 @@ describe('emailing statements', () => {
     const backend = setup();
     await table();
 
-    await openActions(user, 'Harbour & Co');
-    await user.click(await screen.findByRole('menuitem', { name: 'Email the statement' }));
+    await user.click(await findRowAction('Actions for Harbour & Co', 'Email the statement'));
     const dialog = await screen.findByRole('dialog', { name: 'Email the statement' });
     await user.type(
       within(dialog).getByLabelText('Send to'),
@@ -367,8 +359,7 @@ describe('emailing statements', () => {
     const backend = setup();
     await table();
 
-    await openActions(user, 'A. Morgan');
-    await user.click(await screen.findByRole('menuitem', { name: 'Email the statement' }));
+    await user.click(await findRowAction('Actions for A. Morgan', 'Email the statement'));
     const dialog = await screen.findByRole('dialog', { name: 'Email the statement' });
     expect(
       within(dialog).getByText('This client has no email address: enter the addresses to send to.'),
@@ -478,8 +469,7 @@ describe('emailing statements', () => {
     });
     await table();
 
-    await openActions(user, 'Harbour & Co');
-    await user.click(await screen.findByRole('menuitem', { name: 'Email the statement' }));
+    await user.click(await findRowAction('Actions for Harbour & Co', 'Email the statement'));
     const dialog = await screen.findByRole('dialog', { name: 'Email the statement' });
     await user.click(within(dialog).getByRole('button', { name: 'Send email' }));
 
@@ -496,10 +486,11 @@ describe('the permissions', () => {
     await table();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
 
-    await openActions(user, 'Harbour & Co');
-    expect(await screen.findByRole('menuitem', { name: 'View the statement' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Email the statement' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('menuitem', { name: 'View the statement' }));
+    expect(
+      await findRowAction('Actions for Harbour & Co', 'View the statement'),
+    ).toBeInTheDocument();
+    expect(rowActionNames('Actions for Harbour & Co')).not.toContain('Email the statement');
+    await user.click(rowAction('Actions for Harbour & Co', 'View the statement'));
 
     const dialog = await screen.findByRole('dialog', { name: 'Client statement' });
     expect(await within(dialog).findByText('Harbour & Co')).toBeInTheDocument();
@@ -525,8 +516,7 @@ describe('the permissions', () => {
     setup();
     await table();
 
-    await openActions(user, 'A. Morgan');
-    await user.click(await screen.findByRole('menuitem', { name: 'Open the client' }));
+    await user.click(await findRowAction('Actions for A. Morgan', 'Open the client'));
     expect(await screen.findByTestId('location')).toHaveTextContent(`/acme/clients/${morgan.id}`);
   });
 });

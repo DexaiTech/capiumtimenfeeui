@@ -1,13 +1,13 @@
-import { ArrowLeft, ArrowRight, Ellipsis, Pencil, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Pencil, RotateCcw } from 'lucide-react';
 
 import {
   Badge,
   Button,
   Card,
   DataTable,
-  Dropdown,
   Select,
   type DataTableColumn,
+  RowActions,
 } from '@/components/ui';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
 
@@ -175,9 +175,8 @@ export function ReviewStep({
         rows={lines}
         rowKey={(line) => line.key}
         rowActions={(line) => (
-          <Dropdown
+          <RowActions
             label={`Actions for ${line.text}`}
-            trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
             items={[
               {
                 id: 'edit',

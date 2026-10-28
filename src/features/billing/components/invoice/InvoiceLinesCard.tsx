@@ -1,13 +1,13 @@
-import { Ellipsis, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import {
   Button,
   DataTable,
-  Dropdown,
   EmptyState,
   PageToolbar,
   type DataTableColumn,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
 
@@ -44,7 +44,9 @@ export function InvoiceLinesCard({
           <span className="font-semibold text-text">{line.description}</span>
           <span className="text-xs text-text-muted">
             {LINE_KIND_LABELS[line.kind] ?? line.kind}
-            {line.wip ? ` · billed from ${plural(line.wip.item_count, 'WIP item', 'WIP items')}` : ''}
+            {line.wip
+              ? ` · billed from ${plural(line.wip.item_count, 'WIP item', 'WIP items')}`
+              : ''}
           </span>
         </div>
       ),
@@ -123,11 +125,7 @@ export function InvoiceLinesCard({
       rowActions={
         editable
           ? (line) => (
-              <Dropdown
-                label={`Actions for ${line.description}`}
-                items={actionsFor(line)}
-                trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-              />
+              <RowActions label={`Actions for ${line.description}`} items={actionsFor(line)} />
             )
           : undefined
       }

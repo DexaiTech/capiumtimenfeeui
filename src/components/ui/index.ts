@@ -45,6 +45,8 @@ export {
   type DateRangeFieldProps,
 } from './DateField';
 export { Dropdown, type DropdownItem, type DropdownProps } from './Dropdown';
+export { RowActions, type RowActionsProps } from './RowActions';
+export { rowActionIcon } from './rowActionIcon';
 export { DurationInput, type DurationInputProps } from './DurationInput';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { ErrorState, type DisplayableError, type ErrorStateProps } from './ErrorState';

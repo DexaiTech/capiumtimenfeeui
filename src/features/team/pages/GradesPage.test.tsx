@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { findRowAction } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { grade, juniorGrade, partnerGrade, seniorGrade } from '../test/fixtures';
@@ -14,11 +15,6 @@ import GradesPage from './GradesPage';
 type User = ReturnType<typeof userEvent.setup>;
 
 const row = (name: RegExp) => screen.findByRole('row', { name });
-
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
-}
 
 async function openAdd(user: User) {
   await user.click(await screen.findByRole('button', { name: 'Add grade' }));
@@ -149,7 +145,7 @@ describe('GradesPage list', () => {
     renderInOrg(<GradesPage />, { context: contextWith(READ_ONLY) });
     await row(/^Partner/);
     expect(screen.queryByRole('button', { name: 'Add grade' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 });
 
@@ -278,8 +274,7 @@ describe('GradesPage forms', () => {
     const user = userEvent.setup();
     renderInOrg(<GradesPage />);
 
-    await openActions(user, 'Senior');
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await findRowAction('Actions for Senior', 'Edit'));
     const dialog = await screen.findByRole('region', { name: 'Edit grade' });
     expect(within(dialog).getByRole('textbox', { name: /Default cost rate/ })).toHaveValue('30.00');
     expect(within(dialog).getByRole('textbox', { name: /Default charge-out rate/ })).toHaveValue(
@@ -316,8 +311,7 @@ describe('GradesPage forms', () => {
     const user = userEvent.setup();
     renderInOrg(<GradesPage />, { context: contextWith(MANAGER) });
 
-    await openActions(user, 'Senior');
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await findRowAction('Actions for Senior', 'Edit'));
     const dialog = await screen.findByRole('region', { name: 'Edit grade' });
     const target = within(dialog).getByRole('textbox', { name: /Default chargeable target/ });
     await user.clear(target);
@@ -345,12 +339,10 @@ describe('GradesPage row actions', () => {
     const user = userEvent.setup();
     renderInOrg(<GradesPage />);
 
-    await openActions(user, 'Junior');
-    await user.click(screen.getByRole('menuitem', { name: 'Activate' }));
+    await user.click(await findRowAction('Actions for Junior', 'Activate'));
     expect(await screen.findByText('Junior activated')).toBeInTheDocument();
 
-    await openActions(user, 'Partner');
-    await user.click(screen.getByRole('menuitem', { name: 'Deactivate' }));
+    await user.click(await findRowAction('Actions for Partner', 'Deactivate'));
     expect(await screen.findByText('Partner deactivated')).toBeInTheDocument();
     expect(calls).toEqual(['activate', 'deactivate']);
   });
@@ -366,8 +358,7 @@ describe('GradesPage row actions', () => {
     const user = userEvent.setup();
     renderInOrg(<GradesPage />);
 
-    await openActions(user, 'Junior');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for Junior', 'Delete'));
     const confirm = await screen.findByRole('dialog', { name: 'Delete grade?' });
     expect(within(confirm).getByText(/not used by any staff member or rate/)).toBeInTheDocument();
     expect(deleted).toBe(0);
@@ -386,8 +377,7 @@ describe('GradesPage row actions', () => {
     const user = userEvent.setup();
     renderInOrg(<GradesPage />);
 
-    await openActions(user, 'Senior');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for Senior', 'Delete'));
     const confirm = await screen.findByRole('dialog', { name: 'Deactivate grade?' });
     expect(within(confirm).getByText(/cannot be deleted/)).toBeInTheDocument();
     expect(within(confirm).getByText(/2 staff members/)).toBeInTheDocument();
@@ -405,8 +395,7 @@ describe('GradesPage row actions', () => {
     const user = userEvent.setup();
     renderInOrg(<GradesPage />);
 
-    await openActions(user, 'Junior');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for Junior', 'Delete'));
     const confirm = await screen.findByRole('dialog', { name: 'Delete grade?' });
     await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
 

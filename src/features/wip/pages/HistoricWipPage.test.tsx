@@ -190,9 +190,10 @@ describe('the historic WIP', () => {
     const body = rowsOf(await table());
 
     await user.click(
-      within(body[0] as HTMLElement).getByRole('button', { name: 'Actions for Acme Ltd' }),
+      within(
+        within(body[0] as HTMLElement).getByRole('group', { name: 'Actions for Acme Ltd' }),
+      ).getByRole('button', { name: 'See the items' }),
     );
-    await user.click(await screen.findByRole('menuitem', { name: 'See the items' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Items behind the figures' });
     expect(dialog).toHaveTextContent('Acme Ltd, as at 18/10/2026');

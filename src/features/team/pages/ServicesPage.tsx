@@ -1,4 +1,4 @@
-import { Briefcase, Ellipsis, SearchX } from 'lucide-react';
+import { Briefcase, SearchX } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -8,7 +8,6 @@ import {
   ConfirmDialog,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   PageToolbar,
   SearchField,
@@ -17,6 +16,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -359,11 +359,7 @@ function ServiceList() {
         rowActions={
           canManage
             ? (service) => (
-                <Dropdown
-                  label={`Actions for ${service.name}`}
-                  items={actionsFor(service)}
-                  trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-                />
+                <RowActions label={`Actions for ${service.name}`} items={actionsFor(service)} />
               )
             : undefined
         }

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
+import { findRowAction, rowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { detailedTemplate, retiredTemplate, summaryTemplate } from '../test/billingFixtures';
@@ -21,19 +22,14 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const row = (name: RegExp) => screen.findByRole('row', { name });
 
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
+/** The names of the actions of a row, once it is on screen. */
+async function actionsOf(name: string) {
+  await screen.findByRole('group', { name: `Actions for ${name}` });
+  return rowActionNames(`Actions for ${name}`);
 }
 
-const menuItems = (menu: HTMLElement) =>
-  within(menu)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
-
 async function chooseAction(user: User, name: string, action: string) {
-  const menu = await openActions(user, name);
-  await user.click(within(menu).getByRole('menuitem', { name: action }));
+  await user.click(await findRowAction(`Actions for ${name}`, action));
 }
 
 const closed = (name: string) =>
@@ -173,7 +169,6 @@ describe('InvoiceTemplatesPage: the list', () => {
 describe('InvoiceTemplatesPage: permissions', () => {
   it('shows only the active templates to a member and offers nothing but a preview', async () => {
     backend.manager = false;
-    const user = userEvent.setup();
     renderInOrg(<InvoiceTemplatesPage />, { context: contextWith(MEMBER) });
 
     expect(await row(/^Standard/)).toBeInTheDocument();
@@ -189,7 +184,7 @@ describe('InvoiceTemplatesPage: permissions', () => {
     expect(
       screen.getByText(/Changing templates needs permission to manage settings/),
     ).toBeInTheDocument();
-    expect(menuItems(await openActions(user, 'Standard'))).toEqual(['Preview']);
+    expect(await actionsOf('Standard')).toEqual(['Preview']);
   });
 
   it('opens the preview of a template read only', async () => {
@@ -216,29 +211,21 @@ describe('InvoiceTemplatesPage: permissions', () => {
   });
 
   it('offers a manager the actions each template allows', async () => {
-    const user = userEvent.setup();
     renderInOrg(<InvoiceTemplatesPage />);
 
     // The default template stays the default and stays active.
-    const menu = await openActions(user, 'Standard');
-    expect(menuItems(menu)).toEqual(['Edit', 'Deactivate', 'Delete']);
-    expect(within(menu).getByRole('menuitem', { name: 'Deactivate' })).toBeDisabled();
-    expect(within(menu).getByRole('menuitem', { name: 'Delete' })).toBeDisabled();
-    await user.keyboard('{Escape}');
+    expect(await actionsOf('Standard')).toEqual(['Edit', 'Deactivate', 'Delete']);
+    expect(rowAction('Actions for Standard', 'Deactivate')).toBeDisabled();
+    expect(rowAction('Actions for Standard', 'Delete')).toBeDisabled();
 
-    expect(menuItems(await openActions(user, 'Detailed time sheets'))).toEqual([
+    expect(await actionsOf('Detailed time sheets')).toEqual([
       'Edit',
       'Make default',
       'Deactivate',
       'Delete',
     ]);
-    await user.keyboard('{Escape}');
     // An inactive template cannot be made the default.
-    expect(menuItems(await openActions(user, 'Retired layout'))).toEqual([
-      'Edit',
-      'Activate',
-      'Delete',
-    ]);
+    expect(await actionsOf('Retired layout')).toEqual(['Edit', 'Activate', 'Delete']);
   });
 });
 
@@ -730,8 +717,8 @@ describe('InvoiceTemplatesPage: default, status and delete', () => {
       '3 clients use this template, so it cannot be deleted. Deactivate it instead: clients keep an inactive template.',
     );
     expect(backend.calls.templateDeletes).toEqual([summaryTemplate.id]);
-    await screen.findByRole('dialog', { name: 'Deactivate template?' });
-    await user.click(screen.getByRole('button', { name: 'Deactivate' }));
+    const deactivate = await screen.findByRole('dialog', { name: 'Deactivate template?' });
+    await user.click(within(deactivate).getByRole('button', { name: 'Deactivate' }));
     expect(await screen.findByText('Summary by job deactivated')).toBeInTheDocument();
     expect(backend.calls.templateUpdates).toEqual([
       { id: summaryTemplate.id, body: { status: 'inactive' } },

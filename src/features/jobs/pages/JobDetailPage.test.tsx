@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { findRowAction } from '@/test/rowActions';
 import { server } from '@/test/server';
 
 import { ada, assignee, ben, IDS, job as makeJob, task as makeTask } from '../test/fixtures';
@@ -186,7 +187,7 @@ describe('the status of a job', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add task' })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Actions for File the accounts' }),
+      screen.queryByRole('group', { name: 'Actions for File the accounts' }),
     ).not.toBeInTheDocument();
   });
 });
@@ -309,8 +310,7 @@ describe('the tasks of a job', () => {
     const user = userEvent.setup();
     const backend = setup();
     await tasksTable();
-    await user.click(await screen.findByRole('button', { name: 'Actions for File the accounts' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await findRowAction('Actions for File the accounts', 'Edit'));
     const form = await panel('Edit task');
 
     expect(within(form).getByRole('button', { name: 'Save task' })).toBeDisabled();
@@ -329,10 +329,7 @@ describe('the tasks of a job', () => {
     const user = userEvent.setup();
     const backend = setup();
     await tasksTable();
-    await user.click(
-      await screen.findByRole('button', { name: 'Actions for Prepare the trial balance' }),
-    );
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for Prepare the trial balance', 'Delete'));
     let confirm = await dialog('Delete this task?');
     await user.click(within(confirm).getByRole('button', { name: 'Delete task' }));
     expect(await within(confirm).findByRole('alert')).toHaveTextContent(
@@ -340,8 +337,7 @@ describe('the tasks of a job', () => {
     );
     await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
 
-    await user.click(await screen.findByRole('button', { name: 'Actions for File the accounts' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(await findRowAction('Actions for File the accounts', 'Delete'));
     confirm = await dialog('Delete this task?');
     await user.click(within(confirm).getByRole('button', { name: 'Delete task' }));
 

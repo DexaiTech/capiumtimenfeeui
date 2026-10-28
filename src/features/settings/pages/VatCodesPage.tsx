@@ -1,4 +1,4 @@
-import { Ellipsis, Info, Percent, Plus, SearchX } from 'lucide-react';
+import { Info, Percent, Plus, SearchX } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
@@ -10,7 +10,6 @@ import {
   ConfirmDialog,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   PageToolbar,
   SearchField,
@@ -19,6 +18,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { ORG_SEGMENTS, modulePath } from '@/constants/routes';
 import { PERMISSIONS } from '@/constants/permissions';
@@ -333,13 +333,7 @@ function VatCodeList() {
         }
         rowActions={
           canManage
-            ? (rate) => (
-                <Dropdown
-                  label={`Actions for ${rate.name}`}
-                  items={actionsFor(rate)}
-                  trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-                />
-              )
+            ? (rate) => <RowActions label={`Actions for ${rate.name}`} items={actionsFor(rate)} />
             : undefined
         }
         empty={

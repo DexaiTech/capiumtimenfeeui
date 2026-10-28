@@ -1,4 +1,4 @@
-import { Ellipsis, ListChecks, ListTodo, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ListChecks, ListTodo, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -6,11 +6,11 @@ import {
   Button,
   ConfirmDialog,
   DataTable,
-  Dropdown,
   EmptyState,
   useToast,
   type DataTableColumn,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useAuth } from '@/features/auth';
@@ -287,13 +287,7 @@ export function TasksPanel({ job }: { job: Job }) {
         }
         rowActions={
           canEdit
-            ? (task) => (
-                <Dropdown
-                  label={`Actions for ${task.title}`}
-                  items={actionsFor(task)}
-                  trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-                />
-              )
+            ? (task) => <RowActions label={`Actions for ${task.title}`} items={actionsFor(task)} />
             : undefined
         }
         empty={

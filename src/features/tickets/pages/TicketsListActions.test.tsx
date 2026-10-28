@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { accountsTag, apt1, apt16, apt2, bugTag, detailOf, testTags } from '../test/fixtures';
@@ -301,20 +302,13 @@ describe('bulk actions', () => {
   });
 });
 
-describe('the menu of a row', () => {
+describe('the actions of a row', () => {
   it('offers Open and Copy link, even to a role that may otherwise delete', async () => {
-    const user = userEvent.setup();
     server.use(...ticketHandlers());
     renderList(OWNER_PERMISSIONS);
 
-    await user.click(await screen.findByRole('button', { name: 'Actions for APT1' }));
-    const menu = screen.getByRole('menu', { name: 'Actions for APT1' });
-    expect(
-      within(menu)
-        .getAllByRole('menuitem')
-        .map((item) => item.textContent),
-    ).toEqual(['Open', 'Copy link']);
-    expect(within(menu).queryByRole('separator')).not.toBeInTheDocument();
+    await screen.findByRole('group', { name: 'Actions for APT1' });
+    expect(rowActionNames('Actions for APT1')).toEqual(['Open', 'Copy link']);
   });
 
   it('copies the link of the ticket', async () => {
@@ -322,8 +316,7 @@ describe('the menu of a row', () => {
     server.use(...ticketHandlers());
     renderList();
 
-    await user.click(await screen.findByRole('button', { name: 'Actions for APT1' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Copy link' }));
+    await user.click(await findRowAction('Actions for APT1', 'Copy link'));
 
     expect(await screen.findByText('Link copied')).toBeInTheDocument();
     expect(await navigator.clipboard.readText()).toBe(

@@ -1,4 +1,4 @@
-import { Ellipsis, ListChecks, SearchX } from 'lucide-react';
+import { ListChecks, SearchX } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -8,7 +8,6 @@ import {
   ConfirmDialog,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   PageToolbar,
   SearchField,
@@ -17,6 +16,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -320,13 +320,7 @@ function ActivityTypeList() {
         }
         rowActions={
           canManage
-            ? (type) => (
-                <Dropdown
-                  label={`Actions for ${type.name}`}
-                  items={actionsFor(type)}
-                  trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-                />
-              )
+            ? (type) => <RowActions label={`Actions for ${type.name}`} items={actionsFor(type)} />
             : undefined
         }
         empty={

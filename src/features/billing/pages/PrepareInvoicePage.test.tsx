@@ -1,3 +1,4 @@
+import { findRowAction } from '@/test/rowActions';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -277,11 +278,11 @@ describe('reviewing the lines', () => {
     await review(user, /Bank reconciliation/, /Payroll queries/);
 
     await user.click(
-      screen.getByRole('button', {
-        name: 'Actions for Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)',
-      }),
+      await findRowAction(
+        'Actions for Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)',
+        'Edit the line',
+      ),
     );
-    await user.click(await screen.findByRole('menuitem', { name: 'Edit the line' }));
     const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
     const amount = within(dialog).getByLabelText('Amount to bill (£)');
     await user.clear(amount);
@@ -297,11 +298,11 @@ describe('reviewing the lines', () => {
     expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£250.00');
 
     await user.click(
-      screen.getByRole('button', {
-        name: 'Actions for Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)',
-      }),
+      await findRowAction(
+        'Actions for Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)',
+        'Undo the changes',
+      ),
     );
-    await user.click(await screen.findByRole('menuitem', { name: 'Undo the changes' }));
     await waitFor(() =>
       expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£300.00'),
     );
@@ -312,10 +313,7 @@ describe('reviewing the lines', () => {
     setup();
     await review(user, /Bank reconciliation/);
 
-    await user.click(
-      await screen.findByRole('button', { name: /^Actions for Bookkeeping 2026\/27/ }),
-    );
-    await user.click(await screen.findByRole('menuitem', { name: 'Edit the line' }));
+    await user.click(await findRowAction(/^Actions for Bookkeeping 2026\/27/, 'Edit the line'));
     const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
     const description = within(dialog).getByLabelText('Description');
     await user.clear(description);
@@ -334,10 +332,7 @@ describe('reviewing the lines', () => {
     setup();
     await review(user, /Bank reconciliation/);
 
-    await user.click(
-      await screen.findByRole('button', { name: /^Actions for Bookkeeping 2026\/27/ }),
-    );
-    await user.click(await screen.findByRole('menuitem', { name: 'Edit the line' }));
+    await user.click(await findRowAction(/^Actions for Bookkeeping 2026\/27/, 'Edit the line'));
     const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
     const amount = within(dialog).getByLabelText('Amount to bill (£)');
     await user.clear(amount);
@@ -399,9 +394,8 @@ describe('making the draft', () => {
     await user.selectOptions(screen.getByLabelText('Group the time'), 'One line per time entry');
 
     await user.click(
-      screen.getByRole('button', { name: 'Actions for 7 Sep 2026: Bank reconciliation' }),
+      await findRowAction('Actions for 7 Sep 2026: Bank reconciliation', 'Edit the line'),
     );
-    await user.click(await screen.findByRole('menuitem', { name: 'Edit the line' }));
     const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
     const amount = within(dialog).getByLabelText('Amount to bill (£)');
     await user.clear(amount);

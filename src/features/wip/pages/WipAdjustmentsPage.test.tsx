@@ -66,11 +66,16 @@ const table = async () => {
 
 const rowsOf = (element: HTMLElement) => within(element).getAllByRole('row').slice(1);
 
-/** Opens the actions menu of the row that holds this text and returns its table. */
-async function openActions(user: ReturnType<typeof userEvent.setup>, text: string) {
+/** The group of action buttons of the row that holds this text. */
+async function actionsOf(text: string) {
   const row = rowsOf(await table()).find((entry) => entry.textContent?.includes(text));
   if (!row) throw new Error(`no row with ${text}`);
-  await user.click(within(row).getByRole('button', { name: /^Actions for/ }));
+  return within(row).getByRole('group', { name: /^Actions for/ });
+}
+
+/** Clicks one action of the row that holds this text. */
+async function doAction(user: ReturnType<typeof userEvent.setup>, text: string, action: string) {
+  await user.click(within(await actionsOf(text)).getByRole('button', { name: action }));
 }
 
 describe('the adjustments', () => {
@@ -143,8 +148,7 @@ describe('deciding on an adjustment', () => {
   it('approves one, with an optional note', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    await openActions(user, 'Client disputed the hours');
-    await user.click(await screen.findByRole('menuitem', { name: 'Approve' }));
+    await doAction(user, 'Client disputed the hours', 'Approve');
 
     const dialog = await screen.findByRole('dialog', { name: 'Approve this adjustment?' });
     expect(dialog).toHaveTextContent('Write-off of £2,500.00 on J00001 Year-end accounts.');
@@ -162,8 +166,7 @@ describe('deciding on an adjustment', () => {
   it('will not reject without a reason, and sends the reason when there is one', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    await openActions(user, 'Client disputed the hours');
-    await user.click(await screen.findByRole('menuitem', { name: 'Reject' }));
+    await doAction(user, 'Client disputed the hours', 'Reject');
 
     const dialog = await screen.findByRole('dialog', { name: 'Reject this adjustment?' });
     expect(within(dialog).getByRole('button', { name: 'Reject' })).toBeDisabled();
@@ -180,8 +183,7 @@ describe('deciding on an adjustment', () => {
   it('reverses an approved adjustment that still counts', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    await openActions(user, 'Fee agreed with the client');
-    await user.click(await screen.findByRole('menuitem', { name: 'Reverse' }));
+    await doAction(user, 'Fee agreed with the client', 'Reverse');
 
     const dialog = await screen.findByRole('dialog', { name: 'Reverse this adjustment?' });
     await user.type(within(dialog).getByLabelText('Reason'), 'Entered twice');
@@ -201,8 +203,7 @@ describe('deciding on an adjustment', () => {
       adjustments: [adjustment({ requested_by: person(IDS.ada, 'Ada Lovelace') })],
       selfApprovalForbidden: true,
     });
-    await openActions(user, 'Client disputed the hours');
-    await user.click(await screen.findByRole('menuitem', { name: 'Approve' }));
+    await doAction(user, 'Client disputed the hours', 'Approve');
     const dialog = await screen.findByRole('dialog', { name: 'Approve this adjustment?' });
     await user.click(within(dialog).getByRole('button', { name: 'Approve' }));
 
@@ -214,8 +215,7 @@ describe('deciding on an adjustment', () => {
   it('shows the trail of an adjustment', async () => {
     const user = userEvent.setup();
     setup();
-    await openActions(user, 'Not agreed');
-    await user.click(await screen.findByRole('menuitem', { name: 'Details' }));
+    await doAction(user, 'Not agreed', 'Details');
 
     const dialog = await screen.findByRole('dialog', { name: 'WIP adjustment' });
     expect(dialog).toHaveTextContent('Requested');
@@ -378,7 +378,7 @@ describe('the ledger', () => {
     await screen.findByRole('table', { name: 'WIP ledger' });
     expect(screen.getByRole('tab', { name: 'Transfers' })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Write-offs' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 });
 
@@ -449,9 +449,10 @@ describe('the write-offs', () => {
     );
     if (!row) throw new Error('no write-off row');
     await user.click(
-      within(row).getByRole('button', { name: 'Actions for the write-off of £45.50' }),
+      within(
+        within(row).getByRole('group', { name: 'Actions for the write-off of £45.50' }),
+      ).getByRole('button', { name: 'Reverse the write-off' }),
     );
-    await user.click(await screen.findByRole('menuitem', { name: 'Reverse the write-off' }));
     const dialog = await screen.findByRole('dialog', { name: 'Reverse this write-off?' });
     await user.click(within(dialog).getByRole('button', { name: 'Reverse write-off' }));
 
@@ -479,8 +480,11 @@ describe('the write-offs', () => {
     );
     const row = rowsOf(await writeOffsTable())[0];
     if (!row) throw new Error('no write-off row');
-    await user.click(within(row).getByRole('button', { name: /^Actions for/ }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Reverse the write-off' }));
+    await user.click(
+      within(within(row).getByRole('group', { name: /^Actions for/ })).getByRole('button', {
+        name: 'Reverse the write-off',
+      }),
+    );
     const dialog = await screen.findByRole('dialog', { name: 'Reverse this write-off?' });
     await user.click(within(dialog).getByRole('button', { name: 'Reverse write-off' }));
 
@@ -501,7 +505,7 @@ describe('the write-offs', () => {
     setup({ writeOffs: writeOffs() }, { route: WRITE_OFFS, permissions: READ_ONLY });
     const rows = rowsOf(await writeOffsTable());
     expect(rows).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: /^Actions for/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
     expect(rows[0]).toHaveTextContent('Ada Lovelace');
   });
 
@@ -526,18 +530,16 @@ describe('the permissions', () => {
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
     const rows = rowsOf(screen.getByRole('table'));
     expect(
-      within(rows[0] as HTMLElement).getByRole('button', { name: /^Actions for/ }),
+      within(rows[0] as HTMLElement).getByRole('group', { name: /^Actions for/ }),
     ).toBeInTheDocument();
   });
 
   it('offers an approver the decision but not the reversal', async () => {
-    const user = userEvent.setup();
     setup({}, { permissions: [...READ_ONLY, 'wip.approve'] });
-    await openActions(user, 'Client disputed the hours');
-    expect(await screen.findByRole('menuitem', { name: 'Approve' })).toBeInTheDocument();
-    await user.keyboard('{Escape}');
-    await openActions(user, 'Fee agreed with the client');
-    expect(await screen.findByRole('menuitem', { name: 'Details' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Reverse' })).not.toBeInTheDocument();
+    const pending = within(await actionsOf('Client disputed the hours'));
+    expect(pending.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
+    const approved = within(await actionsOf('Fee agreed with the client'));
+    expect(approved.getByRole('button', { name: 'Details' })).toBeInTheDocument();
+    expect(approved.queryByRole('button', { name: 'Reverse' })).not.toBeInTheDocument();
   });
 });

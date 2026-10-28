@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { findRowAction } from '@/test/rowActions';
 import { server } from '@/test/server';
 import { expectRequiredFields } from '@/test/requiredFields';
 
@@ -12,15 +13,9 @@ import { teamHandlers } from '../test/handlers';
 import StaffDetailPage from './StaffDetailPage';
 import StaffMembersPage from './StaffMembersPage';
 
-type User = ReturnType<typeof userEvent.setup>;
-
 beforeEach(() => {
   server.use(...teamHandlers());
 });
-
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-}
 
 describe('mandatory fields of the staff dialogs', () => {
   it('marks the add form: name, grade, start date, hours, working days', async () => {
@@ -65,8 +60,7 @@ describe('mandatory fields of the staff dialogs', () => {
       </Routes>,
       { route: '/acme/team/staff' },
     );
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Edit'));
     await user.click(await screen.findByRole('button', { name: 'Edit details' }));
     const dialog = await screen.findByRole('region', { name: 'Edit staff member' });
     await within(dialog).findByRole('combobox', { name: 'Grade' });
@@ -87,14 +81,12 @@ describe('mandatory fields of the staff dialogs', () => {
     const user = userEvent.setup();
     renderInOrg(<StaffMembersPage />, { context: contextWith(OWNER_PERMISSIONS) });
 
-    await openActions(user, 'Grace Hopper');
-    await user.click(screen.getByRole('menuitem', { name: 'Change role' }));
+    await user.click(await findRowAction('Actions for Grace Hopper', 'Change role'));
     let dialog = await screen.findByRole('dialog', { name: 'Change role' });
     expectRequiredFields(dialog, { required: ['Role'] });
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Link login' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Link login'));
     dialog = await screen.findByRole('dialog', { name: 'Link a login' });
     // Sam has a work email, so a new account can fall back on it.
     expectRequiredFields(dialog, { required: [], optional: ['Sign-in email'] });
@@ -102,14 +94,12 @@ describe('mandatory fields of the staff dialogs', () => {
     expectRequiredFields(dialog, { required: ['Email of their existing login'] });
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Invite to sign in' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Invite to sign in'));
     dialog = await screen.findByRole('dialog', { name: 'Invite to sign in' });
     expectRequiredFields(dialog, { required: [], optional: ['Sign-in email'] });
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
-    await openActions(user, 'Sam Staff');
-    await user.click(screen.getByRole('menuitem', { name: 'Deactivate' }));
+    await user.click(await findRowAction('Actions for Sam Staff', 'Deactivate'));
     dialog = await screen.findByRole('dialog', { name: 'Deactivate staff member?' });
     await user.click(within(dialog).getByRole('radio', { name: /Mark as left/ }));
     expectRequiredFields(dialog, { required: [], optional: ['Leaving date'] });

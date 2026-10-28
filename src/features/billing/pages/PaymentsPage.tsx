@@ -1,4 +1,4 @@
-import { CreditCard, Ellipsis, Plus, SearchX } from 'lucide-react';
+import { CreditCard, Plus, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -7,7 +7,6 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -16,6 +15,7 @@ import {
   sortRows,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { ClientPicker } from '@/features/clients';
@@ -220,11 +220,7 @@ function PaymentList() {
           />
         }
         rowActions={(payment) => (
-          <Dropdown
-            label={`Actions for ${rowLabel(payment)}`}
-            items={actionsFor(payment)}
-            trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-          />
+          <RowActions label={`Actions for ${rowLabel(payment)}`} items={actionsFor(payment)} />
         )}
         empty={
           filtered ? (

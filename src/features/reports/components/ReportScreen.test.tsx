@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { rowAction } from '@/test/rowActions';
 import { server } from '@/test/server';
 
 import AgedDebtorsReportPage from '../pages/AgedDebtorsReportPage';
@@ -331,8 +332,7 @@ describe('the table', () => {
     await table('Utilisation');
     await waitFor(() => expect(screen.getByLabelText('Dates to')).toHaveValue('2026-10-18'));
 
-    await user.click(screen.getByRole('button', { name: 'Actions for Ada Lovelace' }));
-    await user.click(await screen.findByRole('menuitem', { name: 'See the time entries' }));
+    await user.click(rowAction('Actions for Ada Lovelace', 'See the time entries'));
     expect(location()).toHaveTextContent(
       `/acme/time/entries?person=${IDS.ada}&from=2026-10-01&to=2026-10-18`,
     );
@@ -359,7 +359,7 @@ describe('the table', () => {
     const rows = rowsOf(body);
     expect(rows).toHaveLength(3);
     expect(
-      within(rows[0] as HTMLElement).getByRole('button', { name: 'Actions for Acme Ltd' }),
+      within(rows[0] as HTMLElement).getByRole('group', { name: 'Actions for Acme Ltd' }),
     ).toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).queryByRole('button')).not.toBeInTheDocument();
   });

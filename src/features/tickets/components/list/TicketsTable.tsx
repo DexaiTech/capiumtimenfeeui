@@ -1,13 +1,13 @@
-import { EllipsisVertical, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import {
   DataTable,
-  Dropdown,
   type DataTableColumn,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { formatDayMonthYear } from '@/utils/dates';
@@ -193,11 +193,7 @@ export function TicketsTable({
       stickyHeader
       className="[--table-sticky-top:3.75rem]"
       rowActions={(ticket) => (
-        <Dropdown
-          label={`Actions for ${ticket.code}`}
-          items={actionsFor(ticket)}
-          trigger={<EllipsisVertical aria-hidden="true" className="size-5 text-text-muted" />}
-        />
+        <RowActions label={`Actions for ${ticket.code}`} items={actionsFor(ticket)} />
       )}
       empty={empty}
       footer={footer}

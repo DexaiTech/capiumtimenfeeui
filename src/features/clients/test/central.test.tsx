@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { INITIAL_CLIENTS_PREFS, useClientsPrefs } from '../store';
@@ -93,9 +94,10 @@ const item = (list: HTMLElement, name: string) => {
   return found;
 };
 
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
+/** The names of the actions of a row, once it is on screen. */
+async function actionsOf(name: string) {
+  await screen.findByRole('group', { name: `Actions for ${name}` });
+  return rowActionNames(`Actions for ${name}`);
 }
 
 beforeEach(() => {
@@ -264,26 +266,20 @@ describe('Sync all linked', () => {
   });
 });
 
-describe('Sync with central, from the row menu', () => {
+describe('Sync with central, from the row actions', () => {
   it('is offered for linked clients only', async () => {
-    const user = userEvent.setup();
     renderList();
 
-    let menu = await openActions(user, linked.name);
-    expect(
-      within(menu)
-        .getAllByRole('menuitem')
-        .map((item) => item.textContent),
-    ).toEqual(['View', 'Edit', 'Sync with central', 'Archive', 'Delete']);
-    await user.keyboard('{Escape}');
-
-    menu = await openActions(user, techwave.name);
-    expect(within(menu).queryByRole('menuitem', { name: 'Sync with central' })).toBeNull();
-    await user.keyboard('{Escape}');
-
+    expect(await actionsOf(linked.name)).toEqual([
+      'View',
+      'Edit',
+      'Sync with central',
+      'Archive',
+      'Delete',
+    ]);
+    expect(await actionsOf(techwave.name)).not.toContain('Sync with central');
     // A merged-away client is history: nothing to synchronise.
-    menu = await openActions(user, mutual.name);
-    expect(within(menu).queryByRole('menuitem', { name: 'Sync with central' })).toBeNull();
+    expect(await actionsOf(mutual.name)).not.toContain('Sync with central');
   });
 
   it('synchronises the one client and says what happened', async () => {
@@ -308,8 +304,7 @@ describe('Sync with central, from the row menu', () => {
         }),
       ],
     });
-    const menu = await openActions(user, linked.name);
-    await user.click(within(menu).getByRole('menuitem', { name: 'Sync with central' }));
+    await user.click(await findRowAction(`Actions for ${linked.name}`, 'Sync with central'));
 
     await waitFor(() => expect(calls).toEqual([linked.id]));
     expect(await notifications().findByText('Synchronised with central')).toBeInTheDocument();
@@ -338,8 +333,7 @@ describe('Sync with central, from the row menu', () => {
         ),
       ],
     });
-    const menu = await openActions(user, lost.name);
-    await user.click(within(menu).getByRole('menuitem', { name: 'Sync with central' }));
+    await user.click(await findRowAction(`Actions for ${lost.name}`, 'Sync with central'));
     expect(await notifications().findByText('Not found centrally')).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { OWNER_PERMISSIONS, STAFF_PERMISSIONS } from '@/test/orgFixtures';
+import { rowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { apt1, apt2, apt16, bugTag, detailOf } from '../test/fixtures';
@@ -359,13 +360,7 @@ describe('TicketsListPage', () => {
       expect(within(bulk).getByRole('button', { name: 'Set status' })).toBeInTheDocument();
       expect(within(bulk).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
 
-      await user.click(screen.getByRole('button', { name: 'Actions for APT1' }));
-      const menu = screen.getByRole('menu', { name: 'Actions for APT1' });
-      expect(
-        within(menu)
-          .getAllByRole('menuitem')
-          .map((item) => item.textContent),
-      ).toEqual(['Open', 'Copy link']);
+      expect(rowActionNames('Actions for APT1')).toEqual(['Open', 'Copy link']);
     });
 
     it('tells a role without ticket.read that the page is not included', () => {
@@ -381,8 +376,7 @@ describe('TicketsListPage', () => {
     renderList();
     await screen.findByRole('link', { name: 'APT16' });
 
-    await user.click(screen.getByRole('button', { name: 'Actions for APT16' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Open' }));
+    await user.click(rowAction('Actions for APT16', 'Open'));
     expect(await screen.findByText('Ticket page')).toBeInTheDocument();
     expect(where()).toBe(`${LIST}/${apt16.id}`);
   });

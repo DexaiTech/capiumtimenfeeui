@@ -1,4 +1,4 @@
-import { Ellipsis, FileMinus, SearchX, Undo2 } from 'lucide-react';
+import { FileMinus, SearchX, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -6,12 +6,12 @@ import {
   ConfirmDialog,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
   useToast,
   type DataTableColumn,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -195,7 +195,7 @@ export function WriteOffsView() {
           }
           rowActions={(row) =>
             canWriteOff ? (
-              <Dropdown
+              <RowActions
                 label={`Actions for the write-off of ${formatMoney(row.total_wip_value, currency)}`}
                 items={[
                   {
@@ -209,7 +209,6 @@ export function WriteOffsView() {
                     },
                   },
                 ]}
-                trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
               />
             ) : null
           }

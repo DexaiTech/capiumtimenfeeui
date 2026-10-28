@@ -67,10 +67,16 @@ const table = async () => {
 
 const rowsOf = (element: HTMLElement) => within(element).getAllByRole('row').slice(1);
 
-async function openActions(user: ReturnType<typeof userEvent.setup>, text: string) {
+/** The group of action buttons of the row that holds this text. */
+async function actionsOf(text: string) {
   const row = rowsOf(await table()).find((entry) => entry.textContent?.includes(text));
   if (!row) throw new Error(`no row with ${text}`);
-  await user.click(within(row).getByRole('button', { name: /^Actions for/ }));
+  return within(row).getByRole('group', { name: /^Actions for/ });
+}
+
+/** Clicks one action of the row that holds this text. */
+async function doAction(user: ReturnType<typeof userEvent.setup>, text: string, action: string) {
+  await user.click(within(await actionsOf(text)).getByRole('button', { name: action }));
 }
 
 /** The dialog of a new transfer with the client and the two jobs chosen. */
@@ -130,8 +136,7 @@ describe('the transfers', () => {
   it('shows the items of a transfer and who reversed it', async () => {
     const user = userEvent.setup();
     setup();
-    await openActions(user, 'Moved by amount');
-    await user.click(await screen.findByRole('menuitem', { name: 'Details' }));
+    await doAction(user, 'Moved by amount', 'Details');
 
     const dialog = await screen.findByRole('dialog', { name: 'WIP transfer' });
     expect(dialog).toHaveTextContent('Moved by amount, not by item.');
@@ -144,8 +149,7 @@ describe('reversing a transfer', () => {
   it('reverses one with a reason', async () => {
     const user = userEvent.setup();
     const backend = setup();
-    await openActions(user, 'Booked to the wrong job');
-    await user.click(await screen.findByRole('menuitem', { name: 'Reverse' }));
+    await doAction(user, 'Booked to the wrong job', 'Reverse');
 
     const dialog = await screen.findByRole('dialog', { name: 'Reverse this transfer?' });
     expect(dialog).toHaveTextContent(
@@ -174,8 +178,7 @@ describe('reversing a transfer', () => {
         },
       },
     });
-    await openActions(user, 'Booked to the wrong job');
-    await user.click(await screen.findByRole('menuitem', { name: 'Reverse' }));
+    await doAction(user, 'Booked to the wrong job', 'Reverse');
     const dialog = await screen.findByRole('dialog', { name: 'Reverse this transfer?' });
     await user.type(within(dialog).getByLabelText('Reason'), 'Mistake');
     await user.click(within(dialog).getByRole('button', { name: 'Reverse transfer' }));
@@ -300,13 +303,12 @@ describe('transferring WIP', () => {
 
 describe('the permissions', () => {
   it('shows a reader the transfers without a way to make or reverse any', async () => {
-    const user = userEvent.setup();
     setup({}, { permissions: READ_ONLY });
     await table();
     expect(screen.queryByRole('button', { name: 'Transfer WIP' })).not.toBeInTheDocument();
 
-    await openActions(user, 'Booked to the wrong job');
-    expect(await screen.findByRole('menuitem', { name: 'Details' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Reverse' })).not.toBeInTheDocument();
+    const actions = within(await actionsOf('Booked to the wrong job'));
+    expect(actions.getByRole('button', { name: 'Details' })).toBeInTheDocument();
+    expect(actions.queryByRole('button', { name: 'Reverse' })).not.toBeInTheDocument();
   });
 });

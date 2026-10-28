@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { OWNER_PERMISSIONS, STAFF_PERMISSIONS } from '@/test/orgFixtures';
+import { rowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { ada, claim as makeClaim, line as makeLine, ben } from '../test/fixtures';
@@ -283,12 +284,8 @@ describe('My Expenses', () => {
     const backend = setup();
     await table();
 
-    await user.click(screen.getByRole('button', { name: 'Actions for Client visit, Leeds' }));
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Open',
-      'Delete',
-    ]);
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    expect(rowActionNames('Actions for Client visit, Leeds')).toEqual(['Open', 'Delete']);
+    await user.click(rowAction('Actions for Client visit, Leeds', 'Delete'));
     const confirm = await screen.findByRole('dialog', { name: 'Delete this claim?' });
     await user.click(within(confirm).getByRole('button', { name: 'Delete claim' }));
     expect(await screen.findByText('Claim deleted')).toBeInTheDocument();
@@ -299,8 +296,7 @@ describe('My Expenses', () => {
     );
     expect(backend.claims.map((entry) => entry.id)).not.toContain('c-draft');
 
-    await user.click(screen.getByRole('button', { name: 'Actions for Conference' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Recall' }));
+    await user.click(rowAction('Actions for Conference', 'Recall'));
     expect(await screen.findByText('Claim recalled')).toBeInTheDocument();
     expect(backend.claims.find((entry) => entry.id === 'c-submitted')?.status).toBe('draft');
   });
@@ -314,8 +310,7 @@ describe('My Expenses', () => {
       ),
     );
     await table();
-    await user.click(screen.getByRole('button', { name: 'Actions for Client visit, Leeds' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(rowAction('Actions for Client visit, Leeds', 'Delete'));
     const confirm = await screen.findByRole('dialog', { name: 'Delete this claim?' });
     await user.click(within(confirm).getByRole('button', { name: 'Delete claim' }));
 

@@ -1,13 +1,4 @@
-import {
-  Briefcase,
-  Copy,
-  Ellipsis,
-  ExternalLink,
-  Pencil,
-  Plus,
-  SearchX,
-  Trash2,
-} from 'lucide-react';
+import { Briefcase, Copy, ExternalLink, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -18,7 +9,6 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -26,6 +16,7 @@ import {
   Select,
   useToast,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -339,11 +330,7 @@ export default function JobsPage() {
             </>
           }
           rowActions={(job) => (
-            <Dropdown
-              label={`Actions for ${jobLabel(job)}`}
-              items={actionsFor(job)}
-              trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-            />
+            <RowActions label={`Actions for ${jobLabel(job)}`} items={actionsFor(job)} />
           )}
           empty={
             filtered ? (

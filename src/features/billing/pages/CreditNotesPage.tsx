@@ -1,4 +1,4 @@
-import { Ellipsis, FileMinus2, Plus, SearchX } from 'lucide-react';
+import { FileMinus2, Plus, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -6,7 +6,6 @@ import {
   ColumnVisibilityMenu,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -14,6 +13,7 @@ import {
   sortRows,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { ClientPicker } from '@/features/clients';
@@ -175,15 +175,13 @@ function CreditNoteList() {
           />
         }
         rowActions={(note) => (
-          <Dropdown
+          <RowActions
             label={`Actions for ${note.number}`}
             items={actionsFor(note)}
-            trigger={
+            status={
               busy === note.id ? (
                 <span className="text-xs text-text-muted">Downloading…</span>
-              ) : (
-                <Ellipsis aria-hidden="true" className="size-5 text-text-muted" />
-              )
+              ) : undefined
             }
           />
         )}

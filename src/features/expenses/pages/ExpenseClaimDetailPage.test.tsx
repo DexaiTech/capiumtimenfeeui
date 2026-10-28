@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { tokenStore } from '@/services/api';
 import { OWNER_PERMISSIONS, STAFF_PERMISSIONS } from '@/test/orgFixtures';
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import {
@@ -74,8 +75,12 @@ const draft = (overrides: Partial<Parameters<typeof makeClaim>[0]> = {}) =>
 const linesTable = () => screen.findByRole('table', { name: 'Expenses in this claim' });
 const dialog = (name: string) => screen.findByRole('dialog', { name });
 const panel = (name: string) => screen.findByRole('region', { name });
-const lineMenu = async (user: ReturnType<typeof userEvent.setup>, description: string) => {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${description}` }));
+const lineAction = async (
+  user: ReturnType<typeof userEvent.setup>,
+  description: string,
+  action: string,
+) => {
+  await user.click(await findRowAction(`Actions for ${description}`, action));
 };
 
 describe('a claim on its page', () => {
@@ -162,9 +167,8 @@ describe('a claim on its page', () => {
     ]) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     }
-    const user = userEvent.setup();
-    await lineMenu(user, 'Train to Leeds');
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Receipts']);
+    await screen.findByRole('group', { name: 'Actions for Train to Leeds' });
+    expect(rowActionNames('Actions for Train to Leeds')).toEqual(['Receipts']);
     expect(screen.getByRole('columnheader', { name: 'Billing' })).toBeInTheDocument();
   });
 
@@ -431,8 +435,7 @@ describe('changing and deleting an expense', () => {
   it('sends only the fields that changed', async () => {
     const user = userEvent.setup();
     const { backend } = setup({ claim: draft() });
-    await lineMenu(user, 'Train to Leeds');
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await lineAction(user, 'Train to Leeds', 'Edit');
     const form = await panel('Edit expense');
 
     expect(within(form).getByLabelText('Description')).toHaveValue('Train to Leeds');
@@ -452,8 +455,7 @@ describe('changing and deleting an expense', () => {
   it('sends the amounts when they were typed and lets the API price the rest', async () => {
     const user = userEvent.setup();
     const { backend } = setup({ claim: draft() });
-    await lineMenu(user, 'Taxi');
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await lineAction(user, 'Taxi', 'Edit');
     const form = await panel('Edit expense');
 
     await user.clear(within(form).getByLabelText('Net (£)'));
@@ -467,8 +469,7 @@ describe('changing and deleting an expense', () => {
   it('deletes an expense after a confirmation that names it', async () => {
     const user = userEvent.setup();
     const { backend } = setup({ claim: draft() });
-    await lineMenu(user, 'Taxi');
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await lineAction(user, 'Taxi', 'Delete');
     const confirm = await dialog('Delete this expense?');
     expect(confirm).toHaveTextContent(
       'Taxi (£10.00) will be removed from the claim, with its receipts.',
@@ -809,8 +810,7 @@ describe('correcting an approved claim', () => {
       permissions: OWNER_PERMISSIONS,
       backend: { canManage: true },
     });
-    await lineMenu(user, 'Train to Leeds');
-    await user.click(screen.getByRole('menuitem', { name: 'Correct' }));
+    await lineAction(user, 'Train to Leeds', 'Correct');
     const form = await panel('Correct expense');
     expect(form).toHaveTextContent('The claim is approved: the correction needs a reason');
 
@@ -836,7 +836,6 @@ describe('correcting an approved claim', () => {
   });
 
   it('leaves a billed expense alone', async () => {
-    const user = userEvent.setup();
     setup({
       claim: draft({
         status: 'approved',
@@ -847,9 +846,9 @@ describe('correcting an approved claim', () => {
       permissions: OWNER_PERMISSIONS,
       backend: { canManage: true },
     });
-    await lineMenu(user, 'Train to Leeds');
+    await screen.findByRole('row', { name: /Train to Leeds/ });
 
-    expect(screen.queryByRole('menuitem', { name: 'Correct' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Correct' })).not.toBeInTheDocument();
     expect(screen.getByText('Billed')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { Banknote, Ellipsis, FileText, Mail, SearchX, UserRound } from 'lucide-react';
+import { Banknote, FileText, Mail, SearchX, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -8,11 +8,11 @@ import {
   ColumnVisibilityMenu,
   DataTable,
   DateField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -153,13 +153,7 @@ export function DebtorsView() {
         onSelect: () => void navigate(routes.org.client(slug, row.client.id)),
       });
     }
-    return (
-      <Dropdown
-        label={`Actions for ${row.client.name}`}
-        items={items}
-        trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-      />
-    );
+    return <RowActions label={`Actions for ${row.client.name}`} items={items} />;
   };
 
   return (

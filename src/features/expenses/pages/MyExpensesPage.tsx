@@ -1,4 +1,4 @@
-import { Ellipsis, ExternalLink, Plus, SearchX, Trash2, Undo2, Wallet } from 'lucide-react';
+import { ExternalLink, Plus, SearchX, Trash2, Undo2, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -9,13 +9,13 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
   SearchField,
   useToast,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -264,11 +264,7 @@ export default function MyExpensesPage() {
             />
           }
           rowActions={(claim) => (
-            <Dropdown
-              label={`Actions for ${claimLabel(claim)}`}
-              items={actionsFor(claim)}
-              trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-            />
+            <RowActions label={`Actions for ${claimLabel(claim)}`} items={actionsFor(claim)} />
           )}
           empty={
             filtered ? (

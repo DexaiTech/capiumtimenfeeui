@@ -1,13 +1,13 @@
-import { Ellipsis, Paperclip, Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
+import { Paperclip, Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
 
 import {
   Badge,
   Button,
   DataTable,
-  Dropdown,
   EmptyState,
   type DataTableColumn,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
@@ -225,11 +225,7 @@ export function LinesTable({
               Receipt needed
             </Badge>
           ) : null}
-          <Dropdown
-            label={`Actions for ${line.description}`}
-            items={itemsFor(line)}
-            trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-          />
+          <RowActions label={`Actions for ${line.description}`} items={itemsFor(line)} />
         </span>
       )}
       empty={

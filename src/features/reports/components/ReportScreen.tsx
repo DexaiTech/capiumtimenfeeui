@@ -1,4 +1,4 @@
-import { ChartColumn, Ellipsis, ExternalLink, SearchX } from 'lucide-react';
+import { ChartColumn, ExternalLink, SearchX } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -7,13 +7,13 @@ import {
   DataTable,
   DateField,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Select,
   sortRows,
   useToast,
   type DataTableSort,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -180,7 +180,7 @@ function Report<TRow, TTotals>({ config }: { config: ReportConfig<TRow, TTotals>
     ? (row: TRow) => {
         const target = config.drill?.(row, ctx, shown);
         return target ? (
-          <Dropdown
+          <RowActions
             label={`Actions for ${config.rowLabel(row)}`}
             items={[
               {
@@ -190,7 +190,6 @@ function Report<TRow, TTotals>({ config }: { config: ReportConfig<TRow, TTotals>
                 onSelect: () => void navigate(target.to),
               },
             ]}
-            trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
           />
         ) : null;
       }

@@ -15,8 +15,6 @@ import CostRatesPage from './CostRatesPage';
 import RatePreviewPage from './RatePreviewPage';
 import StaffDetailPage from './StaffDetailPage';
 
-type User = ReturnType<typeof userEvent.setup>;
-
 beforeEach(() => {
   server.use(
     ...teamHandlers(),
@@ -24,10 +22,8 @@ beforeEach(() => {
   );
 });
 
-async function openRuleActions(user: User, subject: string) {
-  const name = `Actions for the rate of ${subject}`;
-  await user.click(await screen.findByRole('button', { name }));
-  return screen.findByRole('menu', { name });
+async function openRuleActions(subject: string) {
+  return screen.findByRole('group', { name: `Actions for the rate of ${subject}` });
 }
 
 describe('mandatory fields of the rate dialogs', () => {
@@ -51,8 +47,8 @@ describe('mandatory fields of the rate dialogs', () => {
     const user = userEvent.setup();
     server.use(...teamHandlers({ rules: testCostRules }));
     renderInOrg(<CostRatesPage />);
-    let menu = await openRuleActions(user, 'Sam Staff');
-    await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+    let menu = await openRuleActions('Sam Staff');
+    await user.click(within(menu).getByRole('button', { name: 'Edit' }));
     let dialog = await screen.findByRole('region', { name: 'Edit rate' });
     expectRequiredFields(dialog, {
       required: ['Rate per hour (£)', 'Effective from'],
@@ -60,8 +56,8 @@ describe('mandatory fields of the rate dialogs', () => {
     });
     await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
-    menu = await openRuleActions(user, 'Sam Staff');
-    await user.click(within(menu).getByRole('menuitem', { name: 'End-date' }));
+    menu = await openRuleActions('Sam Staff');
+    await user.click(within(menu).getByRole('button', { name: 'End-date' }));
     dialog = await screen.findByRole('dialog', { name: 'End-date rate' });
     expectRequiredFields(dialog, { required: ['Last day of the rate'] });
   });

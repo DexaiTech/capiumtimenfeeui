@@ -1,4 +1,4 @@
-import { Download, Ellipsis, SearchX, UserPlus, Users } from 'lucide-react';
+import { Download, SearchX, UserPlus, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -8,7 +8,6 @@ import {
   ColumnVisibilityMenu,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   InitialsAvatar,
   PageToolbar,
@@ -18,6 +17,7 @@ import {
   useBulkFlow,
   type DataTableColumn,
   type DataTableSort,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -525,11 +525,7 @@ function StaffList({
             ? (member) => {
                 const items = actionsFor(member);
                 return items.length > 0 ? (
-                  <Dropdown
-                    label={`Actions for ${member.full_name}`}
-                    items={items}
-                    trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-                  />
+                  <RowActions label={`Actions for ${member.full_name}`} items={items} />
                 ) : null;
               }
             : undefined

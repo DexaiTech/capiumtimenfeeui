@@ -1,4 +1,4 @@
-import { BellRing, Download, Eye, Ellipsis, Plus, UsersRound } from 'lucide-react';
+import { BellRing, Download, Eye, Plus, UsersRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -8,7 +8,6 @@ import {
   CountTabs,
   DataTable,
   EmptyState,
-  Dropdown,
   InitialsAvatar,
   PageToolbar,
   SearchField,
@@ -17,6 +16,7 @@ import {
   useToast,
   type DataTableColumn,
   type DataTableSort,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { StaffPicker } from '@/features/team';
@@ -379,9 +379,8 @@ function Page() {
           />
         }
         rowActions={(row) => (
-          <Dropdown
+          <RowActions
             label={`Actions for ${row.name}`}
-            trigger={<Ellipsis className="size-4" aria-hidden="true" />}
             items={[
               {
                 id: 'view',

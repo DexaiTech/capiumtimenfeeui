@@ -1,4 +1,4 @@
-import { Ellipsis, Pencil, Plus, Power, SearchX, Tags, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Power, SearchX, Tags, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 
@@ -9,7 +9,6 @@ import {
   ConfirmDialog,
   CountTabs,
   DataTable,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -17,6 +16,7 @@ import {
   useToast,
   type DataTableColumn,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
@@ -312,13 +312,7 @@ export default function ExpenseTypesPage() {
           }
           rowActions={
             canManage
-              ? (type) => (
-                  <Dropdown
-                    label={`Actions for ${type.name}`}
-                    items={actionsFor(type)}
-                    trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
-                  />
-                )
+              ? (type) => <RowActions label={`Actions for ${type.name}`} items={actionsFor(type)} />
               : undefined
           }
           empty={

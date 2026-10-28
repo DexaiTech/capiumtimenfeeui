@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tokenStore } from '@/services/api';
 import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
+import { findRowAction, rowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import { CLIENTS_PREFS_KEY, INITIAL_CLIENTS_PREFS, useClientsPrefs } from '../store';
@@ -19,15 +20,8 @@ function Where() {
   return <p data-testid="location">{`${location.pathname}${location.search}`}</p>;
 }
 
-type User = ReturnType<typeof userEvent.setup>;
-
 const table = () => screen.getByRole('table', { name: 'Clients' });
 const clientRow = (name: string) => screen.findByRole('row', { name });
-
-async function openActions(user: User, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-  return screen.findByRole('menu', { name: `Actions for ${name}` });
-}
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -537,7 +531,7 @@ describe('ClientsPage actions', () => {
     expect(clicks[0]?.href).toBe('blob:clients');
   });
 
-  it('archives a client from the row menu', async () => {
+  it('archives a client from its row actions', async () => {
     let archived = '';
     server.use(
       ...clientsHandlers(),
@@ -548,8 +542,7 @@ describe('ClientsPage actions', () => {
     );
     const user = userEvent.setup();
     renderInOrg(<ClientsPage />);
-    const menu = await openActions(user, techwave.name);
-    await user.click(within(menu).getByRole('menuitem', { name: 'Archive' }));
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'Archive'));
     const dialog = await screen.findByRole('dialog', { name: 'Archive client' });
     await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
     await waitFor(() => expect(archived).toBe(techwave.id));
@@ -566,13 +559,14 @@ describe('ClientsPage actions', () => {
     );
     const user = userEvent.setup();
     renderInOrg(<ClientsPage />);
-    const menu = await openActions(user, techwave.name);
-    expect(
-      within(menu)
-        .getAllByRole('menuitem')
-        .map((item) => item.textContent),
-    ).toEqual(['View', 'Edit', 'Archive', 'Delete']);
-    await user.click(within(menu).getByRole('menuitem', { name: 'Delete' }));
+    await clientRow(techwave.name);
+    expect(rowActionNames(`Actions for ${techwave.name}`)).toEqual([
+      'View',
+      'Edit',
+      'Archive',
+      'Delete',
+    ]);
+    await user.click(rowAction(`Actions for ${techwave.name}`, 'Delete'));
     const dialog = await screen.findByRole('dialog', { name: 'Delete client' });
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
     expect(
@@ -583,7 +577,6 @@ describe('ClientsPage actions', () => {
 
   it('hides what the role may not do', async () => {
     server.use(...clientsHandlers());
-    const user = userEvent.setup();
     renderInOrg(<ClientsPage />, { context: contextWith(STAFF_PERMISSIONS) });
     const row = await clientRow(mutual.name);
 
@@ -592,12 +585,7 @@ describe('ClientsPage actions', () => {
     expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
     expect(within(row).queryByRole('button', { name: /Add contact/ })).toBeNull();
 
-    const menu = await openActions(user, mutual.name);
-    expect(
-      within(menu)
-        .getAllByRole('menuitem')
-        .map((item) => item.textContent),
-    ).toEqual(['View']);
+    expect(rowActionNames(`Actions for ${mutual.name}`)).toEqual(['View']);
   });
 
   it('shows the same data as cards in the grid view', async () => {

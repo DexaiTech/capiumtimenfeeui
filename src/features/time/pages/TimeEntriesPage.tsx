@@ -1,6 +1,5 @@
 import {
   Download,
-  Ellipsis,
   FilePlus2,
   History,
   Lock,
@@ -20,7 +19,6 @@ import {
   CountTabs,
   DataTable,
   DateRangeField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   Pagination,
@@ -30,6 +28,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
@@ -629,9 +628,8 @@ function List() {
           />
         }
         rowActions={(entry) => (
-          <Dropdown
+          <RowActions
             label={`Actions for the entry of ${formatUkDate(entry.entry_date)}, ${formatMinutes(entry.minutes)}`}
-            trigger={<Ellipsis className="size-4" aria-hidden="true" />}
             items={actionsOf(entry)}
           />
         )}

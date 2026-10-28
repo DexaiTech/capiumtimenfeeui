@@ -44,8 +44,11 @@ describe('mandatory fields of the WIP dialogs', () => {
         .getAllByRole('row')
         .find((entry) => entry.textContent?.includes('Client disputed the hours'));
       if (!row) throw new Error('no row');
-      await user.click(within(row).getByRole('button', { name: /^Actions for/ }));
-      await user.click(await screen.findByRole('menuitem', { name: action }));
+      await user.click(
+        within(within(row).getByRole('group', { name: /^Actions for/ })).getByRole('button', {
+          name: action,
+        }),
+      );
     };
     await open('Reject');
     let dialog = await screen.findByRole('dialog', { name: 'Reject this adjustment?' });

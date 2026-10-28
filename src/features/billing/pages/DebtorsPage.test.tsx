@@ -1,3 +1,4 @@
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -91,10 +92,6 @@ const table = async () => {
 };
 
 const rowsOf = (element: HTMLElement) => within(element).getAllByRole('row').slice(1);
-
-async function openActions(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
-}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -227,8 +224,7 @@ describe('payment reminders', () => {
     const backend = setup();
     await table();
 
-    await openActions(user, 'Northgate Dental LLP');
-    await user.click(await screen.findByRole('menuitem', { name: 'Send a reminder' }));
+    await user.click(await findRowAction('Actions for Northgate Dental LLP', 'Send a reminder'));
     const dialog = await screen.findByRole('dialog', { name: 'Send payment reminders' });
     const email = await within(dialog).findByRole('region', {
       name: 'Email to Northgate Dental LLP',
@@ -259,8 +255,7 @@ describe('payment reminders', () => {
     const backend = setup();
     await table();
 
-    await openActions(user, 'Northgate Dental LLP');
-    await user.click(await screen.findByRole('menuitem', { name: 'Send a reminder' }));
+    await user.click(await findRowAction('Actions for Northgate Dental LLP', 'Send a reminder'));
     const dialog = await screen.findByRole('dialog', { name: 'Send payment reminders' });
     await within(dialog).findByText('1 email will go out.');
     await user.selectOptions(within(dialog).getByLabelText('Email to send'), 'Final notice');
@@ -278,8 +273,7 @@ describe('payment reminders', () => {
     setup();
     await table();
 
-    await openActions(user, 'A. Morgan');
-    await user.click(await screen.findByRole('menuitem', { name: 'Send a reminder' }));
+    await user.click(await findRowAction('Actions for A. Morgan', 'Send a reminder'));
     const dialog = await screen.findByRole('dialog', { name: 'Send payment reminders' });
     expect(
       await within(dialog).findByText('Nothing can be sent: every invoice was skipped.'),
@@ -291,13 +285,13 @@ describe('payment reminders', () => {
   });
 
   it('offers no reminder for a client that is not overdue', async () => {
-    const user = userEvent.setup();
     setup();
     await table();
 
-    await openActions(user, 'Brightside Bakery Ltd');
-    expect(await screen.findByRole('menuitem', { name: 'See the invoices' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Send a reminder' })).not.toBeInTheDocument();
+    expect(
+      await findRowAction('Actions for Brightside Bakery Ltd', 'See the invoices'),
+    ).toBeInTheDocument();
+    expect(rowActionNames('Actions for Brightside Bakery Ltd')).not.toContain('Send a reminder');
   });
 
   it('reminds about the invoices chosen in the drill-down', async () => {
@@ -352,8 +346,7 @@ describe('payment reminders', () => {
     });
     await table();
 
-    await openActions(user, 'Northgate Dental LLP');
-    await user.click(await screen.findByRole('menuitem', { name: 'Send a reminder' }));
+    await user.click(await findRowAction('Actions for Northgate Dental LLP', 'Send a reminder'));
     const dialog = await screen.findByRole('dialog', { name: 'Send payment reminders' });
     expect(await within(dialog).findByText('You cannot send reminders.')).toBeInTheDocument();
   });
@@ -438,14 +431,14 @@ describe('the reminders sent', () => {
 
 describe('the permissions', () => {
   it('shows a reader the debtors without a way to send reminders', async () => {
-    const user = userEvent.setup();
     setup({}, { permissions: READ_ONLY });
     await table();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
 
-    await openActions(user, 'Northgate Dental LLP');
-    expect(await screen.findByRole('menuitem', { name: 'See the invoices' })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Send a reminder' })).not.toBeInTheDocument();
+    expect(
+      await findRowAction('Actions for Northgate Dental LLP', 'See the invoices'),
+    ).toBeInTheDocument();
+    expect(rowActionNames('Actions for Northgate Dental LLP')).not.toContain('Send a reminder');
   });
 
   it('opens the statement of a client from the actions', async () => {
@@ -453,8 +446,7 @@ describe('the permissions', () => {
     setup();
     await table();
 
-    await openActions(user, 'Harbour & Co');
-    await user.click(await screen.findByRole('menuitem', { name: 'View the statement' }));
+    await user.click(await findRowAction('Actions for Harbour & Co', 'View the statement'));
     expect(await screen.findByTestId('location')).toHaveTextContent(
       `/acme/billing/statements?statement=${harbour.id}`,
     );

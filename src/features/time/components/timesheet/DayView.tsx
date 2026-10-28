@@ -1,4 +1,4 @@
-import { Clock, Copy, Ellipsis, Pencil, Trash2 } from 'lucide-react';
+import { Clock, Copy, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -6,12 +6,12 @@ import {
   Card,
   ConfirmDialog,
   DataTable,
-  Dropdown,
   EmptyState,
   Skeleton,
   useToast,
   type DataTableColumn,
   type DropdownItem,
+  RowActions,
 } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { formatMinutes } from '@/utils/minutes';
@@ -222,9 +222,8 @@ export function DayView({ date, canRecord, onAddEntry }: DayViewProps) {
         rowKey={(entry) => entry.id}
         loading={day.isPending}
         rowActions={(entry) => (
-          <Dropdown
+          <RowActions
             label={`Actions for ${refLabel({ code: entry.job_number, name: entry.job_name }) || entry.client_name || 'the entry'}, ${formatMinutes(entry.minutes)}`}
-            trigger={<Ellipsis className="size-4" aria-hidden="true" />}
             items={actionsOf(entry)}
           />
         )}

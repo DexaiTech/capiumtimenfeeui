@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { findRowAction } from '@/test/rowActions';
 import { fail, server } from '@/test/server';
 
 import { IDS, job as makeJob, task as makeTask } from '../test/fixtures';
@@ -136,10 +137,7 @@ describe('starting a job with the default tasks of its service', () => {
   it('shows nothing when editing a job, even one of a service with default tasks', async () => {
     const user = userEvent.setup();
     setupList({ jobs: [makeJob({ service_id: IDS.payroll, service_name: 'Payroll' })] });
-    await user.click(
-      await screen.findByRole('button', { name: 'Actions for J00001 Year-end accounts' }),
-    );
-    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.click(await findRowAction('Actions for J00001 Year-end accounts', 'Edit'));
     const form = await screen.findByRole('region', { name: 'Edit job' });
     expect(within(form).getByLabelText('Service')).toHaveValue(IDS.payroll);
     expect(defaultTasksSwitch(form)).not.toBeInTheDocument();

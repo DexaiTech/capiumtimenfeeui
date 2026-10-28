@@ -1,4 +1,4 @@
-import { Ellipsis, History, ListTree, SearchX } from 'lucide-react';
+import { History, ListTree, SearchX } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -8,10 +8,10 @@ import {
   CountTabs,
   DataTable,
   DateField,
-  Dropdown,
   EmptyState,
   PageToolbar,
   useToast,
+  RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
@@ -222,7 +222,7 @@ export default function HistoricWipPage() {
           }
           rowActions={(row) =>
             row.key ? (
-              <Dropdown
+              <RowActions
                 label={`Actions for ${row.name}`}
                 items={[
                   {
@@ -232,7 +232,6 @@ export default function HistoricWipPage() {
                     onSelect: () => drill(row),
                   },
                 ]}
-                trigger={<Ellipsis aria-hidden="true" className="size-5 text-text-muted" />}
               />
             ) : null
           }

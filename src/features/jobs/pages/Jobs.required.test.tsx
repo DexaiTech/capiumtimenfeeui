@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { expectRequiredFields, isMarkedRequired } from '@/test/requiredFields';
+import { findRowAction } from '@/test/rowActions';
 import { server } from '@/test/server';
 
 import { job as makeJob } from '../test/fixtures';
@@ -28,10 +29,7 @@ function setupList() {
 }
 
 async function openRowAction(user: User, action: string) {
-  await user.click(
-    await screen.findByRole('button', { name: 'Actions for J00001 Year-end accounts' }),
-  );
-  await user.click(screen.getByRole('menuitem', { name: action }));
+  await user.click(await findRowAction('Actions for J00001 Year-end accounts', action));
 }
 
 describe('mandatory fields of the job dialogs', () => {

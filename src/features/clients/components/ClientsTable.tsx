@@ -1,10 +1,11 @@
-import { Ellipsis, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
+import { RowActions } from '@/components/ui';
 import { formatActivity, initialsOf } from '../format';
 import type { ToggleableColumnId } from '../constants';
 import type { ClientListItem, ClientSort, SortOrder } from '../types';
-import { ActionMenu, type MenuAction } from './ActionMenu';
+import { type MenuAction } from './ActionMenu';
 import {
   CentralCell,
   DeadlineCell,
@@ -330,13 +331,10 @@ export function ClientsTable({
                     ) : null}
                     {show('action') ? (
                       <td>
-                        <ActionMenu
+                        <RowActions
                           label={`Actions for ${client.name}`}
                           items={actionsFor(client)}
-                          triggerClassName="cc-more"
-                        >
-                          <Ellipsis aria-hidden="true" />
-                        </ActionMenu>
+                        />
                       </td>
                     ) : null}
                   </tr>
