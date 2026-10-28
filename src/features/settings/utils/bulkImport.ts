@@ -70,7 +70,7 @@ export const RATES_IMPORT: BulkImportKind = {
   ],
   notes: [
     'kind is cost or charge; rate is pounds per hour.',
-    'Which of staff_code, grade, client_code and service_code are filled decides what the rate applies to: a staff member, a grade, a client (with or without a service or staff member) or a service with a grade. Cost rates are for a staff member or a grade only.',
+    'Which of staff_code, grade, client_code and service_code are filled decides what the rate applies to: a staff member (with or without a service), a grade, a client (with or without a service or staff member) or a service with a grade. Cost rates are for a staff member or a grade only.',
     'effective_to is optional; leave it blank for a rate with no end.',
   ],
 };

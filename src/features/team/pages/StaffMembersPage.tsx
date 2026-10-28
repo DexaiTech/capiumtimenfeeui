@@ -189,9 +189,6 @@ function StaffList({
                 </Badge>
               ) : null}
             </span>
-            <span className="truncate text-xs text-text-muted">
-              {member.job_title ?? member.email ?? member.login_email ?? ''}
-            </span>
           </div>
         </div>
       ),

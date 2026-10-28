@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useId } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
@@ -14,11 +14,20 @@ import type {
 } from '../../billingTypes';
 import { invoiceTemplateSchema, type InvoiceTemplateValues } from '../../schemas/billing';
 import { toBillingFormError } from '../../utils/billingErrors';
-import { FOOTER_MAX, LAYOUT_HINT, LAYOUT_OPTIONS } from '../../utils/templates';
+import { FOOTER_MAX, LAYOUT_HINT, LAYOUT_OPTIONS, WATERMARK_MAX } from '../../utils/templates';
 import { DialogActions } from '../DialogActions';
+import { AccentColorField } from './AccentColorField';
 import { InvoicePreview } from './InvoicePreview';
 
-const FIELDS = ['name', 'layout', 'show_logo', 'show_bank_details', 'footer_text'] as const;
+const FIELDS = [
+  'name',
+  'layout',
+  'show_logo',
+  'show_bank_details',
+  'footer_text',
+  'accent_color',
+  'watermark_text',
+] as const;
 
 export interface InvoiceTemplateFormPanelProps {
   /** The template to change, null to add one. */
@@ -55,6 +64,8 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
       show_logo: template?.show_logo ?? true,
       show_bank_details: template?.show_bank_details ?? true,
       footer_text: template?.footer_text ?? '',
+      accent_color: template?.accent_color ?? '',
+      watermark_text: template?.watermark_text ?? '',
     },
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
@@ -66,6 +77,8 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
   const onSubmit = handleSubmit((values) => {
     clearSubmitError();
     const footer = values.footer_text || null;
+    const accent = values.accent_color || null;
+    const watermark = values.watermark_text || null;
     const onError = (error: unknown) => handleSubmitError(toBillingFormError(error));
 
     if (!template) {
@@ -76,6 +89,8 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
         show_bank_details: values.show_bank_details,
       };
       if (footer) body.footer_text = footer;
+      if (accent) body.accent_color = accent;
+      if (watermark) body.watermark_text = watermark;
       create.mutate(body, {
         onSuccess: (created) => {
           toast({ tone: 'success', title: `${created.name} added` });
@@ -95,6 +110,8 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
       changes.show_bank_details = values.show_bank_details;
     }
     if (footer !== template.footer_text) changes.footer_text = footer;
+    if (accent !== (template.accent_color ?? null)) changes.accent_color = accent;
+    if (watermark !== (template.watermark_text ?? null)) changes.watermark_text = watermark;
     if (Object.keys(changes).length === 0) {
       onClose();
       return;
@@ -147,6 +164,26 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
               description="Printed so clients know where to pay. They come from the practice settings."
               {...register('show_bank_details')}
             />
+            <Controller
+              control={control}
+              name="accent_color"
+              render={({ field }) => (
+                <AccentColorField
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.accent_color?.message}
+                />
+              )}
+            />
+            <Input
+              label="Watermark"
+              autoComplete="off"
+              placeholder="e.g. COPY, PAID or CONFIDENTIAL"
+              maxLength={WATERMARK_MAX}
+              hint="Printed large and pale across every page. Leave empty for none."
+              error={errors.watermark_text?.message}
+              {...register('watermark_text')}
+            />
             <Textarea
               label="Footer text"
               rows={4}
@@ -164,6 +201,8 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
           showLogo={draft.show_logo ?? true}
           showBankDetails={draft.show_bank_details ?? true}
           footerText={draft.footer_text ?? ''}
+          accentColor={draft.accent_color ?? ''}
+          watermarkText={draft.watermark_text ?? ''}
           practice={organization}
         />
       </div>
@@ -212,7 +251,7 @@ export function InvoiceTemplateFormPanel({
       description={
         template
           ? template.name
-          : 'How an invoice looks: the layout of its lines, the logo, the bank details and the footer.'
+          : 'How an invoice looks: the layout of its lines, the logo, the bank details, the colour, a watermark and the footer.'
       }
     >
       {open ? (

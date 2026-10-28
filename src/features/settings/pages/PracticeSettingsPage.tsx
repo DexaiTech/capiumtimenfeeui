@@ -1,6 +1,5 @@
-import { Card } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
-import { DeleteOrganization, useOrg } from '@/features/organizations';
+import { useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
 
 import { PracticeSettingsForm } from '../components/practice/PracticeSettingsForm';
@@ -23,11 +22,6 @@ export default function PracticeSettingsPage() {
         organization={organization}
         editable={editable}
       />
-      {can(PERMISSIONS.organizationDelete) ? (
-        <Card padding="lg" className="border-danger/30">
-          <DeleteOrganization organization={organization} />
-        </Card>
-      ) : null}
     </SettingsSection>
   );
 }

@@ -7,7 +7,9 @@ import { currencySymbol, parsePounds, penceToPoundsInput } from '@/utils/money';
 import { useOrganizationForm } from '../../hooks/useOrganizationForm';
 import { billingSettingsSchema, type BillingSettingsValues } from '../../schemas/general';
 import { WIP_MODE_HELP, WIP_MODE_OPTIONS } from '../../utils/general';
+import { normaliseDays } from '../../utils/reminderSchedule';
 import { bpToPercentInput, parsePercentToBp } from '../../utils/vat';
+import { ReminderScheduleField } from './ReminderScheduleField';
 import { SettingsCard } from './SettingsCard';
 import type { GeneralCardProps } from './types';
 
@@ -18,7 +20,7 @@ const FIELDS = [
   'invoice_approval_required',
   'invoice_approval_threshold',
   'payment_reminders_enabled',
-  'payment_reminder_days_after_due',
+  'payment_reminder_schedule',
 ] as const;
 const DEFAULT_PERCENT = '10';
 
@@ -40,7 +42,7 @@ function toValues(organization: Organization): BillingSettingsValues {
       currency,
     ),
     payment_reminders_enabled: organization.payment_reminders_enabled,
-    payment_reminder_days_after_due: String(organization.payment_reminder_days_after_due),
+    payment_reminder_schedule: organization.payment_reminder_schedule,
   };
 }
 
@@ -70,9 +72,9 @@ function toUpdate(values: BillingSettingsValues, organization: Organization): Or
   if (values.payment_reminders_enabled !== organization.payment_reminders_enabled) {
     body.payment_reminders_enabled = values.payment_reminders_enabled;
   }
-  const days = Number(values.payment_reminder_days_after_due);
-  if (days !== organization.payment_reminder_days_after_due) {
-    body.payment_reminder_days_after_due = days;
+  const schedule = normaliseDays(values.payment_reminder_schedule);
+  if (schedule.join(',') !== normaliseDays(organization.payment_reminder_schedule).join(',')) {
+    body.payment_reminder_schedule = schedule;
   }
   return body;
 }
@@ -101,7 +103,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
   return (
     <SettingsCard
       title="WIP and billing"
-      description="When a fixed fee counts as work in progress, which adjustments and invoices need approval, and the reminders for overdue invoices."
+      description="When a fixed fee counts as work in progress, which adjustments and invoices need approval, and the reminders for unpaid invoices."
       saveLabel="Save billing settings"
       editable={editable}
       dirty={card.isDirty}
@@ -204,25 +206,22 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
             onChange={field.onChange}
             disabled={!editable}
             label="Automatic payment reminders"
-            description="On: a daily job emails clients about invoices that are overdue and have not been reminded."
+            description="On: a daily job emails clients about unpaid invoices on the reminder days below, before and after the due date, until they are paid."
             className="rounded-md border border-border px-3 py-2"
           />
         )}
       />
-      <Input
-        label="Days after the due date"
-        required={reminders}
-        inputMode="numeric"
-        autoComplete="off"
-        className="sm:max-w-sm"
-        disabled={!reminders}
-        hint={
-          reminders
-            ? 'The reminder goes this many days after an invoice falls due, from 1 to 365.'
-            : 'Turn on payment reminders to set the delay.'
-        }
-        error={errors.payment_reminder_days_after_due?.message}
-        {...register('payment_reminder_days_after_due')}
+      <Controller
+        control={control}
+        name="payment_reminder_schedule"
+        render={({ field }) => (
+          <ReminderScheduleField
+            value={field.value}
+            onChange={field.onChange}
+            disabled={!editable || !reminders}
+            error={errors.payment_reminder_schedule?.message}
+          />
+        )}
       />
     </SettingsCard>
   );

@@ -8,6 +8,8 @@ import { isApiError } from '@/services/api';
 import { useImportClients } from '../api';
 import { downloadImportTemplate } from '../template';
 import type { ImportResult, ImportRowError } from '../types';
+import { ImportInstructionsButton } from '@/components/common/ImportInstructionsButton';
+import { CLIENTS_SHEET } from '@/utils/importInstructions';
 
 export interface ImportDialogProps {
   open: boolean;
@@ -134,15 +136,17 @@ function ImportBody({ onClose }: { onClose: () => void }) {
           onChange={(event) => reset(event.target.files?.[0] ?? null)}
         />
         <span className="text-sm text-text-muted">{file ? file.name : 'No file chosen'}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto"
-          leftIcon={<Download className="size-4" aria-hidden="true" />}
-          onClick={downloadImportTemplate}
-        >
-          Download template
-        </Button>
+        <span className="ml-auto flex items-center gap-1">
+          <ImportInstructionsButton sheet={CLIENTS_SHEET} />
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={<Download className="size-4" aria-hidden="true" />}
+            onClick={downloadImportTemplate}
+          >
+            Download template
+          </Button>
+        </span>
       </div>
 
       {failure ? <FormAlert message={failure.message} requestId={failure.requestId} /> : null}

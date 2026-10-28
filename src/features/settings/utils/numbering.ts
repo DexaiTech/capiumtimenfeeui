@@ -24,13 +24,20 @@ export const PADDING_MAX = 10;
 export const NEXT_NUMBER_MAX = 2_000_000_000;
 
 /** A number as the API prints it: prefix, then the number padded with zeros (`INV-00042`). */
-export function formatSequenceNumber(prefix: string, number: number, padding: number): string {
-  return `${prefix}${String(number).padStart(padding, '0')}`;
+export function formatSequenceNumber(
+  prefix: string,
+  number: number,
+  padding: number,
+  suffix = '',
+): string {
+  return `${prefix}${String(number).padStart(padding, '0')}${suffix}`;
 }
 
 /** The text of the three numbering fields, as typed. */
 export interface SequenceDraft {
   prefix: string;
+  /** Printed after the number (`/26`); empty for none. */
+  suffix?: string;
   padding: string;
   next_number: string;
 }
@@ -38,11 +45,14 @@ export interface SequenceDraft {
 /** The next `count` numbers a draft would produce, or null while a field is not valid yet. */
 export function previewNumbers(draft: SequenceDraft, count = 1): string[] | null {
   const prefix = draft.prefix.trim();
+  const suffix = (draft.suffix ?? '').trim();
   const padding = Number(draft.padding);
   const next = Number(draft.next_number);
   const valid =
     prefix.length <= PREFIX_MAX_LENGTH &&
     PREFIX_PATTERN.test(prefix) &&
+    suffix.length <= PREFIX_MAX_LENGTH &&
+    PREFIX_PATTERN.test(suffix) &&
     /^\d{1,2}$/.test(draft.padding.trim()) &&
     padding >= PADDING_MIN &&
     padding <= PADDING_MAX &&
@@ -51,6 +61,6 @@ export function previewNumbers(draft: SequenceDraft, count = 1): string[] | null
     next <= NEXT_NUMBER_MAX;
   if (!valid) return null;
   return Array.from({ length: count }, (_, index) =>
-    formatSequenceNumber(prefix, next + index, padding),
+    formatSequenceNumber(prefix, next + index, padding, suffix),
   );
 }

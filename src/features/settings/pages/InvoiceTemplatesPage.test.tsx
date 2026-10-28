@@ -248,6 +248,47 @@ describe('InvoiceTemplateFormPanel: adding', () => {
     return screen.findByRole('region', { name: 'Add invoice template' });
   }
 
+  it('adds a template with a colour and a watermark, and shows both in the preview', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<InvoiceTemplatesPage />);
+    const dialog = await openAdd(user);
+    expect(within(dialog).getByRole('button', { name: 'No colour' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByTestId('preview-watermark')).not.toBeInTheDocument();
+
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Branded');
+    await user.click(within(dialog).getByRole('button', { name: 'Blue' }));
+    expect(within(dialog).getByRole('button', { name: 'Blue' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await user.type(within(dialog).getByRole('textbox', { name: 'Watermark' }), 'COPY');
+    expect(screen.getByTestId('preview-watermark')).toHaveTextContent('COPY');
+    const preview = within(dialog).getByRole('region', { name: 'Invoice preview' });
+    expect(within(preview).getByText('Invoice')).toHaveStyle({ color: '#1F5CE6' });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Add template' }));
+    expect(await screen.findByText('Branded added')).toBeInTheDocument();
+    expect(backend.calls.templateCreates).toEqual([
+      expect.objectContaining({ name: 'Branded', accent_color: '#1F5CE6', watermark_text: 'COPY' }),
+    ]);
+  });
+
+  it('refuses a watermark with characters the PDF cannot print', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<InvoiceTemplatesPage />);
+    const dialog = await openAdd(user);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Odd');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Watermark' }), 'a<b>');
+    await user.click(within(dialog).getByRole('button', { name: 'Add template' }));
+    expect(
+      await within(dialog).findByText('Use up to 24 letters, digits, spaces and hyphens'),
+    ).toBeInTheDocument();
+    expect(backend.calls.templateCreates).toEqual([]);
+  });
+
   it('adds a template and sends the fields it was given', async () => {
     const user = userEvent.setup();
     renderInOrg(<InvoiceTemplatesPage />);
@@ -390,7 +431,7 @@ describe('InvoiceTemplateFormPanel: the preview', () => {
     expect(sample.getByText('£318.00')).toBeInTheDocument();
     expect(sample.getByText('£1,908.00')).toBeInTheDocument();
     // The hint about the PDF renderer.
-    expect(sample.getByText(/The PDF renderer will apply the template/)).toBeInTheDocument();
+    expect(sample.getByText(/drawn with the template of the client/)).toBeInTheDocument();
   });
 
   it('follows the layout', async () => {

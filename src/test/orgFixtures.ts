@@ -29,6 +29,7 @@ export const testOrganization: Organization = {
   invoice_approval_threshold: 0,
   payment_reminders_enabled: false,
   payment_reminder_days_after_due: 7,
+  payment_reminder_schedule: [7],
   mileage_rate: 45,
   expense_markup_bp: 0,
   rate_mode: 'staff_first',

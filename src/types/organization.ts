@@ -52,6 +52,9 @@ export interface Organization {
   payment_reminders_enabled: boolean;
   /** Days past the due date after which the automatic reminder goes (1 to 365). */
   payment_reminder_days_after_due: number;
+  /** The days, from the invoice's due date, on which the client is reminded until it is paid:
+   * negative before the due date, 0 on it, positive after it. */
+  payment_reminder_schedule: number[];
   /** Pence per mile. */
   mileage_rate: number;
   /** Basis points added when an expense is recharged to the client (1000 = 10%). */
@@ -108,6 +111,7 @@ export type OrganizationUpdate = Partial<
     | 'invoice_approval_threshold'
     | 'payment_reminders_enabled'
     | 'payment_reminder_days_after_due'
+    | 'payment_reminder_schedule'
     | 'mileage_rate'
     | 'expense_markup_bp'
     | 'rate_mode'

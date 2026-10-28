@@ -83,7 +83,7 @@ describe('ChargeOutRatesPage', () => {
       'Client + service',
       'Client + staff',
       'Job rate',
-      'Service rate for the grade',
+      'Service rate for the person',
       'Staff rate',
       'Grade rate',
       'Practice default',
@@ -132,6 +132,7 @@ describe('ChargeOutRatesPage', () => {
       'Client + service',
       'Client + staff',
       'Client (everyone)',
+      'Staff + service',
       'Service + grade',
       'Staff',
       'Grade',
@@ -190,6 +191,7 @@ describe('ChargeOutRatesPage', () => {
       'Client + service',
       'Client + staff',
       'Client (everyone)',
+      'Staff + service',
       'Service + grade',
       'Staff',
       'Grade',
@@ -307,6 +309,7 @@ describe('ChargeOutRatesPage', () => {
 
     const dialog = await openAdd(user);
     expect(optionNames(within(dialog).getByRole('combobox', { name: 'Applies to' }))).toEqual([
+      'Staff + service',
       'Service + grade',
       'Staff',
       'Grade',

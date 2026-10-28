@@ -54,6 +54,8 @@ export type NumberedDocument = 'invoice' | 'credit_note' | 'estimate';
 export interface Sequence {
   kind: string;
   prefix: string;
+  /** Printed after the number (`INV-00042/26`); empty for none. */
+  suffix?: string;
   /** Zero padding: 5 shows 42 as 00042. */
   padding: number;
   next_number: number;
@@ -63,6 +65,7 @@ export interface Sequence {
 
 export interface SequenceUpdate {
   prefix?: string;
+  suffix?: string;
   padding?: number;
   next_number?: number;
 }
@@ -80,6 +83,10 @@ export interface InvoiceTemplate {
   show_bank_details: boolean;
   /** Up to 1000 characters; null when there is none. */
   footer_text: string | null;
+  /** `#RRGGBB`: the title, the practice name and the table headings; null for plain black. */
+  accent_color?: string | null;
+  /** Printed pale across the page; null for none. */
+  watermark_text?: string | null;
   /** The template of clients that have not chosen one. */
   is_default: boolean;
   status: InvoiceTemplateStatus;
@@ -95,6 +102,8 @@ export interface InvoiceTemplateCreate {
   show_logo?: boolean;
   show_bank_details?: boolean;
   footer_text?: string | null;
+  accent_color?: string | null;
+  watermark_text?: string | null;
   is_default?: boolean;
   status?: InvoiceTemplateStatus;
 }
@@ -106,5 +115,7 @@ export interface InvoiceTemplateUpdate {
   show_logo?: boolean;
   show_bank_details?: boolean;
   footer_text?: string | null;
+  accent_color?: string | null;
+  watermark_text?: string | null;
   status?: InvoiceTemplateStatus;
 }

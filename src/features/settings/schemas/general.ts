@@ -8,6 +8,7 @@ import { parsePercentToBp } from '../utils/vat';
 import {
   MARKUP_MAX_BP,
   MILEAGE_MAX_PENCE,
+  REMINDER_BEFORE_MAX,
   REMINDER_DAYS_MAX,
   THRESHOLD_MAX_PENCE,
   parseMarkupToBp,
@@ -53,14 +54,11 @@ export const billingSettingsSchema = z.object({
   invoice_approval_required: z.boolean(),
   invoice_approval_threshold: pounds(THRESHOLD_MAX_PENCE, THRESHOLD_MESSAGE),
   payment_reminders_enabled: z.boolean(),
-  payment_reminder_days_after_due: z
-    .string()
-    .trim()
-    .refine(
-      (value) =>
-        /^\d{1,3}$/.test(value) && Number(value) >= 1 && Number(value) <= REMINDER_DAYS_MAX,
-      'Enter a number of days from 1 to 365',
-    ),
+  /** Days from the due date: negative before it, 0 on it, positive after it. */
+  payment_reminder_schedule: z
+    .array(z.number().int().min(-REMINDER_BEFORE_MAX).max(REMINDER_DAYS_MAX))
+    .min(1, 'Add at least one reminder day')
+    .max(12, 'Up to 12 reminders'),
 });
 export type BillingSettingsValues = z.infer<typeof billingSettingsSchema>;
 

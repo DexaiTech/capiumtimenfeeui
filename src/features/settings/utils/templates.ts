@@ -6,6 +6,21 @@ import type { InvoiceLayout } from '../billingTypes';
 
 export const TEMPLATE_NAME_MAX = 80;
 export const FOOTER_MAX = 1000;
+export const WATERMARK_MAX = 24;
+export const WATERMARK_PATTERN = /^[A-Za-z0-9 -]{1,24}$/;
+
+/** `#RRGGBB`. */
+export const isHexColor = (value: string): boolean => /^#[0-9A-Fa-f]{6}$/.test(value);
+
+/** The colours offered for the accent of an invoice, with the names screen readers say. */
+export const ACCENT_PRESETS: ReadonlyArray<{ name: string; color: string }> = [
+  { name: 'Violet', color: '#694BAF' },
+  { name: 'Blue', color: '#1F5CE6' },
+  { name: 'Green', color: '#059062' },
+  { name: 'Orange', color: '#E07000' },
+  { name: 'Red', color: '#D93025' },
+  { name: 'Charcoal', color: '#313B5E' },
+];
 
 export const LAYOUTS = [
   'standard',

@@ -9,6 +9,8 @@ import { useImportOpeningBalanceTime } from '../../api/adminHooks';
 import type { ImportRowError, OpeningBalanceTimeImportResult } from '../../adminTypes';
 import { downloadOpeningBalanceTemplate } from '../../utils/openingBalanceImport';
 import { DialogActions } from '../DialogActions';
+import { ImportInstructionsButton } from '@/components/common/ImportInstructionsButton';
+import { OPENING_BALANCES_SHEET } from '@/utils/importInstructions';
 
 function isRowErrorList(details: unknown): details is ImportRowError[] {
   return (
@@ -108,15 +110,17 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             onChange={(event) => choose(event.target.files?.[0] ?? null)}
           />
           <span className="text-sm text-text-muted">{file ? file.name : 'No file chosen'}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto"
-            leftIcon={<Download className="size-4" aria-hidden="true" />}
-            onClick={downloadOpeningBalanceTemplate}
-          >
-            Download template
-          </Button>
+          <span className="ml-auto flex items-center gap-1">
+            <ImportInstructionsButton sheet={OPENING_BALANCES_SHEET} />
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<Download className="size-4" aria-hidden="true" />}
+              onClick={downloadOpeningBalanceTemplate}
+            >
+              Download template
+            </Button>
+          </span>
         </div>
 
         {failure ? <FormAlert message={failure.message} requestId={failure.requestId} /> : null}

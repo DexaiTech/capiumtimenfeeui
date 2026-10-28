@@ -9,6 +9,8 @@ import { useImportClients } from '../../api/adminHooks';
 import type { ImportResult, ImportRowError } from '../../adminTypes';
 import { downloadClientTemplate } from '../../utils/clientImport';
 import { DialogActions } from '../DialogActions';
+import { ImportInstructionsButton } from '@/components/common/ImportInstructionsButton';
+import { CLIENTS_SHEET } from '@/utils/importInstructions';
 
 function isRowErrorList(details: unknown): details is ImportRowError[] {
   return (
@@ -103,15 +105,17 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             onChange={(event) => choose(event.target.files?.[0] ?? null)}
           />
           <span className="text-sm text-text-muted">{file ? file.name : 'No file chosen'}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto"
-            leftIcon={<Download className="size-4" aria-hidden="true" />}
-            onClick={downloadClientTemplate}
-          >
-            Download template
-          </Button>
+          <span className="ml-auto flex items-center gap-1">
+            <ImportInstructionsButton sheet={CLIENTS_SHEET} />
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<Download className="size-4" aria-hidden="true" />}
+              onClick={downloadClientTemplate}
+            >
+              Download template
+            </Button>
+          </span>
         </div>
 
         {failure ? <FormAlert message={failure.message} requestId={failure.requestId} /> : null}

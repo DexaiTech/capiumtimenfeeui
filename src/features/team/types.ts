@@ -269,6 +269,7 @@ export type RateLevel =
   | 'client_service'
   | 'client_staff'
   | 'client'
+  | 'service_staff'
   | 'service_grade'
   | 'staff'
   | 'grade';

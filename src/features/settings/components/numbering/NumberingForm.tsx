@@ -24,13 +24,14 @@ import {
 } from '../../utils/numbering';
 import { LoadError } from '../LoadError';
 
-const FIELDS = ['prefix', 'padding', 'next_number'] as const;
+const FIELDS = ['prefix', 'suffix', 'padding', 'next_number'] as const;
 
 /** An explicit reset replaces everything, unlike the reset that follows the saved numbering. */
 const RESET_ALL = { keepDirtyValues: false, keepErrors: false } as const;
 
 const toValues = (sequence: Sequence): NumberingValues => ({
   prefix: sequence.prefix,
+  suffix: sequence.suffix ?? '',
   padding: String(sequence.padding),
   next_number: String(sequence.next_number),
 });
@@ -96,6 +97,7 @@ function NumberingEditor({ kind, sequence }: { kind: NumberedDocument; sequence:
   const upcoming = previewNumbers(
     {
       prefix: draft.prefix ?? '',
+      suffix: draft.suffix ?? '',
       padding: draft.padding ?? '',
       next_number: draft.next_number ?? '',
     },
@@ -107,6 +109,7 @@ function NumberingEditor({ kind, sequence }: { kind: NumberedDocument; sequence:
     // PATCH is partial: send only what changed.
     const body: SequenceUpdate = {};
     if (values.prefix !== sequence.prefix) body.prefix = values.prefix;
+    if (values.suffix !== (sequence.suffix ?? '')) body.suffix = values.suffix;
     if (Number(values.padding) !== sequence.padding) body.padding = Number(values.padding);
     if (Number(values.next_number) !== sequence.next_number) {
       body.next_number = Number(values.next_number);
@@ -172,14 +175,24 @@ function NumberingEditor({ kind, sequence }: { kind: NumberedDocument; sequence:
           </span>
         </div>
 
-        <fieldset disabled={!editable} className="grid min-w-0 gap-5 sm:grid-cols-3">
+        <fieldset disabled={!editable} className="grid min-w-0 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <Input
             label="Prefix"
             autoComplete="off"
+            placeholder="e.g. INV-"
             maxLength={PREFIX_MAX_LENGTH}
-            hint={`Up to ${PREFIX_MAX_LENGTH} letters, digits, "-", "_" or "/". Can be empty.`}
+            hint={`Before the number. Up to ${PREFIX_MAX_LENGTH} letters, digits, "-", "_" or "/". Can be empty.`}
             error={errors.prefix?.message}
             {...register('prefix')}
+          />
+          <Input
+            label="Suffix"
+            autoComplete="off"
+            placeholder="e.g. /26"
+            maxLength={PREFIX_MAX_LENGTH}
+            hint={`After the number, for example the year: INV-00042/26. Can be empty.`}
+            error={errors.suffix?.message}
+            {...register('suffix')}
           />
           <Input
             label="Zero padding"
@@ -218,8 +231,8 @@ function NumberingEditor({ kind, sequence }: { kind: NumberedDocument; sequence:
             existing {info.noun} is refused.
           </li>
           <li>
-            A new prefix or padding applies to the numbers issued from now on; every {info.noun}{' '}
-            that already has a number keeps it.
+            A new prefix, suffix or padding applies to the numbers issued from now on; every{' '}
+            {info.noun} that already has a number keeps it.
           </li>
         </ul>
       </Card>

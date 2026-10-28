@@ -111,6 +111,13 @@ export const SCOPE_OPTIONS: ReadonlyArray<ScopeOption> = [
     precedence: 3,
   },
   {
+    level: 'service_staff',
+    label: 'Staff + service',
+    help: 'One person, on one service, for every client. Used before the rate for their grade.',
+    needs: { client: false, service: true, staff: true, grade: false },
+    precedence: 5,
+  },
+  {
     level: 'service_grade',
     label: 'Service + grade',
     help: 'Everyone of a grade, on one service.',
@@ -158,8 +165,8 @@ export const CHARGE_LADDER: ReadonlyArray<{ position: number; title: string; hel
   { position: 4, title: 'Job rate', help: 'The hourly rate set on the job itself.' },
   {
     position: 5,
-    title: 'Service rate for the grade',
-    help: 'A rate for the person’s grade on the job’s service.',
+    title: 'Service rate for the person',
+    help: 'The person’s own rate for the job’s service, else the rate for their grade on it.',
   },
   { position: 6, title: 'Staff rate', help: 'The person’s own rate.' },
   {

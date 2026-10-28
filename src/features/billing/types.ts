@@ -621,7 +621,10 @@ export type DebtorSort =
 
 /* -------------------------------- Reminders -------------------------------- */
 
-export type ReminderTemplate = 'client_payment_reminder' | 'client_payment_final_notice';
+export type ReminderTemplate =
+  | 'client_payment_reminder'
+  | 'client_payment_final_notice'
+  | 'client_payment_upcoming';
 
 export type ReminderSkipReason =
   'already_reminded_today' | 'not_overdue' | 'no_balance' | 'not_issued' | 'no_recipient';

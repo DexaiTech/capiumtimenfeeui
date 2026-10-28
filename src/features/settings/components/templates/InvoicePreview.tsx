@@ -29,6 +29,10 @@ export interface InvoicePreviewProps {
   showLogo: boolean;
   showBankDetails: boolean;
   footerText: string;
+  /** `#RRGGBB`, or '' for the plain look. */
+  accentColor?: string;
+  /** Printed pale across the page; '' for none. */
+  watermarkText?: string;
   practice: PreviewPractice;
 }
 
@@ -47,6 +51,8 @@ export function InvoicePreview({
   showLogo,
   showBankDetails,
   footerText,
+  accentColor = '',
+  watermarkText = '',
   practice,
 }: InvoicePreviewProps) {
   const invoice = sampleInvoice(layout, practice.currency);
@@ -57,6 +63,8 @@ export function InvoicePreview({
     .filter(Boolean)
     .join('\n');
   const footer = footerText.trim();
+  const accent = /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : undefined;
+  const watermark = watermarkText.trim();
 
   return (
     <section aria-label="Invoice preview" className="flex min-w-0 flex-col gap-2">
@@ -67,7 +75,17 @@ export function InvoicePreview({
         </Badge>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3 text-2xs text-text shadow-card">
+      <div className="relative flex flex-col gap-3 overflow-hidden rounded-md border border-border bg-surface p-3 text-2xs text-text shadow-card">
+        {watermark ? (
+          <span
+            aria-hidden="true"
+            data-testid="preview-watermark"
+            style={{ color: accent }}
+            className="pointer-events-none absolute inset-0 z-0 flex -rotate-[30deg] items-center justify-center text-4xl font-extrabold tracking-widest whitespace-nowrap uppercase opacity-[0.1]"
+          >
+            {watermark}
+          </span>
+        ) : null}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             {showLogo ? (
@@ -80,7 +98,9 @@ export function InvoicePreview({
                 Logo
               </div>
             ) : null}
-            <p className="text-xs font-semibold break-words">{practice.name}</p>
+            <p style={{ color: accent }} className="text-xs font-semibold break-words">
+              {practice.name}
+            </p>
             {address ? (
               <p className="break-words whitespace-pre-line text-text-muted">{address}</p>
             ) : null}
@@ -89,7 +109,9 @@ export function InvoicePreview({
             ) : null}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
-            <p className="text-sm font-semibold tracking-wide uppercase">Invoice</p>
+            <p style={{ color: accent }} className="text-sm font-semibold tracking-wide uppercase">
+              Invoice
+            </p>
             <dl className="grid grid-cols-[auto_auto] gap-x-2 gap-y-0.5">
               <dt className="text-text-muted">Number</dt>
               <dd>{SAMPLE_NUMBER}</dd>
@@ -115,8 +137,9 @@ export function InvoicePreview({
                 <th
                   key={heading}
                   scope="col"
+                  style={accent ? { backgroundColor: accent, color: '#ffffff' } : undefined}
                   className={cn(
-                    'border-b border-border py-1 pr-2 font-medium text-text-muted',
+                    'border-b border-border px-1 py-1 pr-2 font-medium text-text-muted',
                     NUMERIC_COLUMNS.has(heading) && 'text-right',
                   )}
                 >
@@ -174,8 +197,8 @@ export function InvoicePreview({
       </div>
 
       <p className="text-xs text-text-muted">
-        This preview uses sample data. The PDF renderer will apply the template when issued invoices
-        are drawn; until it does, invoice PDFs still use the practice letterhead and footer.
+        This preview uses sample data. Invoices, credit notes and statements are drawn with the
+        template of the client, else the default one.
       </p>
     </section>
   );

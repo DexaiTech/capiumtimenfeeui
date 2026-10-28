@@ -185,9 +185,9 @@ describe('PracticeSettingsPage', () => {
     expect(within(form).getByRole('switch', { name: 'VAT registered' })).toBeDisabled();
   });
 
-  it('offers deleting the practice to an Owner', () => {
+  it('offers no way to delete the practice, not even to an Owner', () => {
     renderSettings(<PracticeSettingsPage />);
-    expect(screen.getByRole('button', { name: 'Delete practice' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete practice' })).not.toBeInTheDocument();
   });
 });
 

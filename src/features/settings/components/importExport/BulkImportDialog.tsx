@@ -16,6 +16,8 @@ import type { BulkImportRequest } from '../../api/adminHooks';
 import type { BulkImportResult, ImportRowError } from '../../adminTypes';
 import { downloadImportTemplate, type BulkImportKind } from '../../utils/bulkImport';
 import { DialogActions } from '../DialogActions';
+import { ImportInstructionsButton } from '@/components/common/ImportInstructionsButton';
+import { JOBS_SHEET, RATES_SHEET, STAFF_SHEET, type ImportSheet } from '@/utils/importInstructions';
 
 function isRowErrorList(details: unknown): details is ImportRowError[] {
   return (
@@ -39,6 +41,31 @@ const ERROR_COLUMNS: DataTableColumn<ImportRowError>[] = [
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /** The one-line summary of a finished import: the records, then any further counts. */
+const SHEETS: Readonly<Record<string, ImportSheet>> = {
+  staff: STAFF_SHEET,
+  rates: RATES_SHEET,
+  jobs: JOBS_SHEET,
+};
+
+/** The written instructions of an import: the prepared sheet, or one made from its column list. */
+function sheetOf(kind: BulkImportKind): ImportSheet {
+  return (
+    SHEETS[kind.slug] ?? {
+      title: kind.title,
+      slug: kind.slug,
+      summary: kind.intro,
+      columns: kind.columns.map(([name, example]) => ({
+        name,
+        required: kind.required.includes(name),
+        what: '',
+        allowed: '',
+        example,
+      })),
+      tips: kind.notes,
+    }
+  );
+}
+
 function summary(kind: BulkImportKind, result: BulkImportResult) {
   const base = `${plural(result.created, kind.one, kind.many)} imported`;
   if (kind.slug === 'staff' && result.counts.rates) {
@@ -150,15 +177,17 @@ function ImportBody({
             onChange={(event) => choose(event.target.files?.[0] ?? null)}
           />
           <span className="text-sm text-text-muted">{file ? file.name : 'No file chosen'}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto"
-            leftIcon={<Download className="size-4" aria-hidden="true" />}
-            onClick={() => downloadImportTemplate(kind)}
-          >
-            Download template
-          </Button>
+          <span className="ml-auto flex items-center gap-1">
+            <ImportInstructionsButton sheet={sheetOf(kind)} />
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<Download className="size-4" aria-hidden="true" />}
+              onClick={() => downloadImportTemplate(kind)}
+            >
+              Download template
+            </Button>
+          </span>
         </div>
         {closePreviousLabel ? (
           <Checkbox

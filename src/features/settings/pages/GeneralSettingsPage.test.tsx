@@ -77,7 +77,10 @@ describe('GeneralSettingsPage', () => {
       '0.00',
     );
     expect(billing.getByRole('switch', { name: 'Automatic payment reminders' })).not.toBeChecked();
-    expect(billing.getByRole('textbox', { name: 'Days after the due date' })).toHaveValue('7');
+    // A practice without a schedule of its own has the one day after the due date.
+    expect(billing.getByRole('list', { name: 'Reminder days' })).toHaveTextContent(
+      '7 days after the due date',
+    );
     expect(save('WIP and billing', 'Save billing settings')).toBeDisabled();
 
     await openTab(user, 'Rates');
@@ -181,9 +184,17 @@ describe('GeneralSettingsPage', () => {
     await user.clear(invoice);
     await user.type(invoice, '2000');
     await user.click(billing.getByRole('switch', { name: 'Automatic payment reminders' }));
-    const days = box('WIP and billing', 'Days after the due date');
-    await user.clear(days);
-    await user.type(days, '14');
+    // Before the due date, on it, and two days after: the 7 days after stays.
+    const reminders = within(card('WIP and billing'));
+    await user.selectOptions(
+      reminders.getByRole('combobox', { name: 'When' }),
+      'days before the due date',
+    );
+    await user.clear(reminders.getByRole('textbox', { name: 'Number of days' }));
+    await user.type(reminders.getByRole('textbox', { name: 'Number of days' }), '3');
+    await user.click(reminders.getByRole('button', { name: 'Add a reminder' }));
+    await user.selectOptions(reminders.getByRole('combobox', { name: 'When' }), 'on the due date');
+    await user.click(reminders.getByRole('button', { name: 'Add a reminder' }));
     await user.click(save('WIP and billing', 'Save billing settings'));
 
     expect(await screen.findByText('WIP and billing settings saved')).toBeInTheDocument();
@@ -194,7 +205,7 @@ describe('GeneralSettingsPage', () => {
         invoice_approval_required: true,
         invoice_approval_threshold: 200000,
         payment_reminders_enabled: true,
-        payment_reminder_days_after_due: 14,
+        payment_reminder_schedule: [-3, 0, 7],
       },
     ]);
   });
@@ -234,15 +245,15 @@ describe('GeneralSettingsPage', () => {
 
     const billing = within(card('WIP and billing'));
     const threshold = billing.getByRole('textbox', { name: 'Invoice approval threshold (£)' });
-    const delay = billing.getByRole('textbox', { name: 'Days after the due date' });
+    const addReminder = billing.getByRole('button', { name: 'Add a reminder' });
     expect(threshold).toBeDisabled();
-    expect(delay).toBeDisabled();
+    expect(addReminder).toBeDisabled();
     expect(billing.getByText('Turn on invoice approval to set a threshold.')).toBeInTheDocument();
 
     await user.click(billing.getByRole('switch', { name: 'Invoice approval' }));
     await user.click(billing.getByRole('switch', { name: 'Automatic payment reminders' }));
     expect(threshold).toBeEnabled();
-    expect(delay).toBeEnabled();
+    expect(addReminder).toBeEnabled();
   });
 
   it('explains the rate mode and saves it', async () => {
@@ -344,11 +355,11 @@ describe('GeneralSettingsPage', () => {
     await user.click(
       within(card('WIP and billing')).getByRole('switch', { name: 'Automatic payment reminders' }),
     );
-    const days = box('WIP and billing', 'Days after the due date');
-    await user.clear(days);
-    await user.type(days, '400');
-    await user.click(save('WIP and billing', 'Save billing settings'));
-    expect(await screen.findByText('Enter a number of days from 1 to 365')).toBeInTheDocument();
+    const reminders = within(card('WIP and billing'));
+    await user.clear(reminders.getByRole('textbox', { name: 'Number of days' }));
+    await user.type(reminders.getByRole('textbox', { name: 'Number of days' }), '400');
+    await user.click(reminders.getByRole('button', { name: 'Add a reminder' }));
+    expect(await screen.findByText('Enter a number of days from 1 to 365.')).toBeInTheDocument();
 
     expect(bodies).toEqual([]);
   });
@@ -472,7 +483,7 @@ describe('GeneralSettingsPage: mandatory fields', () => {
     // The percentage rule is on, invoice approval and reminders are off.
     expectRequiredFields(billing, {
       required: [/^WIP adjustment approval threshold/, 'Write-off approval threshold (%)'],
-      optional: [/^Invoice approval threshold/, 'Days after the due date'],
+      optional: [/^Invoice approval threshold/],
     });
     await user.click(within(billing).getByRole('switch', { name: 'Invoice approval' }));
     expectRequiredFields(billing, { required: [/^Invoice approval threshold/] });

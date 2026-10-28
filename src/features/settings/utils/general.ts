@@ -62,6 +62,7 @@ export const MILEAGE_MAX_PENCE = 1000;
 /** The API bound of the expense mark-up: 1000% in basis points. */
 export const MARKUP_MAX_BP = 100_000;
 export const REMINDER_DAYS_MAX = 365;
+export const REMINDER_BEFORE_MAX = 90;
 
 const MARKUP = /^(\d{1,4})(?:\.(\d{1,2}))?$/;
 

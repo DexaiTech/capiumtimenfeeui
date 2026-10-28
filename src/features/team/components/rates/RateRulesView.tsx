@@ -26,6 +26,7 @@ import { modulePath, ORG_SEGMENTS } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatUkDate } from '@/utils/dates';
+import { cn } from '@/utils/cn';
 
 import {
   flattenPages,
@@ -212,7 +213,13 @@ export function RateRulesView({ kind }: RateRulesViewProps) {
               {rule.level_label}
             </Badge>
           </span>
-          <span className="truncate font-medium text-text" title={scopeNames(rule).join(' · ')}>
+          <span
+            className={cn(
+              'truncate font-medium text-text',
+              canManage && 'hover:text-brand-text hover:underline',
+            )}
+            title={scopeNames(rule).join(' · ')}
+          >
             {scopeNames(rule).join(' · ')}
           </span>
         </div>
@@ -308,6 +315,8 @@ export function RateRulesView({ kind }: RateRulesViewProps) {
         columns={columns}
         rows={loaded}
         rowKey={(rule) => rule.id}
+        // Clicking a rate (its name or anywhere on its row) opens it for editing.
+        onRowClick={canManage ? (rule) => setDialog({ type: 'form', rule }) : undefined}
         sort={sort}
         onSortChange={(next) => setParam({ sort: next.columnId, order: next.direction })}
         hiddenColumns={hidden}

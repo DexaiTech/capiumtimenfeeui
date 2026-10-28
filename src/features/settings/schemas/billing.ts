@@ -7,7 +7,14 @@ import {
   PREFIX_MAX_LENGTH,
   PREFIX_PATTERN,
 } from '../utils/numbering';
-import { FOOTER_MAX, LAYOUTS, TEMPLATE_NAME_MAX } from '../utils/templates';
+import {
+  FOOTER_MAX,
+  isHexColor,
+  LAYOUTS,
+  TEMPLATE_NAME_MAX,
+  WATERMARK_MAX,
+  WATERMARK_PATTERN,
+} from '../utils/templates';
 import { parsePercentToBp, VAT_CODES } from '../utils/vat';
 
 /** Characters as the API counts them (code points), so an emoji is one. */
@@ -39,6 +46,11 @@ export type VatRateValues = z.infer<typeof vatRateSchema>;
 export function numberingSchema(minNext: number | null) {
   return z.object({
     prefix: z
+      .string()
+      .trim()
+      .max(PREFIX_MAX_LENGTH, `Use at most ${PREFIX_MAX_LENGTH} characters`)
+      .regex(PREFIX_PATTERN, 'Use letters, digits, "-", "_" or "/" only'),
+    suffix: z
       .string()
       .trim()
       .max(PREFIX_MAX_LENGTH, `Use at most ${PREFIX_MAX_LENGTH} characters`)
@@ -86,5 +98,15 @@ export const invoiceTemplateSchema = z.object({
     .string()
     .trim()
     .refine((value) => length(value) <= FOOTER_MAX, `Use at most ${FOOTER_MAX} characters`),
+  /** '' for none. */
+  accent_color: z.string().refine((value) => value === '' || isHexColor(value), 'Choose a colour'),
+  /** '' for none. */
+  watermark_text: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === '' || WATERMARK_PATTERN.test(value),
+      `Use up to ${WATERMARK_MAX} letters, digits, spaces and hyphens`,
+    ),
 });
 export type InvoiceTemplateValues = z.infer<typeof invoiceTemplateSchema>;

@@ -61,7 +61,13 @@ export default function GeneralSettingsPage() {
           Changing these settings needs permission to update the practice.
         </p>
       )}
-      <Tabs label="General settings section" idBase="general-settings" items={TABS} value={tab} onChange={setTab} />
+      <Tabs
+        label="General settings section"
+        idBase="general-settings"
+        items={TABS}
+        value={tab}
+        onChange={setTab}
+      />
       {/* Every card stays mounted (only hidden), so switching tabs never loses an unsaved edit
           in another card — each card keeps its own independent form state and Save button. */}
       <div

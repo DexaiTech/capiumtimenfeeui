@@ -101,6 +101,19 @@ describe('DocumentNumberingPage', () => {
     expect(backend.calls.sequenceUpdates).toEqual([{ kind: 'estimate', body: { prefix: 'QUO-' } }]);
   });
 
+  it('saves a suffix, and shows how the next number will look with it', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<DocumentNumberingPage />);
+    await screen.findByRole('form', { name: 'Invoice numbering' });
+
+    await replace(user, 'Suffix', '/26');
+    expect((await screen.findAllByText(/INV-\d+\/26/)).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Invoice numbering saved')).toBeInTheDocument();
+    expect(backend.calls.sequenceUpdates).toEqual([{ kind: 'invoice', body: { suffix: '/26' } }]);
+  });
+
   it('saves only the fields that changed, on the active tab', async () => {
     const user = userEvent.setup();
     renderInOrg(<DocumentNumberingPage />);

@@ -63,9 +63,11 @@ describe('AuditLogSettingsPage', () => {
     expect(within(changed).getByText('ada@example.com')).toBeInTheDocument();
     expect(within(changed).getByText('203.0.113.7')).toBeInTheDocument();
     // Relative inline, absolute on hover and in the machine-readable attribute.
-    const time = within(changed).getByRole('time');
-    expect(time).toHaveAttribute('datetime', '2026-10-05T09:14:07Z');
-    expect(time.getAttribute('title')).toMatch(/2026/);
+    // The exact date and time first, the relative time under it.
+    const [exact, relative] = within(changed).getAllByRole('time');
+    expect(exact).toHaveAttribute('datetime', '2026-10-05T09:14:07Z');
+    expect(exact).toHaveTextContent(/2026/);
+    expect(relative?.getAttribute('title')).toMatch(/2026/);
 
     // Financial records: a generic sentence naming the record by its number.
     expect(screen.getByRole('row', { name: /Invoice issued: INV-00012/ })).toBeInTheDocument();

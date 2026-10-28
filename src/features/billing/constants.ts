@@ -104,6 +104,7 @@ export const AGEING_LABELS: Record<
 
 export const REMINDER_TEMPLATE_LABELS: Record<ReminderTemplate, string> = {
   client_payment_reminder: 'Payment reminder',
+  client_payment_upcoming: 'Payment due soon',
   client_payment_final_notice: 'Final notice',
 };
 

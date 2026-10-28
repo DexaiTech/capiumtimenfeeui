@@ -20,6 +20,7 @@ import { flattenPages, useAuditLogs } from '../api/hooks';
 import { AuditDetails } from '../components/audit/AuditDetails';
 import { MemberPicker } from '../components/MemberPicker';
 import { RelativeTime } from '../components/RelativeTime';
+import { formatDateTime } from '../utils/datetime';
 import { NoAccess, SettingsSection } from '../components/SettingsSection';
 import type { AuditLogEntry, AuditLogFilters } from '../types';
 import {
@@ -90,7 +91,14 @@ function AuditLogList() {
       id: 'time',
       header: 'Time',
       className: 'whitespace-nowrap',
-      cell: (entry) => <RelativeTime iso={entry.created_at} className="text-text-muted" />,
+      cell: (entry) => (
+        <div className="flex flex-col">
+          <time dateTime={entry.created_at} className="font-medium text-text">
+            {formatDateTime(entry.created_at)}
+          </time>
+          <RelativeTime iso={entry.created_at} className="text-xs text-text-subtle" />
+        </div>
+      ),
     },
     { id: 'actor', header: 'Actor', cell: (entry) => <Actor actor={entry.actor} /> },
     {

@@ -27,6 +27,15 @@ describe('previewNumbers', () => {
     ]);
   });
 
+  it('prints the suffix after the number, and refuses one with characters that are not allowed', () => {
+    expect(
+      previewNumbers({ prefix: 'INV-', suffix: '/26', padding: '5', next_number: '42' }, 2),
+    ).toEqual(['INV-00042/26', 'INV-00043/26']);
+    expect(previewNumbers({ prefix: 'INV-', suffix: 'a b', padding: '5', next_number: '1' })).toBe(
+      null,
+    );
+  });
+
   it.each([
     ['padding below 1', { prefix: 'A', padding: '0', next_number: '1' }],
     ['padding above 10', { prefix: 'A', padding: '11', next_number: '1' }],
