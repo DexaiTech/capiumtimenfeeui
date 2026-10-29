@@ -61,6 +61,11 @@ export function todayInZone(timeZone: string, now: Date = new Date()): string {
   }
 }
 
+/** Today as `YYYY-MM-DD` in the browser's own time zone. */
+export function todayHere(now: Date = new Date()): string {
+  return todayInZone(Intl.DateTimeFormat().resolvedOptions().timeZone, now);
+}
+
 /** The day before a `YYYY-MM-DD` date, without any time zone shift. */
 export function dayBefore(value: string): string {
   return addDays(value, -1);

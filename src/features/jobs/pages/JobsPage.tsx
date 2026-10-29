@@ -300,6 +300,7 @@ export default function JobsPage() {
                       />
                       <DateRangeField
                         label="Due date"
+                        endsToday={false}
                         value={{ from: dueFrom, to: dueTo }}
                         onChange={(range) => setParam({ due_from: range.from, due_to: range.to })}
                       />

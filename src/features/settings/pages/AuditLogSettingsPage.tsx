@@ -20,6 +20,8 @@ import { flattenPages, useAuditLogs } from '../api/hooks';
 import { AuditDetails } from '../components/audit/AuditDetails';
 import { MemberPicker } from '../components/MemberPicker';
 import { RelativeTime } from '../components/RelativeTime';
+import { todayHere } from '@/utils/dates';
+
 import { formatDateTime } from '../utils/datetime';
 import { NoAccess, SettingsSection } from '../components/SettingsSection';
 import type { AuditLogEntry, AuditLogFilters } from '../types';
@@ -153,7 +155,7 @@ function AuditLogList() {
         <Input
           label="To"
           type="date"
-          value={to}
+          value={to || todayHere()}
           min={from || undefined}
           onChange={(event) => setParam({ to: event.target.value })}
         />

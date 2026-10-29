@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { todayHere } from '@/utils/dates';
+
 import { DateRangeField } from './DateField';
 import { datePresets } from './dateRangePresets';
 
@@ -52,5 +54,33 @@ describe('DateRangeField: quick ranges', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Last month' }));
     expect(onChange).toHaveBeenCalledWith({ from: '2026-09-01', to: '2026-09-30' });
+  });
+});
+
+describe('DateRangeField: the end of the range', () => {
+  const today = todayHere();
+
+  it('shows today when the end is empty, without reporting a change', () => {
+    const onChange = vi.fn();
+    render(<DateRangeField label="Date" value={{ from: null, to: null }} onChange={onChange} />);
+    expect(screen.getByLabelText('Date to')).toHaveValue(today);
+    expect(screen.getByLabelText('Date from')).toHaveValue('');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps an end that was picked, and can be told to stay empty (due dates)', () => {
+    const { rerender } = render(
+      <DateRangeField label="Date" value={{ from: null, to: '2026-01-05' }} onChange={vi.fn()} />,
+    );
+    expect(screen.getByLabelText('Date to')).toHaveValue('2026-01-05');
+    rerender(
+      <DateRangeField
+        label="Date"
+        endsToday={false}
+        value={{ from: null, to: null }}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Date to')).toHaveValue('');
   });
 });

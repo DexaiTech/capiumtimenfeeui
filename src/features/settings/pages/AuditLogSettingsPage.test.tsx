@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -122,7 +122,8 @@ describe('AuditLogSettingsPage', () => {
 
     await user.type(screen.getByLabelText('From'), '2026-10-01');
     await waitFor(() => expect(last().get('from')).toBe(dayStartIso('2026-10-01')));
-    await user.type(screen.getByLabelText('To'), '2026-10-05');
+    // The end shows today until a date is picked, so it is replaced rather than typed into.
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-05' } });
     await waitFor(() => expect(last().get('to')).toBe(dayEndIso('2026-10-05')));
 
     // The actor is picked from the members, searched by name.

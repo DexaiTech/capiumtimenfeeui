@@ -1,6 +1,7 @@
 import { useId, type Ref } from 'react';
 
 import { cn } from '@/utils/cn';
+import { todayHere } from '@/utils/dates';
 
 import { Button } from './Button';
 import { datePresets } from './dateRangePresets';
@@ -55,6 +56,12 @@ export interface DateRangeFieldProps {
   presetsFrom?: string;
   /** The practice's first day of the week, 1 (Monday) to 7 (Sunday); Monday when left out. */
   weekStartsOn?: number;
+  /**
+   * An empty end of the range shows today, so "up to today" is what the person sees. It is only
+   * shown: nothing is filtered until a date is picked, which for dates in the past is the same
+   * result. Turn it off for dates that look ahead (due dates).
+   */
+  endsToday?: boolean;
   error?: string;
   className?: string;
 }
@@ -70,10 +77,13 @@ export function DateRangeField({
   prefix,
   presetsFrom,
   weekStartsOn,
+  endsToday = true,
   error,
   className,
 }: DateRangeFieldProps) {
   const errorId = useId();
+  const today = todayHere();
+  const shownTo = value.to ?? (endsToday && (!value.from || value.from <= today) ? today : null);
   return (
     <fieldset className={cn('flex max-w-full min-w-0 flex-col gap-1.5', className)}>
       <legend className={cn('mb-1.5 text-sm font-medium text-text', hideLabel && 'sr-only')}>
@@ -100,7 +110,7 @@ export function DateRangeField({
         <DateField
           label={`${label} ${toLabel}`}
           hideLabel
-          value={value.to}
+          value={shownTo}
           min={value.from}
           onChange={(to) => onChange({ ...value, to })}
           aria-describedby={error ? errorId : undefined}

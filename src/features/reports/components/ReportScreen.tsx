@@ -167,6 +167,7 @@ function Report<TRow, TTotals>({ config }: { config: ReportConfig<TRow, TTotals>
         label="Weeks"
         hideLabel
         prefix="Weeks"
+        endsToday={false}
         value={{
           from: weekFrom || data?.filters.week_from || null,
           to: weekTo || data?.filters.week_to || null,
