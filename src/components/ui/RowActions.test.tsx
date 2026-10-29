@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { DropdownItem } from './Dropdown';
 import { RowActions } from './RowActions';
-import { rowActionIcon } from './rowActionIcon';
+import { rowActionColor, rowActionIcon } from './rowActionIcon';
 
 const items = (onEdit = vi.fn(), onDelete = vi.fn()): DropdownItem[] => [
   { id: 'edit', label: 'Edit', onSelect: onEdit },
@@ -33,10 +33,10 @@ describe('RowActions', () => {
     expect(onDelete).toHaveBeenCalledOnce();
   });
 
-  it('turns a destructive action red on hover and keeps the others neutral', () => {
+  it('draws a destructive action red and the others in their own colour', () => {
     render(<RowActions label="Actions for Acme" items={items()} />);
-    expect(screen.getByRole('button', { name: 'Delete' }).className).toContain('hover:text-danger');
-    expect(screen.getByRole('button', { name: 'Edit' }).className).not.toContain('text-danger');
+    expect(screen.getByRole('button', { name: 'Delete' }).className).toContain('text-badge-red');
+    expect(screen.getByRole('button', { name: 'Edit' }).className).toContain('text-badge-violet');
   });
 
   it('disables an action that is not available', () => {
@@ -113,5 +113,15 @@ describe('rowActionIcon', () => {
 
   it('falls back to a generic icon for a name it does not know', () => {
     expect(rowActionIcon('zzz', 'Frobnicate')).toBe(rowActionIcon('qqq', 'Whatever'));
+  });
+});
+
+describe('rowActionColor', () => {
+  it('colours an action by what it does', () => {
+    expect(rowActionColor('view', 'View')).toBe('blue');
+    expect(rowActionColor('edit', 'Edit')).toBe('violet');
+    expect(rowActionColor('archive', 'Archive')).toBe('orange');
+    expect(rowActionColor('delete', 'Delete')).toBe('red');
+    expect(rowActionColor('approve', 'Approve')).toBe('green');
   });
 });

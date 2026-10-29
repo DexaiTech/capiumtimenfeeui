@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/utils/cn';
 
 import type { DropdownActionItem, DropdownItem } from './Dropdown';
-import { rowActionIcon } from './rowActionIcon';
+import { ROW_ACTION_CLASSES, rowActionColor, rowActionIcon } from './rowActionIcon';
 
 export interface RowActionsProps {
   /** Names the group of actions for assistive technology: "Actions for Acme Ltd". */
@@ -23,7 +23,8 @@ function isAction(item: DropdownItem): item is DropdownActionItem {
 
 /**
  * The actions of a grid row as icon buttons in the row itself, each named by a tooltip and an
- * accessible label, so nothing hides behind a menu. A destructive action turns red on hover.
+ * accessible label, so nothing hides behind a menu. Each icon is coloured by what it does (view blue,
+ * edit violet, done green, archive orange, delete red) and tints its button on hover.
  */
 export function RowActions({ label, items, status, size = 'md', className }: RowActionsProps) {
   const actions = items.filter(isAction);
@@ -48,12 +49,12 @@ export function RowActions({ label, items, status, size = 'md', className }: Row
                 disabled={action.disabled}
                 onClick={action.onSelect}
                 className={cn(
-                  'inline-flex shrink-0 items-center justify-center rounded-md text-text-muted',
+                  'inline-flex shrink-0 items-center justify-center rounded-md',
                   size === 'sm' ? 'size-6' : 'size-7',
                   'transition-colors duration-fast ease-standard disabled:pointer-events-none disabled:opacity-45',
-                  action.tone === 'danger'
-                    ? 'hover:bg-danger-soft hover:text-danger'
-                    : 'hover:bg-primary-soft hover:text-primary-text',
+                  ROW_ACTION_CLASSES[
+                    action.tone === 'danger' ? 'red' : rowActionColor(action.id, action.label)
+                  ],
                   'focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none',
                 )}
               >

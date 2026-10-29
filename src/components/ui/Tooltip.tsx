@@ -19,6 +19,8 @@ export interface TooltipProps {
   side?: TooltipSide;
   /** When true the tooltip never opens (for example when the label is already visible). */
   disabled?: boolean;
+  /** Classes of the element that wraps the trigger (it is inline by default). */
+  className?: string;
   /** One focusable element; it receives `aria-describedby`. */
   children: ReactElement<{ 'aria-describedby'?: string }>;
 }
@@ -46,7 +48,13 @@ function anchorPoint(rect: DOMRect, side: TooltipSide): { top: number; left: num
 }
 
 /** Shows on hover and on keyboard focus; Escape hides it. Rendered in a portal so nothing clips it. */
-export function Tooltip({ content, side = 'top', disabled = false, children }: TooltipProps) {
+export function Tooltip({
+  content,
+  side = 'top',
+  disabled = false,
+  className = 'inline-flex',
+  children,
+}: TooltipProps) {
   const id = useId();
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -75,7 +83,7 @@ export function Tooltip({ content, side = 'top', disabled = false, children }: T
   return (
     <span
       ref={wrapperRef}
-      className="inline-flex"
+      className={className}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}

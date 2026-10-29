@@ -71,11 +71,68 @@ const RULES: ReadonlyArray<readonly [RegExp, LucideIcon]> = [
   [/link|go to|visit/, ExternalLink],
 ];
 
-/** The icon of a row action, from what it is called. */
-export function rowActionIcon(id: string, label: string): LucideIcon {
+function matchIcon(id: string, label: string): LucideIcon {
   const text = `${id.replaceAll(/[-_]/g, ' ')} ${label}`.toLowerCase();
   for (const [pattern, icon] of RULES) {
     if (pattern.test(text)) return icon;
   }
   return ArrowUpRight;
+}
+
+/** The icon of a row action, from what it is called. */
+export function rowActionIcon(id: string, label: string): LucideIcon {
+  return matchIcon(id, label);
+}
+
+export type RowActionColor = 'blue' | 'violet' | 'green' | 'amber' | 'orange' | 'red';
+
+/** What each icon means, as a colour: look blue, change violet, done green, history amber, risky red. */
+const COLORS = new Map<LucideIcon, RowActionColor>([
+  [Eye, 'blue'],
+  [ExternalLink, 'blue'],
+  [ArrowUpRight, 'blue'],
+  [Download, 'blue'],
+  [Send, 'blue'],
+  [RefreshCw, 'blue'],
+  [Pencil, 'violet'],
+  [PencilLine, 'violet'],
+  [Settings2, 'violet'],
+  [KeyRound, 'violet'],
+  [UserPlus, 'violet'],
+  [Banknote, 'green'],
+  [CircleCheck, 'green'],
+  [FileCheck, 'green'],
+  [UserCheck, 'green'],
+  [ArchiveRestore, 'green'],
+  [Clock, 'amber'],
+  [History, 'amber'],
+  [Star, 'amber'],
+  [RotateCcw, 'amber'],
+  [Undo2, 'amber'],
+  [Mail, 'amber'],
+  [Archive, 'orange'],
+  [CalendarX, 'orange'],
+  [FileMinus2, 'orange'],
+  [ArrowLeftRight, 'orange'],
+  [Paperclip, 'orange'],
+  [Copy, 'orange'],
+  [Trash2, 'red'],
+  [Ban, 'red'],
+  [CircleX, 'red'],
+  [UserX, 'red'],
+]);
+
+/** Written out in full so Tailwind finds every class: the icon's colour, and its hover tint. */
+export const ROW_ACTION_CLASSES: Record<RowActionColor, string> = {
+  blue: 'text-badge-blue hover:bg-badge-blue-soft',
+  violet: 'text-badge-violet hover:bg-badge-violet-soft',
+  green: 'text-badge-green hover:bg-badge-green-soft',
+  amber: 'text-badge-amber hover:bg-badge-amber-soft',
+  orange: 'text-badge-orange hover:bg-badge-orange-soft',
+  red: 'text-badge-red hover:bg-badge-red-soft',
+};
+
+/** The colour of a row action, from what it is called (the same words as its icon). */
+export function rowActionColor(id: string, label: string): RowActionColor {
+  return COLORS.get(matchIcon(id, label)) ?? 'violet';
 }
