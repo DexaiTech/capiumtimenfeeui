@@ -33,6 +33,8 @@ export const testOrganization: Organization = {
   mileage_rate: 45,
   expense_markup_bp: 0,
   rate_mode: 'staff_first',
+  overtime_enabled: false,
+  overtime_multiplier_bp: 15000,
   email: 'hello@acme.example',
   phone: null,
   address_line1: '1 High Street',

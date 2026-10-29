@@ -1,4 +1,4 @@
-import { Send, Undo2 } from 'lucide-react';
+import { Send, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button, Card, ConfirmDialog, ProgressBar, useToast } from '@/components/ui';
@@ -6,7 +6,7 @@ import { useOrg } from '@/features/organizations';
 import { formatUkDateTime } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 
-import { useRecallTimesheet, useSubmitTimesheet } from '../../api';
+import { useDeleteTimesheet, useRecallTimesheet, useSubmitTimesheet } from '../../api';
 import { EDITABLE_SHEET_STATUSES } from '../../constants';
 import type { TimesheetDetail, WeekGrid } from '../../types';
 import { describeFailure, dialogError } from '../../utils/errors';
@@ -32,7 +32,8 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
   const { toast } = useToast();
   const submit = useSubmitTimesheet();
   const recall = useRecallTimesheet();
-  const [confirming, setConfirming] = useState<'submit' | 'recall' | null>(null);
+  const remove = useDeleteTimesheet();
+  const [confirming, setConfirming] = useState<'submit' | 'recall' | 'delete' | null>(null);
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
 
   const status = grid.timesheet_status;
@@ -98,7 +99,19 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
       },
       onError: (error: unknown) => setRefusal(dialogError(error)),
     };
-    if (confirming === 'submit') submit.mutate(timesheetId, done);
+    if (confirming === 'delete') {
+      remove.mutate(timesheetId, {
+        onSuccess: () => {
+          toast({
+            tone: 'success',
+            title: 'Timesheet deleted',
+            description: 'The week and its time were removed.',
+          });
+          close();
+        },
+        onError: done.onError,
+      });
+    } else if (confirming === 'submit') submit.mutate(timesheetId, done);
     else recall.mutate(timesheetId, done);
   };
 
@@ -173,6 +186,15 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
               Recall
             </Button>
           ) : null}
+          {canRecord && editable && timesheetId !== null ? (
+            <Button
+              variant="ghost"
+              leftIcon={<Trash2 className="size-4" aria-hidden="true" />}
+              onClick={() => setConfirming('delete')}
+            >
+              Delete timesheet
+            </Button>
+          ) : null}
           {canRecord && editable && grid.total_minutes === 0 ? (
             <p className="text-xs text-text-muted">Record some time before you submit.</p>
           ) : null}
@@ -202,7 +224,8 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
           {sheet?.decided_at
             ? `Approved on ${formatUkDateTime(sheet.decided_at, organization.timezone)}. `
             : ''}
-          Its time is locked. A manager can correct approved time that has not been billed.
+          Its time is locked: it cannot be edited or deleted. A manager can revoke the approval, or
+          correct approved time that has not been billed.
         </Notice>
       ) : null}
       {missing.length > 0 ? (
@@ -215,13 +238,31 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
         open={confirming !== null}
         onClose={close}
         onConfirm={act}
-        title={confirming === 'recall' ? 'Recall this timesheet?' : 'Submit this timesheet?'}
-        confirmLabel={confirming === 'recall' ? 'Recall timesheet' : 'Submit timesheet'}
-        tone="default"
-        loading={submit.isPending || recall.isPending}
+        title={
+          confirming === 'delete'
+            ? 'Delete this timesheet?'
+            : confirming === 'recall'
+              ? 'Recall this timesheet?'
+              : 'Submit this timesheet?'
+        }
+        confirmLabel={
+          confirming === 'delete'
+            ? 'Delete timesheet'
+            : confirming === 'recall'
+              ? 'Recall timesheet'
+              : 'Submit timesheet'
+        }
+        tone={confirming === 'delete' ? 'danger' : 'default'}
+        loading={submit.isPending || recall.isPending || remove.isPending}
         error={refusal}
       >
-        {confirming === 'recall' ? (
+        {confirming === 'delete' ? (
+          <p>
+            The week of {formatWeekRange(grid.week_start)} and the{' '}
+            {formatMinutes(grid.total_minutes)} recorded on it will be removed for good. It cannot
+            be done once the week is submitted or any of its time is billed.
+          </p>
+        ) : confirming === 'recall' ? (
           <p>
             The timesheet goes back to open so you can change it. It is not approved yet, so nothing
             is lost.

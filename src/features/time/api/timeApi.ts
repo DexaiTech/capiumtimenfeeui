@@ -148,6 +148,8 @@ export const timeApi = {
   /** Unapprove: an approved sheet goes back to open while none of its time is billed. */
   reopenTimesheet: (organizationId: string, timesheetId: string) =>
     api.post<TimesheetDetail>(`${org(organizationId)}/timesheets/${seg(timesheetId)}/reopen`),
+  deleteTimesheet: (organizationId: string, timesheetId: string) =>
+    api.delete<null>(`${org(organizationId)}/timesheets/${seg(timesheetId)}`),
   approveTimesheet: (organizationId: string, timesheetId: string, note?: string) =>
     api.post<TimesheetDetail>(
       `${org(organizationId)}/timesheets/${seg(timesheetId)}/approve`,

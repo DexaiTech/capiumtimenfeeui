@@ -90,7 +90,11 @@ export default function ClientsPage() {
 
   const [search, setSearch] = useState('');
   const q = useDebouncedValue(search, 300);
-  const [filters, setFilters] = useState<ClientFilters>(EMPTY_FILTERS);
+  // `?segment=` opens the list for those segments (the links of Settings and the staff screen).
+  const [filters, setFilters] = useState<ClientFilters>(() => ({
+    ...EMPTY_FILTERS,
+    segment: searchParams.getAll('segment'),
+  }));
   const [sort, setSort] = useState<ClientSort>(DEFAULT_SORT);
   const [order, setOrder] = useState<SortOrder>('asc');
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());

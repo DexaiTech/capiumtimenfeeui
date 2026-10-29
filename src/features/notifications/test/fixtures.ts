@@ -120,6 +120,7 @@ export const budgetAlertTemplate: EmailTemplate = {
   name: 'Budget alert',
   description: 'Warns when a job has used a set share of its budget.',
   category: 'notification',
+  audience: 'internal',
   notification_type: 'budget_alert',
   merge_fields: [
     ...COMMON_FIELDS,
@@ -152,6 +153,7 @@ export const invoiceTemplate: EmailTemplate = {
   name: 'Invoice email',
   description: 'The email that carries an invoice to the client.',
   category: 'system',
+  audience: 'external',
   notification_type: null,
   merge_fields: [
     ...COMMON_FIELDS,
@@ -177,6 +179,7 @@ export const invitationTemplate: EmailTemplate = {
   name: 'Staff invitation',
   description: 'The email that invites a member of staff.',
   category: 'system',
+  audience: 'internal',
   notification_type: null,
   merge_fields: [
     ...COMMON_FIELDS,

@@ -13,9 +13,11 @@ import type {
   Onboarding,
   OpeningBalanceTimeImportResult,
   PeriodLock,
+  PeriodLockCalendar,
   PeriodLockCreate,
   PeriodLockEvent,
   PeriodLockReopen,
+  PeriodLockSettingsUpdate,
   RetryFailedResult,
   StepState,
   SyncItem,
@@ -51,6 +53,13 @@ export const adminApi = {
       query: { limit: PAGE_SIZE, cursor: page.cursor },
       signal: page.signal,
     }),
+  getPeriodLockCalendar: (organizationId: string, year?: number, signal?: AbortSignal) =>
+    api.get<PeriodLockCalendar>(`${org(organizationId)}/period-locks/calendar`, {
+      query: { year },
+      signal,
+    }),
+  updatePeriodLockSettings: (organizationId: string, body: PeriodLockSettingsUpdate) =>
+    api.put<PeriodLock>(`${org(organizationId)}/period-locks/settings`, body),
   lockPeriod: (organizationId: string, body: PeriodLockCreate) =>
     api.post<PeriodLock>(`${org(organizationId)}/period-locks`, body),
   reopenPeriod: (organizationId: string, body: PeriodLockReopen) =>

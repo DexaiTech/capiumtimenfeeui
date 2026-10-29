@@ -1,5 +1,6 @@
 import { http, type HttpHandler } from 'msw';
 
+import { segmentHandlers } from '@/test/segments';
 import { orgApiPath } from '@/test/renderInOrg';
 import { ok } from '@/test/server';
 
@@ -21,6 +22,7 @@ export interface ClientsData {
 export function clientsHandlers(data: ClientsData = {}): HttpHandler[] {
   const clients = data.clients ?? testClients;
   return [
+    ...segmentHandlers(),
     http.get(orgApiPath('/clients/summary'), () => ok(data.summary ?? testSummary)),
     http.get(orgApiPath('/clients'), ({ request }) => {
       const params = new URL(request.url).searchParams;

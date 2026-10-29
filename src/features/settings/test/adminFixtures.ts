@@ -7,6 +7,7 @@ import type {
   OnboardingStep,
   PeriodLock,
   PeriodLockEvent,
+  PeriodLockSettings,
   SyncItem,
   SyncLogEntry,
 } from '../adminTypes';
@@ -93,12 +94,25 @@ export const PERIODS: LockedPeriod[] = [
   }),
 ];
 
-export const lockedWith = (periods: LockedPeriod[], last: PeriodLockEvent): PeriodLock => ({
+/** A practice that locks by the month in a calendar year, which it has set up. */
+export const SETTINGS: PeriodLockSettings = {
+  granularity: 'monthly',
+  financial_year_start_month: 1,
+  financial_year_start_day: 1,
+  configured: true,
+};
+
+export const lockedWith = (
+  periods: LockedPeriod[],
+  last: PeriodLockEvent,
+  settings: PeriodLockSettings = SETTINGS,
+): PeriodLock => ({
+  settings,
   periods,
   last_event: last,
 });
 
-export const NOT_LOCKED: PeriodLock = { periods: [], last_event: null };
+export const NOT_LOCKED: PeriodLock = { settings: SETTINGS, periods: [], last_event: null };
 
 /* -------------------------------- Onboarding -------------------------------- */
 

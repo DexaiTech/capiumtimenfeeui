@@ -727,6 +727,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         anyOf: [P.settingsManage, P.organizationUpdate],
         group: 'Access control',
       },
+      { id: 'segments', label: 'Client Segments', icon: Tags, group: 'Practice' },
       { id: 'vat-codes', label: 'VAT Codes', icon: Percent, group: 'Money & tax' },
       {
         id: 'document-numbering',

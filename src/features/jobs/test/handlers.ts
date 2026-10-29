@@ -56,6 +56,8 @@ export interface JobsBackend {
   userId: string;
   /** The default tasks of each service by id (Payroll has two). */
   templates: Record<string, TaskTemplate[]>;
+  /** The job's time entries, as the time list answers them (none unless a test sets some). */
+  timeEntries: unknown[];
 }
 
 export function createBackend(initial: Partial<JobsBackend> = {}): JobsBackend {
@@ -69,6 +71,7 @@ export function createBackend(initial: Partial<JobsBackend> = {}): JobsBackend {
     nextId: 0,
     userId: IDS.ada,
     templates: { [IDS.payroll]: payrollTemplates },
+    timeEntries: [],
     ...initial,
   };
 }
@@ -198,6 +201,8 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
 
   return [
     /* ------------------------------ Lookups ------------------------------ */
+    // The job page lists the job's time.
+    http.get(orgApiPath('/time-entries'), () => ok(backend.timeEntries, { meta: END })),
     http.get(orgApiPath('/members'), ({ request }) => {
       const params = new URL(request.url).searchParams;
       record('GET', '/members', undefined, params);

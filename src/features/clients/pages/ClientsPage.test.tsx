@@ -191,6 +191,24 @@ describe('ClientsPage list', () => {
     expect(screen.getByRole('button', { name: 'Drafts' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('offers the segments of Settings in the filter and opens on ?segment=', async () => {
+    const seen: URLSearchParams[] = [];
+    server.use(...clientsHandlers({ onList: (params) => seen.push(params) }));
+    const user = userEvent.setup();
+    renderInOrg(<ClientsPage />, { route: '/acme/clients?segment=Silver' });
+    await clientRow(techwave.name);
+    await waitFor(() => expect(seen.at(-1)?.getAll('segment')).toEqual(['Silver']));
+
+    await user.click(screen.getByRole('button', { name: /^Filter\s*\d/ }));
+    const panel = await screen.findByRole('dialog', { name: 'Filter clients' });
+    const segment = within(within(panel).getByRole('group', { name: 'Segment' }));
+    expect(await segment.findByRole('checkbox', { name: 'Gold' })).toBeInTheDocument();
+    expect(segment.getByRole('checkbox', { name: 'Silver' })).toBeChecked();
+    // Whatever clients have is listed too; an inactive segment nobody has is not.
+    expect(segment.getByRole('checkbox', { name: 'Platinum' })).toBeInTheDocument();
+    expect(segment.queryByRole('checkbox', { name: 'Retail' })).not.toBeInTheDocument();
+  });
+
   it('saves, applies and deletes a filter set', async () => {
     const seen: URLSearchParams[] = [];
     server.use(...clientsHandlers({ onList: (params) => seen.push(params) }));
@@ -366,6 +384,81 @@ describe('ClientsPage actions', () => {
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Add Client' })).toBeNull());
     expect(await screen.findByText('Client created')).toBeInTheDocument();
     await waitFor(() => expect(lists).toBeGreaterThan(1));
+  });
+
+  it('picks the segment from the segments of Settings and sends it', async () => {
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      ...clientsHandlers(),
+      http.post(orgApiPath('/clients'), async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return ok(techwaveDetail, { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ClientsPage />);
+    await clientRow(techwave.name);
+    await user.click(screen.getByRole('button', { name: 'Add Client' }));
+    const dialog = await screen.findByRole('region', { name: 'Add Client' });
+    const form = within(dialog);
+
+    const segment = form.getByRole('combobox', { name: 'Segment' });
+    // Active segments only: Retail is inactive, and nothing the design once listed is invented.
+    expect(await within(segment).findByRole('option', { name: 'Gold' })).toBeInTheDocument();
+    expect(
+      within(segment)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['No segment', 'Gold', 'Silver']);
+    await user.type(form.getByRole('textbox', { name: 'Client name' }), 'Techwave');
+    await user.selectOptions(segment, 'Gold');
+    await user.click(form.getByRole('button', { name: 'Add Client' }));
+
+    await waitFor(() => expect(body).toMatchObject({ name: 'Techwave', segment: 'Gold' }));
+  });
+
+  it('keeps a segment the practice has not defined on the client being edited', async () => {
+    server.use(...clientsHandlers());
+    const user = userEvent.setup();
+    renderInOrg(<ClientsPage />);
+    await clientRow(techwave.name);
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'Edit'));
+    const dialog = await screen.findByRole('region', { name: `Edit ${techwave.name}` });
+    const segment = within(dialog).getByRole('combobox', { name: 'Segment' });
+    await waitFor(() => expect(segment).toHaveValue('Bronze'));
+    expect(
+      within(segment).getByRole('option', { name: 'Bronze (not in Settings)' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows which client already has a typed code, on the code field', async () => {
+    const message =
+      'The code ACME is already used by Acme Ltd (archived). Change that client’s code, or delete it, to use the code again.';
+    server.use(
+      ...clientsHandlers(),
+      http.post(orgApiPath('/clients'), () => fail(409, 'CLIENT_CODE_TAKEN', message)),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ClientsPage />);
+    await clientRow(techwave.name);
+    await user.click(screen.getByRole('button', { name: 'Add Client' }));
+    const dialog = await screen.findByRole('region', { name: 'Add Client' });
+    const form = within(dialog);
+
+    expect(
+      form.getByText(
+        'Left blank, the next code from the numbering sequence is used. You can also type your own fixed number.',
+      ),
+    ).toBeInTheDocument();
+    await user.type(form.getByRole('textbox', { name: 'Client name' }), 'New Acme');
+    await user.type(form.getByRole('textbox', { name: 'Client code' }), 'acme');
+    await user.click(form.getByRole('button', { name: 'Add Client' }));
+
+    expect(await form.findByText(message)).toBeInTheDocument();
+    expect(form.getByRole('textbox', { name: 'Client code' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
   });
 
   it('opens the new client on its own page after creating it', async () => {

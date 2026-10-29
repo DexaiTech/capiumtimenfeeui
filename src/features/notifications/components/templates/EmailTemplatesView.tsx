@@ -4,9 +4,11 @@ import {
   Badge,
   Button,
   Card,
+  CountTabs,
   DataTable,
   EmptyState,
   ErrorState,
+  PageToolbar,
   Skeleton,
   type DataTableColumn,
 } from '@/components/ui';
@@ -16,8 +18,13 @@ import { isApiError } from '@/services/api';
 import { formatUkDateTime } from '@/utils/dates';
 
 import { useEmailTemplates } from '../../api/hooks';
-import type { EmailTemplate } from '../../types';
+import type { EmailTemplate, TemplateAudience } from '../../types';
 import { TemplateEditor } from './TemplateEditor';
+
+const AUDIENCES: ReadonlyArray<{ value: TemplateAudience; label: string }> = [
+  { value: 'external', label: 'Client emails (external)' },
+  { value: 'internal', label: 'Team emails (internal)' },
+];
 
 function EditorSkeleton() {
   return (
@@ -39,6 +46,8 @@ export function EmailTemplatesView() {
   const templates = useEmailTemplates();
   const selectedKey = params.get('template');
   const open = (key: string | null) => setParam({ template: key }, { push: true });
+  const audience: TemplateAudience =
+    AUDIENCES.find((entry) => entry.value === params.get('audience'))?.value ?? 'external';
 
   if (templates.isError) {
     return (
@@ -68,7 +77,13 @@ export function EmailTemplatesView() {
         </Card>
       );
     }
-    return <TemplateEditor key={template.key} template={template} onBack={() => open(null)} />;
+    return (
+      <TemplateEditor
+        key={template.key}
+        template={template}
+        onBack={() => setParam({ template: null, audience: template.audience }, { push: true })}
+      />
+    );
   }
 
   const columns: DataTableColumn<EmailTemplate>[] = [
@@ -119,11 +134,31 @@ export function EmailTemplatesView() {
     },
   ];
 
+  const all = templates.data ?? [];
+  const rows = all.filter((template) => template.audience === audience);
+
   return (
     <DataTable
       caption="Email templates"
       columns={columns}
-      rows={templates.data ?? []}
+      rows={rows}
+      toolbar={
+        <PageToolbar
+          start={
+            <CountTabs
+              label="Who the emails are for"
+              items={AUDIENCES.map((entry) => ({
+                ...entry,
+                count: templates.data
+                  ? all.filter((template) => template.audience === entry.value).length
+                  : null,
+              }))}
+              value={audience}
+              onChange={(value) => setParam({ audience: value === 'external' ? null : value })}
+            />
+          }
+        />
+      }
       rowKey={(template) => template.key}
       loading={templates.isPending}
       skeletonRows={8}
@@ -142,7 +177,11 @@ export function EmailTemplatesView() {
         <EmptyState
           icon={<MailPlus className="size-6" />}
           title="No email templates"
-          description="The emails the application sends will be listed here."
+          description={
+            all.length > 0
+              ? 'There are no emails for this audience.'
+              : 'The emails the application sends will be listed here.'
+          }
         />
       }
     />

@@ -904,6 +904,21 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       const sheet = backend.sheets.find((candidate) => candidate.id === params.sheetId);
       return sheet ? ok(detail(sheet)) : notFound();
     }),
+    http.delete(orgApiPath('/timesheets/:sheetId'), async ({ request, params }) => {
+      await record(request);
+      const sheet = backend.sheets.find((candidate) => candidate.id === params.sheetId);
+      if (!sheet) return notFound();
+      if (sheet.status !== 'open' && sheet.status !== 'rejected') {
+        return fail(409, 'INVALID_STATUS_TRANSITION', 'That status change is not allowed.');
+      }
+      const own = backend.entries.filter((item) => view(item).timesheet_id === sheet.id);
+      if (own.some((item) => item.billing_status !== 'unbilled')) {
+        return fail(409, 'TIMESHEET_HAS_BILLED_TIME', 'Some of this time has been billed.');
+      }
+      backend.entries = backend.entries.filter((item) => view(item).timesheet_id !== sheet.id);
+      backend.sheets = backend.sheets.filter((candidate) => candidate.id !== sheet.id);
+      return ok(null, { message: 'Timesheet deleted' });
+    }),
     http.post(orgApiPath('/timesheets/:sheetId/submit'), async ({ request, params }) => {
       await record(request);
       const sheet = backend.sheets.find((candidate) => candidate.id === params.sheetId);

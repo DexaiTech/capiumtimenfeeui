@@ -1,11 +1,12 @@
-import { Clock } from 'lucide-react';
-import { useMemo } from 'react';
+import { Clock, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
-import { Badge, PageToolbar, Select, type DataTableColumn } from '@/components/ui';
+import { Badge, Button, PageToolbar, Select, type DataTableColumn } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
+import { EntryPanel } from '@/features/time';
 import { useUrlParams } from '@/hooks';
 import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
@@ -45,12 +46,14 @@ export interface TimeTabProps {
 /**
  * The time recorded for the client (`GET /time-entries?client_id=`): every person's with
  * `time.read_all`, otherwise the caller's own. The totals above come from the overview, so they
- * stay right however many rows are loaded.
+ * stay right however many rows are loaded. "Add time" opens the time panel for this client; saving
+ * refreshes the list and the totals through the time invalidation.
  */
 export function TimeTab({ clientId, clientName, overview }: TimeTabProps) {
   const { organization, can } = useOrg();
   const { params, setParam } = useUrlParams();
   const staff = useStaffDirectory();
+  const [adding, setAdding] = useState(false);
   const scope = can(P.timeReadAll) ? 'all' : 'own';
   const from = isoDateParam(params.get('from'));
   const to = isoDateParam(params.get('to'));
@@ -161,6 +164,11 @@ export function TimeTab({ clientId, clientName, overview }: TimeTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <EntryPanel
+        open={adding}
+        onClose={() => setAdding(false)}
+        defaults={{ client: { id: clientId, label: clientName } }}
+      />
       {time ? (
         <SummaryStrip
           label="Time totals"
@@ -201,6 +209,18 @@ export function TimeTab({ clientId, clientName, overview }: TimeTabProps) {
               <h2 className="px-2 text-sm font-semibold text-text">
                 {scope === 'own' ? 'Your time' : 'Time entries'}
               </h2>
+            }
+            primaryAction={
+              can(P.timeLog) ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Plus className="size-4" aria-hidden="true" />}
+                  onClick={() => setAdding(true)}
+                >
+                  Add time
+                </Button>
+              ) : null
             }
             actions={
               <>

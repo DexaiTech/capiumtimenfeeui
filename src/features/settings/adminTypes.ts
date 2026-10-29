@@ -8,9 +8,11 @@ import type { IsoDate, IsoDateTime } from '@/types/api';
 /* ------------------------------- Period lock ------------------------------- */
 
 export type PeriodLockEventType = 'locked' | 'reopened';
-/** A calendar month, quarter or year; `legacy` is a lock set through a date before periods. */
-export type PeriodType = 'month' | 'quarter' | 'year' | 'legacy';
+/** A week, month, quarter or accounting year; `legacy` is a lock set through a date before periods. */
+export type PeriodType = 'week' | 'month' | 'quarter' | 'year' | 'legacy';
 export type LockablePeriodType = Exclude<PeriodType, 'legacy'>;
+/** How a practice locks: a new lock is exactly one period of this length. */
+export type LockGranularity = 'weekly' | 'monthly' | 'quarterly' | 'annually';
 
 export interface PeriodLockEvent {
   id: string;
@@ -45,18 +47,77 @@ export interface LockedPeriod {
   locked_at: IsoDateTime;
 }
 
+export interface PeriodLockSettings {
+  granularity: LockGranularity;
+  /** The accounting year starts on this month and day (1 January: the calendar year). */
+  financial_year_start_month: number;
+  financial_year_start_day: number;
+  /** False until the practice has made its choice (the first-time set-up). */
+  configured: boolean;
+}
+
+export interface PeriodLockSettingsUpdate {
+  granularity: LockGranularity;
+  financial_year_start_month?: number;
+  financial_year_start_day?: number;
+}
+
 export interface PeriodLock {
-  /** Oldest first. Every day inside any of them is closed. */
+  settings: PeriodLockSettings;
+  /** Oldest first, of any length. Every day inside any of them is closed. */
   periods: LockedPeriod[];
   last_event: PeriodLockEvent | null;
 }
 
 export interface PeriodLockCreate {
   period_type: LockablePeriodType;
+  /** The accounting year, named by the calendar year it starts in. */
   year: number;
-  /** The month (1-12) or quarter (1-4); left out for a year. */
+  /** The week (1-53), month (1-12) or quarter (1-4) of that year; left out for a year. */
   period?: number;
   reason?: string | null;
+}
+
+/** `locked` this period; `blocked` another lock overlaps it; `future` it has not ended. */
+export type LockRowStatus = 'open' | 'locked' | 'blocked' | 'future';
+
+/** One period of an accounting year and whether it is locked. */
+export interface LockPeriodRow {
+  period_type: LockablePeriodType;
+  year: number;
+  period: number;
+  start_date: IsoDate;
+  end_date: IsoDate;
+  label: string;
+  status: LockRowStatus;
+  /** The lock to pass to unlock, when `locked`. */
+  lock_id: string | null;
+  /** Label of the overlapping lock, when `blocked`. */
+  blocked_by: string | null;
+  locked_at: IsoDateTime | null;
+  locked_by_name: string | null;
+}
+
+export interface LockYearSummary {
+  year: number;
+  /** "2026", or "2026/27" for an accounting year that starts after 1 January. */
+  label: string;
+  start_date: IsoDate;
+  end_date: IsoDate;
+  locked: number;
+  total: number;
+}
+
+export interface PeriodLockCalendar {
+  settings: PeriodLockSettings;
+  year: number;
+  label: string;
+  start_date: IsoDate;
+  end_date: IsoDate;
+  /** Every period of the year, in date order: 52 or 53 weeks, 12 months, 4 quarters or the year. */
+  periods: LockPeriodRow[];
+  /** The accounting years that can be shown, newest first. */
+  years: LockYearSummary[];
 }
 
 export interface PeriodLockReopen {

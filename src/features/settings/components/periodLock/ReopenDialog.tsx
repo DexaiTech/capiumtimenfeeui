@@ -4,16 +4,25 @@ import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Modal, Textarea, useToast } from '@/components/ui';
+import type { IsoDate } from '@/types/api';
 import { formatUkDate } from '@/utils/dates';
 
 import { useReopenPeriod } from '../../api/adminHooks';
-import type { LockedPeriod } from '../../adminTypes';
 import { REASON_MAX, unlockSchema, type UnlockValues } from '../../schemas/admin';
 import { DialogActions } from '../DialogActions';
 
 const FIELDS = ['reason'] as const;
 
-function UnlockForm({ period, onClose }: { period: LockedPeriod; onClose: () => void }) {
+/** What the dialog needs of a locked period: a `LockedPeriod` or a locked row of the grid. */
+export interface ReopenTarget {
+  /** The lock to unlock. */
+  id: string;
+  label: string;
+  start_date: IsoDate;
+  end_date: IsoDate;
+}
+
+function UnlockForm({ period, onClose }: { period: ReopenTarget; onClose: () => void }) {
   const { toast } = useToast();
   const unlock = useReopenPeriod();
   const formId = useId();
@@ -87,7 +96,7 @@ function UnlockForm({ period, onClose }: { period: LockedPeriod; onClose: () => 
 
 export interface ReopenDialogProps {
   /** The locked period to unlock; the dialog is closed while it is null. */
-  period: LockedPeriod | null;
+  period: ReopenTarget | null;
   onClose: () => void;
 }
 

@@ -22,6 +22,7 @@ import { ApiError } from '@/services/api';
 import { formatUkDate, todayInZone } from '@/utils/dates';
 import { formatMinutes, parseMinutes, roundUpToIncrement } from '@/utils/minutes';
 import { formatMoney } from '@/utils/money';
+import { formatMultiplier } from '@/utils/multiplier';
 
 import { useCorrectEntry, useCreateEntry, useJobRefs, useUpdateEntry } from '../api';
 import { RATE_SOURCE_LABEL } from '../constants';
@@ -187,6 +188,10 @@ function EntryForm({
       jobId !== (entry.job_id ?? '') ||
       activityId !== (entry.activity_code_id ?? ''));
   const billable = billableChoice ?? (entry && !identityChanged ? entry.is_billable : autoBillable);
+  // Overtime is a practice setting: with it off the box is not shown and nothing is sent.
+  const [overtime, setOvertime] = useState(entry?.is_overtime ?? false);
+  const showOvertime = organization.overtime_enabled && !correction;
+  const overtimeChanged = showOvertime && overtime !== (entry?.is_overtime ?? false);
 
   const typed = parseMinutes(timeText);
   const rounded = typed !== null && typed > 0 ? roundUpToIncrement(typed, increment) : null;
@@ -226,6 +231,7 @@ function EntryForm({
     if (billableChoice !== null && billableChoice !== entry.is_billable) {
       found.is_billable = billableChoice;
     }
+    if (overtimeChanged) found.is_overtime = overtime;
     return found;
   };
 
@@ -259,6 +265,7 @@ function EntryForm({
       if (values.description) body.description = values.description;
       if (values.internal_note) body.internal_note = values.internal_note;
       if (billableChoice !== null) body.is_billable = billableChoice;
+      if (showOvertime && overtime) body.is_overtime = true;
       create.mutate(body, { onSuccess: saved, onError });
       return;
     }
@@ -481,6 +488,15 @@ function EntryForm({
           disabled={readOnly}
           onChange={(event) => setBillableChoice(event.target.checked)}
         />
+        {showOvertime ? (
+          <Checkbox
+            label="Overtime"
+            description={`Charged and costed at the overtime rate: ${formatMultiplier(organization.overtime_multiplier_bp)} the normal rate, unless the person has their own.`}
+            checked={overtime}
+            disabled={readOnly}
+            onChange={(event) => setOvertime(event.target.checked)}
+          />
+        ) : null}
         {correction ? (
           <section
             aria-label="What will change"
@@ -577,7 +593,10 @@ function EntryForm({
             {...again.primaryProps}
             variant="primary"
             loading={saving}
-            disabled={(entry && !correction && !isDirty && billableChoice === null) || retryIn > 0}
+            disabled={
+              (entry && !correction && !isDirty && billableChoice === null && !overtimeChanged) ||
+              retryIn > 0
+            }
           >
             {correction ? 'Correct time' : entry ? 'Save entry' : 'Record time'}
           </Button>

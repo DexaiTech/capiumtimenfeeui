@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, FormPanel, FormSection, Input, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
+import { useSegments } from '@/features/settings';
 import { ApiError, isApiError } from '@/services/api';
 
 import { useCreateClient, useStaffDirectory, useUpdateClient } from '../api';
@@ -12,8 +13,8 @@ import { isLinked, MANAGED_MESSAGE, managedFields } from '../central/format';
 import {
   CLIENT_STATUS_OPTIONS,
   CLIENT_TYPE_OPTIONS,
-  KNOWN_SEGMENTS,
   MONTH_OPTIONS,
+  segmentOptions,
   SOFTWARE_OPTIONS,
 } from '../constants';
 import {
@@ -52,6 +53,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
   const create = useCreateClient();
   const update = useUpdateClient();
   const staff = useStaffDirectory();
+  const segments = useSegments();
   const canPickPeople = can('member.read');
   const canArchive = can('client.delete');
   // A client linked to the central service takes its name and address from there.
@@ -162,7 +164,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
           />
           <Input
             label="Client code"
-            hint="Left blank, the next code from the numbering sequence is used."
+            hint="Left blank, the next code from the numbering sequence is used. You can also type your own fixed number."
             error={errors.code?.message}
             {...register('code')}
           />
@@ -178,18 +180,13 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
             error={errors.status?.message}
             {...register('status')}
           />
-          <Input
+          <Select
             label="Segment"
-            hint="A group of your own, for example Gold or Retail. Use it to filter the client list."
-            list={`${formId}-segments`}
+            options={segmentOptions(segments.data ?? [], client?.segment)}
+            hint="Chosen from the segments in Settings. Use it to filter the client list."
             error={errors.segment?.message}
             {...register('segment')}
           />
-          <datalist id={`${formId}-segments`}>
-            {KNOWN_SEGMENTS.map((segment) => (
-              <option key={segment} value={segment} />
-            ))}
-          </datalist>
         </FormSection>
 
         <FormSection

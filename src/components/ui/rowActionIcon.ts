@@ -47,7 +47,7 @@ const RULES: ReadonlyArray<readonly [RegExp, LucideIcon]> = [
   [/\b(view|open|see|show|preview|details)\b/, Eye],
   [/end.?date|\bend\b/, CalendarX],
   [/reopen|restart/, RotateCcw],
-  [/recall|undo|return|reverse|revert|unapprove|unmatch|unallocate/, Undo2],
+  [/recall|undo|return|reverse|revert|revoke|unapprove|unmatch|unallocate/, Undo2],
   [/reject|decline|refuse/, CircleX],
   [/approve|accept|confirm|mark .*(paid|done)/, CircleCheck],
   [/\bvoid\b|cancel|disable/, Ban],

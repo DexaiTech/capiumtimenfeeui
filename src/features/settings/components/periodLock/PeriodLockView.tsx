@@ -1,4 +1,4 @@
-import { Lock, LockOpen } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge, Button, Card, Skeleton } from '@/components/ui';
@@ -7,12 +7,13 @@ import { useOrg } from '@/features/organizations';
 import { formatUkDate } from '@/utils/dates';
 
 import { usePeriodLock } from '../../api/adminHooks';
-import type { LockedPeriod } from '../../adminTypes';
+import { GRANULARITY_PERIOD } from '../../utils/periodLock';
 import { LoadError } from '../LoadError';
 import { RelativeTime } from '../RelativeTime';
-import { LockDialog } from './LockDialog';
 import { LockHistory } from './LockHistory';
-import { ReopenDialog } from './ReopenDialog';
+import { LockSettingsCard } from './LockSettings';
+import { PeriodGrid } from './PeriodGrid';
+import { ReopenDialog, type ReopenTarget } from './ReopenDialog';
 
 const CLOSED = [
   ['Time', 'logging, editing, moving and deleting entries, corrections, and stopping a timer'],
@@ -30,18 +31,20 @@ const OPEN = [
 function LockSkeleton() {
   return (
     <div role="status" aria-label="Loading the period lock" className="flex flex-col gap-3">
-      <Skeleton shape="rect" className="h-36 w-full" />
-      <Skeleton shape="rect" className="h-40 w-full" />
+      <Skeleton shape="rect" className="h-20 w-full" />
+      <Skeleton shape="rect" className="h-64 w-full" />
     </div>
   );
 }
 
-/** The period lock of the practice: where it stands, what it closes, who changed it and why. */
+/**
+ * The period lock of the practice: how it locks, the periods of an accounting year to lock and
+ * unlock, what a lock closes and who changed it and why.
+ */
 export function PeriodLockView() {
   const { can } = useOrg();
   const lock = usePeriodLock();
-  const [locking, setLocking] = useState(false);
-  const [unlocking, setUnlocking] = useState<LockedPeriod | null>(null);
+  const [unlocking, setUnlocking] = useState<ReopenTarget | null>(null);
 
   if (lock.isPending) return <LockSkeleton />;
   if (lock.isError && !lock.data) {
@@ -56,40 +59,47 @@ export function PeriodLockView() {
   }
   const current = lock.data;
   if (!current) return null;
-  const periods = current.periods;
   const canLock = can(P.periodLockManage);
   const canReopen = can(P.periodLockReopen);
+  // Locks made under another length (and any from before periods existed) are listed apart:
+  // they stay in force and can be unlocked, but no row of the grid is one of them.
+  const kind = GRANULARITY_PERIOD[current.settings.granularity];
+  const others = current.periods.filter((period) => period.period_type !== kind);
 
   return (
     <>
-      <Card padding="lg" role="region" aria-label="Locked periods" className="flex flex-col gap-4">
-        <div className="flex items-start gap-3">
-          {periods.length > 0 ? (
-            <Lock aria-hidden="true" className="mt-1 size-6 shrink-0 text-warning" />
-          ) : (
-            <LockOpen aria-hidden="true" className="mt-1 size-6 shrink-0 text-success" />
-          )}
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="text-lg font-semibold text-text">
-              {periods.length > 0 ? 'Locked periods' : 'Nothing is locked'}
-            </h2>
-            <p className="text-sm text-text-muted">
-              {periods.length > 0
-                ? 'Time, expenses and WIP dated inside a locked period cannot be created, changed or deleted by anybody. Unlock a period to make changes.'
-                : 'Every day is open. Lock a month, quarter or year once its time, expenses and WIP have been reported.'}
-            </p>
+      <LockSettingsCard settings={current.settings} canManage={canLock} />
+      <PeriodGrid canLock={canLock} canReopen={canReopen} onUnlock={setUnlocking} />
+      {canLock && canReopen ? null : (
+        <p className="text-sm text-text-muted">
+          {canLock
+            ? 'Unlocking a period needs its own permission.'
+            : canReopen
+              ? 'Locking a period needs its own permission.'
+              : 'Locking and unlocking periods need their own permissions.'}
+        </p>
+      )}
+
+      {others.length > 0 ? (
+        <Card padding="lg" role="region" aria-label="Earlier locks" className="flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <Lock aria-hidden="true" className="mt-1 size-5 shrink-0 text-warning" />
+            <div className="flex min-w-0 flex-col gap-1">
+              <h2 className="text-base font-semibold text-text">Earlier locks</h2>
+              <p className="text-sm text-text-muted">
+                Made under another way of locking. They stay in force until you unlock them.
+              </p>
+            </div>
           </div>
-        </div>
-        {periods.length > 0 ? (
           <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
-            {periods.map((period) => (
+            {others.map((period) => (
               <li key={period.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-2 font-medium text-text">
                     {period.label}
                     {period.period_type === 'legacy' ? (
                       <Badge tone="neutral" size="sm">
-                        Earlier lock
+                        Before periods
                       </Badge>
                     ) : null}
                   </span>
@@ -112,22 +122,8 @@ export function PeriodLockView() {
               </li>
             ))}
           </ul>
-        ) : null}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="primary" disabled={!canLock} onClick={() => setLocking(true)}>
-            Lock a period
-          </Button>
-        </div>
-        {canLock && canReopen ? null : (
-          <p className="text-sm text-text-muted">
-            {canLock
-              ? 'Unlocking a period needs its own permission.'
-              : canReopen
-                ? 'Locking a period needs its own permission.'
-                : 'Locking and unlocking periods need their own permissions.'}
-          </p>
-        )}
-      </Card>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card padding="lg" className="flex flex-col gap-3">
@@ -152,7 +148,6 @@ export function PeriodLockView() {
 
       <LockHistory />
 
-      <LockDialog open={locking} onClose={() => setLocking(false)} periods={periods} />
       <ReopenDialog period={unlocking} onClose={() => setUnlocking(null)} />
     </>
   );

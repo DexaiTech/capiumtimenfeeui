@@ -2,6 +2,7 @@ import { Funnel, ListFilter } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Popover } from '@/components/ui';
+import { useSegments } from '@/features/settings';
 
 import {
   CENTRAL_FILTER_OPTIONS,
@@ -9,7 +10,6 @@ import {
   CLIENT_TYPE_OPTIONS,
   countFilters,
   EMPTY_FILTERS,
-  KNOWN_SEGMENTS,
   parseCentralFilter,
   SOFTWARE_OPTIONS,
 } from '../constants';
@@ -73,13 +73,18 @@ export function FilterPanel({
   const setList = (key: ListKey, value: string, on: boolean) =>
     onChange({ ...filters, [key]: toggle(filters[key] as string[], value, on) });
 
-  // Known segments first, then whatever else the practice uses.
-  const segmentNames = Array.from(
-    new Set([
-      ...KNOWN_SEGMENTS,
-      ...segments.map((entry) => entry.segment).filter((name): name is string => Boolean(name)),
-    ]),
-  );
+  // The segments defined in Settings first, then whatever else clients have or is filtered on.
+  const defined = useSegments();
+  const segmentNames: string[] = [];
+  for (const name of [
+    ...(defined.data ?? []).filter((entry) => entry.is_active).map((entry) => entry.name),
+    ...segments.map((entry) => entry.segment).filter((name): name is string => Boolean(name)),
+    ...filters.segment,
+  ]) {
+    if (!segmentNames.some((known) => known.toLowerCase() === name.toLowerCase())) {
+      segmentNames.push(name);
+    }
+  }
 
   return (
     <>

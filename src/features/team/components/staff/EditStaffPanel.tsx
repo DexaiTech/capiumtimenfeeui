@@ -6,6 +6,7 @@ import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, ErrorState, FormPanel, Skeleton, useToast } from '@/components/ui';
 import { isApiError } from '@/services/api';
 import { minutesToHours, parseMinutes } from '@/utils/minutes';
+import { bpToMultiplierInput, parseMultiplierToBp } from '@/utils/multiplier';
 
 import { useGradeOptions, useSaveStaff } from '../../api';
 import { staffEditSchema, type StaffFormValues } from '../../schemas/staff';
@@ -26,6 +27,7 @@ const FIELDS = [
   'hours_per_day',
   'working_days',
   'target_percent',
+  'overtime_multiplier',
   'start_date',
   'leaving_date',
   'status',
@@ -34,6 +36,7 @@ const FIELDS = [
 const FIELD_NAMES = {
   working_minutes_per_day: 'hours_per_day',
   chargeable_target_bp: 'target_percent',
+  overtime_multiplier_bp: 'overtime_multiplier',
 };
 
 const sameDays = (a: ReadonlyArray<number>, b: ReadonlyArray<number>) =>
@@ -69,6 +72,10 @@ function EditStaffForm({
       hours_per_day: minutesToHours(staff.working_minutes_per_day),
       working_days: staff.working_days,
       target_percent: bpToPercent(staff.chargeable_target_bp),
+      overtime_multiplier:
+        staff.overtime_multiplier_bp == null
+          ? ''
+          : bpToMultiplierInput(staff.overtime_multiplier_bp),
       start_date: staff.start_date ?? '',
       leaving_date: staff.leaving_date ?? '',
       status: staff.status,
@@ -115,6 +122,10 @@ function EditStaffForm({
     const target = percentToBp(values.target_percent);
     if (target !== null && target !== staff.chargeable_target_bp) {
       changes.chargeable_target_bp = target;
+    }
+    const overtime = parseMultiplierToBp(values.overtime_multiplier);
+    if (overtime !== (staff.overtime_multiplier_bp ?? null)) {
+      changes.overtime_multiplier_bp = overtime;
     }
     const startDate = values.start_date || null;
     if (startDate !== staff.start_date) changes.start_date = startDate;

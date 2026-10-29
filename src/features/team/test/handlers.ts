@@ -1,6 +1,7 @@
 import { http, type HttpHandler } from 'msw';
 
 import type { Role } from '@/features/settings';
+import { segmentHandlers } from '@/test/segments';
 import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
 
@@ -90,6 +91,7 @@ export function teamHandlers(data: TeamData = {}): HttpHandler[] {
   const jobs = data.jobs ?? [job];
 
   return [
+    ...segmentHandlers(),
     http.get(orgApiPath('/staff'), ({ request }) => {
       const params = new URL(request.url).searchParams;
       data.onStaffList?.(params);

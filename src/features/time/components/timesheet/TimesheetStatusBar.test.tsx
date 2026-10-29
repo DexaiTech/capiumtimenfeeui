@@ -4,7 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
-import { ok, server } from '@/test/server';
+import { fail, ok, server } from '@/test/server';
 
 import type { WeekGrid } from '../../types';
 import { TimesheetStatusBar } from './TimesheetStatusBar';
@@ -73,5 +73,64 @@ describe('TimesheetStatusBar: submitting', () => {
     expect(calls).toEqual([]);
     await user.click(within(dialog).getByRole('button', { name: 'Submit timesheet' }));
     await waitFor(() => expect(calls).toEqual(['submit']));
+  });
+});
+
+describe('TimesheetStatusBar: deleting', () => {
+  function setupDelete(week: WeekGrid, refuse = false) {
+    const calls: string[] = [];
+    server.use(
+      http.delete(orgApiPath('/timesheets/:id'), () => {
+        calls.push('delete');
+        return refuse
+          ? fail(409, 'TIMESHEET_HAS_BILLED_TIME', 'Some of this time has been billed.')
+          : ok(null);
+      }),
+    );
+    renderInOrg(<TimesheetStatusBar grid={week} sheet={undefined} canRecord />);
+    return calls;
+  }
+
+  it('deletes an open week after asking', async () => {
+    const user = userEvent.setup();
+    const calls = setupDelete(grid());
+    await user.click(screen.getByRole('button', { name: 'Delete timesheet' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete this timesheet?' });
+    expect(calls).toEqual([]);
+    await user.click(within(dialog).getByRole('button', { name: 'Delete timesheet' }));
+    await waitFor(() => expect(calls).toEqual(['delete']));
+    expect(await screen.findByText('Timesheet deleted')).toBeInTheDocument();
+  });
+
+  it('is offered on a returned week too', () => {
+    setupDelete(grid({ timesheet_status: 'rejected' }));
+    expect(screen.getByRole('button', { name: 'Delete timesheet' })).toBeInTheDocument();
+  });
+
+  it('shows why the API refused, for example billed time', async () => {
+    const user = userEvent.setup();
+    setupDelete(grid(), true);
+    await user.click(screen.getByRole('button', { name: 'Delete timesheet' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete this timesheet?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete timesheet' }));
+    expect(
+      await within(dialog).findByText('Some of this time has been billed.'),
+    ).toBeInTheDocument();
+  });
+
+  it.each(['submitted', 'approved'] as const)('is not offered on a %s week', (status) => {
+    setupDelete(grid({ timesheet_status: status }));
+    expect(screen.queryByRole('button', { name: 'Delete timesheet' })).not.toBeInTheDocument();
+  });
+
+  it('says that approved time is locked and who can release it', () => {
+    setupDelete(grid({ timesheet_status: 'approved' }));
+    expect(screen.getByText(/cannot be edited or deleted/)).toBeInTheDocument();
+    expect(screen.getByText(/revoke the approval/)).toBeInTheDocument();
+  });
+
+  it('is not offered without a timesheet yet', () => {
+    setupDelete(grid({ timesheet_id: null }));
+    expect(screen.queryByRole('button', { name: 'Delete timesheet' })).not.toBeInTheDocument();
   });
 });

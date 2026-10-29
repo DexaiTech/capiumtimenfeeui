@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { budgetAlertTemplate, invitationTemplate } from '@/features/notifications/test/fixtures';
+import {
+  budgetAlertTemplate,
+  invitationTemplate,
+  invoiceTemplate,
+} from '@/features/notifications/test/fixtures';
 import {
   createBackend,
   DEFAULT_TEXT,
@@ -41,18 +45,66 @@ describe('EmailTemplatesPage: the list', () => {
     renderInOrg(<EmailTemplatesPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Email Templates' })).toBeInTheDocument();
-    const budget = within(await row(/^Budget alert/));
-    expect(budget.getByText('Notification')).toBeInTheDocument();
-    expect(budget.getByText('Default')).toBeInTheDocument();
-    expect(budget.getByText('—')).toBeInTheDocument();
-
     const invoice = within(await row(/^Invoice email/));
     expect(invoice.getByText('System')).toBeInTheDocument();
     expect(invoice.getByText('Customised')).toBeInTheDocument();
     // 09:05 UTC is 10:05 in London in October.
     expect(invoice.getByText('18/10/2026 10:05')).toBeInTheDocument();
     expect(invoice.getByText('by Ada Admin')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('tab', { name: /Team emails/ }));
+    const budget = within(await row(/^Budget alert/));
+    expect(budget.getByText('Notification')).toBeInTheDocument();
+    expect(budget.getByText('Default')).toBeInTheDocument();
+    expect(budget.getByText('—')).toBeInTheDocument();
     expect(await row(/^Staff invitation/)).toBeInTheDocument();
+  });
+
+  it('splits the client emails from the team emails', async () => {
+    const user = userEvent.setup();
+    setup();
+    renderInOrg(<EmailTemplatesPage />);
+
+    const external = await screen.findByRole('tab', { name: /Client emails \(external\)/ });
+    const internal = screen.getByRole('tab', { name: /Team emails \(internal\)/ });
+    expect(external).toHaveAttribute('aria-selected', 'true');
+    expect(await row(/^Invoice email/)).toBeInTheDocument();
+    expect(external).toHaveTextContent('1');
+    expect(internal).toHaveTextContent('2');
+    expect(screen.queryByRole('row', { name: /^Budget alert/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /^Staff invitation/ })).not.toBeInTheDocument();
+
+    await user.click(internal);
+    expect(internal).toHaveAttribute('aria-selected', 'true');
+    expect(await row(/^Budget alert/)).toBeInTheDocument();
+    expect(await row(/^Staff invitation/)).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /^Invoice email/ })).not.toBeInTheDocument();
+
+    await user.click(external);
+    expect(await row(/^Invoice email/)).toBeInTheDocument();
+  });
+
+  it('opens on the team emails with ?audience=internal and goes back to the audience of the email', async () => {
+    const user = userEvent.setup();
+    setup();
+    renderInOrg(<EmailTemplatesPage />, { route: '/?audience=internal' });
+    expect(await row(/^Budget alert/)).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit Budget alert' }));
+    await user.click(await screen.findByRole('button', { name: 'All templates' }));
+    expect(await row(/^Budget alert/)).toBeInTheDocument();
+  });
+
+  it('goes back from a linked email to the list of its audience', async () => {
+    const user = userEvent.setup();
+    setup();
+    renderInOrg(<EmailTemplatesPage />, { route: '/?template=staff_invitation' });
+    await user.click(await screen.findByRole('button', { name: 'All templates' }));
+    expect(await row(/^Staff invitation/)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Team emails/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('shows a skeleton while loading', () => {
@@ -83,7 +135,7 @@ describe('EmailTemplatesPage: the list', () => {
     ).toBeInTheDocument();
     failing = false;
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await row(/^Budget alert/)).toBeInTheDocument();
+    expect(await row(/^Invoice email/)).toBeInTheDocument();
   });
 
   it.each([['organization.update'], ['settings.manage']])('is open with %s', async (permission) => {
@@ -91,7 +143,7 @@ describe('EmailTemplatesPage: the list', () => {
     renderInOrg(<EmailTemplatesPage />, {
       context: contextWith(['organization.read', permission]),
     });
-    expect(await row(/^Budget alert/)).toBeInTheDocument();
+    expect(await row(/^Invoice email/)).toBeInTheDocument();
   });
 
   it('is not open to a role without organization.update or settings.manage, and asks for nothing', async () => {
@@ -106,12 +158,12 @@ describe('EmailTemplatesPage: the list', () => {
     const user = userEvent.setup();
     setup();
     renderInOrg(<EmailTemplatesPage />);
-    await user.click(await screen.findByRole('button', { name: 'Edit Budget alert' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit Invoice email' }));
 
     expect(
-      await screen.findByRole('heading', { level: 2, name: 'Budget alert' }),
+      await screen.findByRole('heading', { level: 2, name: 'Invoice email' }),
     ).toBeInTheDocument();
-    expect(subject()).toHaveValue(budgetAlertTemplate.subject);
+    expect(subject()).toHaveValue(invoiceTemplate.subject);
     await user.click(screen.getByRole('button', { name: 'All templates' }));
     expect(await row(/^Invoice email/)).toBeInTheDocument();
   });

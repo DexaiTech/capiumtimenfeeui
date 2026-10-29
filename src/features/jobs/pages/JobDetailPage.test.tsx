@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { entry as timeEntry } from '@/features/time/test/fixtures';
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { findRowAction } from '@/test/rowActions';
 import { server } from '@/test/server';
@@ -428,5 +429,25 @@ describe('editing, copying and deleting the job', () => {
     expect(await within(confirm).findByRole('alert')).toHaveTextContent(
       'Time is recorded against this job',
     );
+  });
+});
+
+describe('the time on a job', () => {
+  it('lists the time recorded on the job, with delete for open time', async () => {
+    const user = userEvent.setup();
+    setup({ timeEntries: [timeEntry({ id: 'e-1', entry_date: '2026-10-12', minutes: 90 })] });
+
+    const table = await screen.findByRole('table', { name: 'Time on J00001' });
+    expect(await within(table).findByText('1:30')).toBeInTheDocument();
+    await user.click(
+      await findRowAction(/^Actions for the entry of 1:30 on 12\/10\/2026/, 'Delete entry'),
+    );
+    expect(await dialog('Delete this time entry?')).toBeInTheDocument();
+  });
+
+  it('is left out for someone who may not see time', async () => {
+    setup({}, { permissions: READ_ONLY });
+    await screen.findByRole('heading', { level: 1, name: 'J00001 Year-end accounts' });
+    expect(screen.queryByRole('table', { name: 'Time on J00001' })).not.toBeInTheDocument();
   });
 });

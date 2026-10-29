@@ -110,14 +110,18 @@ describe('bulk actions on the client list', () => {
     await user.click(await screen.findByRole('option', { name: 'Set segment' }));
     dialog = await screen.findByRole('dialog', { name: 'Set the segment of 1 client' });
     expect(within(dialog).getByRole('button', { name: 'Update 1 client' })).toBeDisabled();
-    await user.type(within(dialog).getByRole('textbox', { name: 'New segment' }), 'Key account');
+    // The segments of Settings are offered; an inactive one is not.
+    const picker = within(dialog).getByRole('combobox', { name: 'New segment' });
+    expect(await within(picker).findByRole('option', { name: 'Gold' })).toBeInTheDocument();
+    expect(within(picker).queryByRole('option', { name: 'Retail' })).not.toBeInTheDocument();
+    await user.selectOptions(picker, 'Gold');
     await user.click(within(dialog).getByRole('button', { name: 'Update 1 client' }));
     await waitFor(() => expect(calls).toHaveLength(3));
 
     expect(calls).toEqual([
       { client_ids: [techwave.id], action: 'set_manager', value: grace },
       { client_ids: [techwave.id], action: 'set_partner', value: null },
-      { client_ids: [techwave.id], action: 'set_segment', value: 'Key account' },
+      { client_ids: [techwave.id], action: 'set_segment', value: 'Gold' },
     ]);
   });
 

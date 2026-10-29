@@ -34,6 +34,8 @@ export interface TimeEntry {
   description: string | null;
   internal_note: string | null;
   is_billable: boolean;
+  /** Overtime: `charge_rate` and `cost_rate` already include the multiplier. Absent: not overtime. */
+  is_overtime?: boolean;
   charge_rate: Pence;
   charge_value: Pence;
   cost_rate: Pence | null;
@@ -61,6 +63,8 @@ export interface TimeEntryCreate {
   description?: string | null;
   internal_note?: string | null;
   is_billable?: boolean;
+  /** Needs overtime switched on for the practice. */
+  is_overtime?: boolean;
 }
 
 /** Body of `PATCH /time-entries/{id}`: only what changes. */
@@ -73,6 +77,8 @@ export interface TimeEntryUpdate {
   description?: string | null;
   internal_note?: string | null;
   is_billable?: boolean | null;
+  /** Needs overtime switched on for the practice. */
+  is_overtime?: boolean;
 }
 
 /** Body of `POST /time-entries/{id}/correct`. */

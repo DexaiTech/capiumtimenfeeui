@@ -96,6 +96,7 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
     practice: () => import('@/features/settings/pages/PracticeSettingsPage'),
     roles: () => import('@/features/settings/pages/RolesSettingsPage'),
     'period-lock': () => import('@/features/settings/pages/PeriodLockPage'),
+    segments: () => import('@/features/settings/pages/SegmentsPage'),
     'vat-codes': () => import('@/features/settings/pages/VatCodesPage'),
     'document-numbering': () => import('@/features/settings/pages/DocumentNumberingPage'),
     'invoice-templates': () => import('@/features/settings/pages/InvoiceTemplatesPage'),

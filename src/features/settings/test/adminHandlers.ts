@@ -13,6 +13,7 @@ import type {
   OpeningBalanceTimeImportResult,
   LockablePeriodType,
   LockedPeriod,
+  LockGranularity,
   PeriodLock,
   PeriodLockEvent,
   StepState,
@@ -29,7 +30,8 @@ import {
   onboardingSteps,
   withSummary,
 } from './adminFixtures';
-import { periodName, periodRange } from '../utils/periodLock';
+import { GRANULARITY_PERIOD } from '../utils/periodLock';
+import { buildCalendar } from './periodCalendar';
 
 export { orgApiPath };
 
@@ -218,6 +220,36 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
       record('GET', '/period-locks');
       return refusal('GET', '/period-locks') ?? ok(backend.lock);
     }),
+    http.get(orgApiPath('/period-locks/calendar'), ({ request }) => {
+      const year = new URL(request.url).searchParams.get('year');
+      record('GET', '/period-locks/calendar', undefined, new URL(request.url).searchParams);
+      return (
+        refusal('GET', '/period-locks/calendar') ??
+        ok(buildCalendar(backend.lock, year ? Number(year) : undefined, TODAY))
+      );
+    }),
+    http.put(orgApiPath('/period-locks/settings'), async ({ request }) => {
+      const body = (await request.json()) as {
+        granularity: LockGranularity;
+        financial_year_start_month?: number;
+        financial_year_start_day?: number;
+      };
+      record('PUT', '/period-locks/settings', body);
+      const failed = refusal('PUT', '/period-locks/settings');
+      if (failed) return failed;
+      backend.lock = {
+        ...backend.lock,
+        settings: {
+          granularity: body.granularity,
+          financial_year_start_month:
+            body.financial_year_start_month ?? backend.lock.settings.financial_year_start_month,
+          financial_year_start_day:
+            body.financial_year_start_day ?? backend.lock.settings.financial_year_start_day,
+          configured: true,
+        },
+      };
+      return ok(backend.lock, { message: 'Period lock settings saved' });
+    }),
     http.post(orgApiPath('/period-locks/reopen'), async ({ request }) => {
       const body = (await request.json()) as { lock_id: string; reason?: string | null };
       record('POST', '/period-locks/reopen', body);
@@ -237,6 +269,7 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
         reason: body.reason.trim(),
       });
       backend.lock = {
+        ...backend.lock,
         periods: backend.lock.periods.filter((entry) => entry.id !== found.id),
         last_event: event,
       };
@@ -252,9 +285,16 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
       record('POST', '/period-locks', body);
       const failed = refusal('POST', '/period-locks');
       if (failed) return failed;
-      const index = body.period ?? 1;
-      const { start, end } = periodRange(body.period_type, body.year, index);
-      const label = periodName(body.period_type, body.year, index);
+      if (body.period_type !== GRANULARITY_PERIOD[backend.lock.settings.granularity]) {
+        return invalid(
+          'PERIOD_LOCK_WRONG_LENGTH',
+          'period_type',
+          `This practice locks ${backend.lock.settings.granularity}, not by the ${body.period_type}.`,
+        );
+      }
+      const row = buildCalendar(backend.lock, body.year, TODAY).periods[(body.period ?? 1) - 1];
+      if (!row) return invalid('PERIOD_LOCK_INVALID_PERIOD', 'period', 'No such period.');
+      const { start_date: start, end_date: end, label } = row;
       if (end > TODAY) {
         return invalid('PERIOD_LOCK_IN_FUTURE', 'period', `${label} has not ended yet.`);
       }
@@ -287,6 +327,7 @@ export function adminHandlers(backend: AdminBackend): HttpHandler[] {
         locked_at: NOW,
       };
       backend.lock = {
+        ...backend.lock,
         periods: [...backend.lock.periods, period].sort((a, b) =>
           a.start_date.localeCompare(b.start_date),
         ),

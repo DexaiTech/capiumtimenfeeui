@@ -46,6 +46,8 @@ export const queryKeys = {
     services: (organizationId: string) => ['org', organizationId, 'services'] as const,
     activityCodes: (organizationId: string) => ['org', organizationId, 'activity-codes'] as const,
     vatRates: (organizationId: string) => ['org', organizationId, 'vat-rates'] as const,
+    // Client segments (Settings) and the staff linked to them.
+    segments: (organizationId: string) => ['org', organizationId, 'segments'] as const,
     sequences: (organizationId: string) => ['org', organizationId, 'sequences'] as const,
     invoiceTemplates: (organizationId: string) =>
       ['org', organizationId, 'invoice-templates'] as const,

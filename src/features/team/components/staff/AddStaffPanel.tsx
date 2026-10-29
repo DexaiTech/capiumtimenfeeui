@@ -126,6 +126,7 @@ function AddStaffForm({
       hours_per_day: minutesToHours(organization.minutes_per_day),
       working_days: organization.working_days,
       target_percent: '',
+      overtime_multiplier: '',
       start_date: todayInZone(organization.timezone),
       leaving_date: '',
       status: 'active',

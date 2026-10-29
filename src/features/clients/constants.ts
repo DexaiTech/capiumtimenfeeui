@@ -56,8 +56,29 @@ export function parseCentralFilter(value: string): CentralFilter | null {
   return CENTRAL_FILTER_OPTIONS.find((option) => option.value === value)?.value ?? null;
 }
 
-/** The segments the design names; any other text the API holds is shown as it is. */
-export const KNOWN_SEGMENTS = ['Bronze', 'Silver', 'Gold', 'Platinum'] as const;
+/** The segment select of a form: none, the active segments, and the client's own if undefined. */
+export function segmentOptions(
+  segments: ReadonlyArray<{ name: string; is_active: boolean }>,
+  current: string | null | undefined,
+): Array<{ value: string; label: string }> {
+  const names = segments.filter((entry) => entry.is_active).map((entry) => entry.name);
+  const own = current?.trim() ?? '';
+  const known = new Set(segments.map((entry) => entry.name.toLowerCase()));
+  const extra =
+    own !== '' && !names.some((name) => name.toLowerCase() === own.toLowerCase())
+      ? [
+          {
+            value: own,
+            label: known.has(own.toLowerCase()) ? `${own} (inactive)` : `${own} (not in Settings)`,
+          },
+        ]
+      : [];
+  return [
+    { value: '', label: 'No segment' },
+    ...names.map((name) => ({ value: name, label: name })),
+    ...extra,
+  ];
+}
 
 const options = <T extends string>(values: readonly T[], labels: Record<T, string>) =>
   values.map((value) => ({ value, label: labels[value] }));

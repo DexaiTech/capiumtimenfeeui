@@ -172,21 +172,21 @@ function Content({
           if (!grid?.timesheet_id) return;
           reopen.mutate(grid.timesheet_id, {
             onSuccess: () => {
-              toast({ tone: 'success', title: 'Timesheet unapproved' });
+              toast({ tone: 'success', title: 'Approval revoked' });
               setUnapproving(false);
             },
             onError: (error) => setRefusal(dialogError(error)),
           });
         }}
-        title="Unapprove this week?"
-        confirmLabel="Unapprove week"
+        title="Revoke approval of this week?"
+        confirmLabel="Revoke approval"
         tone="default"
         loading={reopen.isPending}
         error={refusal}
       >
         <p>
           {person.name}, week of {formatWeekRange(weekStart)}. The week goes back to open, so the
-          time on it can be changed or deleted and the week submitted again. It cannot be unapproved
+          time on it can be changed or deleted and the week submitted again. It cannot be revoked
           once any of its time is billed.
         </p>
       </ConfirmDialog>
@@ -233,7 +233,7 @@ function Content({
                 setUnapproving(true);
               }}
             >
-              Unapprove week
+              Revoke approval
             </Button>
           ) : null}
           {can(PERMISSIONS.timeManageAll) ? (

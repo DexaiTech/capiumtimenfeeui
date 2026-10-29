@@ -1,6 +1,13 @@
+import type { SelectOption } from '@/components/ui';
 import { formatUkDate } from '@/utils/dates';
 
-import type { LockablePeriodType, LockedPeriod, PeriodLockEvent } from '../adminTypes';
+import type {
+  LockablePeriodType,
+  LockGranularity,
+  LockPeriodRow,
+  PeriodLockEvent,
+  PeriodLockSettings,
+} from '../adminTypes';
 
 export const MONTHS = [
   'January',
@@ -17,49 +24,41 @@ export const MONTHS = [
   'December',
 ] as const;
 
-const iso = (date: Date) => date.toISOString().slice(0, 10);
+export const MONTH_OPTIONS: SelectOption[] = MONTHS.map((name, n) => ({
+  value: String(n + 1),
+  label: name,
+}));
 
-/** First and last day of a calendar month, quarter (`index` 1-4) or year. */
-export function periodRange(
-  type: LockablePeriodType,
-  year: number,
-  index: number,
-): { start: string; end: string } {
-  if (type === 'year') return { start: `${String(year)}-01-01`, end: `${String(year)}-12-31` };
-  const first = type === 'quarter' ? index * 3 - 2 : index;
-  const last = type === 'quarter' ? first + 2 : first;
-  return {
-    start: iso(new Date(Date.UTC(year, first - 1, 1))),
-    end: iso(new Date(Date.UTC(year, last, 0))),
-  };
+export const GRANULARITY_OPTIONS: ReadonlyArray<{ value: LockGranularity; label: string }> = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'annually', label: 'Annually' },
+];
+
+export const GRANULARITY_HELP: Record<LockGranularity, string> = {
+  weekly: 'Lock each week on its own: 52 or 53 weeks a year, shown together in one list.',
+  monthly: 'Lock each of the 12 months of the accounting year on its own.',
+  quarterly: 'Lock each of the 4 quarters of the accounting year on its own.',
+  annually: 'Lock a whole accounting year at once.',
+};
+
+/** The kind of lock each way of locking makes. */
+export const GRANULARITY_PERIOD: Record<LockGranularity, LockablePeriodType> = {
+  weekly: 'week',
+  monthly: 'month',
+  quarterly: 'quarter',
+  annually: 'year',
+};
+
+/** "1 January", "6 April": the day an accounting year starts. */
+export function yearStartLabel(settings: PeriodLockSettings): string {
+  return `${String(settings.financial_year_start_day)} ${MONTHS[settings.financial_year_start_month - 1] ?? ''}`;
 }
 
-/** "March 2026", "Q1 2026" or "2026". */
-export function periodName(type: LockablePeriodType, year: number, index: number): string {
-  if (type === 'year') return String(year);
-  if (type === 'quarter') return `Q${String(index)} ${String(year)}`;
-  return `${MONTHS[index - 1] ?? ''} ${String(year)}`;
-}
-
-/** Why a period cannot be locked now, or null when it can: not ended yet, or already locked. */
-export function lockBlocker(
-  periods: ReadonlyArray<LockedPeriod>,
-  type: LockablePeriodType,
-  year: number,
-  index: number,
-  today: string,
-): string | null {
-  const { start, end } = periodRange(type, year, index);
-  if (end >= today) return 'not ended yet';
-  const clash = periods.some((entry) => entry.start_date <= end && entry.end_date >= start);
-  return clash ? 'already locked' : null;
-}
-
-/** The month that ended last before `today`: `{ year: 2026, month: 9 }` for "2026-10-18". */
-export function lastEndedMonth(today: string): { year: number; month: number } {
-  const [year, month] = today.split('-').map(Number);
-  const previous = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 2, 1));
-  return { year: previous.getUTCFullYear(), month: previous.getUTCMonth() + 1 };
+/** "Week 3" for a week, the label of the period ("March 2026", "Q1 2026") for the rest. */
+export function rowName(row: LockPeriodRow): string {
+  return row.period_type === 'week' ? `Week ${String(row.period)}` : row.label;
 }
 
 /** What an event did, in words: "Locked March 2026", with the old single date when it has one. */

@@ -20,6 +20,7 @@ import type {
   Onboarding,
   PeriodLockCreate,
   PeriodLockReopen,
+  PeriodLockSettingsUpdate,
   StepState,
   SyncItemFilters,
   SyncLogFilters,
@@ -30,6 +31,8 @@ import { adminApi } from './adminApi';
 export const adminKeys = {
   periodLock: (organizationId: string) =>
     [...queryKeys.org.periodLock(organizationId), 'current'] as const,
+  periodLockCalendar: (organizationId: string, year: number | undefined) =>
+    [...queryKeys.org.periodLock(organizationId), 'calendar', year ?? 'current'] as const,
   periodLockHistory: (organizationId: string) =>
     [...queryKeys.org.periodLock(organizationId), 'history'] as const,
   onboarding: (organizationId: string) => queryKeys.org.onboarding(organizationId),
@@ -84,6 +87,20 @@ export function usePeriodLock(options: { enabled?: boolean } = {}) {
   });
 }
 
+/** The periods of one accounting year (the current one without `year`), with their lock state. */
+export function usePeriodLockCalendar(
+  year: number | undefined,
+  options: { enabled?: boolean } = {},
+) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: adminKeys.periodLockCalendar(organization.id, year),
+    queryFn: ({ signal }) => adminApi.getPeriodLockCalendar(organization.id, year, signal),
+    placeholderData: keepPreviousData,
+    enabled: options.enabled ?? true,
+  });
+}
+
 export function usePeriodLockHistory(options: { enabled?: boolean } = {}) {
   const { organization } = useOrg();
   return useInfiniteQuery({
@@ -111,6 +128,11 @@ function usePeriodLockChange<TBody>(
 export const useLockPeriod = () =>
   usePeriodLockChange<PeriodLockCreate>((organizationId, body) =>
     adminApi.lockPeriod(organizationId, body),
+  );
+
+export const useUpdateLockSettings = () =>
+  usePeriodLockChange<PeriodLockSettingsUpdate>((organizationId, body) =>
+    adminApi.updatePeriodLockSettings(organizationId, body),
   );
 
 export const useReopenPeriod = () =>

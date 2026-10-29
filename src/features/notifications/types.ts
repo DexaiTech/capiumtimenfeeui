@@ -106,11 +106,15 @@ export interface MergeField {
 
 export type TemplateCategory = 'notification' | 'system';
 
+/** Who reads an email: the practice's clients (`external`) or its own team (`internal`). */
+export type TemplateAudience = 'external' | 'internal';
+
 export interface EmailTemplate {
   key: string;
   name: string;
   description: string;
   category: TemplateCategory;
+  audience: TemplateAudience;
   /** The notification type the email belongs to; null for a system email. */
   notification_type: string | null;
   merge_fields: MergeField[];

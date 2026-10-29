@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useOrg } from '@/features/organizations';
 
@@ -88,6 +88,19 @@ export function useReopenTimesheet() {
   return useMutation({
     mutationFn: (timesheetId: string) => timeApi.reopenTimesheet(organization.id, timesheetId),
     onSettled: invalidate.sheets,
+  });
+}
+
+/** Delete an open or returned week together with its time (the API refuses billed time). */
+export function useDeleteTimesheet() {
+  const { organization } = useOrg();
+  const queryClient = useQueryClient();
+  const invalidate = useTimeInvalidation();
+  return useMutation({
+    mutationFn: (timesheetId: string) => timeApi.deleteTimesheet(organization.id, timesheetId),
+    onSuccess: (_result, timesheetId) =>
+      queryClient.removeQueries({ queryKey: timeKeys.timesheet(organization.id, timesheetId) }),
+    onSettled: invalidate.entries,
   });
 }
 

@@ -22,11 +22,13 @@ import { useDocumentTitle } from '@/hooks';
 import { formatUkDate, formatWeekdays } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 import { formatBasisPoints } from '@/utils/money';
+import { formatMultiplier } from '@/utils/multiplier';
 
 import { flattenPages, useRateRules, useStaffMember } from '../api';
 import { LoginStatusBadge, RuleStatusBadge, StaffStatusBadge } from '../components/badges';
 import { LoadError, NoAccess } from '../components/PageShell';
 import { StaffPermissionsCard } from '../components/staff/StaffPermissionsCard';
+import { StaffSegmentsCard } from '../components/staff/StaffSegmentsCard';
 import { StaffRatePanel } from '../components/staff/StaffRatePanel';
 import {
   TemporaryPasswordDialog,
@@ -70,6 +72,7 @@ function ProfileCard({
   onEdit: () => void;
 }) {
   const roleName = useRoleName();
+  const { organization } = useOrg();
   return (
     <Card padding="none" role="region" aria-label="Profile">
       <CardHeader
@@ -97,6 +100,12 @@ function ProfileCard({
         <Field label="Hours per working day">{formatMinutes(staff.working_minutes_per_day)}</Field>
         <Field label="Working days">{formatWeekdays(staff.working_days)}</Field>
         <Field label="Chargeable target">{formatBasisPoints(staff.chargeable_target_bp)}</Field>
+        {organization.overtime_enabled ? (
+          <Field label="Overtime rate">
+            {formatMultiplier(staff.overtime_multiplier_bp ?? organization.overtime_multiplier_bp)}
+            {staff.overtime_multiplier_bp == null ? ' (practice rate)' : null}
+          </Field>
+        ) : null}
         <Field label="Start date">{formatUkDate(staff.start_date) || dash}</Field>
         <Field label="Leaving date">{formatUkDate(staff.leaving_date) || dash}</Field>
         <Field label="Role">
@@ -386,6 +395,7 @@ function StaffDetailView({ staffId }: { staffId: string }) {
       {editPanel}
       <ProfileCard staff={member} canEdit={canUpdate} onEdit={() => edit(member)} />
       {can(PERMISSIONS.rateRead) ? <RatesCard staff={member} /> : null}
+      <StaffSegmentsCard staff={member} />
       {can(PERMISSIONS.roleRead) ? <StaffPermissionsCard staff={member} /> : null}
       <SignInCard staff={member} />
       <UsageCard staff={member} />

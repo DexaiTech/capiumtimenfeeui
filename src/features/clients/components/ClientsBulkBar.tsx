@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import { BulkBar, Checkbox, ConfirmDialog, Input, Select, type BulkFlow } from '@/components/ui';
+import { BulkBar, Checkbox, ConfirmDialog, Select, type BulkFlow } from '@/components/ui';
+import { useSegments } from '@/features/settings';
 import { MAX_BULK_IDS } from '@/utils/bulk';
 
 import { CLIENT_STATUS_OPTIONS } from '../constants';
@@ -47,6 +48,7 @@ export function ClientsBulkBar({
   const [person, setPerson] = useState('');
   const [segment, setSegment] = useState('');
   const [clearSegment, setClearSegment] = useState(false);
+  const segments = useSegments();
 
   const count = ids.length;
   const word = count === 1 ? 'client' : 'clients';
@@ -152,12 +154,16 @@ export function ClientsBulkBar({
         ) : null}
         {editing === 'segment' ? (
           <>
-            <Input
+            <Select
               label="New segment"
               required={!clearSegment}
+              placeholder="Choose a segment"
+              options={(segments.data ?? [])
+                .filter((entry) => entry.is_active)
+                .map((entry) => ({ value: entry.name, label: entry.name }))}
               value={segment}
-              maxLength={40}
               disabled={clearSegment}
+              hint="Chosen from the segments in Settings."
               onChange={(event) => setSegment(event.target.value)}
             />
             <Checkbox

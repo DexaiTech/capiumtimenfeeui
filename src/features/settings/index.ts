@@ -11,6 +11,9 @@ export type { Member, MemberStatus, Permission, Role } from './types';
 // The invoice templates a client's billing settings can choose from (`GET /invoice-templates`).
 export { useInvoiceTemplates } from './api/billingHooks';
 export type { InvoiceLayout, InvoiceTemplate } from './billingTypes';
+// The practice's client segments, and the ones a staff member looks after.
+export { useSegments, useSetStaffSegments, useStaffSegments } from './api/segmentHooks';
+export type { Segment, StaffSegments } from './segmentTypes';
 // The set-up checklist of the practice, for the dashboard's Getting started card.
 export { useOnboarding } from './api/adminHooks';
 // Asks the browser to confirm closing the tab while a form has unsaved changes.

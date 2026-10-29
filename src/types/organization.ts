@@ -60,6 +60,10 @@ export interface Organization {
   /** Basis points added when an expense is recharged to the client (1000 = 10%). */
   expense_markup_bp: number;
   rate_mode: RateMode;
+  /** Whether time can be marked as overtime, which is priced at the normal rates times the multiplier. */
+  overtime_enabled: boolean;
+  /** Basis points of the normal rate that overtime is paid and charged at (15000 = 1.5x). */
+  overtime_multiplier_bp: number;
   email: string | null;
   phone: string | null;
   address_line1: string | null;
@@ -115,6 +119,8 @@ export type OrganizationUpdate = Partial<
     | 'mileage_rate'
     | 'expense_markup_bp'
     | 'rate_mode'
+    | 'overtime_enabled'
+    | 'overtime_multiplier_bp'
     | 'email'
     | 'phone'
     | 'address_line1'

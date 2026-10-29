@@ -51,32 +51,32 @@ function setup(
 }
 
 describe('PersonSheetDrawer: fixing approved time', () => {
-  it('unapproves the week so its time can be changed again', async () => {
+  it('revokes the approval of the week so its time can be changed again', async () => {
     const user = userEvent.setup();
     const backend = setup();
 
-    await user.click(await screen.findByRole('button', { name: 'Unapprove week' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Unapprove this week?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Unapprove week' }));
+    await user.click(await screen.findByRole('button', { name: 'Revoke approval' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Revoke approval of this week?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Revoke approval' }));
 
     await waitFor(() =>
       expect(
         callsTo(backend, 'POST', `/timesheets/${backend.sheets[0]?.id ?? ''}/reopen`),
       ).toHaveLength(1),
     );
-    expect(await screen.findByText('Timesheet unapproved')).toBeInTheDocument();
+    expect(await screen.findByText('Approval revoked')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Unapprove week' })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('button', { name: 'Revoke approval' })).not.toBeInTheDocument(),
     );
   });
 
-  it('says why the week cannot be unapproved when some of its time is billed', async () => {
+  it('says why the week cannot be revoked when some of its time is billed', async () => {
     const user = userEvent.setup();
     setup(OWNER_PERMISSIONS, 'billed');
 
-    await user.click(await screen.findByRole('button', { name: 'Unapprove week' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Unapprove this week?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Unapprove week' }));
+    await user.click(await screen.findByRole('button', { name: 'Revoke approval' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Revoke approval of this week?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Revoke approval' }));
 
     expect(
       await within(dialog).findByText('Some of this time has been billed.'),
@@ -109,7 +109,7 @@ describe('PersonSheetDrawer: fixing approved time', () => {
     setup(['organization.read', 'time.log']);
 
     await screen.findByText(/Week of/);
-    expect(screen.queryByRole('button', { name: 'Unapprove week' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Revoke approval' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Remove the entry of/ })).not.toBeInTheDocument();
   });
 

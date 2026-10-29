@@ -1,49 +1,28 @@
 import * as z from 'zod';
 
-import type { LockedPeriod } from '../adminTypes';
 import { MAPPING_CODE_PATTERN } from '../utils/integrations';
-import { lockBlocker } from '../utils/periodLock';
 
 export const REASON_MAX = 500;
-/** The API refuses a year before this (`EARLIEST_LOCK_YEAR`). */
-export const EARLIEST_LOCK_YEAR = 2000;
 
 const reasonOf = (required: boolean) => {
   const text = z.string().trim().max(REASON_MAX, `Use at most ${REASON_MAX} characters`);
   return required ? text.min(1, 'Say why the period is unlocked') : text;
 };
 
-export const LOCK_TYPES = ['month', 'quarter', 'year'] as const;
+export const LOCK_GRANULARITIES = ['weekly', 'monthly', 'quarterly', 'annually'] as const;
 
-/** Locking a month, quarter or year that has ended and does not overlap a locked one. */
-export function lockSchema(periods: ReadonlyArray<LockedPeriod>, today: string) {
-  return z
-    .object({
-      period_type: z.enum(LOCK_TYPES),
-      year: z.string(),
-      period: z.string(),
-      reason: reasonOf(false),
-    })
-    .superRefine((values, ctx) => {
-      const issue = (path: string, message: string) =>
-        ctx.addIssue({ code: 'custom', path: [path], message });
-      const year = Number(values.year);
-      if (!Number.isInteger(year) || year < EARLIEST_LOCK_YEAR) {
-        issue('year', `Choose a year from ${String(EARLIEST_LOCK_YEAR)}`);
-        return;
-      }
-      const index = values.period_type === 'year' ? 1 : Number(values.period);
-      const max = values.period_type === 'quarter' ? 4 : 12;
-      if (!Number.isInteger(index) || index < 1 || index > max) {
-        issue('period', `Choose the ${values.period_type}`);
-        return;
-      }
-      const blocker = lockBlocker(periods, values.period_type, year, index, today);
-      if (blocker)
-        issue(values.period_type === 'year' ? 'year' : 'period', `That period is ${blocker}`);
-    });
-}
-export type LockValues = z.infer<ReturnType<typeof lockSchema>>;
+/** How the practice locks, and the day its accounting year starts (1-28 of any month). */
+export const lockSettingsSchema = z.object({
+  granularity: z.enum(LOCK_GRANULARITIES),
+  financial_year_start_month: z.string(),
+  financial_year_start_day: z
+    .string()
+    .trim()
+    .refine((value) => /^\d{1,2}$/.test(value) && Number(value) >= 1 && Number(value) <= 28, {
+      message: 'Use a day from 1 to 28',
+    }),
+});
+export type LockSettingsValues = z.infer<typeof lockSettingsSchema>;
 
 /** Unlocking a period: always with a reason. */
 export const unlockSchema = z.object({ reason: reasonOf(true) });

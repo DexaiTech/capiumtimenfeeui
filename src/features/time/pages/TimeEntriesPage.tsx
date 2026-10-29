@@ -7,12 +7,14 @@ import {
   Plus,
   SearchX,
   Trash2,
+  Undo2,
   Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import {
+  Badge,
   Button,
   ColumnVisibilityMenu,
   ConfirmDialog,
@@ -46,6 +48,7 @@ import {
   flattenPages,
   timeApi,
   useDeleteEntry,
+  useReopenTimesheet,
   useStaffDirectory,
   useTimeEntryList,
 } from '../api';
@@ -134,6 +137,7 @@ function List() {
   const list = useTimeEntryList(filters);
   const staff = useStaffDirectory({ enabled: canReadAll && can(PERMISSIONS.memberRead) });
   const remove = useDeleteEntry();
+  const reopen = useReopenTimesheet();
 
   const [hidden, setHidden] = usePersistentColumns('time-entries');
   const [sort, setSort] = useState<DataTableSort | null>(null);
@@ -144,6 +148,7 @@ function List() {
   const [deleteError, setDeleteError] = useState<{ message: string; requestId?: string } | null>(
     null,
   );
+  const [revoking, setRevoking] = useState<TimeEntry | null>(null);
   const [adding, setAdding] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
@@ -161,6 +166,12 @@ function List() {
     entry.timesheet_status === 'approved' &&
     entry.billing_status === 'unbilled' &&
     (can(PERMISSIONS.timeManageAll) || can(PERMISSIONS.timesheetApprove));
+
+  // Reopens the week (nobody decides on their own timesheet without `organization.update`).
+  const canRevoke = (entry: TimeEntry) =>
+    canCorrect(entry) &&
+    can(PERMISSIONS.timesheetApprove) &&
+    (entry.user_id !== user?.id || can(PERMISSIONS.organizationUpdate));
 
   const columns: DataTableColumn<TimeEntry>[] = [
     {
@@ -237,6 +248,22 @@ function List() {
       className: 'whitespace-nowrap tabular-nums',
       cell: (entry) => formatMoney(entry.charge_value, currency),
     },
+    ...(organization.overtime_enabled
+      ? [
+          {
+            id: 'overtime',
+            header: 'Overtime',
+            cell: (entry: TimeEntry) =>
+              entry.is_overtime ? (
+                <Badge tone="warning" size="sm">
+                  Overtime
+                </Badge>
+              ) : (
+                '—'
+              ),
+          } satisfies DataTableColumn<TimeEntry>,
+        ]
+      : []),
     ...(canSeeCost
       ? [
           {
@@ -362,6 +389,19 @@ function List() {
             },
           ]
         : []),
+      ...(canRevoke(entry)
+        ? [
+            {
+              id: 'revoke',
+              label: 'Revoke approval',
+              icon: <Undo2 className="size-4" aria-hidden="true" />,
+              onSelect: () => {
+                setDeleteError(null);
+                setRevoking(entry);
+              },
+            },
+          ]
+        : []),
       {
         id: 'history',
         label: 'History of corrections',
@@ -406,6 +446,7 @@ function List() {
             'Time',
             'Hours',
             'Billable',
+            ...(organization.overtime_enabled ? ['Overtime'] : []),
             'Rate',
             'Value',
             ...(canSeeCost ? ['Cost'] : []),
@@ -422,6 +463,7 @@ function List() {
             formatMinutes(entry.minutes),
             formatDecimalHours(entry.minutes),
             entry.is_billable ? 'Yes' : 'No',
+            ...(organization.overtime_enabled ? [entry.is_overtime ? 'Yes' : 'No'] : []),
             penceToDecimalString(entry.charge_rate, currency),
             penceToDecimalString(entry.charge_value, currency),
             ...(canSeeCost
@@ -679,6 +721,37 @@ function List() {
       />
 
       <HistoryDrawer entry={history} onClose={() => setHistory(null)} />
+      <ConfirmDialog
+        open={revoking !== null}
+        onClose={() => setRevoking(null)}
+        onConfirm={() => {
+          if (!revoking) return;
+          reopen.mutate(revoking.timesheet_id, {
+            onSuccess: () => {
+              toast({
+                tone: 'success',
+                title: 'Approval revoked',
+                description: 'The time can now be edited or deleted.',
+              });
+              setRevoking(null);
+            },
+            onError: (error) => setDeleteError(dialogError(error)),
+          });
+        }}
+        title="Revoke approval of this week?"
+        confirmLabel="Revoke approval"
+        tone="default"
+        loading={reopen.isPending}
+        error={deleteError}
+      >
+        <p>
+          {revoking
+            ? `${personName(revoking.user_id)}, ${formatUkDate(revoking.entry_date)}. `
+            : ''}
+          The whole week goes back to open, so its time can be edited or deleted and the week
+          submitted again. It cannot be revoked once any of its time is billed.
+        </p>
+      </ConfirmDialog>
       <ConfirmDialog
         open={deleting !== null}
         onClose={() => setDeleting(null)}

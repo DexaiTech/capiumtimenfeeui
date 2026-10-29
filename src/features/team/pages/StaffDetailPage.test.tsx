@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
+import { newSegmentCalls, segmentHandlers, testSegments } from '@/test/segments';
 import { apiPath, fail, ok, server } from '@/test/server';
 
 import { detailOf, futureRule, sam, samChargeRule, samCostRule } from '../test/fixtures';
@@ -324,5 +325,69 @@ describe('StaffDetailPage: permissions of one person', () => {
     expect(
       await within(sheet).findByText('You cannot grant permissions you do not have.'),
     ).toBeInTheDocument();
+  });
+});
+
+describe('StaffDetailPage: client segments', () => {
+  it('shows the segments the person looks after and links to their clients', async () => {
+    server.use(
+      ...segmentHandlers(testSegments, newSegmentCalls(), { [sam.id]: ['seg-gold', 'seg-silver'] }),
+      ...teamHandlers(),
+    );
+    renderDetail();
+
+    const card = within(await region('Client segments'));
+    const list = await card.findByRole('list', { name: 'Segments' });
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Gold', 'Silver']);
+    expect(card.getByRole('link', { name: '4 clients in these segments' })).toHaveAttribute(
+      'href',
+      '/acme/clients?segment=Gold&segment=Silver',
+    );
+  });
+
+  it('says so when the person has none', async () => {
+    server.use(...teamHandlers());
+    renderDetail();
+    const card = within(await region('Client segments'));
+    expect(await card.findByText(/No segments/)).toBeInTheDocument();
+    expect(card.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('changes the segments: only active ones are offered, and the choice is saved', async () => {
+    const calls = newSegmentCalls();
+    server.use(
+      ...segmentHandlers(testSegments, calls, { [sam.id]: ['seg-silver'] }),
+      ...teamHandlers(),
+    );
+    const user = userEvent.setup();
+    renderDetail();
+
+    const card = within(await region('Client segments'));
+    await user.click(await card.findByRole('button', { name: 'Edit segments' }));
+    const group = await card.findByRole('group', { name: 'Segments of Sam Staff' });
+    expect(within(group).getByRole('checkbox', { name: /Silver/ })).toBeChecked();
+    expect(within(group).getByRole('checkbox', { name: /Gold/ })).not.toBeChecked();
+    expect(within(group).queryByRole('checkbox', { name: /Retail/ })).not.toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Save segments' })).toBeDisabled();
+
+    await user.click(within(group).getByRole('checkbox', { name: /Gold/ }));
+    await user.click(card.getByRole('button', { name: 'Save segments' }));
+
+    expect(await screen.findByText("Sam Staff's segments saved")).toBeInTheDocument();
+    expect(calls.staffSets).toEqual([{ userId: sam.id, segmentIds: ['seg-silver', 'seg-gold'] }]);
+    const list = await card.findByRole('list', { name: 'Segments' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('offers no edit without member.update', async () => {
+    server.use(...teamHandlers());
+    renderDetail(['member.read', 'organization.read']);
+    const card = within(await region('Client segments'));
+    expect(await card.findByText(/No segments/)).toBeInTheDocument();
+    expect(card.queryByRole('button', { name: 'Edit segments' })).not.toBeInTheDocument();
   });
 });
