@@ -122,11 +122,9 @@ export function TopBar({ user, onLogout }: TopBarProps) {
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
           {practice ? (
             <>
-              {desktop ? null : (
-                <span className="hidden sm:contents">
-                  <ApplicationTestingMenu />
-                </span>
-              )}
+              <span className="hidden sm:contents">
+                <ApplicationTestingMenu />
+              </span>
               <Tooltip content="Search (/ or Ctrl+K)" side="bottom" disabled={desktop}>
                 <button
                   type="button"
