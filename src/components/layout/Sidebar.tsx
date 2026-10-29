@@ -1,24 +1,22 @@
-import {
-  ChevronRight,
-  CircleQuestionMark,
-  PanelLeftClose,
-  PanelLeftOpen,
-  type LucideIcon,
-} from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router';
+import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router';
 
 import { useShellStore } from '@/app/store';
-import { LogoMark } from '@/components/common/Logo';
 import { Tooltip } from '@/components/ui';
-import { activePageId, moduleIdForPath } from '@/constants/navigation';
-import { ORG_SEGMENTS, routes } from '@/constants/routes';
+import { activePageId, moduleIdForPath, NO_SUBNAV_MODULES } from '@/constants/navigation';
+import { ORG_SEGMENTS } from '@/constants/routes';
 import { cn } from '@/utils/cn';
 
 import { useShell } from './shellContext';
 
-/** Modules that sit apart, under a divider, at the foot of the list (the setup of the practice). */
-const FOOT_MODULES: ReadonlyArray<string> = ['team', 'settings'];
+interface SidebarPage {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  to: string;
+  description?: string;
+  group?: string;
+}
 
 const rowClasses = (active: boolean, collapsed: boolean) =>
   cn(
@@ -30,194 +28,74 @@ const rowClasses = (active: boolean, collapsed: boolean) =>
       : 'text-topbar-muted hover:bg-topbar-hover hover:text-topbar-fg',
   );
 
-const subRowClasses = (active: boolean) =>
-  cn(
-    'flex h-9 items-center rounded-md px-3 text-[13px] font-medium whitespace-nowrap',
-    'transition-colors duration-fast ease-standard',
-    active
-      ? 'bg-topbar-pill text-topbar-fg'
-      : 'text-topbar-muted hover:bg-topbar-hover hover:text-topbar-fg',
-  );
-
-interface GroupProps {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  active: boolean;
-  collapsed: boolean;
-  open: boolean;
-  onToggle: () => void;
-  /** Where the group leads when the sidebar is collapsed (there are no sub-pages to open). */
-  href: string;
-  children: ReactNode;
-}
-
-/** A module with pages: a row that opens its list (expanded), or leads to its first page (icons). */
-function Group({
-  id,
-  label,
-  icon: Icon,
-  active,
-  collapsed,
-  open,
-  onToggle,
-  href,
-  children,
-}: GroupProps) {
-  if (collapsed) {
-    return (
-      <Tooltip content={label} side="right" className="flex w-full">
-        <Link
-          to={href}
-          aria-label={label}
-          aria-current={active ? 'true' : undefined}
-          className={rowClasses(active, true)}
-        >
-          <Icon aria-hidden="true" className="size-5" />
-        </Link>
-      </Tooltip>
-    );
+/** Pages in runs of the same group, so a group's heading is written once. */
+function grouped(pages: ReadonlyArray<SidebarPage>) {
+  const groups: Array<{ name: string | null; pages: SidebarPage[] }> = [];
+  for (const page of pages) {
+    const name = page.group ?? null;
+    const last = groups.at(-1);
+    if (last && last.name === name) last.pages.push(page);
+    else groups.push({ name, pages: [page] });
   }
-  return (
-    <>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={`sidebar-${id}`}
-        onClick={onToggle}
-        className={rowClasses(active, false)}
-      >
-        <Icon aria-hidden="true" className="size-5 shrink-0" />
-        <span className="flex-1 truncate text-left">{label}</span>
-        <ChevronRight
-          aria-hidden="true"
-          className={cn(
-            'size-4 shrink-0 text-topbar-subtle transition-transform duration-fast ease-standard',
-            open && 'rotate-90',
-          )}
-        />
-      </button>
-      {open ? (
-        <ul
-          id={`sidebar-${id}`}
-          className="mt-0.5 mb-1 ml-[1.35rem] flex flex-col gap-0.5 border-l border-white/20 pl-2.5"
-        >
-          {children}
-        </ul>
-      ) : null}
-    </>
-  );
+  return groups;
 }
 
 /**
- * The left navigation from lg up: the practice's modules, each opening its pages, under the
- * product mark. It collapses to a column of icons (remembered between visits) and opens the
- * module the caller is in. Below lg the drawer takes its place.
+ * The left menu from lg up: the pages of the module the caller is in (the modules themselves are
+ * the tabs of the top bar), or of Application Testing. It collapses to a column of icons
+ * (remembered between visits). Modules with a single page have no sidebar. Below lg the pages
+ * are a row of tabs above the content instead.
  */
 export function Sidebar() {
-  const { practice, modules, homeTo, applicationTesting } = useShell();
+  const { practice, modules, applicationTesting } = useShell();
   const collapsed = useShellStore((state) => state.sidebarCollapsed);
   const setCollapsed = useShellStore((state) => state.setSidebarCollapsed);
   const { pathname } = useLocation();
-  const activeId = moduleIdForPath(pathname);
-  const inTracker = pathname.split('/')[2] === ORG_SEGMENTS.applicationTesting;
-  // One module is open at a time: the one the caller is in until they open another.
-  const [pick, setPick] = useState<{ path: string; id: string | null } | null>(null);
-  const section = pathname.split('/').slice(0, 3).join('/');
-  const defaultOpen = inTracker ? 'application-testing' : activeId;
-  // A choice holds for the module it was made in; moving to another one follows the page again.
-  const openId = pick && pick.path === section ? pick.id : defaultOpen;
-  const toggle = (id: string) => setPick({ path: section, id: openId === id ? null : id });
-
   const slug = practice?.slug ?? '';
-  const main = modules.filter((module) => !FOOT_MODULES.includes(module.id));
-  const foot = modules.filter((module) => FOOT_MODULES.includes(module.id));
+  const inTracker = pathname.split('/')[2] === ORG_SEGMENTS.applicationTesting;
+  const module = modules.find((entry) => entry.id === moduleIdForPath(pathname));
 
-  const renderModule = (module: (typeof modules)[number]) => {
-    const Icon = module.icon;
-    const active = module.id === activeId;
-    if (module.pages.length < 2) {
-      const link = (
-        <NavLink
-          to={module.href}
-          aria-label={collapsed ? module.label : undefined}
-          className={rowClasses(active, collapsed)}
-        >
-          <Icon aria-hidden="true" className="size-5 shrink-0" />
-          {collapsed ? null : <span className="truncate">{module.label}</span>}
-        </NavLink>
-      );
-      return (
-        <li key={module.id}>
-          {collapsed ? (
-            <Tooltip content={module.label} side="right" className="flex w-full">
-              {link}
-            </Tooltip>
-          ) : (
-            link
-          )}
-        </li>
-      );
-    }
-    const currentPage = active ? activePageId(module, pathname) : null;
-    return (
-      <li key={module.id}>
-        <Group
-          id={module.id}
-          label={module.label}
-          icon={module.icon}
-          active={active}
-          collapsed={collapsed}
-          open={openId === module.id}
-          onToggle={() => toggle(module.id)}
-          href={module.href}
-        >
-          {module.pages.map((page) => (
-            <li key={page.id}>
-              <NavLink
-                to={practice ? page.to(slug) : '#'}
-                title={page.description}
-                aria-current={page.id === currentPage ? 'page' : undefined}
-                className={subRowClasses(page.id === currentPage)}
-              >
-                {page.label}
-              </NavLink>
-            </li>
-          ))}
-        </Group>
-      </li>
-    );
-  };
+  let title: string;
+  let pages: SidebarPage[];
+  let currentId: string | null;
+  if (inTracker && applicationTesting) {
+    title = applicationTesting.label;
+    pages = applicationTesting.pages.map((page) => ({ ...page }));
+    currentId = pages.find((page) => pathname.startsWith(page.to))?.id ?? null;
+  } else if (module && !NO_SUBNAV_MODULES.includes(module.id) && slug) {
+    title = module.label;
+    pages = module.pages.map((page) => ({
+      id: page.id,
+      label: page.label,
+      icon: page.icon,
+      to: page.to(slug),
+      description: page.description,
+      group: page.group,
+    }));
+    currentId = activePageId(module, pathname);
+  } else {
+    return null;
+  }
+  if (pages.length < 2) return null;
 
   return (
     <aside
       aria-label="Sidebar"
       className={cn(
-        'sticky top-0 z-30 hidden h-dvh shrink-0 flex-col bg-gradient-sidebar bg-topbar text-topbar-fg shadow-md',
+        'sticky top-15 z-20 hidden h-[calc(100dvh-3.75rem)] shrink-0 flex-col',
+        'bg-gradient-sidebar bg-topbar text-topbar-fg shadow-md',
         'transition-[width] duration-base ease-standard lg:flex',
-        collapsed ? 'w-[4.5rem]' : 'w-64',
+        collapsed ? 'w-[4.5rem]' : 'w-60',
       )}
     >
       <div
         className={cn(
-          'flex h-15 shrink-0 items-center border-b border-white/10',
+          'flex h-14 shrink-0 items-center border-b border-white/10',
           collapsed ? 'justify-center' : 'justify-between gap-2 pr-3 pl-4',
         )}
       >
         {collapsed ? null : (
-          <Link
-            to={homeTo}
-            className="flex min-w-0 items-center gap-2.5"
-            aria-label="Capium Time & Fees home"
-          >
-            <LogoMark tone="inverse" />
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className="truncate text-sm font-bold text-topbar-fg">Capium</span>
-              <span className="truncate text-2xs font-medium tracking-wide text-topbar-subtle uppercase">
-                Time &amp; Fees
-              </span>
-            </span>
-          </Link>
+          <span className="truncate text-sm font-bold text-topbar-fg">{title}</span>
         )}
         <button
           type="button"
@@ -234,58 +112,49 @@ export function Sidebar() {
         </button>
       </div>
 
-      <nav aria-label="Main" className="flex-1 overflow-x-hidden overflow-y-auto p-3">
-        <ul className="flex flex-col gap-1">{main.map(renderModule)}</ul>
-        {foot.length > 0 || applicationTesting ? (
-          <ul className="mt-3 flex flex-col gap-1 border-t border-white/15 pt-3">
-            {foot.map(renderModule)}
-            {applicationTesting ? (
-              <li key="application-testing">
-                <Group
-                  id="application-testing"
-                  label={applicationTesting.label}
-                  icon={applicationTesting.icon}
-                  active={inTracker}
-                  collapsed={collapsed}
-                  open={openId === 'application-testing'}
-                  onToggle={() => toggle('application-testing')}
-                  href={applicationTesting.pages[0]?.to ?? homeTo}
-                >
-                  {applicationTesting.pages.map((page) => (
-                    <li key={page.id}>
-                      <NavLink to={page.to} className={({ isActive }) => subRowClasses(isActive)}>
-                        {page.label}
-                      </NavLink>
-                    </li>
-                  ))}
-                </Group>
-              </li>
-            ) : null}
-            {practice ? (
-              <li key="help">
-                {collapsed ? (
-                  <Tooltip content="Help" side="right" className="flex w-full">
+      <nav aria-label={`${title} pages`} className="flex-1 overflow-x-hidden overflow-y-auto p-3">
+        <ul className="flex flex-col gap-1">
+          {grouped(pages).map((group, index) => (
+            <li key={group.name ?? `ungrouped-${index}`}>
+              {group.name && !collapsed ? (
+                <div className="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-topbar-subtle uppercase">
+                  {group.name}
+                </div>
+              ) : index > 0 ? (
+                <div className="mx-2 my-2 border-t border-white/15" />
+              ) : null}
+              <ul className="flex flex-col gap-1">
+                {group.pages.map((page) => {
+                  const Icon = page.icon;
+                  const active = page.id === currentId;
+                  const link = (
                     <NavLink
-                      to={routes.org.help(practice.slug)}
-                      aria-label="Help"
-                      className={({ isActive }) => rowClasses(isActive, true)}
+                      to={page.to}
+                      title={collapsed ? undefined : page.description}
+                      aria-label={collapsed ? page.label : undefined}
+                      aria-current={active ? 'page' : undefined}
+                      className={rowClasses(active, collapsed)}
                     >
-                      <CircleQuestionMark aria-hidden="true" className="size-5" />
+                      <Icon aria-hidden="true" className="size-5 shrink-0" />
+                      {collapsed ? null : <span className="truncate">{page.label}</span>}
                     </NavLink>
-                  </Tooltip>
-                ) : (
-                  <NavLink
-                    to={routes.org.help(practice.slug)}
-                    className={({ isActive }) => rowClasses(isActive, false)}
-                  >
-                    <CircleQuestionMark aria-hidden="true" className="size-5 shrink-0" />
-                    Help
-                  </NavLink>
-                )}
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
+                  );
+                  return (
+                    <li key={page.id}>
+                      {collapsed ? (
+                        <Tooltip content={page.label} side="right" className="flex w-full">
+                          {link}
+                        </Tooltip>
+                      ) : (
+                        link
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          ))}
+        </ul>
       </nav>
     </aside>
   );

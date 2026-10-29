@@ -25,10 +25,10 @@ export interface AppShellProps {
 }
 
 /**
- * The chrome for signed-in users. From lg up: the left sidebar with the modules and their pages,
- * and beside it the violet top bar (search, create, bell, account) over the content. Below lg
- * the modules are in the top bar's menu button (a drawer), with the pages of the current module
- * in a row above the content.
+ * The chrome for signed-in users: the violet top bar with the modules (and search, create, bell,
+ * account). From lg up the pages of the current module are the left sidebar beside the content;
+ * below lg the modules are in the top bar's menu button (a drawer), with the pages in a row above
+ * the content.
  */
 export function AppShell({ user, onLogout, shell }: AppShellProps) {
   const location = useLocation();
@@ -43,17 +43,17 @@ export function AppShell({ user, onLogout, shell }: AppShellProps) {
 
   return (
     <ShellContext.Provider value={shell}>
-      <div className="flex min-h-dvh overflow-x-clip bg-bg" style={accent}>
+      <div className="flex min-h-dvh flex-col overflow-x-clip bg-bg" style={accent}>
         <a
           href="#main-content"
           className="sr-only z-[80] rounded-md bg-surface-raised px-4 py-2 text-sm font-medium text-text focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
         >
           Skip to content
         </a>
-        {desktop ? <Sidebar /> : null}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar user={user} onLogout={onLogout} />
-          {desktop ? null : <SubNav />}
+        <TopBar user={user} onLogout={onLogout} />
+        {desktop ? null : <SubNav />}
+        <div className="flex min-w-0 flex-1">
+          {desktop ? <Sidebar /> : null}
           <main
             id="main-content"
             tabIndex={-1}

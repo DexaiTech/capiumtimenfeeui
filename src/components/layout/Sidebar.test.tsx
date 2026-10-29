@@ -56,35 +56,37 @@ function renderShell(route = '/acme/dashboard/overview') {
 const sidebar = () => screen.getByRole('complementary', { name: 'Sidebar' });
 
 describe('Sidebar', () => {
-  it('lists the modules on the left and not in the top bar', () => {
-    renderShell();
-    const nav = within(sidebar()).getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('button', { name: /Dashboard/ })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: /Clients/ })).toBeInTheDocument();
-    expect(screen.getAllByRole('navigation', { name: 'Main' })).toHaveLength(1);
+  it('lists the pages of the current module, while the modules stay in the top bar', () => {
+    renderShell('/acme/billing/invoices');
+    const pages = within(sidebar()).getByRole('navigation', { name: 'Billing & Fees pages' });
+    expect(within(pages).getByRole('link', { name: /^Invoices$/ })).toBeInTheDocument();
+    expect(within(pages).getByRole('link', { name: /^Payments$/ })).toBeInTheDocument();
+    expect(within(pages).queryByRole('link', { name: /Clients/ })).not.toBeInTheDocument();
+    const tabs = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(tabs).getByRole('link', { name: /Clients/ })).toBeInTheDocument();
   });
 
-  it('opens a module to its pages and marks the current page', async () => {
-    const user = userEvent.setup();
-    renderShell('/acme/clients/list');
-    const group = within(sidebar()).getByRole('button', { name: /Clients/ });
-    expect(group).toHaveAttribute('aria-expanded', 'true');
+  it('marks the current page', () => {
+    renderShell('/acme/billing/payments');
     const current = within(sidebar())
       .getAllByRole('link')
       .filter((link) => link.getAttribute('aria-current') === 'page');
     expect(current).toHaveLength(1);
+    expect(current[0]).toHaveTextContent('Payments');
+  });
 
-    await user.click(group);
-    expect(group).toHaveAttribute('aria-expanded', 'false');
+  it('has no sidebar for a module without pages to choose from', () => {
+    renderShell('/acme/clients/list');
+    expect(screen.queryByRole('complementary', { name: 'Sidebar' })).not.toBeInTheDocument();
   });
 
   it('collapses to icons, keeps every link named, and remembers the choice', async () => {
     const user = userEvent.setup();
-    renderShell();
+    renderShell('/acme/billing/invoices');
     await user.click(within(sidebar()).getByRole('button', { name: 'Collapse the sidebar' }));
     expect(useShellStore.getState().sidebarCollapsed).toBe(true);
     expect(window.localStorage.getItem('capium.sidebar.collapsed')).toBe('1');
-    expect(within(sidebar()).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(within(sidebar()).getByRole('link', { name: 'Invoices' })).toBeInTheDocument();
 
     await user.click(within(sidebar()).getByRole('button', { name: 'Expand the sidebar' }));
     expect(useShellStore.getState().sidebarCollapsed).toBe(false);
