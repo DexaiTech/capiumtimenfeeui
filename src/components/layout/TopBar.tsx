@@ -6,9 +6,11 @@ import { useShellStore } from '@/app/store';
 import { LogoMark } from '@/components/common/Logo';
 import { Tooltip } from '@/components/ui';
 import { moduleIdForPath } from '@/constants/navigation';
+import { useMediaQuery } from '@/hooks';
 import type { User } from '@/types/models';
 import { cn } from '@/utils/cn';
 
+import { DESKTOP_QUERY } from './AppShell';
 import { ApplicationTestingMenu } from './ApplicationTestingMenu';
 import { HelpMenu, NotificationsMenu } from './HeaderPanels';
 import { OverflowNav } from './OverflowNav';
@@ -43,6 +45,7 @@ export function TopBar({ user, onLogout }: TopBarProps) {
   const setDrawerOpen = useShellStore((state) => state.setDrawerOpen);
   const setSearchOpen = useShellStore((state) => state.setSearchOpen);
   const { pathname } = useLocation();
+  const desktop = useMediaQuery(DESKTOP_QUERY);
   const activeId = moduleIdForPath(pathname);
   const items = useMemo(
     () =>
@@ -69,20 +72,44 @@ export function TopBar({ user, onLogout }: TopBarProps) {
           </button>
         ) : null}
 
-        <Link
-          to={homeTo}
-          className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-full pr-2"
-          aria-label={practice ? `${practice.name} home` : 'Capium Time & Fees home'}
-        >
-          <LogoMark tone="inverse" />
-          <span className="hidden min-w-0 flex-col leading-tight sm:flex">
-            <span className="max-w-44 truncate text-[13px] font-semibold xl:max-w-56">
+        {desktop ? (
+          // The modules are in the sidebar: the bar starts with the practice and the search.
+          <>
+            <span className="max-w-56 truncate text-[13px] font-semibold">
               {practice?.name ?? 'Capium'}
             </span>
-          </span>
-        </Link>
+            {practice ? (
+              <button
+                type="button"
+                aria-label="Search"
+                aria-keyshortcuts="/"
+                onClick={() => setSearchOpen(true)}
+                className="hidden h-8 w-full max-w-sm items-center gap-2 rounded-full bg-topbar-hover px-3 text-xs text-topbar-muted transition-colors duration-fast hover:bg-topbar-pill md:flex"
+              >
+                <Search aria-hidden="true" className="size-3.5" />
+                <span className="flex-1 text-left">Search clients, jobs, invoices…</span>
+                <kbd className="rounded-sm bg-topbar-pill px-1.5 font-mono text-2xs text-topbar-fg">
+                  /
+                </kbd>
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <Link
+            to={homeTo}
+            className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-full pr-2"
+            aria-label={practice ? `${practice.name} home` : 'Capium Time & Fees home'}
+          >
+            <LogoMark tone="inverse" />
+            <span className="hidden min-w-0 flex-col leading-tight sm:flex">
+              <span className="max-w-44 truncate text-[13px] font-semibold xl:max-w-56">
+                {practice?.name ?? 'Capium'}
+              </span>
+            </span>
+          </Link>
+        )}
 
-        {items.length > 0 ? (
+        {items.length > 0 && !desktop ? (
           <OverflowNav
             label="Main"
             items={items}
@@ -95,16 +122,18 @@ export function TopBar({ user, onLogout }: TopBarProps) {
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
           {practice ? (
             <>
-              <span className="hidden sm:contents">
-                <ApplicationTestingMenu />
-              </span>
-              <Tooltip content="Search (/ or Ctrl+K)" side="bottom">
+              {desktop ? null : (
+                <span className="hidden sm:contents">
+                  <ApplicationTestingMenu />
+                </span>
+              )}
+              <Tooltip content="Search (/ or Ctrl+K)" side="bottom" disabled={desktop}>
                 <button
                   type="button"
                   aria-label="Search"
                   aria-keyshortcuts="/"
                   onClick={() => setSearchOpen(true)}
-                  className={chipClasses}
+                  className={cn(chipClasses, desktop && 'md:hidden')}
                 >
                   <Search aria-hidden="true" className="size-3.5" />
                 </button>

@@ -1,5 +1,8 @@
 import { Outlet } from 'react-router';
 
+import { DESKTOP_QUERY } from '@/components/layout/AppShell';
+import { useMediaQuery } from '@/hooks';
+
 import { TicketsSidebar } from '../components/TicketsSidebar';
 
 /**
@@ -7,9 +10,11 @@ import { TicketsSidebar } from '../components/TicketsSidebar';
  * modules, so the top bar highlights none and there is no secondary bar here.
  */
 export default function TicketsLayoutPage() {
+  // From lg up Application Testing's pages are in the shell's left sidebar.
+  const desktop = useMediaQuery(DESKTOP_QUERY);
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
-      <TicketsSidebar />
+      {desktop ? null : <TicketsSidebar />}
       <div className="min-w-0 flex-1">
         <Outlet />
       </div>
