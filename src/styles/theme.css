@@ -153,6 +153,8 @@
   /* ---- Gradients ---- */
   --gradient-primary: linear-gradient(135deg, #7556bd 0%, #5a3f9c 100%);
   --gradient-topbar: linear-gradient(100deg, #4b3585 0%, #694baf 50%, #7d5fc8 100%);
+  /* The sidebar starts where the top bar does and runs down the same violet. */
+  --gradient-sidebar: linear-gradient(180deg, #4b3585 0%, #5d41a0 45%, #694baf 100%);
   --gradient-border: linear-gradient(135deg, rgb(107 78 219 / 0.55) 0%, rgb(94 67 208 / 0.2) 100%);
   --gradient-surface: linear-gradient(
     180deg,
@@ -166,7 +168,8 @@
   --shadow-card: 0 2px 14px -2px rgb(105 75 175 / 0.14), 0 0 0 1px rgb(105 75 175 / 0.04);
   --shadow-md: 0 4px 14px -2px rgb(40 24 100 / 0.22);
   --shadow-lg: 0 18px 44px -14px rgb(40 24 100 / 0.38);
-  --shadow-glow-primary: 0 6px 18px -6px rgb(105 75 175 / 0.75), 0 0 14px -4px rgb(125 95 200 / 0.45);
+  --shadow-glow-primary:
+    0 6px 18px -6px rgb(105 75 175 / 0.75), 0 0 14px -4px rgb(125 95 200 / 0.45);
   --shadow-glow-focus: 0 0 0 2px var(--color-bg), 0 0 0 4px rgb(105 75 175 / 0.7);
 
   /* ---- Radii: control 5px, menu 8px, card 10px, pill ---- */
@@ -352,6 +355,7 @@
   --color-avatar-8-fg: #e2e8f0;
 
   --gradient-topbar: linear-gradient(100deg, #1f1456 0%, #3d2c8c 52%, #5a3fc4 100%);
+  --gradient-sidebar: linear-gradient(180deg, #1f1456 0%, #2c2073 50%, #3d2c8c 100%);
   --gradient-surface: linear-gradient(
     180deg,
     rgb(255 255 255 / 0.04) 0%,
@@ -381,6 +385,9 @@
 }
 @utility bg-gradient-topbar {
   background-image: var(--gradient-topbar);
+}
+@utility bg-gradient-sidebar {
+  background-image: var(--gradient-sidebar);
 }
 @utility bg-gradient-surface {
   background-image: var(--gradient-surface);

@@ -26,8 +26,8 @@ const rowClasses = (active: boolean, collapsed: boolean) =>
     'transition-colors duration-fast ease-standard',
     collapsed ? 'justify-center' : 'gap-3 px-3',
     active
-      ? 'bg-brand-soft text-brand-text shadow-[inset_3px_0_0_0_var(--module-accent,var(--color-brand))]'
-      : 'text-text-muted hover:bg-surface-hover hover:text-text',
+      ? 'bg-topbar-pill text-topbar-fg shadow-[inset_3px_0_0_0_var(--module-accent,var(--color-topbar-fg))]'
+      : 'text-topbar-muted hover:bg-topbar-hover hover:text-topbar-fg',
   );
 
 const subRowClasses = (active: boolean) =>
@@ -35,8 +35,8 @@ const subRowClasses = (active: boolean) =>
     'flex h-9 items-center rounded-md px-3 text-[13px] font-medium whitespace-nowrap',
     'transition-colors duration-fast ease-standard',
     active
-      ? 'bg-brand-soft text-brand-text'
-      : 'text-text-muted hover:bg-surface-hover hover:text-text',
+      ? 'bg-topbar-pill text-topbar-fg'
+      : 'text-topbar-muted hover:bg-topbar-hover hover:text-topbar-fg',
   );
 
 interface GroupProps {
@@ -92,7 +92,7 @@ function Group({
         <ChevronRight
           aria-hidden="true"
           className={cn(
-            'size-4 shrink-0 text-text-subtle transition-transform duration-fast ease-standard',
+            'size-4 shrink-0 text-topbar-subtle transition-transform duration-fast ease-standard',
             open && 'rotate-90',
           )}
         />
@@ -100,7 +100,7 @@ function Group({
       {open ? (
         <ul
           id={`sidebar-${id}`}
-          className="mt-0.5 mb-1 ml-[1.35rem] flex flex-col gap-0.5 border-l border-border pl-2.5"
+          className="mt-0.5 mb-1 ml-[1.35rem] flex flex-col gap-0.5 border-l border-white/20 pl-2.5"
         >
           {children}
         </ul>
@@ -193,14 +193,14 @@ export function Sidebar() {
     <aside
       aria-label="Sidebar"
       className={cn(
-        'sticky top-0 z-30 hidden h-dvh shrink-0 flex-col border-r border-border bg-surface',
+        'sticky top-0 z-30 hidden h-dvh shrink-0 flex-col bg-gradient-sidebar bg-topbar text-topbar-fg shadow-md',
         'transition-[width] duration-base ease-standard lg:flex',
         collapsed ? 'w-[4.5rem]' : 'w-64',
       )}
     >
       <div
         className={cn(
-          'flex h-15 shrink-0 items-center border-b border-border',
+          'flex h-15 shrink-0 items-center border-b border-white/10',
           collapsed ? 'justify-center' : 'justify-between gap-2 pr-3 pl-4',
         )}
       >
@@ -210,10 +210,10 @@ export function Sidebar() {
             className="flex min-w-0 items-center gap-2.5"
             aria-label="Capium Time & Fees home"
           >
-            <LogoMark />
+            <LogoMark tone="inverse" />
             <span className="flex min-w-0 flex-col leading-tight">
-              <span className="truncate text-sm font-bold text-text">Capium</span>
-              <span className="truncate text-2xs font-medium tracking-wide text-text-muted uppercase">
+              <span className="truncate text-sm font-bold text-topbar-fg">Capium</span>
+              <span className="truncate text-2xs font-medium tracking-wide text-topbar-subtle uppercase">
                 Time &amp; Fees
               </span>
             </span>
@@ -224,7 +224,7 @@ export function Sidebar() {
           aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
           aria-expanded={!collapsed}
           onClick={() => setCollapsed(!collapsed)}
-          className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-muted shadow-sm transition-colors duration-fast hover:bg-surface-hover hover:text-text"
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-topbar-hover text-topbar-fg transition-colors duration-fast hover:bg-topbar-pill"
         >
           {collapsed ? (
             <PanelLeftOpen aria-hidden="true" className="size-4.5" />
@@ -237,7 +237,7 @@ export function Sidebar() {
       <nav aria-label="Main" className="flex-1 overflow-x-hidden overflow-y-auto p-3">
         <ul className="flex flex-col gap-1">{main.map(renderModule)}</ul>
         {foot.length > 0 || applicationTesting ? (
-          <ul className="mt-3 flex flex-col gap-1 border-t border-border pt-3">
+          <ul className="mt-3 flex flex-col gap-1 border-t border-white/15 pt-3">
             {foot.map(renderModule)}
             {applicationTesting ? (
               <li key="application-testing">
