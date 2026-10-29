@@ -1,6 +1,6 @@
 import { Download, FilePlus2, FileText, Mail, SearchX, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 
 import {
   Button,
@@ -12,7 +12,6 @@ import {
   PageToolbar,
   Pagination,
   SearchField,
-  buttonClasses,
   sortRows,
   useBulkFlow,
   useToast,
@@ -43,6 +42,7 @@ import { FilterPopover } from '../components/FilterPopover';
 import { InvoiceFilterFields } from '../components/invoices/InvoiceFilterFields';
 import { invoiceColumns } from '../components/invoices/invoiceColumns';
 import { InvoiceSummaryCards } from '../components/invoices/InvoiceSummaryCards';
+import { PrepareInvoicePanel } from '../components/prepare/PrepareInvoicePanel';
 import { IssueDialog } from '../components/IssueDialog';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { ReasonDialog } from '../components/ReasonDialog';
@@ -122,6 +122,8 @@ function InvoiceList() {
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // "Create invoice" opens the preparation in this page, above the list.
+  const [creating, setCreating] = useState<{ clientId: string | null } | null>(null);
   const close = () => setDialog(null);
   const deletion = useBulkFlow({
     run: (body: InvoiceBulkRequest) => bulkDelete.mutateAsync(body),
@@ -343,10 +345,17 @@ function InvoiceList() {
     setParam({ q: null, tab: null, client: null, from: null, to: null });
   };
   const target = dialog && 'invoice' in dialog ? dialog.invoice : null;
-  const prepareLink = routes.org.module(slug, 'billing', 'prepare');
+  const startCreating = () => setCreating((current) => current ?? { clientId: null });
 
   return (
     <>
+      {creating ? (
+        <PrepareInvoicePanel
+          clientId={creating.clientId}
+          onClientChange={(clientId) => setCreating({ clientId })}
+          onClose={() => setCreating(null)}
+        />
+      ) : null}
       <InvoiceSummaryCards summary={summary.data} currency={organization.currency} />
       <DataTable
         caption="Invoices"
@@ -482,13 +491,15 @@ function InvoiceList() {
             }
             primaryAction={
               can(P.invoiceCreate) ? (
-                <Link
-                  to={prepareLink}
-                  className={buttonClasses({ variant: 'primary', size: 'sm' })}
+                <Button
+                  size="sm"
+                  variant="primary"
+                  aria-expanded={creating !== null}
+                  leftIcon={<FilePlus2 aria-hidden="true" className="size-4" />}
+                  onClick={startCreating}
                 >
-                  <FilePlus2 aria-hidden="true" className="size-4" />
                   Create invoice
-                </Link>
+                </Button>
               ) : undefined
             }
           />
@@ -519,9 +530,9 @@ function InvoiceList() {
               description="Invoices prepared from work in progress are listed here."
               action={
                 can(P.invoiceCreate) ? (
-                  <Link to={prepareLink} className={buttonClasses({ variant: 'primary' })}>
+                  <Button variant="primary" onClick={startCreating}>
                     Create invoice
-                  </Link>
+                  </Button>
                 ) : undefined
               }
             />
