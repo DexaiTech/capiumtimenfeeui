@@ -75,6 +75,7 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
     'job-profitability': () => import('@/features/reports/pages/JobProfitabilityReportPage'),
     'wip-ageing': () => import('@/features/reports/pages/WipAgeingReportPage'),
     recovery: () => import('@/features/reports/pages/RecoveryReportPage'),
+    'recovery-analysis': () => import('@/features/reports/pages/RecoveryAnalysisReportPage'),
     billing: () => import('@/features/reports/pages/BillingReportPage'),
     expenses: () => import('@/features/reports/pages/ExpensesReportPage'),
     'aged-debtors': () => import('@/features/reports/pages/AgedDebtorsReportPage'),

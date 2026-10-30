@@ -60,6 +60,8 @@ export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'reports/job-profitability': 'Fees against cost for each job.',
   'reports/wip-ageing': 'Unbilled work and its age.',
   'reports/recovery': 'How much of the value of work was billed.',
+  'reports/recovery-analysis':
+    'Invoice value against the task rate, staff rates and cost plus: revenue left on the table.',
   'reports/expenses': 'Expenses by type, client and person.',
   'reports/billing': 'Invoiced amounts over time.',
   'reports/payments': 'Money received over time.',

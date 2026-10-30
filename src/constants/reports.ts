@@ -41,6 +41,13 @@ export const REPORTS: ReadonlyArray<ReportDefinition> = [
     permission: PERMISSIONS.reportFinancial,
   },
   {
+    key: 'recovery-analysis',
+    label: 'Recovery analysis',
+    description:
+      'Invoice value against the task rate, staff rates and cost plus, per job, client and person.',
+    permission: PERMISSIONS.reportFinancial,
+  },
+  {
     key: 'billing-summary',
     label: 'Billing summary',
     description: 'Invoices, credit notes and receipts per month and per partner.',

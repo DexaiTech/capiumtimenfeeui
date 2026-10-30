@@ -22,6 +22,7 @@ import { HistoryTab } from '../workspace/tabs/HistoryTab';
 import { InvoicesTab } from '../workspace/tabs/InvoicesTab';
 import { JobsTab } from '../workspace/tabs/JobsTab';
 import { PaymentsTab } from '../workspace/tabs/PaymentsTab';
+import { RecoveryTab } from '../workspace/tabs/RecoveryTab';
 import { TimeTab } from '../workspace/tabs/TimeTab';
 import { WipTab } from '../workspace/tabs/WipTab';
 import type { ClientOverview, ClientTabId } from '../workspace/types';
@@ -91,6 +92,8 @@ function TabPanel({ tab, client, abilities, overview, members }: TabPanelProps) 
       );
     case 'payments':
       return <PaymentsTab clientId={client.id} clientName={client.name} overview={summary} />;
+    case 'recovery':
+      return <RecoveryTab clientId={client.id} clientName={client.name} />;
     case 'contacts':
       return <ContactsTab client={client} canEdit={abilities.edit} />;
     case 'history':
@@ -194,7 +197,7 @@ function ClientWorkspace({ clientId, tab }: { clientId: string; tab: ClientTabId
 /**
  * `/:orgSlug/clients/:clientId/<tab>`: the Client 360 workspace of one client. The tab is the
  * last URL segment (`overview`, `jobs`, `time`, `expenses`, `wip`, `invoices`, `payments`,
- * `contacts`, `history`, `settings`), so every tab can be bookmarked and shared. A missing, unknown or
+ * `recovery`, `contacts`, `history`, `settings`), so every tab can be bookmarked and shared. A missing, unknown or
  * not permitted tab opens the overview.
  */
 export default function ClientDetailPage() {

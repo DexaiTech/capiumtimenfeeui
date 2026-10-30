@@ -73,6 +73,11 @@ export const rateSettingsSchema = z.object({
       (value) => parseMultiplierToBp(value) !== null,
       'Enter a multiple of the normal rate from 1 to 10, for example 1.5',
     ),
+  /** The cost-plus mark-up of the recovery analysis, typed in percent ("50"). */
+  cost_plus_markup: z.string().refine((value) => {
+    const bp = parseMarkupToBp(value);
+    return bp !== null && bp <= MARKUP_MAX_BP;
+  }, 'Enter a percentage from 0 to 1000 with at most two decimals, for example 50'),
 });
 export type RateSettingsValues = z.infer<typeof rateSettingsSchema>;
 

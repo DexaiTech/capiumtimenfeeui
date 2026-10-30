@@ -6,16 +6,23 @@ import { bpToMultiplierInput, parseMultiplierToBp } from '@/utils/multiplier';
 
 import { useOrganizationForm } from '../../hooks/useOrganizationForm';
 import { rateSettingsSchema, type RateSettingsValues } from '../../schemas/general';
-import { RATE_MODE_HELP, RATE_MODE_OPTIONS } from '../../utils/general';
+import { parseMarkupToBp, RATE_MODE_HELP, RATE_MODE_OPTIONS } from '../../utils/general';
+import { bpToPercentInput } from '../../utils/vat';
 import { SettingsCard } from './SettingsCard';
 import type { GeneralCardProps } from './types';
 
-const FIELDS = ['rate_mode', 'overtime_enabled', 'overtime_multiplier'] as const;
+const FIELDS = [
+  'rate_mode',
+  'overtime_enabled',
+  'overtime_multiplier',
+  'cost_plus_markup',
+] as const;
 
 const toValues = (organization: Organization): RateSettingsValues => ({
   rate_mode: organization.rate_mode,
   overtime_enabled: organization.overtime_enabled,
   overtime_multiplier: bpToMultiplierInput(organization.overtime_multiplier_bp),
+  cost_plus_markup: bpToPercentInput(organization.cost_plus_markup_bp),
 });
 
 function toUpdate(values: RateSettingsValues, organization: Organization): OrganizationUpdate {
@@ -28,12 +35,17 @@ function toUpdate(values: RateSettingsValues, organization: Organization): Organ
   if (multiplier !== null && multiplier !== organization.overtime_multiplier_bp) {
     body.overtime_multiplier_bp = multiplier;
   }
+  const markup = parseMarkupToBp(values.cost_plus_markup);
+  if (markup !== null && markup !== organization.cost_plus_markup_bp) {
+    body.cost_plus_markup_bp = markup;
+  }
   return body;
 }
 
 /**
- * `rate_mode`: whether a person's own charge-out rate comes before their grade's; and the
- * overtime switch with the multiplier overtime time is priced at.
+ * `rate_mode`: whether a person's own charge-out rate comes before their grade's; the overtime
+ * switch with the multiplier overtime time is priced at; and the cost-plus mark-up the recovery
+ * analysis compares invoices with.
  */
 export function RateModeCard({ organization, editable }: GeneralCardProps) {
   const { form, ...card } = useOrganizationForm<RateSettingsValues>({
@@ -42,7 +54,10 @@ export function RateModeCard({ organization, editable }: GeneralCardProps) {
     toValues,
     toUpdate,
     fields: FIELDS,
-    fieldNames: { overtime_multiplier_bp: 'overtime_multiplier' },
+    fieldNames: {
+      overtime_multiplier_bp: 'overtime_multiplier',
+      cost_plus_markup_bp: 'cost_plus_markup',
+    },
     savedTitle: 'Rate settings saved',
   });
   const {
@@ -103,6 +118,16 @@ export function RateModeCard({ organization, editable }: GeneralCardProps) {
         }
         error={errors.overtime_multiplier?.message}
         {...register('overtime_multiplier')}
+      />
+      <Input
+        label="Cost-plus mark-up (%)"
+        required
+        inputMode="decimal"
+        autoComplete="off"
+        className="sm:max-w-sm"
+        hint="Recovery analysis: what the work would bill at its cost plus this mark-up. 50 bills time that cost £50 an hour at £75."
+        error={errors.cost_plus_markup?.message}
+        {...register('cost_plus_markup')}
       />
     </SettingsCard>
   );

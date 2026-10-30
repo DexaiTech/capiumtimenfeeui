@@ -1,6 +1,7 @@
 import { MoneyTone } from '@/components/ui/MoneyTone';
 import { useMemo, useState } from 'react';
 
+import { RecoveryComparison } from '@/components/common/RecoveryComparison';
 import {
   Button,
   ColumnVisibilityMenu,
@@ -19,6 +20,7 @@ import { usePersistentColumns } from '@/hooks';
 import type { Pence } from '@/types/api';
 import { formatMoney } from '@/utils/money';
 import { formatMinutes } from '@/utils/minutes';
+import { compareRecovery } from '@/utils/recovery';
 
 import type { BillingBasis, ClientBillingSummary, JobBilling } from '../../types';
 import { BASIS_HINTS, BASIS_LABELS } from '../../utils/basis';
@@ -37,6 +39,9 @@ const HIDDEN_BY_DEFAULT = [
   'fixed',
   'other',
   'budgeted',
+  'task_rate',
+  'staff_rate',
+  'cost_plus',
 ];
 
 /** The terms in a few words; the full sentence is the tooltip. */
@@ -210,6 +215,31 @@ function columnsFor(
   }
   columns.push(
     {
+      id: 'task_rate',
+      header: 'At task rate',
+      sortable: true,
+      ...amount((job) => job.breakdown.recovery.task_value),
+      cell: (job) => money(job.breakdown.recovery.task_value),
+    },
+    {
+      id: 'staff_rate',
+      header: 'At staff rates',
+      sortable: true,
+      ...amount((job) => job.breakdown.recovery.staff_value),
+      cell: (job) => money(job.breakdown.recovery.staff_value),
+    },
+  );
+  if (showCost) {
+    columns.push({
+      id: 'cost_plus',
+      header: 'Cost plus',
+      sortable: true,
+      ...amount((job) => job.breakdown.recovery.cost_plus_value),
+      cell: (job) => cell(job.breakdown.recovery.cost_plus_value),
+    });
+  }
+  columns.push(
+    {
       id: 'budgeted',
       header: 'Budgeted cost',
       sortable: true,
@@ -254,6 +284,10 @@ export function BillingSummary({ summary, basis, onBasisChange }: BillingSummary
   const options = (Object.keys(BASIS_LABELS) as BillingBasis[])
     .filter((key) => values[key] !== null)
     .map((key) => ({ value: key, label: `${BASIS_LABELS[key]} ${money(values[key] ?? 0)}` }));
+
+  // The invoice being raised, without its disbursements: what the work itself is billed at.
+  const invoiceValue = Math.max((values[basis] ?? 0) - totals.other_costs, 0);
+  const recovery = compareRecovery(totals.recovery, invoiceValue, summary.markup_bp);
 
   const columns = useMemo(
     () => columnsFor(basis, summary.show_cost, money),
@@ -322,6 +356,22 @@ export function BillingSummary({ summary, basis, onBasisChange }: BillingSummary
           value={totals.agreed_price === null ? '—' : money(totals.agreed_price)}
         />
       </dl>
+
+      {totals.recovery.minutes > 0 ? (
+        <RecoveryComparison
+          title="Recovery of this invoice"
+          description={`The ${formatMinutes(totals.recovery.minutes)} ready to bill against what the work would bill at the task rate, at each person's own charge-out rate and at cost plus the practice's mark-up.`}
+          invoiceLabel={`This invoice (${BASIS_LABELS[basis].toLowerCase()})`}
+          invoiceValue={invoiceValue}
+          invoiceHint={
+            totals.other_costs > 0
+              ? `Before ${money(totals.other_costs)} of other costs`
+              : undefined
+          }
+          lines={recovery}
+          currency={organization.currency}
+        />
+      ) : null}
 
       {summary.jobs.length === 0 ? (
         <p className="text-sm text-text-muted">No time has been logged for this client yet.</p>

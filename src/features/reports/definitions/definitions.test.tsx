@@ -13,6 +13,7 @@ import ExpensesReportPage from '../pages/ExpensesReportPage';
 import JobProfitabilityReportPage from '../pages/JobProfitabilityReportPage';
 import MissingTimesheetsReportPage from '../pages/MissingTimesheetsReportPage';
 import PaymentsReportPage from '../pages/PaymentsReportPage';
+import RecoveryAnalysisReportPage from '../pages/RecoveryAnalysisReportPage';
 import RecoveryReportPage from '../pages/RecoveryReportPage';
 import UtilisationReportPage from '../pages/UtilisationReportPage';
 import WipAgeingReportPage from '../pages/WipAgeingReportPage';
@@ -35,11 +36,14 @@ import {
   paymentsByClient,
   paymentsByMonth,
   paymentTotals,
+  recoveryAnalysisRows,
+  recoveryAnalysisTotals,
   recoveryByJob,
   recoveryRows,
   recoveryTotals,
   utilisationRows,
   utilisationTotals,
+  withoutCost,
   withoutRates,
   wipRows,
   wipTotals,
@@ -324,6 +328,77 @@ describe('Recovery', () => {
     await drill(user, 'Acme Ltd', 'See the invoices');
     expect(location()).toHaveTextContent(
       `/acme/billing/invoices?client=${IDS.acme}&from=2026-01-01&to=2026-10-18`,
+    );
+  });
+});
+
+describe('Recovery Analysis', () => {
+  const answers = () => ({
+    'recovery-analysis': { rows: recoveryAnalysisRows(), totals: recoveryAnalysisTotals() },
+  });
+
+  it('sets the invoice value against the task rate, the staff rates and cost plus', async () => {
+    setup(<RecoveryAnalysisReportPage />, answers());
+    const rows = rowsOf(await table('Recovery Analysis'));
+
+    const figures = screen.getByLabelText('Recovery Analysis figures');
+    expect(figures).toHaveTextContent('Invoice value£3,500.00');
+    expect(figures).toHaveTextContent('£2,000.00 still to bill');
+    expect(figures).toHaveTextContent('Left on the table at the task rate£500.00');
+    expect(figures).toHaveTextContent('87.5% recovered');
+    expect(figures).toHaveTextContent('Left on the table at staff rates£100.00');
+    expect(figures).toHaveTextContent('Left on the table at cost plus-£1,250.00');
+
+    for (const text of [
+      'J00001 Year-end accounts',
+      'Acme Ltd · Fixed £1,500.00',
+      '20:00',
+      '£1,500.00',
+      '£2,000.00£500.00 left on the table75% recovered',
+      '£1,600.00£100.00 left on the table93.75% recovered',
+      '£1,050.00£450.00 over',
+    ]) {
+      expect(rows[0]).toHaveTextContent(text);
+    }
+    expect(rows[1]).toHaveTextContent('Globex plc · Hourly');
+    expect(rows[1]).toHaveTextContent('£2,000.00 still to bill');
+    expect(rows[1]).toHaveTextContent('Matches the invoice');
+  });
+
+  it('leaves out cost plus for someone who may not see rates', async () => {
+    setup(
+      <RecoveryAnalysisReportPage />,
+      {
+        'recovery-analysis': {
+          rows: recoveryAnalysisRows().map(withoutCost),
+          totals: withoutCost(recoveryAnalysisTotals()),
+        },
+      },
+      { permissions: ['organization.read', 'report.financial'] },
+    );
+    const body = await table('Recovery Analysis');
+
+    expect(within(body).queryByRole('columnheader', { name: /Cost plus/ })).toBeNull();
+    expect(within(body).getByRole('columnheader', { name: /At staff rates/ })).toBeInTheDocument();
+    expect(screen.getByLabelText('Recovery Analysis figures')).not.toHaveTextContent('cost plus');
+  });
+
+  it('opens the job', async () => {
+    const user = userEvent.setup();
+    setup(<RecoveryAnalysisReportPage />, answers());
+    await table('Recovery Analysis');
+
+    await drill(user, 'J00001 Year-end accounts', 'Open the job');
+    expect(location()).toHaveTextContent('/acme/jobs/j-1');
+  });
+
+  it('is for those who may see financial reports only', async () => {
+    const backend = setup(<RecoveryAnalysisReportPage />, answers(), {
+      permissions: ['organization.read', 'report.read'],
+    });
+    expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
+    expect(backend.calls.filter((call) => call.path === '/reports/recovery-analysis')).toHaveLength(
+      0,
     );
   });
 });

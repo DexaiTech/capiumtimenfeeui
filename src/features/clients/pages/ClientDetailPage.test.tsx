@@ -74,6 +74,7 @@ describe('ClientDetailPage routing', () => {
       'WIP5',
       'Invoices4',
       'Payments3',
+      'Invoices & Recovery',
       'Contacts2',
       'History',
       'Settings',
