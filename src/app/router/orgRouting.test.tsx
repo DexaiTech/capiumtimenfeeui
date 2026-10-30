@@ -221,9 +221,12 @@ describe('practice route (/:orgSlug)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/acme/reports/time-analysis'));
 
     const sidebar = await screen.findByRole('navigation', { name: 'Reports pages' });
-    expect(within(sidebar).getByRole('link', { name: 'Time Analysis Report' })).toHaveAttribute(
-      'aria-current',
-      'page',
+    // The page is marked once the redirect has landed, which can be after the sidebar shows.
+    await waitFor(() =>
+      expect(within(sidebar).getByRole('link', { name: 'Time Analysis Report' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      ),
     );
     expect(within(sidebar).getByRole('link', { name: 'Utilisation' })).toBeInTheDocument();
     // Financial reports need report.financial, which this role does not hold.
@@ -237,9 +240,11 @@ describe('practice route (/:orgSlug)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/acme/billing/invoices'));
 
     const sidebar = await screen.findByRole('navigation', { name: 'Billing & Fees pages' });
-    expect(within(sidebar).getByRole('link', { name: 'Invoices' })).toHaveAttribute(
-      'aria-current',
-      'page',
+    await waitFor(() =>
+      expect(within(sidebar).getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      ),
     );
     expect(within(sidebar).getByRole('link', { name: 'Credit Notes' })).toBeInTheDocument();
     // Preparing an invoice needs invoice.create, which this role does not hold.
