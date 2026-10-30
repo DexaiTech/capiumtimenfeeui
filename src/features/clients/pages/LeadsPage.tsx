@@ -30,13 +30,7 @@ import { isApiError } from '@/services/api';
 import { formatDayMonthYear } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
-import {
-  flattenPages,
-  useArchiveLead,
-  useConvertLead,
-  useLeadList,
-  useLeadSummary,
-} from '../api';
+import { flattenPages, useArchiveLead, useConvertLead, useLeadList, useLeadSummary } from '../api';
 import { CLIENT_TYPE_LABELS } from '../constants';
 import { LeadFormPanel } from '../leads/LeadFormPanel';
 import { LEAD_STATUSES, type Lead, type LeadStatus } from '../leads/types';
@@ -47,12 +41,11 @@ const TABS: ReadonlyArray<{ value: LeadStatus; label: string }> = [
   { value: 'archived', label: 'Archived' },
 ];
 
-const STATUS_BADGE: Record<LeadStatus, { label: string; tone: 'info' | 'success' | 'neutral' }> =
-  {
-    open: { label: 'Open', tone: 'info' },
-    converted: { label: 'Converted', tone: 'success' },
-    archived: { label: 'Archived', tone: 'neutral' },
-  };
+const STATUS_BADGE: Record<LeadStatus, { label: string; tone: 'info' | 'success' | 'neutral' }> = {
+  open: { label: 'Open', tone: 'info' },
+  converted: { label: 'Converted', tone: 'success' },
+  archived: { label: 'Archived', tone: 'neutral' },
+};
 
 type DialogState =
   | { type: 'form'; lead: Lead | null }
@@ -372,10 +365,7 @@ function LeadList() {
               }
               action={
                 canCreate && tab === 'open' ? (
-                  <Button
-                    variant="primary"
-                    onClick={() => setDialog({ type: 'form', lead: null })}
-                  >
+                  <Button variant="primary" onClick={() => setDialog({ type: 'form', lead: null })}>
                     Add lead
                   </Button>
                 ) : undefined
@@ -408,9 +398,8 @@ function LeadList() {
         error={refusal}
       >
         <p>
-          A new active client,{' '}
-          <strong className="font-medium text-text">{target?.name}</strong>, is created from this
-          lead with its type, email, phone and notes
+          A new active client, <strong className="font-medium text-text">{target?.name}</strong>, is
+          created from this lead with its type, email, phone and notes
           {target?.contact_name ? `, and ${target.contact_name} as its primary contact` : ''}. The
           client code comes from your client numbering.
         </p>

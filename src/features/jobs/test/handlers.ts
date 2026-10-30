@@ -208,7 +208,9 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
       const person = params.get('user_id');
       const rows =
         person && person !== 'all' && person !== 'me'
-          ? backend.timeEntries.filter((entry) => (entry as { user_id?: string }).user_id === person)
+          ? backend.timeEntries.filter(
+              (entry) => (entry as { user_id?: string }).user_id === person,
+            )
           : backend.timeEntries;
       return ok(rows, { meta: END });
     }),

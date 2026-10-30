@@ -454,7 +454,8 @@ describe('the time on a job', () => {
       ],
     });
     const timeTable = () => screen.getByRole('table', { name: 'Time on J00001' });
-    expect(await screen.findByRole('table', { name: 'Time on J00001' })).toHaveTextContent('0:30');
+    const table = await screen.findByRole('table', { name: 'Time on J00001' });
+    expect(await within(table).findByText('0:30')).toBeInTheDocument();
 
     // A person's hours in the budget open their entries, to edit or delete them.
     await user.click(await screen.findByRole('button', { name: /^Show the time of Ada Lovelace/ }));

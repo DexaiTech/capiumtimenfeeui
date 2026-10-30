@@ -140,7 +140,7 @@ export function leadHandlers(
         ...body,
         client_type: body.client_type ?? 'limited_company',
         created_at: '2026-10-30T09:00:00Z',
-      } as Partial<Lead>);
+      });
       leads = [created, ...leads];
       return ok(created, { status: 201 });
     }),
@@ -149,7 +149,7 @@ export function leadHandlers(
       calls.updates.push({ id: String(params.id), body });
       const current = find(params.id);
       if (!current) return fail(404, 'RESOURCE_NOT_FOUND', 'Lead not found.');
-      return ok(replace({ ...current, ...body } as Lead));
+      return ok(replace({ ...current, ...body }));
     }),
     http.post(orgApiPath('/leads/:id/archive'), ({ params }) => {
       calls.archives.push(String(params.id));

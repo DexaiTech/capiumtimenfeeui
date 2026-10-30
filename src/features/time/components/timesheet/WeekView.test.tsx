@@ -18,9 +18,7 @@ function Week() {
   const week = useWeek('me', WEEK);
   const entries = useRangeEntries('me', WEEK, addDays(WEEK, 6));
   if (!week.data || !entries.data) return <p>Loading the week</p>;
-  return (
-    <WeekView grid={week.data} entries={entries.data} canRecord onOpenDay={() => undefined} />
-  );
+  return <WeekView grid={week.data} entries={entries.data} canRecord onOpenDay={() => undefined} />;
 }
 
 function setup(entries: TimeEntry[] = weekEntries()) {
