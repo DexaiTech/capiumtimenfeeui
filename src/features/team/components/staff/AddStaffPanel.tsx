@@ -136,7 +136,9 @@ function AddStaffForm({
       send_email: true,
       cost_rate: '',
       charge_rate: '',
-      rate_effective_from: todayInZone(organization.timezone),
+      // Empty: the rates start on the person's start date (the API's default), so the time they
+      // log from their first day is costed and charged at them, not only time from today.
+      rate_effective_from: '',
     },
   });
   const {

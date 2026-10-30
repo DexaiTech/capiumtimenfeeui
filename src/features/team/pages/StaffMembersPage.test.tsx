@@ -568,6 +568,29 @@ describe('AddStaffPanel', () => {
     });
   });
 
+  it('starts the rates on the start date when no rate start is given', async () => {
+    let body: Record<string, unknown> = {};
+    server.use(
+      http.post(orgApiPath('/staff'), async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    const dialog = await openAddDialog(user);
+    await fillRequired(dialog, user);
+    // Empty by default: the API starts the rates on the start date, so earlier time is costed.
+    expect(within(dialog).getByLabelText('Rates start')).toHaveValue('');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Cost rate (£/h)' }), '60');
+    await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
+
+    expect(await screen.findByText('Katherine Johnson added')).toBeInTheDocument();
+    expect(body).toMatchObject({ cost_rate: 6000 });
+    expect(body).not.toHaveProperty('rate_effective_from');
+  });
+
   it('sends no rate when the fields are left empty, and rejects one that is not money', async () => {
     let body: Record<string, unknown> = {};
     server.use(
