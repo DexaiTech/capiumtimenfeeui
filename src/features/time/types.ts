@@ -44,6 +44,11 @@ export interface TimeEntry {
   billing_status: BillingStatus;
   /** The sheet is submitted or approved, or the entry is no longer unbilled. */
   is_locked: boolean;
+  /**
+   * The last day of the locked period the entry's date lies in (Settings > Period Lock): it cannot
+   * be edited or deleted until the period is unlocked. Null or absent: the date is open.
+   */
+  period_locked_through?: IsoDate | null;
   created_by: string | null;
   created_at: IsoDateTime;
   updated_at: IsoDateTime;

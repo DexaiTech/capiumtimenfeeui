@@ -21,6 +21,7 @@ import { useDay, useDeleteEntry } from '../../api';
 import type { TimeEntry } from '../../types';
 import { dialogError } from '../../utils/errors';
 import { describeVariance, refLabel } from '../../utils/format';
+import { isEntryLocked } from '../../utils/locks';
 import { formatLongDay } from '../../utils/weeks';
 import { BillableBadge, SheetStatusBadge } from '../badges';
 import { EntryPanel } from '../EntryPanel';
@@ -127,7 +128,7 @@ export function DayView({ date, canRecord, onAddEntry }: DayViewProps) {
   ];
 
   const actionsOf = (entry: TimeEntry): DropdownItem[] => {
-    const editable = canRecord && !entry.is_locked;
+    const editable = canRecord && !isEntryLocked(entry);
     return [
       {
         id: 'edit',
@@ -215,7 +216,7 @@ export function DayView({ date, canRecord, onAddEntry }: DayViewProps) {
       <DataTable
         caption={`Time recorded on ${formatLongDay(date)}`}
         onRowClick={(entry) => {
-          if (canRecord && !entry.is_locked) setEditing(entry);
+          if (canRecord && !isEntryLocked(entry)) setEditing(entry);
         }}
         columns={columns}
         rows={data?.entries ?? []}

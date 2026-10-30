@@ -5,6 +5,7 @@
  * tabs use are listed; field names mirror the Pydantic models. Money is pence, durations are
  * whole minutes, dates `YYYY-MM-DD` in the practice time zone.
  */
+import type { TimeEntry } from '@/features/time';
 import type { IsoDate, IsoDateTime, Pence } from '@/types/api';
 
 import type { ClientRef } from '../types';
@@ -166,23 +167,11 @@ export interface JobRow {
 export const BILLING_STATUSES = ['unbilled', 'in_draft', 'billed', 'written_off'] as const;
 export type BillingStatus = (typeof BILLING_STATUSES)[number];
 
-/** One row of `GET /time-entries`. */
-export interface TimeEntryRow {
-  id: string;
-  user_id: string;
-  entry_date: IsoDate;
-  minutes: number;
-  job_id: string | null;
-  job_number: string | null;
-  job_name: string | null;
-  activity_code: string | null;
-  activity_name: string | null;
-  description: string | null;
-  is_billable: boolean;
-  charge_rate: Pence;
-  charge_value: Pence;
-  billing_status: BillingStatus;
-}
+/**
+ * One row of `GET /time-entries`: the whole entry as the Time feature reads it, because the tab
+ * edits and deletes it with that feature's panel and rules.
+ */
+export type TimeEntryRow = TimeEntry;
 
 /** One row of `GET /disbursements`. */
 export interface DisbursementRow {

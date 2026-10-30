@@ -1,17 +1,15 @@
-import { Clock, Pencil, Trash2, Undo2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Clock } from 'lucide-react';
+import { useMemo } from 'react';
 
 import {
+  Button,
   Card,
   CardHeader,
-  ConfirmDialog,
   DataTable,
   EmptyState,
   Pagination,
   RowActions,
-  useToast,
   type DataTableColumn,
-  type DropdownItem,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useAuth } from '@/features/auth';
@@ -20,111 +18,49 @@ import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 import { formatMoney } from '@/utils/money';
 
-import {
-  flattenPages,
-  useDeleteEntry,
-  useReopenTimesheet,
-  useStaffDirectory,
-  useTimeEntryList,
-} from '../api';
+import { flattenPages, useStaffDirectory, useTimeEntryList } from '../api';
 import type { TimeEntry, TimeEntryFilters } from '../types';
-import { dialogError } from '../utils/errors';
+import { describeEntry } from '../utils/format';
 import { SheetStatusBadge, BillingStatusBadge } from './badges';
-import { EntryPanel } from './EntryPanel';
+import { useEntryActions } from './EntryActions';
 import { LoadError } from './PageShell';
 
-type Refusal = { message: string; requestId?: string } | null;
-
-/** Why a locked entry cannot be deleted, and what to do about it. */
-function lockedReason(entry: TimeEntry, canRevoke: boolean): string {
-  if (entry.billing_status !== 'unbilled') return 'billed time is locked';
-  if (entry.timesheet_status === 'approved') {
-    return canRevoke ? 'revoke approval first' : 'approved time is locked';
-  }
-  return 'the timesheet is submitted';
+export interface JobTimeCardProps {
+  jobId: string;
+  jobNumber: string;
+  /** Only this person's time (the budget's "time by person" opens it; needs `time.read_all`). */
+  person?: { id: string; name: string } | null;
+  /** Back to everyone's time. */
+  onShowEveryone?: () => void;
 }
 
 /**
  * The time recorded on one job (`GET /time-entries?job_id=`): everyone's with `time.read_all`,
- * otherwise the caller's own. A person deletes or edits unbilled time on an open or returned
- * timesheet; approved time is first released with "Revoke approval" (`timesheet.approve`), which
- * reopens that person's week.
+ * otherwise the caller's own, or one person's. A person edits or deletes unbilled time on an open
+ * or returned timesheet outside a locked period; locked time opens read-only and its delete says
+ * why. Approved time is first released with "Revoke approval" (`timesheet.approve`), which reopens
+ * that person's week (see `useEntryActions`).
  */
-export function JobTimeCard({ jobId, jobNumber }: { jobId: string; jobNumber: string }) {
+export function JobTimeCard({ jobId, jobNumber, person, onShowEveryone }: JobTimeCardProps) {
   const { organization, can } = useOrg();
   const { user } = useAuth();
-  const { toast } = useToast();
   const canReadAll = can(PERMISSIONS.timeReadAll);
   const allowed = can(PERMISSIONS.timeLog) || canReadAll;
+  const personId = canReadAll ? person?.id : undefined;
   const filters = useMemo<TimeEntryFilters>(
-    () => ({ user_id: canReadAll ? 'all' : 'me', job_id: jobId }),
-    [canReadAll, jobId],
+    () => ({ user_id: personId ?? (canReadAll ? 'all' : 'me'), job_id: jobId }),
+    [canReadAll, personId, jobId],
   );
   const list = useTimeEntryList(filters, { enabled: allowed });
   const staff = useStaffDirectory({ enabled: canReadAll && can(PERMISSIONS.memberRead) });
-  const remove = useDeleteEntry();
-  const reopen = useReopenTimesheet();
-  const [editing, setEditing] = useState<TimeEntry | null>(null);
-  const [deleting, setDeleting] = useState<TimeEntry | null>(null);
-  const [revoking, setRevoking] = useState<TimeEntry | null>(null);
-  const [refusal, setRefusal] = useState<Refusal>(null);
+  const names = new Map((staff.data ?? []).map((member) => [member.id, member.full_name]));
+  const personName = (userId: string) =>
+    userId === user?.id ? 'You' : (names.get(userId) ?? 'Another person');
+  const entryActions = useEntryActions({ personName });
 
   if (!allowed) return null;
 
   const currency = organization.currency;
-  const names = new Map((staff.data ?? []).map((member) => [member.id, member.full_name]));
-  const personName = (userId: string) =>
-    userId === user?.id ? 'You' : (names.get(userId) ?? 'Another person');
-
-  const mayWrite = (entry: TimeEntry) =>
-    entry.user_id === user?.id ? can(PERMISSIONS.timeLog) : can(PERMISSIONS.timeManageAll);
-  // Nobody decides on their own timesheet unless they hold `organization.update`.
-  const canRevoke = (entry: TimeEntry) =>
-    entry.timesheet_status === 'approved' &&
-    entry.billing_status === 'unbilled' &&
-    can(PERMISSIONS.timesheetApprove) &&
-    (entry.user_id !== user?.id || can(PERMISSIONS.organizationUpdate));
-
-  const actionsOf = (entry: TimeEntry): DropdownItem[] => {
-    const writable = mayWrite(entry);
-    const revocable = canRevoke(entry);
-    const actions: DropdownItem[] = [];
-    if (writable && !entry.is_locked) {
-      actions.push({
-        id: 'edit',
-        label: 'Edit entry',
-        icon: <Pencil className="size-4" aria-hidden="true" />,
-        onSelect: () => setEditing(entry),
-      });
-    }
-    if (revocable) {
-      actions.push({
-        id: 'revoke',
-        label: 'Revoke approval',
-        icon: <Undo2 className="size-4" aria-hidden="true" />,
-        onSelect: () => {
-          setRefusal(null);
-          setRevoking(entry);
-        },
-      });
-    }
-    if (writable) {
-      actions.push({
-        id: 'delete',
-        label: entry.is_locked
-          ? `Delete entry (${lockedReason(entry, revocable)})`
-          : 'Delete entry',
-        tone: 'danger',
-        icon: <Trash2 className="size-4" aria-hidden="true" />,
-        disabled: entry.is_locked,
-        onSelect: () => {
-          setRefusal(null);
-          setDeleting(entry);
-        },
-      });
-    }
-    return actions;
-  };
 
   const columns: DataTableColumn<TimeEntry>[] = [
     {
@@ -188,15 +124,24 @@ export function JobTimeCard({ jobId, jobNumber }: { jobId: string; jobNumber: st
   ];
 
   const rows = flattenPages(list.data);
-  const describe = (entry: TimeEntry) =>
-    `${formatMinutes(entry.minutes)} on ${formatUkDate(entry.entry_date)}`;
 
   return (
     <Card padding="none">
       <CardHeader
         title="Time"
         description={
-          canReadAll ? 'The time recorded on this job.' : 'The time you recorded on this job.'
+          personId && person
+            ? `The time ${person.id === user?.id ? 'you' : person.name} recorded on this job.`
+            : canReadAll
+              ? 'The time recorded on this job.'
+              : 'The time you recorded on this job.'
+        }
+        actions={
+          personId && onShowEveryone ? (
+            <Button size="sm" onClick={onShowEveryone}>
+              Show everyone
+            </Button>
+          ) : undefined
         }
       />
       {list.isError && !list.data ? (
@@ -217,8 +162,8 @@ export function JobTimeCard({ jobId, jobNumber }: { jobId: string; jobNumber: st
           loading={list.isPending}
           rowActions={(entry) => (
             <RowActions
-              label={`Actions for the entry of ${describe(entry)}`}
-              items={actionsOf(entry)}
+              label={`Actions for the entry of ${describeEntry(entry)}`}
+              items={entryActions.actionsOf(entry)}
             />
           )}
           empty={
@@ -244,56 +189,7 @@ export function JobTimeCard({ jobId, jobNumber }: { jobId: string; jobNumber: st
         />
       )}
 
-      <EntryPanel open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
-      <ConfirmDialog
-        open={deleting !== null}
-        onClose={() => setDeleting(null)}
-        onConfirm={() => {
-          if (!deleting) return;
-          remove.mutate(deleting.id, {
-            onSuccess: () => {
-              toast({ tone: 'success', title: 'Time entry deleted' });
-              setDeleting(null);
-            },
-            onError: (error) => setRefusal(dialogError(error)),
-          });
-        }}
-        title="Delete this time entry?"
-        confirmLabel="Delete entry"
-        loading={remove.isPending}
-        error={refusal}
-      >
-        <p>{deleting ? `${describe(deleting)} will be removed for good.` : ''}</p>
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={revoking !== null}
-        onClose={() => setRevoking(null)}
-        onConfirm={() => {
-          if (!revoking) return;
-          reopen.mutate(revoking.timesheet_id, {
-            onSuccess: () => {
-              toast({
-                tone: 'success',
-                title: 'Approval revoked',
-                description: 'The time can now be edited or deleted.',
-              });
-              setRevoking(null);
-            },
-            onError: (error) => setRefusal(dialogError(error)),
-          });
-        }}
-        title="Revoke approval of this week?"
-        confirmLabel="Revoke approval"
-        tone="default"
-        loading={reopen.isPending}
-        error={refusal}
-      >
-        <p>
-          {revoking ? `${personName(revoking.user_id)}, ${describe(revoking)}. ` : ''}
-          The whole week goes back to open, so its time can be edited or deleted and the week
-          submitted again. It cannot be revoked once any of its time is billed.
-        </p>
-      </ConfirmDialog>
+      {entryActions.dialogs}
     </Card>
   );
 }

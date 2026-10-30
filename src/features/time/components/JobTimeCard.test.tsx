@@ -95,8 +95,13 @@ describe('JobTimeCard', () => {
     const backend = setup(OWNER_PERMISSIONS);
     const row = /^Actions for the entry of .* on 13\/10\/2026/;
 
-    // Locked: the delete is there but disabled, and says what to do first.
+    // Locked: it opens read-only, and the delete is there but disabled and says what to do first.
     await screen.findByRole('group', { name: row });
+    expect(rowActionNames(row)).toEqual([
+      'View entry',
+      'Revoke approval',
+      'Delete entry (revoke approval first)',
+    ]);
     expect(rowAction(row, /^Delete entry \(revoke approval first\)/)).toBeDisabled();
 
     await user.click(rowAction(row, 'Revoke approval'));
@@ -149,8 +154,9 @@ describe('JobTimeCard', () => {
 
     await screen.findByRole('group', { name: /^Actions for the entry of .* on 07\/10\/2026/ });
     const submittedActions = rowActionNames(/^Actions for the entry of .* on 07\/10\/2026/);
-    expect(submittedActions).toEqual(['Delete entry (the timesheet is submitted)']);
+    expect(submittedActions).toEqual(['View entry', 'Delete entry (the timesheet is submitted)']);
     expect(rowActionNames(/^Actions for the entry of .* on 30\/09\/2026/)).toEqual([
+      'View entry',
       'Delete entry (billed time is locked)',
     ]);
   });
@@ -197,8 +203,60 @@ describe('JobTimeCard', () => {
 
     await screen.findByRole('group', { name: /^Actions for the entry of .* on 12\/10\/2026/ });
     expect(rowActionNames(/^Actions for the entry of .* on 12\/10\/2026/)).toEqual([
+      'View entry',
       'Delete entry (approved time is locked)',
     ]);
+  });
+
+  it('says the period is locked, offers no revoke for it, and opens the entry read-only', async () => {
+    const user = userEvent.setup();
+    setup(OWNER_PERMISSIONS, [
+      { ...mine, period_locked_through: '2026-10-31' },
+      { ...approved, period_locked_through: '2026-10-31' },
+    ]);
+    const open = /^Actions for the entry of .* on 12\/10\/2026/;
+
+    await screen.findByRole('group', { name: open });
+    expect(rowActionNames(open)).toEqual([
+      'View entry',
+      'Delete entry (the period is locked through 31/10/2026)',
+    ]);
+    expect(rowAction(open, /^Delete entry/)).toBeDisabled();
+    // Revoking the approval would not unlock the period.
+    expect(rowActionNames(/^Actions for the entry of .* on 13\/10\/2026/)).toEqual([
+      'View entry',
+      'Delete entry (the period is locked through 31/10/2026)',
+    ]);
+
+    await user.click(rowAction(open, 'View entry'));
+    const panel = await screen.findByRole('region', { name: 'Time entry' });
+    expect(within(panel).getByText('This time is in a locked period')).toBeInTheDocument();
+    expect(within(panel).getByLabelText(/^Time/)).toBeDisabled();
+    expect(within(panel).queryByRole('button', { name: 'Save entry' })).not.toBeInTheDocument();
+  });
+
+  it('edits an open entry in the time panel', async () => {
+    const user = userEvent.setup();
+    const backend = setup(OWNER_PERMISSIONS);
+
+    await user.click(
+      await findRowAction(/^Actions for the entry of .* on 12\/10\/2026/, 'Edit entry'),
+    );
+    const panel = await screen.findByRole('region', { name: 'Edit time entry' });
+    const time = within(panel).getByLabelText(/^Time/);
+    await user.clear(time);
+    await user.type(time, '2:00');
+    await user.click(within(panel).getByRole('button', { name: 'Save entry' }));
+
+    await waitFor(() =>
+      expect(callsTo(backend, 'PATCH', '/time-entries/mine-open')[0]?.body).toEqual({
+        minutes: 120,
+      }),
+    );
+    // The list is read again, so the new time shows.
+    expect(
+      await screen.findByRole('group', { name: /^Actions for the entry of 2:00 on 12\/10\/2026/ }),
+    ).toBeInTheDocument();
   });
 
   it('is not drawn for someone who may see no time', () => {

@@ -22,9 +22,10 @@ import {
   type DraftRow,
 } from '../../utils/grid';
 import { weekdayName } from '../../utils/weeks';
-import { EntryPanel } from '../EntryPanel';
+import { useEntryActions } from '../EntryActions';
 import { Notice } from '../Notice';
 import { AddRowPanel } from './AddRowPanel';
+import { CellEntriesPanel } from './CellEntriesPanel';
 import { rowTitle } from './rowLabels';
 import { WeekGridTable } from './WeekGridTable';
 
@@ -52,7 +53,8 @@ const REFUSAL_TITLE: Record<string, string> = {
 /**
  * The week grid with its autosave: type hours in a cell and it is saved when typing pauses, rows
  * are added with a dialog, and what the API refuses (a locked period, a closed job, more than
- * 24 hours in a day) is shown next to the cell and in a banner. Keyed by week, so what is typed
+ * 24 hours in a day) is shown next to the cell and in a banner. A cell's details icon lists its
+ * entries to edit or delete them one by one (`useEntryActions`). Keyed by week, so what is typed
  * and not saved yet is saved when the week is left.
  */
 export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps) {
@@ -65,7 +67,8 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
 
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [addOpen, setAddOpen] = useState(false);
-  const [editing, setEditing] = useState<TimeEntry | null>(null);
+  const [openCell, setOpenCell] = useState<{ key: string; label: string } | null>(null);
+  const entryActions = useEntryActions();
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [closedByError, setClosedByError] = useState<ReadonlySet<string>>(() => new Set());
   const [clearing, setClearing] = useState<string | null>(null);
@@ -191,7 +194,14 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
           setDrafts((current) => [...current, draft]);
         }}
       />
-      <EntryPanel open={editing !== null} entry={editing} onClose={() => setEditing(null)} />
+      {entryActions.dialogs}
+      <CellEntriesPanel
+        open={openCell !== null}
+        onClose={() => setOpenCell(null)}
+        title={openCell?.label ?? ''}
+        entries={openCell ? (cellEntries.get(openCell.key) ?? []) : []}
+        actions={entryActions}
+      />
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
         {editable ? (
           <Button
@@ -217,7 +227,7 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
           cellEntries={cellEntries}
           closedJobs={closedJobs}
           autosave={editable ? autosave : undefined}
-          onOpenEntry={setEditing}
+          onOpenCell={setOpenCell}
           onOpenDay={onOpenDay}
           onRemoveDraft={(key) =>
             setDrafts((current) => current.filter((draft) => rowKey(draft) !== key))

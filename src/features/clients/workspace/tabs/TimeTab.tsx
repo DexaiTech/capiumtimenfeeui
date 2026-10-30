@@ -2,11 +2,18 @@ import { Clock, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
-import { Badge, Button, PageToolbar, Select, type DataTableColumn } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  PageToolbar,
+  RowActions,
+  Select,
+  type DataTableColumn,
+} from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { EntryPanel } from '@/features/time';
+import { EntryPanel, useEntryActions } from '@/features/time';
 import { useUrlParams } from '@/hooks';
 import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
@@ -46,8 +53,10 @@ export interface TimeTabProps {
 /**
  * The time recorded for the client (`GET /time-entries?client_id=`): every person's with
  * `time.read_all`, otherwise the caller's own. The totals above come from the overview, so they
- * stay right however many rows are loaded. "Add time" opens the time panel for this client; saving
- * refreshes the list and the totals through the time invalidation.
+ * stay right however many rows are loaded. "Add time" opens the time panel for this client, and
+ * each row is edited or deleted with the Time feature's actions (locked time opens read-only and
+ * its delete says why); saving or deleting refreshes the list and the totals through the time
+ * invalidation.
  */
 export function TimeTab({ clientId, clientName, overview }: TimeTabProps) {
   const { organization, can } = useOrg();
@@ -70,6 +79,7 @@ export function TimeTab({ clientId, clientName, overview }: TimeTabProps) {
 
   const person = (userId: string) =>
     staff.data?.find((member) => member.user_id === userId)?.full_name ?? 'A former member';
+  const entryActions = useEntryActions({ personName: person });
 
   const columns: DataTableColumn<TimeEntryRow>[] = [
     {
@@ -169,6 +179,7 @@ export function TimeTab({ clientId, clientName, overview }: TimeTabProps) {
         onClose={() => setAdding(false)}
         defaults={{ client: { id: clientId, label: clientName } }}
       />
+      {entryActions.dialogs}
       {time ? (
         <SummaryStrip
           label="Time totals"
@@ -192,6 +203,12 @@ export function TimeTab({ clientId, clientName, overview }: TimeTabProps) {
         columns={columns}
         rowKey={(entry) => entry.id}
         query={query}
+        rowActions={(entry) => (
+          <RowActions
+            label={`Actions for the entry of ${formatMinutes(entry.minutes)} on ${formatUkDate(entry.entry_date)}`}
+            items={entryActions.actionsOf(entry)}
+          />
+        )}
         noun={['entry', 'entries']}
         filtered={filtered}
         onClearFilters={() => setParam({ from: null, to: null, billable: null, status: null })}

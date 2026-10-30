@@ -31,6 +31,7 @@ import type { TimeCorrection, TimeEntry, TimeEntryCreate, TimeEntryUpdate } from
 import { activityOptions } from '../utils/activities';
 import { toFormError } from '../utils/errors';
 import { refLabel } from '../utils/format';
+import { isEntryLocked } from '../utils/locks';
 import { DialogActions } from './DialogActions';
 import { Notice } from './Notice';
 
@@ -119,7 +120,7 @@ function EntryForm({
   const { toast } = useToast();
   const formId = useId();
   const again = useAddAnother();
-  const readOnly = !correction && (entry?.is_locked ?? false);
+  const readOnly = !correction && entry !== null && entry !== undefined && isEntryLocked(entry);
 
   const [job, setJob] = useState<PickedJob | null>(jobOf(entry) ?? defaults?.job ?? null);
   const [clientLabel, setClientLabel] = useState<string | undefined>(
@@ -340,7 +341,12 @@ function EntryForm({
         onSubmit={(event) => void onSubmit(event)}
         className="flex flex-col gap-4"
       >
-        {readOnly ? (
+        {readOnly && entry?.period_locked_through && entry.billing_status === 'unbilled' ? (
+          <Notice tone="info" title="This time is in a locked period">
+            Time dated up to {formatUkDate(entry.period_locked_through)} is locked in Settings &gt;
+            Period Lock. Unlock the period to change or delete it.
+          </Notice>
+        ) : readOnly ? (
           <Notice tone="info" title="This time is locked">
             Its timesheet is submitted or approved, or it has been billed. Approved time that is not
             billed yet can be corrected from Time Entries.
@@ -620,7 +626,7 @@ export function EntryPanel({
     ? 'Correct approved time'
     : onBehalfOf
       ? `Record time for ${onBehalfOf.name}`
-      : entry?.is_locked
+      : entry && isEntryLocked(entry)
         ? 'Time entry'
         : entry
           ? 'Edit time entry'
@@ -633,7 +639,7 @@ export function EntryPanel({
       description={
         entry ? (
           <>
-            {entry.is_locked && !correction ? (
+            {isEntryLocked(entry) && !correction ? (
               <Lock className="mr-1 inline size-3" aria-hidden="true" />
             ) : null}
             {refLabel({ code: entry.client_code, name: entry.client_name }) || 'No client'}

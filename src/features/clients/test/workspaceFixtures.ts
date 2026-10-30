@@ -226,21 +226,41 @@ export const jobs: JobRow[] = [
 const entry = (
   tail: string,
   fields: Pick<TimeEntryRow, 'entry_date' | 'minutes'> & Partial<TimeEntryRow>,
-): TimeEntryRow => ({
-  id: gid(tail),
-  user_id: GRACE_ID,
-  job_id: jobs[0]?.id ?? null,
-  job_number: 'J-0001',
-  job_name: 'Year-end accounts 2026',
-  activity_code: 'ACC',
-  activity_name: 'Accounts preparation',
-  description: null,
-  is_billable: true,
-  charge_rate: 9500,
-  charge_value: 0,
-  billing_status: 'unbilled',
-  ...fields,
-});
+): TimeEntryRow => {
+  const row: TimeEntryRow = {
+    id: gid(tail),
+    user_id: GRACE_ID,
+    timesheet_id: gid('e00000000001'),
+    timesheet_status: 'open',
+    client_id: techwave.id,
+    client_code: techwave.code,
+    client_name: techwave.name,
+    job_id: jobs[0]?.id ?? null,
+    job_number: 'J-0001',
+    job_name: 'Year-end accounts 2026',
+    service_id: null,
+    service_name: null,
+    activity_code_id: null,
+    activity_code: 'ACC',
+    activity_name: 'Accounts preparation',
+    description: null,
+    internal_note: null,
+    is_billable: true,
+    charge_rate: 9500,
+    charge_value: 0,
+    cost_rate: null,
+    cost_value: null,
+    rate_source: null,
+    billing_status: 'unbilled',
+    is_locked: false,
+    created_by: GRACE_ID,
+    created_at: '2026-06-12T09:00:00Z',
+    updated_at: '2026-06-12T09:00:00Z',
+    ...fields,
+  };
+  // As the API works it out: anything no longer unbilled is locked.
+  return { ...row, is_locked: fields.is_locked ?? row.billing_status !== 'unbilled' };
+};
 
 export const timeEntries: TimeEntryRow[] = [
   entry('c00000000001', {

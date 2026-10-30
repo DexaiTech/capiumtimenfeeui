@@ -201,8 +201,17 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
 
   return [
     /* ------------------------------ Lookups ------------------------------ */
-    // The job page lists the job's time.
-    http.get(orgApiPath('/time-entries'), () => ok(backend.timeEntries, { meta: END })),
+    // The job page lists the job's time: everyone's, or one person's.
+    http.get(orgApiPath('/time-entries'), ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      record('GET', '/time-entries', undefined, params);
+      const person = params.get('user_id');
+      const rows =
+        person && person !== 'all' && person !== 'me'
+          ? backend.timeEntries.filter((entry) => (entry as { user_id?: string }).user_id === person)
+          : backend.timeEntries;
+      return ok(rows, { meta: END });
+    }),
     http.get(orgApiPath('/members'), ({ request }) => {
       const params = new URL(request.url).searchParams;
       record('GET', '/members', undefined, params);

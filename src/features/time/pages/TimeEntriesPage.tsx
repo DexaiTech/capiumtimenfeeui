@@ -67,6 +67,7 @@ import {
 import type { BillingStatus, TimeEntry, TimeEntryFilters, TimesheetStatus } from '../types';
 import { dialogError } from '../utils/errors';
 import { refLabel } from '../utils/format';
+import { isEntryLocked } from '../utils/locks';
 import { isIsoDate, monthStart } from '../utils/weeks';
 
 type BillingTab = 'all' | 'unbilled' | 'billed';
@@ -160,7 +161,7 @@ function List() {
     userId === user?.id ? 'You' : (names.get(userId) ?? 'Another person');
 
   const canEdit = (entry: TimeEntry) =>
-    !entry.is_locked &&
+    !isEntryLocked(entry) &&
     (entry.user_id === user?.id ? can(PERMISSIONS.timeLog) : can(PERMISSIONS.timeManageAll));
   const canCorrect = (entry: TimeEntry) =>
     entry.timesheet_status === 'approved' &&

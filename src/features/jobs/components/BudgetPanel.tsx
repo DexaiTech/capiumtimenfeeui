@@ -42,8 +42,17 @@ function leftOrOver(remaining: number, format: (value: number) => string): strin
 const statusLabel = (status: string | null) =>
   status && status in TASK_STATUS_META ? TASK_STATUS_META[status as TaskStatus].label : '—';
 
-/** A job's budget against actual: hours and fee, the alerts it has raised, and where time went. */
-export function BudgetPanel({ job }: { job: Job }) {
+export interface BudgetPanelProps {
+  job: Job;
+  /** Lists a person's time on the job (their hours become a button); left out, they are text. */
+  onShowTime?: (person: { id: string; name: string }) => void;
+}
+
+/**
+ * A job's budget against actual: hours and fee, the alerts it has raised, and where time went.
+ * With `onShowTime` a person's hours open their time entries, to edit or delete them.
+ */
+export function BudgetPanel({ job, onShowTime }: BudgetPanelProps) {
   const { organization, can } = useOrg();
   const { toast } = useToast();
   const budget = useJobBudget(job.id);
@@ -115,7 +124,20 @@ export function BudgetPanel({ job }: { job: Job }) {
       id: 'hours',
       header: 'Hours',
       align: 'end',
-      cell: (row) => <span className="tabular-nums">{formatMinutes(row.minutes)}</span>,
+      cell: (row) =>
+        onShowTime ? (
+          <button
+            type="button"
+            aria-label={`Show the time of ${row.full_name}: ${formatMinutes(row.minutes)}`}
+            title="Show the time entries"
+            onClick={() => onShowTime({ id: row.user_id, name: row.full_name })}
+            className="font-semibold text-brand-text tabular-nums hover:underline"
+          >
+            {formatMinutes(row.minutes)}
+          </button>
+        ) : (
+          <span className="tabular-nums">{formatMinutes(row.minutes)}</span>
+        ),
     },
     {
       id: 'billable',

@@ -14,17 +14,16 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { JobTimeCard } from '@/features/time';
 import { useDocumentTitle } from '@/hooks';
 import { isApiError } from '@/services/api';
 
 import { useChangeJobStatus, useDeleteJob, useJob, useSetJobAssignees } from '../api';
 import { AssigneePicker } from '../components/AssigneePicker';
-import { BudgetPanel } from '../components/BudgetPanel';
 import { CopyJobDialog } from '../components/CopyJobDialog';
 import { JobDetailsCard } from '../components/JobDetailsCard';
 import { JobFormPanel } from '../components/JobFormPanel';
 import { JobSummaryCards } from '../components/JobSummaryCards';
+import { JobTimeAndBudget } from '../components/JobTimeAndBudget';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { JobStatusPicker } from '../components/StatusPickers';
 import { TasksPanel } from '../components/TasksPanel';
@@ -220,8 +219,7 @@ export default function JobDetailPage() {
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           <TasksPanel job={job} />
-          <JobTimeCard jobId={job.id} jobNumber={job.number} />
-          <BudgetPanel job={job} />
+          <JobTimeAndBudget key={job.id} job={job} />
         </div>
         <div className="flex min-w-0 flex-col gap-4">
           <JobDetailsCard job={job} />

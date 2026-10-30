@@ -2,7 +2,9 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { entry as timeEntry } from '@/features/time/test/fixtures';
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { rowActionNames } from '@/test/rowActions';
 import { server } from '@/test/server';
 
 import { job as makeJob, task as makeTask } from '../test/fixtures';
@@ -74,6 +76,20 @@ describe('job details', () => {
     expect(
       within(await screen.findByRole('table', { name: 'Tasks of J00002' })).getAllByRole('row'),
     ).toBeTruthy();
+  });
+
+  it("lists the job's time, to edit or delete it", async () => {
+    setup({
+      route: `${DETAILS}?job=j-1`,
+      init: { timeEntries: [timeEntry({ id: 'e-1', entry_date: '2026-10-12', minutes: 90 })] },
+    });
+
+    const table = await screen.findByRole('table', { name: 'Time on J00001' });
+    expect(await within(table).findByText('1:30')).toBeInTheDocument();
+    expect(rowActionNames(/^Actions for the entry of 1:30 on 12\/10\/2026/)).toEqual([
+      'Edit entry',
+      'Delete entry',
+    ]);
   });
 
   it('says so when the job does not exist', async () => {

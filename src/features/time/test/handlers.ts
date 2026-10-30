@@ -207,6 +207,10 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       cost_value: backend.seesCost ? item.cost_value : null,
       is_locked:
         status === 'submitted' || status === 'approved' || item.billing_status !== 'unbilled',
+      // Only on time in a locked period, as the API fills it in.
+      ...(backend.lockedThrough && item.entry_date <= backend.lockedThrough
+        ? { period_locked_through: backend.lockedThrough }
+        : {}),
     };
   };
   const owned = (userId: string, from: string, to: string) =>

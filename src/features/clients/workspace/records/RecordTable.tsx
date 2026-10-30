@@ -56,6 +56,8 @@ export interface RecordTableProps<TRow> {
   emptyDescription: string;
   errorTitle: string;
   onRowClick?: (row: TRow) => void;
+  /** The actions of a row (`RowActions`), in a column at the end. */
+  rowActions?: (row: TRow) => ReactNode;
   /**
    * Set both when the server sorts (jobs): the rows are then shown as they come. Without them the
    * headers sort the rows loaded so far.
@@ -85,6 +87,7 @@ export function RecordTable<TRow>({
   emptyDescription,
   errorTitle,
   onRowClick,
+  rowActions,
   sort,
   onSortChange,
   footerExtra,
@@ -117,6 +120,7 @@ export function RecordTable<TRow>({
       sort={serverSorted ? sort : localSort}
       onSortChange={serverSorted ? onSortChange : setLocalSort}
       onRowClick={onRowClick}
+      rowActions={rowActions}
       loading={query.isPending}
       toolbar={toolbar}
       empty={

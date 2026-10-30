@@ -445,6 +445,32 @@ describe('the time on a job', () => {
     expect(await dialog('Delete this time entry?')).toBeInTheDocument();
   });
 
+  it("lists one person's time from the budget, then everyone's again", async () => {
+    const user = userEvent.setup();
+    const backend = setup({
+      timeEntries: [
+        timeEntry({ id: 'e-ada', entry_date: '2026-10-12', minutes: 90 }),
+        timeEntry({ id: 'e-ben', user_id: IDS.ben, entry_date: '2026-10-13', minutes: 30 }),
+      ],
+    });
+    const timeTable = () => screen.getByRole('table', { name: 'Time on J00001' });
+    expect(await screen.findByRole('table', { name: 'Time on J00001' })).toHaveTextContent('0:30');
+
+    // A person's hours in the budget open their entries, to edit or delete them.
+    await user.click(await screen.findByRole('button', { name: /^Show the time of Ada Lovelace/ }));
+    await waitFor(() => expect(timeTable()).not.toHaveTextContent('0:30'));
+    expect(timeTable()).toHaveTextContent('1:30');
+    const asked = callsOf(backend, 'GET').filter((call) => call.path === '/time-entries');
+    expect(asked.at(-1)?.params?.get('user_id')).toBe(IDS.ada);
+    expect(screen.getByText('The time you recorded on this job.')).toBeInTheDocument();
+    expect(
+      await findRowAction(/^Actions for the entry of 1:30 on 12\/10\/2026/, 'Edit entry'),
+    ).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Show everyone' }));
+    await waitFor(() => expect(timeTable()).toHaveTextContent('0:30'));
+  });
+
   it('is left out for someone who may not see time', async () => {
     setup({}, { permissions: READ_ONLY });
     await screen.findByRole('heading', { level: 1, name: 'J00001 Year-end accounts' });

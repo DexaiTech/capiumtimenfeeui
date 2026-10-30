@@ -10,6 +10,7 @@ import type { GridAutosave } from '../../hooks/useGridAutosave';
 import type { TimeEntry, WeekGrid } from '../../types';
 import { cellKey, type GridRowModel } from '../../utils/grid';
 import { describeVariance } from '../../utils/format';
+import { isEntryLocked } from '../../utils/locks';
 import { formatDayHeader, weekdayName } from '../../utils/weeks';
 import { BillableBadge } from '../badges';
 import { HoursCell, type CellMove } from './HoursCell';
@@ -25,7 +26,8 @@ export interface WeekGridTableProps {
   /** Jobs that take no more time. */
   closedJobs: ReadonlySet<string>;
   autosave?: GridAutosave;
-  onOpenEntry?: (entry: TimeEntry) => void;
+  /** Opens the entries of a cell (its details icon), to see, edit or delete them. */
+  onOpenCell?: (cell: { key: string; label: string }) => void;
   onOpenDay?: (date: string) => void;
   onRemoveDraft?: (rowKey: string) => void;
 }
@@ -42,7 +44,7 @@ export function WeekGridTable({
   cellEntries,
   closedJobs,
   autosave,
-  onOpenEntry,
+  onOpenCell,
   onOpenDay,
   onRemoveDraft,
 }: WeekGridTableProps) {
@@ -153,7 +155,7 @@ export function WeekGridTable({
                     editable &&
                     !closed &&
                     entries.length <= 1 &&
-                    (entry === undefined || !entry.is_locked) &&
+                    (entry === undefined || !isEntryLocked(entry)) &&
                     autosave !== undefined;
                   const dayName = `${weekdayName(date, 'long')} ${formatUkDate(date)}`;
                   return (
@@ -172,8 +174,10 @@ export function WeekGridTable({
                         editable={cellEditable}
                         minutes={minutes}
                         entryCount={entries.length}
-                        hasDetails={entry !== undefined && onOpenEntry !== undefined}
-                        detailed={Boolean(entry?.description ?? entry?.internal_note)}
+                        hasDetails={entries.length > 0 && onOpenCell !== undefined}
+                        detailed={entries.some((item) =>
+                          Boolean(item.description ?? item.internal_note),
+                        )}
                         detailsLabel={`Details of ${title}, ${dayName}`}
                         weekend={!working.has(date)}
                         onEdit={(text) => autosave?.engine.edit(key, text)}
@@ -181,9 +185,7 @@ export function WeekGridTable({
                         onRevert={() => autosave?.engine.revert(key)}
                         onRetry={() => autosave?.engine.retry(key)}
                         onMove={(direction) => move(`${rowIndex}:${dayIndex}`, direction)}
-                        onOpenDetails={() => {
-                          if (entry) onOpenEntry?.(entry);
-                        }}
+                        onOpenDetails={() => onOpenCell?.({ key, label: `${title}, ${dayName}` })}
                         onOpenDay={() => onOpenDay?.(date)}
                       />
                     </td>

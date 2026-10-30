@@ -21,9 +21,9 @@ export interface HoursCellProps {
   minutes: number;
   /** More than one entry in the cell: it opens the day instead of being typed in. */
   entryCount: number;
-  /** The cell holds one entry whose details can be opened. */
+  /** The cell holds entries whose details can be opened (to see, edit or delete them). */
   hasDetails: boolean;
-  /** The entry has a description or a note. */
+  /** An entry of the cell has a description or a note. */
   detailed: boolean;
   detailsLabel: string;
   weekend?: boolean;

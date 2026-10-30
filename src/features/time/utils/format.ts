@@ -1,5 +1,7 @@
+import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 
+import type { TimeEntry } from '../types';
 import { formatDayHeader } from './weeks';
 
 export type VarianceKind = 'over' | 'under' | 'on';
@@ -46,4 +48,9 @@ export interface NamedRef {
 /** "J00012 Year-end accounts": a code and a name on one line, whichever exist. */
 export function refLabel({ code, name }: NamedRef): string {
   return [code, name].filter(Boolean).join(' ');
+}
+
+/** "1:30 on 12/10/2026": an entry in a sentence. */
+export function describeEntry(entry: Pick<TimeEntry, 'minutes' | 'entry_date'>): string {
+  return `${formatMinutes(entry.minutes)} on ${formatUkDate(entry.entry_date)}`;
 }

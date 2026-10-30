@@ -8,9 +8,9 @@ import { JobPicker } from '@/features/team';
 import { useDocumentTitle, useUrlParams } from '@/hooks';
 
 import { useJob } from '../api';
-import { BudgetPanel } from '../components/BudgetPanel';
 import { JobDetailsCard } from '../components/JobDetailsCard';
 import { JobSummaryCards } from '../components/JobSummaryCards';
+import { JobTimeAndBudget } from '../components/JobTimeAndBudget';
 import { LoadError, PageShell } from '../components/PageShell';
 import { JobStatusBadge } from '../components/StatusBadges';
 import { TasksPanel } from '../components/TasksPanel';
@@ -77,7 +77,7 @@ export default function JobDetailsPage() {
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col gap-4">
             <TasksPanel job={job} />
-            <BudgetPanel job={job} />
+            <JobTimeAndBudget key={job.id} job={job} />
           </div>
           <JobDetailsCard job={job} />
         </div>
