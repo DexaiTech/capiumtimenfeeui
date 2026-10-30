@@ -5,6 +5,7 @@
  * `YYYY-MM-DD` in the practice time zone and timestamps UTC.
  */
 import type { BasisPoints, IsoDate, IsoDateTime, Pence } from '@/types/api';
+import type { RecoveryPotentials } from '@/types/recovery';
 
 export interface ClientRef {
   id: string;
@@ -489,6 +490,8 @@ export interface Breakdown {
   budgeted_cost: Pence | null;
   agreed_price: Pence | null;
   basis_values: BasisValues;
+  /** The time ready to bill at the task rate, the staff rates, cost and cost plus. */
+  recovery: RecoveryPotentials;
 }
 
 export interface JobBilling {
@@ -511,6 +514,8 @@ export interface ClientBillingSummary {
   jobs: JobBilling[];
   totals: Breakdown;
   show_cost: boolean;
+  /** The practice's cost-plus mark-up (basis points) behind `recovery.cost_plus_value`. */
+  markup_bp: number;
   /** The cost of each time entry ready to bill, by entry id; null without `rate.read`. */
   time_costs: Record<string, Pence> | null;
 }

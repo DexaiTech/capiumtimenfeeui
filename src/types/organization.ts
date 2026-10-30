@@ -64,6 +64,9 @@ export interface Organization {
   overtime_enabled: boolean;
   /** Basis points of the normal rate that overtime is paid and charged at (15000 = 1.5x). */
   overtime_multiplier_bp: number;
+  /** Basis points added to the cost of the work for the cost-plus value of the recovery analysis
+   * (5000 = 50%: time that cost £50.00 is worth £75.00). */
+  cost_plus_markup_bp: number;
   email: string | null;
   phone: string | null;
   address_line1: string | null;
@@ -121,6 +124,7 @@ export type OrganizationUpdate = Partial<
     | 'rate_mode'
     | 'overtime_enabled'
     | 'overtime_multiplier_bp'
+    | 'cost_plus_markup_bp'
     | 'email'
     | 'phone'
     | 'address_line1'

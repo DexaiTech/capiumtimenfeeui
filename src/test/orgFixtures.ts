@@ -35,6 +35,7 @@ export const testOrganization: Organization = {
   rate_mode: 'staff_first',
   overtime_enabled: false,
   overtime_multiplier_bp: 15000,
+  cost_plus_markup_bp: 5000,
   email: 'hello@acme.example',
   phone: null,
   address_line1: '1 High Street',

@@ -724,6 +724,27 @@ describe('the billing summary', () => {
     expect(rowsOf(lines)[0]).toHaveTextContent('£180.00');
   });
 
+  it('compares the invoice with the task rate, the staff rates and cost plus', async () => {
+    const user = userEvent.setup();
+    setup();
+    await work();
+
+    // Contract value £2,394.00 less £34.00 of other costs: £2,360.00 for the work itself.
+    let panel = screen.getByRole('region', { name: 'Recovery of this invoice' });
+    expect(panel).toHaveTextContent('This invoice (contract value)£2,360.00');
+    expect(panel).toHaveTextContent('Before £34.00 of other costs');
+    expect(panel).toHaveTextContent('At the task rate£960.00£1,400.00 over');
+    expect(panel).toHaveTextContent('At staff rates£800.00£1,560.00 over');
+    expect(panel).toHaveTextContent('Cost plus 50%£480.00£1,880.00 over');
+
+    // Billed at the team's cost (£320.00) the work leaves £640.00 on the table at the task rate.
+    await user.click(screen.getByRole('button', { name: /Team value/ }));
+    panel = screen.getByRole('region', { name: 'Recovery of this invoice' });
+    expect(panel).toHaveTextContent('This invoice (team value)£320.00');
+    expect(panel).toHaveTextContent('At the task rate£960.00£640.00 left on the table');
+    expect(panel).toHaveTextContent('At staff rates£800.00£480.00 left on the table40% recovered');
+  });
+
   it('does not offer the team value to someone who cannot see cost', async () => {
     const summary = harbourSummary();
     summary.show_cost = false;

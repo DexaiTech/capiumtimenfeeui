@@ -19,6 +19,7 @@ describe('the tabs of the client workspace', () => {
       'wip',
       'invoices',
       'payments',
+      'recovery',
       'contacts',
       'history',
       'settings',
@@ -62,6 +63,14 @@ describe('the tabs of the client workspace', () => {
     expect(ids(['invoice.read'])).not.toContain('payments');
     expect(ids(['payment.read'])).toContain('payments');
     expect(ids(['payment.read'])).not.toContain('invoices');
+  });
+
+  it('open Invoices & Recovery to people who read WIP', () => {
+    expect(ids(['wip.read'])).toContain('recovery');
+    expect(ids(['invoice.read', 'payment.read'])).not.toContain('recovery');
+    expect(visibleTabs(() => true).find((tab) => tab.id === 'recovery')?.label).toBe(
+      'Invoices & Recovery',
+    );
   });
 
   it('open History to people who read the audit log, and to nobody else', () => {

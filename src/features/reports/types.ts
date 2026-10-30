@@ -4,6 +4,7 @@
  * percentages basis points (`null` when the denominator is zero).
  */
 import type { BasisPoints, IsoDate, Pence } from '@/types/api';
+import type { RecoveryFigures } from '@/types/recovery';
 
 export interface ReportFilters {
   date_from?: IsoDate | null;
@@ -137,6 +138,26 @@ export interface RecoveryRow extends RecoveryAmounts {
 }
 
 export type RecoveryTotals = RecoveryAmounts;
+
+/* ----------------------------- Recovery analysis ----------------------------- */
+
+/** A row of `/reports/recovery-analysis`: a job, client or person (`group_by`). */
+export interface RecoveryAnalysisRow extends RecoveryFigures {
+  key: string | null;
+  /** Job number, client code or initials. */
+  code: string | null;
+  name: string;
+  /** The job's client (`group_by=job`). */
+  client_name: string | null;
+  user_id?: string | null;
+  client_id?: string | null;
+  job_id?: string | null;
+  /** `group_by=job`: hourly, fixed or non_billable. */
+  billing_basis?: string | null;
+  fixed_fee?: Pence | null;
+}
+
+export type RecoveryAnalysisTotals = RecoveryFigures;
 
 /* ----------------------------- Billing summary ----------------------------- */
 

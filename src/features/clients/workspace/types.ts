@@ -7,6 +7,7 @@
  */
 import type { TimeEntry } from '@/features/time';
 import type { IsoDate, IsoDateTime, Pence } from '@/types/api';
+import type { RecoveryFigures } from '@/types/recovery';
 
 import type { ClientRef } from '../types';
 
@@ -19,6 +20,7 @@ export const CLIENT_TAB_IDS = [
   'wip',
   'invoices',
   'payments',
+  'recovery',
   'contacts',
   'history',
   'settings',
@@ -331,6 +333,34 @@ export interface PaymentRow {
   unallocated: Pence;
   state: PaymentState;
   voided_at: IsoDateTime | null;
+}
+
+/* ------------------------------ Invoices and recovery ------------------------------ */
+
+/** One job of `GET /clients/{id}/recovery`: its invoice value against the task rate, the staff
+ * rates and cost plus. */
+export interface JobRecovery extends RecoveryFigures {
+  /** Null for the work on the client without a job. */
+  job_id: string | null;
+  number: string | null;
+  name: string;
+  status: string | null;
+  billing_basis: string | null;
+  fixed_fee: Pence | null;
+  hourly_rate: Pence | null;
+  /** The contract terms in words: "Fixed fee of £1,500.00". */
+  terms: string;
+}
+
+/** `GET /clients/{id}/recovery` (`wip.read`): every job with billable time, all dates. */
+export interface ClientRecovery {
+  client: ClientRef;
+  jobs: JobRecovery[];
+  totals: RecoveryFigures;
+  /** The practice's cost-plus mark-up in basis points (5000 = 50%). */
+  markup_bp: number;
+  /** Whether the caller may see cost (`rate.read`); cost plus is null otherwise. */
+  show_cost: boolean;
 }
 
 /* ------------------------------ Settings lookups ------------------------------ */

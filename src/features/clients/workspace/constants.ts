@@ -52,6 +52,8 @@ export const CLIENT_TABS: ReadonlyArray<ClientTabDef> = [
     count: (c) => c.payments,
     visible: (can) => can(P.paymentRead),
   },
+  // The other side of the client's account: what the invoices recovered of the work's value.
+  { id: 'recovery', label: 'Invoices & Recovery', visible: (can) => can(P.wipRead) },
   { id: 'contacts', label: 'Contacts', count: (c) => c.contacts, visible: () => true },
   { id: 'history', label: 'History', visible: (can) => can(P.auditLogRead) },
   { id: 'settings', label: 'Settings', visible: () => true },

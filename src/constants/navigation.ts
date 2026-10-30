@@ -614,6 +614,13 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         group: 'Jobs & WIP',
       },
       {
+        id: 'recovery-analysis',
+        label: 'Recovery Analysis',
+        icon: Percent,
+        anyOf: [P.reportFinancial],
+        group: 'Jobs & WIP',
+      },
+      {
         id: 'expenses',
         label: 'Expenses Report',
         icon: Receipt,

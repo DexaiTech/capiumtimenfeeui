@@ -18,6 +18,7 @@ import type {
   BillingStatus,
   ClientJobRates,
   ClientOverview,
+  ClientRecovery,
   ClientWip,
   CreditNoteRow,
   InvoiceDisplayStatus,
@@ -187,6 +188,24 @@ export function useClientWip(clientId: string, enabled = true) {
     queryKey: [...queryKeys.org.wip(organization.id), 'by-client', clientId],
     queryFn: ({ signal }) =>
       api.get<ClientWip>(`${org(organization.id)}/clients/${seg(clientId)}/wip`, { signal }),
+    enabled,
+  });
+}
+
+/* ------------------------------ Invoices & Recovery ------------------------------ */
+
+/**
+ * `GET /clients/{id}/recovery` (`wip.read`): each job's invoice value against the task rate, the
+ * staff charge-out rates and cost plus. Under the WIP key, so billing and write-offs refresh it.
+ */
+export function useClientRecovery(clientId: string, enabled = true) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: [...queryKeys.org.wip(organization.id), 'recovery', clientId],
+    queryFn: ({ signal }) =>
+      api.get<ClientRecovery>(`${org(organization.id)}/clients/${seg(clientId)}/recovery`, {
+        signal,
+      }),
     enabled,
   });
 }

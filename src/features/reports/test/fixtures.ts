@@ -13,6 +13,8 @@ import type {
   MissingTimesheetTotals,
   PaymentReportRow,
   PaymentReportTotals,
+  RecoveryAnalysisRow,
+  RecoveryAnalysisTotals,
   RecoveryRow,
   RecoveryTotals,
   UtilisationRow,
@@ -344,6 +346,95 @@ export const recoveryByJob = (): RecoveryRow[] => [
     recovery_bp: 9750,
   },
 ];
+
+/* ----------------------------- Recovery analysis ----------------------------- */
+
+// The ticket's example: a £1,500 fixed fee for 20 hours (£100 an hour task rate, £80 staff rate,
+// £35 cost); and 20 hours of advisory by a semi-senior at £50 and a partner at £150.
+export const recoveryAnalysisRows = (): RecoveryAnalysisRow[] => [
+  {
+    key: 'j-1',
+    code: 'J00001',
+    name: 'Year-end accounts',
+    client_name: 'Acme Ltd',
+    client_id: IDS.acme,
+    job_id: 'j-1',
+    billing_basis: 'fixed',
+    fixed_fee: 150000,
+    minutes: 1200,
+    invoiced_value: 150000,
+    to_bill_value: 0,
+    invoice_value: 150000,
+    task_value: 200000,
+    task_shortfall: 50000,
+    task_recovery_bp: 7500,
+    staff_value: 160000,
+    staff_shortfall: 10000,
+    staff_recovery_bp: 9375,
+    cost_value: 70000,
+    cost_plus_value: 105000,
+    cost_plus_shortfall: -45000,
+    cost_plus_recovery_bp: 14286,
+    margin_value: 80000,
+    margin_bp: 5333,
+  },
+  {
+    key: 'j-2',
+    code: 'J00002',
+    name: 'Advisory',
+    client_name: 'Globex plc',
+    client_id: IDS.globex,
+    job_id: 'j-2',
+    billing_basis: 'hourly',
+    fixed_fee: null,
+    minutes: 1200,
+    invoiced_value: 0,
+    to_bill_value: 200000,
+    invoice_value: 200000,
+    task_value: 200000,
+    task_shortfall: 0,
+    task_recovery_bp: 10000,
+    staff_value: 200000,
+    staff_shortfall: 0,
+    staff_recovery_bp: 10000,
+    cost_value: 80000,
+    cost_plus_value: 120000,
+    cost_plus_shortfall: -80000,
+    cost_plus_recovery_bp: 16667,
+    margin_value: 120000,
+    margin_bp: 6000,
+  },
+];
+
+export const recoveryAnalysisTotals = (): RecoveryAnalysisTotals => ({
+  minutes: 2400,
+  invoiced_value: 150000,
+  to_bill_value: 200000,
+  invoice_value: 350000,
+  task_value: 400000,
+  task_shortfall: 50000,
+  task_recovery_bp: 8750,
+  staff_value: 360000,
+  staff_shortfall: 10000,
+  staff_recovery_bp: 9722,
+  cost_value: 150000,
+  cost_plus_value: 225000,
+  cost_plus_shortfall: -125000,
+  cost_plus_recovery_bp: 15556,
+  margin_value: 200000,
+  margin_bp: 5714,
+});
+
+/** What the API answers to someone who may not see rates: cost figures are null. */
+export const withoutCost = <T extends RecoveryAnalysisTotals>(figures: T): T => ({
+  ...figures,
+  cost_value: null,
+  cost_plus_value: null,
+  cost_plus_shortfall: null,
+  cost_plus_recovery_bp: null,
+  margin_value: null,
+  margin_bp: null,
+});
 
 /* ---------------------------------- Billing ---------------------------------- */
 
