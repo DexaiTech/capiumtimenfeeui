@@ -271,6 +271,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         detail: true,
         anyOf: [P.clientRead],
       },
+      { id: 'leads', label: 'Leads', icon: Target, anyOf: [P.clientRead] },
     ],
   ),
 

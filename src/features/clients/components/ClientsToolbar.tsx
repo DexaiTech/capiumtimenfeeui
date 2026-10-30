@@ -7,9 +7,11 @@ import {
   List,
   RefreshCw,
   Search,
+  Target,
   UserPlus,
   Users,
 } from 'lucide-react';
+import { Link } from 'react-router';
 
 import type { ToggleableColumnId } from '../constants';
 import type { ClientsView, FilterPreset } from '../store';
@@ -22,6 +24,8 @@ import { FilterSetMenu } from './FilterSetMenu';
 
 export interface ClientsToolbarProps {
   clientCount: number | undefined;
+  /** The Leads page: a second tab next to Clients (the module has no sidebar). */
+  leadsHref?: string;
   search: string;
   onSearchChange: (value: string) => void;
   hidden: ReadonlySet<ToggleableColumnId>;
@@ -72,6 +76,12 @@ export function ClientsToolbar(props: ClientsToolbarProps) {
             Clients
             <span className="cc-count">{props.clientCount ?? '–'}</span>
           </span>
+          {props.leadsHref ? (
+            <Link className="cc-tab no-underline" to={props.leadsHref}>
+              <Target aria-hidden="true" />
+              Leads
+            </Link>
+          ) : null}
         </div>
         <div className="cc-search">
           <Search aria-hidden="true" />

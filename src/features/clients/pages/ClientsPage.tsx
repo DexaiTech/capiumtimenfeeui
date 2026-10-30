@@ -478,6 +478,7 @@ export default function ClientsPage() {
       <ContactFormPanel target={contactTarget} onClose={() => setContactTarget(null)} />
       <ClientsToolbar
         clientCount={summary.data?.total}
+        leadsHref={routes.org.leads(organization.slug)}
         search={search}
         onSearchChange={setSearch}
         hidden={hidden}

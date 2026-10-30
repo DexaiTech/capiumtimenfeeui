@@ -15,6 +15,8 @@ export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
 
   'clients/list': 'All your clients: find one, add one, open its jobs, invoices and contacts.',
   'clients/client-360': 'One client on one page: contacts, jobs, time, invoices and settings.',
+  'clients/leads':
+    'Prospective clients and what winning them costs; convert a lead into a client in one click.',
 
   'time/my-timesheet': 'Record your time by day, week or calendar, and submit the week.',
   'time/entries': 'Every time entry: search, filter, correct and export.',

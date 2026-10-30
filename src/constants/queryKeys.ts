@@ -48,6 +48,8 @@ export const queryKeys = {
     vatRates: (organizationId: string) => ['org', organizationId, 'vat-rates'] as const,
     // Client segments (Settings) and the staff linked to them.
     segments: (organizationId: string) => ['org', organizationId, 'segments'] as const,
+    // Leads (Clients → Leads): the lists by status and the totals.
+    leads: (organizationId: string) => ['org', organizationId, 'leads'] as const,
     sequences: (organizationId: string) => ['org', organizationId, 'sequences'] as const,
     invoiceTemplates: (organizationId: string) =>
       ['org', organizationId, 'invoice-templates'] as const,

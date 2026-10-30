@@ -58,8 +58,9 @@ const RULES: ReadonlyArray<readonly [RegExp, LucideIcon]> = [
   [/receipt|attach|file/, Paperclip],
   [/duplicate|copy|clone/, Copy],
   [/default/, Star],
-  [/archive/, Archive],
+  // Before archive: "Unarchive" contains it.
   [/restore|unarchive/, ArchiveRestore],
+  [/archive/, Archive],
   [/deactivate|suspend|leave/, UserX],
   [/activate|reactivate/, UserCheck],
   [/reset|password/, KeyRound],

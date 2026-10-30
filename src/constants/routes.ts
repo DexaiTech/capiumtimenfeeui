@@ -68,6 +68,8 @@ export const routes = {
     /** Client 360; `tab` is one of its tabs ('' is the overview). */
     client: (slug: string, clientId: string, tab = '') =>
       under(slug, ORG_SEGMENTS.clients, segment(clientId), tab),
+    /** Leads: prospective clients, converted into clients from there. */
+    leads: (slug: string) => under(slug, ORG_SEGMENTS.clients, 'leads'),
     jobs: (slug: string) => under(slug, ORG_SEGMENTS.jobs),
     job: (slug: string, jobId: string) => under(slug, ORG_SEGMENTS.jobs, segment(jobId)),
     timesheet: (slug: string) => under(slug, ORG_SEGMENTS.time),

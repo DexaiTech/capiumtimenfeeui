@@ -321,6 +321,7 @@ describe('TopBar', () => {
         'Clients',
         'Client List',
         'Client Overview',
+        'Leads',
       ]);
     });
 

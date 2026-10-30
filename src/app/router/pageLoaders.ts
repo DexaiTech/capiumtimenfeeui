@@ -26,6 +26,7 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
   clients: {
     list: () => import('@/features/clients/pages/ClientsPage'),
     'client-360': () => import('@/features/clients/pages/Client360Page'),
+    leads: () => import('@/features/clients/pages/LeadsPage'),
   },
   time: {
     'my-timesheet': () => import('@/features/time/pages/MyTimesheetPage'),
