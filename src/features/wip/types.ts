@@ -116,6 +116,9 @@ export interface WipFilters {
 
 export interface SummaryFilters extends WipFilters {
   group_by: WipGroup;
+  /** Only these kinds of item, and only items this old, are grouped (WIP Details "By job"). */
+  kind?: WipItemKind[];
+  min_age_days?: number;
   q?: string;
   sort?: SummarySort;
   order?: SortOrder;

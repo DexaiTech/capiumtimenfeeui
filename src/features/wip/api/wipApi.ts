@@ -55,6 +55,8 @@ export const wipApi = {
         partner_user_id: filters.partner_user_id,
         manager_user_id: filters.manager_user_id,
         service_id: filters.service_id,
+        kind: filters.kind,
+        min_age_days: filters.min_age_days,
         q: text(filters.q),
         sort: filters.sort,
         order: filters.order,
