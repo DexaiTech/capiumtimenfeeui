@@ -149,7 +149,7 @@ export function SummaryView({ variant }: { variant: SummaryVariant }) {
           caption={variant === 'ageing' ? 'WIP ageing' : 'WIP summary'}
           columns={columns}
           rows={rows}
-          rowKey={(row) => row.key ?? `none:${row.name}`}
+          rowKey={(row) => `${row.client?.id ?? ''}:${row.key ?? 'none'}`}
           sort={{ columnId: sort, direction: order }}
           onSortChange={(next) => setParam({ sort: next.columnId, order: next.direction })}
           hiddenColumns={hidden}
