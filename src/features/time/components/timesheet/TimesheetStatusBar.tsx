@@ -42,6 +42,11 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
   const variance = describeVariance(grid.total_minutes - target);
   const timesheetId = grid.timesheet_id;
   const missing = editable ? grid.missing_days : [];
+  // The practice may not approve timesheets (General Settings): submitting approves the week.
+  const approving = organization.require_timesheet_approval;
+  const submittedText = approving
+    ? 'Your manager can now approve it.'
+    : 'Timesheets need no approval here: the week is approved and its time is locked.';
 
   const close = () => {
     setConfirming(null);
@@ -55,25 +60,27 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
       description: 'It is open again: you can change it and submit it again.',
     });
 
-  // A complete week goes in with one click: nothing needs checking, and Undo recalls it. A week
-  // with days missing still asks first, because that is what the question is for.
+  // A complete week goes in with one click: nothing needs checking, and Undo recalls it (while
+  // it waits for approval; an approved week cannot be recalled). A week with days missing still
+  // asks first, because that is what the question is for.
   const submitAtOnce = () => {
     if (!timesheetId) return;
+    const undo = {
+      label: 'Undo',
+      onClick: () =>
+        recall.mutate(timesheetId, {
+          onSuccess: recalled,
+          onError: (error: unknown) =>
+            toast({ tone: 'error', ...describeFailure(error, 'Could not recall it') }),
+        }),
+    };
     submit.mutate(timesheetId, {
       onSuccess: () =>
         toast({
           tone: 'success',
           title: 'Timesheet submitted',
-          description: 'Your manager can now approve it.',
-          action: {
-            label: 'Undo',
-            onClick: () =>
-              recall.mutate(timesheetId, {
-                onSuccess: recalled,
-                onError: (error) =>
-                  toast({ tone: 'error', ...describeFailure(error, 'Could not recall it') }),
-              }),
-          },
+          description: submittedText,
+          ...(approving ? { action: undo } : {}),
         }),
       // The API refused: show why in the usual dialog, where it can be retried.
       onError: (error) => {
@@ -92,7 +99,7 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
           title: confirming === 'submit' ? 'Timesheet submitted' : 'Timesheet recalled',
           description:
             confirming === 'submit'
-              ? 'Your manager can now approve it.'
+              ? submittedText
               : 'It is open again: you can change it and submit it again.',
         });
         close();
@@ -175,7 +182,7 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
                 grid.missing_days.length === 0 ? submitAtOnce() : setConfirming('submit')
               }
             >
-              Submit for approval
+              {approving ? 'Submit for approval' : 'Submit timesheet'}
             </Button>
           ) : null}
           {canRecord && status === 'submitted' ? (
@@ -269,11 +276,19 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
           </p>
         ) : (
           <>
-            <p>
-              The week of {formatWeekRange(grid.week_start)} with{' '}
-              {formatMinutes(grid.total_minutes)} recorded goes to your manager. Its time is locked
-              until it is approved or returned.
-            </p>
+            {approving ? (
+              <p>
+                The week of {formatWeekRange(grid.week_start)} with{' '}
+                {formatMinutes(grid.total_minutes)} recorded goes to your manager. Its time is
+                locked until it is approved or returned.
+              </p>
+            ) : (
+              <p>
+                The week of {formatWeekRange(grid.week_start)} with{' '}
+                {formatMinutes(grid.total_minutes)} recorded is approved at once: timesheets need no
+                approval here. Its time is then locked.
+              </p>
+            )}
             {grid.missing_days.length > 0 ? (
               <p>
                 {grid.missing_days.length === 1

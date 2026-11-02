@@ -1,20 +1,33 @@
-import { Input } from '@/components/ui';
+import { Controller, useWatch } from 'react-hook-form';
+
+import { Input, Switch } from '@/components/ui';
 import type { Organization, OrganizationUpdate } from '@/types/organization';
 import { currencySymbol, parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import { useOrganizationForm } from '../../hooks/useOrganizationForm';
 import { expenseSettingsSchema, type ExpenseSettingsValues } from '../../schemas/general';
-import { parseMarkupToBp } from '../../utils/general';
+import { approvalSwitchHelp, parseMarkupToBp } from '../../utils/general';
 import { bpToPercentInput } from '../../utils/vat';
 import { SettingsCard } from './SettingsCard';
 import type { GeneralCardProps } from './types';
 
-const FIELDS = ['mileage_rate', 'expense_markup', 'receipt_required_threshold'] as const;
+const FIELDS = [
+  'expense_approval_required',
+  'mileage_rate',
+  'expense_markup',
+  'receipt_required_threshold',
+] as const;
 /** API field → form field, for 422 details. */
 const FIELD_NAMES = { expense_markup_bp: 'expense_markup' };
 
+const APPROVAL_HELP = {
+  on: 'On: a submitted claim waits for an approver before it is reimbursed or recharged.',
+  off: 'Off: nobody approves expense claims. A claim is approved as soon as it is submitted.',
+};
+
 function toValues(organization: Organization): ExpenseSettingsValues {
   return {
+    expense_approval_required: organization.expense_approval_required,
     mileage_rate: penceToPoundsInput(organization.mileage_rate, organization.currency),
     expense_markup: bpToPercentInput(organization.expense_markup_bp),
     receipt_required_threshold: penceToPoundsInput(
@@ -26,6 +39,9 @@ function toValues(organization: Organization): ExpenseSettingsValues {
 
 function toUpdate(values: ExpenseSettingsValues, organization: Organization): OrganizationUpdate {
   const body: OrganizationUpdate = {};
+  if (values.expense_approval_required !== organization.expense_approval_required) {
+    body.expense_approval_required = values.expense_approval_required;
+  }
   const mileage = parsePounds(values.mileage_rate, organization.currency);
   if (mileage !== null && mileage !== organization.mileage_rate) body.mileage_rate = mileage;
   const markup = parseMarkupToBp(values.expense_markup);
@@ -39,7 +55,7 @@ function toUpdate(values: ExpenseSettingsValues, organization: Organization): Or
   return body;
 }
 
-/** `mileage_rate`, `expense_markup_bp` and `receipt_required_threshold`. */
+/** `expense_approval_required`, `mileage_rate`, `expense_markup_bp` and `receipt_required_threshold`. */
 export function ExpenseSettingsCard({ organization, editable }: GeneralCardProps) {
   const { form, ...card } = useOrganizationForm<ExpenseSettingsValues>({
     organization,
@@ -52,14 +68,16 @@ export function ExpenseSettingsCard({ organization, editable }: GeneralCardProps
   });
   const {
     register,
+    control,
     formState: { errors },
   } = form;
+  const approval = useWatch({ control, name: 'expense_approval_required' });
   const symbol = currencySymbol(organization.currency);
 
   return (
     <SettingsCard
       title="Expenses"
-      description="The mileage rate, the mark-up added when an expense is recharged and when a receipt is required."
+      description="Whether expense claims need approval, the mileage rate, the mark-up added when an expense is recharged and when a receipt is required."
       saveLabel="Save expense settings"
       editable={editable}
       dirty={card.isDirty}
@@ -100,6 +118,25 @@ export function ExpenseSettingsCard({ organization, editable }: GeneralCardProps
           {...register('receipt_required_threshold')}
         />
       </div>
+      <Controller
+        control={control}
+        name="expense_approval_required"
+        render={({ field }) => (
+          <Switch
+            ref={field.ref}
+            checked={field.value}
+            onChange={field.onChange}
+            disabled={!editable}
+            label="Expense approval"
+            description={approvalSwitchHelp(
+              APPROVAL_HELP,
+              approval,
+              organization.expense_approval_required,
+            )}
+            className="rounded-md border border-border px-3 py-2"
+          />
+        )}
+      />
     </SettingsCard>
   );
 }

@@ -42,15 +42,24 @@ interface Setup {
   permissions?: string[];
   list?: 'mine' | 'claims' | 'approvals';
   backend?: Partial<ExpenseBackend>;
+  /** The practice approves expense claims (its switch in General Settings). */
+  approving?: boolean;
 }
 
-function setup({ claim, permissions = STAFF_PERMISSIONS, list = 'mine', backend: init }: Setup) {
+function setup({
+  claim,
+  permissions = STAFF_PERMISSIONS,
+  list = 'mine',
+  backend: init,
+  approving = true,
+}: Setup) {
   const backend = createBackend({ claims: [claim], ...init });
   server.use(...expenseHandlers(backend));
   const view = renderExpensePage(<ExpenseClaimDetailPage />, {
     permissions,
     route: `${EXPENSES}/${list}/${claim.id}`,
     path: `${EXPENSES}/${list}/:claimId`,
+    organization: { expense_approval_required: approving },
   });
   return { backend, view };
 }
@@ -512,6 +521,34 @@ describe('changing and deleting an expense', () => {
       expect(screen.getByTestId('location')).toHaveTextContent('/acme/expenses/mine'),
     );
     expect(backend.claims).toHaveLength(0);
+  });
+});
+
+describe('submitting a claim when the practice does not approve claims (ticket APT53)', () => {
+  it('submits without mentioning approval and says the claim is approved', async () => {
+    const user = userEvent.setup();
+    const { backend } = setup({
+      claim: draft({
+        lines: [
+          makeLine({
+            id: 'l-taxi',
+            description: 'Taxi',
+            net: 1000,
+            gross: 1000,
+            recharge_amount: 1100,
+            receipt_required: false,
+          }),
+        ],
+      }),
+      approving: false,
+    });
+    await screen.findByRole('button', { name: 'Submit claim' });
+    expect(screen.queryByRole('button', { name: 'Submit for approval' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit claim' }));
+
+    expect(await screen.findByText('Claim approved')).toBeInTheDocument();
+    expect(screen.getByText(/Expense claims need no approval here/)).toBeInTheDocument();
+    expect(backend.calls.some((call) => call.path.endsWith('/submit'))).toBe(true);
   });
 });
 

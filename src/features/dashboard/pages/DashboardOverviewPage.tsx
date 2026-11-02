@@ -6,6 +6,7 @@ import { Button } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
+import { approvalOn } from '@/utils/approvals';
 
 import {
   dashboardKeys,
@@ -61,6 +62,10 @@ export default function DashboardOverviewPage() {
   const refreshAll = useRefreshDashboard();
   const refreshing = useIsFetching({ queryKey: dashboardKeys.all(organization.id) }) > 0;
   const range = cards.data ? dateRange(cards.data.date_from, cards.data.date_to) : null;
+  // Approvals the person decides, of the kinds the practice has not switched off.
+  const decidesApprovals =
+    (approvalOn(organization, 'timesheet') && can(P.timesheetApprove)) ||
+    (approvalOn(organization, 'expense') && can(P.expenseApprove));
 
   return (
     <section className="flex min-w-0 flex-col gap-4">
@@ -87,7 +92,7 @@ export default function DashboardOverviewPage() {
       <SummaryCards query={cards} />
       <div className="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         <MyActionsWidget />
-        {canAny([P.timesheetApprove, P.expenseApprove]) ? <PendingApprovalsWidget /> : null}
+        {decidesApprovals ? <PendingApprovalsWidget /> : null}
         {can(P.timeLog) ? <TimesheetWidget /> : null}
         {canAny([P.wipRead, P.reportFinancial]) ? <TopClientsWidget period={period} /> : null}
         {canAny([P.invoiceRead, P.reportFinancial]) ? <BillingWidget /> : null}

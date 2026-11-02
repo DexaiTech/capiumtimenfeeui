@@ -144,8 +144,10 @@ function ClaimView({ claim }: { claim: ExpenseClaimDetail }) {
         setFlagged(new Set());
         toast({
           tone: 'success',
-          title: 'Claim submitted',
-          description: 'It now waits for an approver.',
+          title: organization.expense_approval_required ? 'Claim submitted' : 'Claim approved',
+          description: organization.expense_approval_required
+            ? 'It now waits for an approver.'
+            : 'Expense claims need no approval here: it is approved as submitted.',
         });
       },
       onError: (error) => {
@@ -252,7 +254,7 @@ function ClaimView({ claim }: { claim: ExpenseClaimDetail }) {
           onClick={onSubmit}
           leftIcon={<Send aria-hidden="true" className="size-4" />}
         >
-          Submit for approval
+          {organization.expense_approval_required ? 'Submit for approval' : 'Submit claim'}
         </Button>
       ) : null}
       {actions.can_approve ? (

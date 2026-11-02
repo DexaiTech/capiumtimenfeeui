@@ -6,7 +6,7 @@ import { currencySymbol, parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import { useOrganizationForm } from '../../hooks/useOrganizationForm';
 import { billingSettingsSchema, type BillingSettingsValues } from '../../schemas/general';
-import { WIP_MODE_HELP, WIP_MODE_OPTIONS } from '../../utils/general';
+import { approvalSwitchHelp, WIP_MODE_HELP, WIP_MODE_OPTIONS } from '../../utils/general';
 import { normaliseDays } from '../../utils/reminderSchedule';
 import { bpToPercentInput, parsePercentToBp } from '../../utils/vat';
 import { ReminderScheduleField } from './ReminderScheduleField';
@@ -15,6 +15,7 @@ import type { GeneralCardProps } from './types';
 
 const FIELDS = [
   'fixed_fee_wip_mode',
+  'wip_adjustment_approval_required',
   'wip_adjustment_approval_threshold',
   'wip_write_off_approval_threshold_percent',
   'invoice_approval_required',
@@ -24,11 +25,21 @@ const FIELDS = [
 ] as const;
 const DEFAULT_PERCENT = '10';
 
+const WIP_APPROVAL_HELP = {
+  on: 'On: a write-on or write-off above the approval threshold (or the write-off percentage) waits for an approver.',
+  off: 'Off: nobody approves WIP adjustments. Every write-on and write-off takes effect at once, whatever its amount.',
+};
+const INVOICE_APPROVAL_HELP = {
+  on: 'On: invoices at or above the threshold must be approved before they are issued.',
+  off: 'Off: invoices are issued without approval.',
+};
+
 function toValues(organization: Organization): BillingSettingsValues {
   const { currency } = organization;
   const percent = organization.wip_write_off_approval_threshold_percent;
   return {
     fixed_fee_wip_mode: organization.fixed_fee_wip_mode,
+    wip_adjustment_approval_required: organization.wip_adjustment_approval_required,
     wip_adjustment_approval_threshold: penceToPoundsInput(
       organization.wip_adjustment_approval_threshold,
       currency,
@@ -51,6 +62,9 @@ function toUpdate(values: BillingSettingsValues, organization: Organization): Or
   const { currency } = organization;
   if (values.fixed_fee_wip_mode !== organization.fixed_fee_wip_mode) {
     body.fixed_fee_wip_mode = values.fixed_fee_wip_mode;
+  }
+  if (values.wip_adjustment_approval_required !== organization.wip_adjustment_approval_required) {
+    body.wip_adjustment_approval_required = values.wip_adjustment_approval_required;
   }
   const wip = parsePounds(values.wip_adjustment_approval_threshold, currency);
   if (wip !== null && wip !== organization.wip_adjustment_approval_threshold) {
@@ -79,7 +93,8 @@ function toUpdate(values: BillingSettingsValues, organization: Organization): Or
   return body;
 }
 
-/** `fixed_fee_wip_mode`, the WIP and invoice approval thresholds and the payment reminders. */
+/** `fixed_fee_wip_mode`, the WIP and invoice approval switches and thresholds, and the payment
+ * reminders. */
 export function BillingSettingsCard({ organization, editable }: GeneralCardProps) {
   const { form, ...card } = useOrganizationForm<BillingSettingsValues>({
     organization,
@@ -95,6 +110,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
     formState: { errors },
   } = form;
   const mode = useWatch({ control, name: 'fixed_fee_wip_mode' });
+  const wipApproval = useWatch({ control, name: 'wip_adjustment_approval_required' });
   const percentEnabled = useWatch({ control, name: 'wip_write_off_percent_enabled' });
   const approval = useWatch({ control, name: 'invoice_approval_required' });
   const reminders = useWatch({ control, name: 'payment_reminders_enabled' });
@@ -123,16 +139,40 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
         />
         <Input
           label={`WIP adjustment approval threshold (${symbol})`}
-          required
+          required={wipApproval}
           inputMode="decimal"
           autoComplete="off"
           leftIcon={<span className="text-sm">{symbol}</span>}
-          hint="A WIP write-on or write-off above this amount needs approval. 0 means every adjustment does."
+          disabled={!wipApproval}
+          hint={
+            wipApproval
+              ? 'A WIP write-on or write-off above this amount needs approval. 0 means every adjustment does.'
+              : 'Turn on WIP adjustment approval to set a threshold.'
+          }
           error={errors.wip_adjustment_approval_threshold?.message}
           {...register('wip_adjustment_approval_threshold')}
         />
       </div>
 
+      <Controller
+        control={control}
+        name="wip_adjustment_approval_required"
+        render={({ field }) => (
+          <Switch
+            ref={field.ref}
+            checked={field.value}
+            onChange={field.onChange}
+            disabled={!editable}
+            label="WIP adjustment approval"
+            description={approvalSwitchHelp(
+              WIP_APPROVAL_HELP,
+              wipApproval,
+              organization.wip_adjustment_approval_required,
+            )}
+            className="rounded-md border border-border px-3 py-2"
+          />
+        )}
+      />
       <Controller
         control={control}
         name="wip_write_off_percent_enabled"
@@ -141,7 +181,7 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
             ref={field.ref}
             checked={field.value}
             onChange={field.onChange}
-            disabled={!editable}
+            disabled={!editable || !wipApproval}
             label="Write-off percentage rule"
             description="On: a write-off above this share of the job's or client's current WIP also needs approval, in addition to the amount threshold above."
             className="rounded-md border border-border px-3 py-2"
@@ -150,11 +190,11 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
       />
       <Input
         label="Write-off approval threshold (%)"
-        required={percentEnabled}
+        required={wipApproval && percentEnabled}
         inputMode="decimal"
         autoComplete="off"
         className="sm:max-w-sm"
-        disabled={!percentEnabled}
+        disabled={!wipApproval || !percentEnabled}
         hint={
           percentEnabled
             ? 'A write-off above this percentage of the WIP there is to write off needs approval.'
@@ -174,7 +214,11 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
             onChange={field.onChange}
             disabled={!editable}
             label="Invoice approval"
-            description="On: invoices at or above the threshold must be approved before they are issued."
+            description={approvalSwitchHelp(
+              INVOICE_APPROVAL_HELP,
+              approval,
+              organization.invoice_approval_required,
+            )}
             className="rounded-md border border-border px-3 py-2"
           />
         )}

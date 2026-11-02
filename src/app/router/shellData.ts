@@ -127,7 +127,7 @@ export function buildShellData(options: {
   }
   const slug = context.organization.slug;
   const { can } = createPermissions(context);
-  const modules = visibleModules(slug, can);
+  const modules = visibleModules(slug, can, context.organization);
   const practicePage = modules
     .find((module) => module.id === 'settings')
     ?.pages.find((page) => page.id === 'practice');

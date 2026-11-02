@@ -70,6 +70,10 @@ function AdjustmentForm({ onClose, formId }: { onClose: () => void; formId: stri
   const [clientId, jobId, kind] = useWatch({ control, name: ['client_id', 'job_id', 'kind'] });
   const today = todayInZone(organization.timezone);
   const limit = formatMoney(organization.wip_adjustment_approval_threshold, organization.currency);
+  // The practice may not approve adjustments at all (General Settings, ticket APT53).
+  const amountHint = organization.wip_adjustment_approval_required
+    ? `Above ${limit} needs approval`
+    : 'Takes effect at once: adjustments need no approval';
 
   const onSubmit = handleSubmit((values) => {
     clearSubmitError();
@@ -128,7 +132,7 @@ function AdjustmentForm({ onClose, formId }: { onClose: () => void; formId: stri
             required
             inputMode="decimal"
             autoComplete="off"
-            hint={`Above ${limit} needs approval`}
+            hint={amountHint}
             error={errors.amount?.message}
             {...register('amount')}
           />

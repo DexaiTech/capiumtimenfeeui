@@ -55,6 +55,20 @@ export const RATE_MODE_OPTIONS: ReadonlyArray<SelectOption<RateMode>> = [
   { value: 'grade_only', label: RATE_MODE_LABEL.grade_only },
 ];
 
+/** Said when an approval switch that is saved on is turned off in the form (ticket APT53). */
+export const APPROVAL_SETTLE_HELP =
+  'Saving approves what is already waiting; anything dated in a locked period stays with the approvers.';
+
+/** The help under an approval switch: what on or off means, and what saving "off" does. */
+export function approvalSwitchHelp(
+  help: { on: string; off: string },
+  value: boolean,
+  saved: boolean,
+): string {
+  if (value) return help.on;
+  return saved ? `${help.off} ${APPROVAL_SETTLE_HELP}` : help.off;
+}
+
 /** The API bound of an approval or receipt threshold: £1,000,000.00 in pence. */
 export const THRESHOLD_MAX_PENCE = 100_000_000;
 /** The API bound of the mileage rate: £10.00 a mile in pence. */

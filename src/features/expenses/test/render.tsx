@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { Route, Routes } from 'react-router';
 import { vi } from 'vitest';
 
+import type { Organization } from '@/features/organizations';
 import { OWNER_PERMISSIONS, ownerContext } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 
@@ -17,12 +18,14 @@ export interface RenderOptions {
   route?: string;
   /** The route pattern the page is mounted on (needed for a page that reads `useParams`). */
   path?: string;
+  /** Practice settings that differ from the tests' practice (an approval switched off). */
+  organization?: Partial<Organization>;
 }
 
 /** The practice context of the tests: the expense settings come with the practice. */
-export const contextFor = (permissions: string[]) => ({
+export const contextFor = (permissions: string[], organization: Partial<Organization> = {}) => ({
   ...ownerContext,
-  organization: expensePractice,
+  organization: { ...expensePractice, ...organization },
   permissions,
 });
 
@@ -32,7 +35,12 @@ export const contextFor = (permissions: string[]) => ({
  */
 export function renderExpensePage(
   page: ReactElement,
-  { permissions = OWNER_PERMISSIONS, route = EXPENSES, path = EXPENSES }: RenderOptions = {},
+  {
+    permissions = OWNER_PERMISSIONS,
+    route = EXPENSES,
+    path = EXPENSES,
+    organization,
+  }: RenderOptions = {},
 ) {
   return renderInOrg(
     <>
@@ -42,7 +50,7 @@ export function renderExpensePage(
       </Routes>
       <Where />
     </>,
-    { context: contextFor(permissions), route },
+    { context: contextFor(permissions, organization), route },
   );
 }
 

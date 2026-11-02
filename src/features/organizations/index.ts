@@ -7,6 +7,7 @@ export {
   useUpdateOrganization,
 } from './api/hooks';
 export { organizationsApi } from './api/organizationsApi';
+export { ApprovalOffNotice, type ApprovalOffNoticeProps } from './components/ApprovalOffNotice';
 export { Can, type CanProps } from './components/Can';
 export { CreateOrganizationForm } from './components/CreateOrganizationForm';
 export { DeleteOrganization } from './components/DeleteOrganization';

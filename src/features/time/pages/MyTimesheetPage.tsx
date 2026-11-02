@@ -141,7 +141,11 @@ export default function MyTimesheetPage() {
   return (
     <PageShell
       title="My Timesheet"
-      description="Record time by day, week or calendar, and submit the week for approval."
+      description={
+        organization.require_timesheet_approval
+          ? 'Record time by day, week or calendar, and submit the week for approval.'
+          : 'Record time by day, week or calendar, and submit the week when it is complete.'
+      }
       actions={
         <>
           {view === 'week' && weekEditable ? (

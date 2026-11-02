@@ -47,6 +47,7 @@ export type TimeSettingsValues = z.infer<typeof timeSettingsSchema>;
 /** WIP and billing: the fixed-fee rule, the approval thresholds and the payment reminders. */
 export const billingSettingsSchema = z.object({
   fixed_fee_wip_mode: z.enum(FIXED_FEE_WIP_MODES, 'Choose when a fixed fee counts as WIP'),
+  wip_adjustment_approval_required: z.boolean(),
   wip_adjustment_approval_threshold: pounds(THRESHOLD_MAX_PENCE, THRESHOLD_MESSAGE),
   wip_write_off_percent_enabled: z.boolean(),
   wip_write_off_approval_threshold_percent: z.string().refine((value) => {
@@ -99,8 +100,9 @@ export const rateSettingsSchema = z
   });
 export type RateSettingsValues = z.infer<typeof rateSettingsSchema>;
 
-/** Expenses: pounds per mile, the mark-up in percent and the receipt threshold in pounds. */
+/** Expenses: approval, pounds per mile, the mark-up in percent and the receipt threshold. */
 export const expenseSettingsSchema = z.object({
+  expense_approval_required: z.boolean(),
   mileage_rate: pounds(
     MILEAGE_MAX_PENCE,
     'Enter the rate per mile in pounds, from 0 to 10.00, for example 0.45',
