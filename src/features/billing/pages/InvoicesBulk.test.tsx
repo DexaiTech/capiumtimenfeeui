@@ -169,4 +169,20 @@ describe('bulk delete of drafts on the invoice list', () => {
     const group = screen.getByRole('group', { name: 'Selected invoices' });
     expect(within(group).queryByRole('button', { name: /^Delete/ })).toBeNull();
   });
+
+  it.each([
+    ['who may send', OWNER_PERMISSIONS, true],
+    [
+      'who may issue but not send',
+      OWNER_PERMISSIONS.filter((code) => code !== 'invoice.send'),
+      false,
+    ],
+  ])('offers Email of the selection only to someone %s', async (_who, permissions, offered) => {
+    const user = userEvent.setup();
+    setup(permissions);
+    const list = await table();
+    await user.click(within(list).getByRole('checkbox', { name: 'Select INV-0007' }));
+    const group = screen.getByRole('group', { name: 'Selected invoices' });
+    expect(within(group).queryByRole('button', { name: 'Email 1' }) !== null).toBe(offered);
+  });
 });

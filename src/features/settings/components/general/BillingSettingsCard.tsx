@@ -239,6 +239,10 @@ export function BillingSettingsCard({ organization, editable }: GeneralCardProps
         error={errors.invoice_approval_threshold?.message}
         {...register('invoice_approval_threshold')}
       />
+      <p className="text-xs text-text-muted">
+        Invoices are approved by the staff who hold the “Approve invoices awaiting approval”
+        permission, set per person in Team &amp; Rates → a staff member → Permissions.
+      </p>
 
       <Controller
         control={control}

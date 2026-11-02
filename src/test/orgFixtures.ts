@@ -85,6 +85,7 @@ export const OWNER_PERMISSIONS = [
   'invoice.read',
   'invoice.create',
   'invoice.issue',
+  'invoice.send',
   'credit_note.create',
   'payment.read',
   'payment.record',
