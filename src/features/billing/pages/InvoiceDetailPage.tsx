@@ -125,7 +125,7 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
     can(P.invoiceIssue) &&
     invoice.payments.length === 0 &&
     invoice.credit_notes.length === 0;
-  const canSend = isIssued && can(P.invoiceIssue);
+  const canSend = isIssued && can(P.invoiceSend);
   const title = invoice.number ?? 'Draft invoice';
 
   // The invoice list's "Record payment…", "Raise credit note…" and "Void invoice…" open this page

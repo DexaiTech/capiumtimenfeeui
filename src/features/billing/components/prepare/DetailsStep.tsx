@@ -57,7 +57,8 @@ export function DetailsStep({
   const [running, setRunning] = useState<Finish | null>(null);
   // Emailing the invoice is the usual next step: on by default when the client has an address.
   const [sendChoice, setSendChoice] = useState<boolean | null>(null);
-  const sendAfter = sendChoice ?? invoiceEmail !== '';
+  const canSend = can(P.invoiceSend);
+  const sendAfter = canSend && (sendChoice ?? invoiceEmail !== '');
   const today = todayInZone(organization.timezone);
   const currency = organization.currency;
   const approval = needsApproval(approvalPolicyOf(organization), totals.gross);
@@ -217,7 +218,7 @@ export function DetailsStep({
         ) : null}
       </form>
 
-      {canIssue && !approval ? (
+      {canIssue && canSend && !approval ? (
         <Checkbox
           label="Email it to the client after issuing"
           description={

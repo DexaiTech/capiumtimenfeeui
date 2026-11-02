@@ -156,6 +156,7 @@ function InvoiceList() {
   const submittable = drafts.filter((row) => row.approval_required);
   const sendable = chosen.filter((row) => row.status === 'issued' && row.number !== null);
   const canIssue = can(P.invoiceIssue);
+  const canSend = can(P.invoiceSend);
   const canDelete = can(P.invoiceCreate);
   const canSubmit = can(P.invoiceCreate);
 
@@ -194,7 +195,7 @@ function InvoiceList() {
         onSelect: () => setDialog({ type: 'issue', invoice }),
       });
     }
-    if (invoice.status === 'issued' && canIssue) {
+    if (invoice.status === 'issued' && canSend) {
       items.push({
         id: 'send',
         label: 'Send email…',
@@ -418,7 +419,7 @@ function InvoiceList() {
                         Submit {submittable.length} for approval
                       </Button>
                     ) : null}
-                    {canIssue && sendable.length > 0 ? (
+                    {canSend && sendable.length > 0 ? (
                       <Button
                         size="sm"
                         variant="brand-outline"

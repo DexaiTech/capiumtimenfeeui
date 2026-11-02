@@ -36,7 +36,8 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
   const billing = useClientBilling(invoice.client?.id ?? null);
   const invoiceEmail = billing.data?.invoice_email ?? '';
   const [sendChoice, setSendChoice] = useState<boolean | null>(null);
-  const sendAfter = sendChoice ?? invoiceEmail !== '';
+  const canSend = can(PERMISSIONS.invoiceSend);
+  const sendAfter = canSend && (sendChoice ?? invoiceEmail !== '');
   const {
     register,
     handleSubmit,
@@ -141,16 +142,18 @@ function IssueForm({ invoice, onClose, onIssued }: Omit<IssueDialogProps, 'open'
             {...register('due_date')}
           />
         </div>
-        <Checkbox
-          label="Email it to the client after issuing"
-          description={
-            invoiceEmail
-              ? `The PDF goes to ${invoiceEmail}.`
-              : 'The client has no invoice email: it goes to the billing contacts, if there are any.'
-          }
-          checked={sendAfter}
-          onChange={(event) => setSendChoice(event.target.checked)}
-        />
+        {canSend ? (
+          <Checkbox
+            label="Email it to the client after issuing"
+            description={
+              invoiceEmail
+                ? `The PDF goes to ${invoiceEmail}.`
+                : 'The client has no invoice email: it goes to the billing contacts, if there are any.'
+            }
+            checked={sendAfter}
+            onChange={(event) => setSendChoice(event.target.checked)}
+          />
+        ) : null}
         {submitError ? (
           <FormAlert message={submitError.message} requestId={submitError.requestId} />
         ) : null}

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
+import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath } from '@/test/renderInOrg';
 import { ok, server } from '@/test/server';
 
@@ -18,7 +19,7 @@ const invoice = {
   client: bright,
 };
 
-function setup(invoiceEmail: string | null) {
+function setup(invoiceEmail: string | null, permissions = OWNER_PERMISSIONS) {
   const calls: string[] = [];
   server.use(
     http.get(orgApiPath('/clients/:clientId'), () =>
@@ -39,7 +40,9 @@ function setup(invoiceEmail: string | null) {
       return ok({ invoice_id: invoice.id, to: ['accounts@brightside.example'], queued: true });
     }),
   );
-  renderBillingPage(<IssueDialog open onClose={() => undefined} invoice={invoice} />);
+  renderBillingPage(<IssueDialog open onClose={() => undefined} invoice={invoice} />, {
+    permissions,
+  });
   return calls;
 }
 
@@ -75,6 +78,19 @@ describe('IssueDialog: issue and send', () => {
       within(dialog).getByRole('checkbox', { name: /Email it to the client/ }),
     ).not.toBeChecked();
     await user.click(within(dialog).getByRole('button', { name: 'Issue invoice' }));
+    await waitFor(() => expect(calls).toEqual(['issue']));
+  });
+
+  it('does not offer the email to someone who may issue but not send', async () => {
+    const user = userEvent.setup();
+    const calls = setup(
+      'accounts@brightside.example',
+      OWNER_PERMISSIONS.filter((permission) => permission !== 'invoice.send'),
+    );
+    const dialog = await screen.findByRole('dialog');
+    const button = await within(dialog).findByRole('button', { name: 'Issue invoice' });
+    expect(within(dialog).queryByRole('checkbox', { name: /Email it to the client/ })).toBeNull();
+    await user.click(button);
     await waitFor(() => expect(calls).toEqual(['issue']));
   });
 });

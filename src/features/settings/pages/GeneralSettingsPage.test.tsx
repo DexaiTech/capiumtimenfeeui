@@ -76,6 +76,10 @@ describe('GeneralSettingsPage', () => {
     expect(billing.getByRole('textbox', { name: 'Invoice approval threshold (£)' })).toHaveValue(
       '0.00',
     );
+    // Who approves is a permission of each person, not a setting of the practice.
+    expect(billing.getByText(/Approve invoices awaiting approval/)).toHaveTextContent(
+      'Team & Rates → a staff member → Permissions',
+    );
     expect(billing.getByRole('switch', { name: 'Automatic payment reminders' })).not.toBeChecked();
     // A practice without a schedule of its own has the one day after the due date.
     expect(billing.getByRole('list', { name: 'Reminder days' })).toHaveTextContent(

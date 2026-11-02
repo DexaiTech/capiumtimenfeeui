@@ -43,6 +43,7 @@ export const PERMISSIONS = {
   invoiceRead: 'invoice.read',
   invoiceCreate: 'invoice.create',
   invoiceIssue: 'invoice.issue',
+  invoiceSend: 'invoice.send',
   creditNoteCreate: 'credit_note.create',
   paymentRead: 'payment.read',
   paymentRecord: 'payment.record',
