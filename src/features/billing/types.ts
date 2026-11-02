@@ -5,7 +5,7 @@
  * `YYYY-MM-DD` in the practice time zone and timestamps UTC.
  */
 import type { BasisPoints, IsoDate, IsoDateTime, Pence } from '@/types/api';
-import type { RecoveryPotentials } from '@/types/recovery';
+import type { RecoveryPotentials, RecoveryRate } from '@/types/recovery';
 
 export interface ClientRef {
   id: string;
@@ -490,7 +490,7 @@ export interface Breakdown {
   budgeted_cost: Pence | null;
   agreed_price: Pence | null;
   basis_values: BasisValues;
-  /** The time ready to bill at the task rate, the staff rates, cost and cost plus. */
+  /** The time ready to bill at the recovery rate, the staff rates, cost and cost plus. */
   recovery: RecoveryPotentials;
 }
 
@@ -514,8 +514,10 @@ export interface ClientBillingSummary {
   jobs: JobBilling[];
   totals: Breakdown;
   show_cost: boolean;
-  /** The practice's cost-plus mark-up (basis points) behind `recovery.cost_plus_value`. */
+  /** The client's cost-plus mark-up, else the practice's (basis points): jobs without their own. */
   markup_bp: number;
+  /** The practice's order of the rates behind `recovery.recovery_value`. */
+  rate_order: RecoveryRate[];
   /** The cost of each time entry ready to bill, by entry id; null without `rate.read`. */
   time_costs: Record<string, Pence> | null;
 }
@@ -627,9 +629,7 @@ export type DebtorSort =
 /* -------------------------------- Reminders -------------------------------- */
 
 export type ReminderTemplate =
-  | 'client_payment_reminder'
-  | 'client_payment_final_notice'
-  | 'client_payment_upcoming';
+  'client_payment_reminder' | 'client_payment_final_notice' | 'client_payment_upcoming';
 
 export type ReminderSkipReason =
   'already_reminded_today' | 'not_overdue' | 'no_balance' | 'not_issued' | 'no_recipient';

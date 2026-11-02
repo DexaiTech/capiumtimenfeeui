@@ -44,7 +44,14 @@ export const REPORTS: ReadonlyArray<ReportDefinition> = [
     key: 'recovery-analysis',
     label: 'Recovery analysis',
     description:
-      'Invoice value against the task rate, staff rates and cost plus, per job, client and person.',
+      'Invoice value against the recovery rate, staff rates and cost plus, per job, client and person.',
+    permission: PERMISSIONS.reportFinancial,
+  },
+  {
+    key: 'cost-to-business',
+    label: 'Cost to Business',
+    description:
+      'What the work cost the practice at each person’s cost rate, against the invoice value.',
     permission: PERMISSIONS.reportFinancial,
   },
   {

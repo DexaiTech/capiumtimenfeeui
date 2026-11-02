@@ -373,6 +373,28 @@ describe('the actions of a job', () => {
     });
   });
 
+  it("sets the job's own cost-plus mark-up, in percent, and clears it again", async () => {
+    const user = userEvent.setup();
+    const backend = setup();
+    await jobAction(user, 'J00001 Year-end accounts', 'Edit');
+    const form = await screen.findByRole('region', { name: 'Edit job' });
+    const markup = within(form).getByLabelText('Cost-plus mark-up (%)');
+    expect(markup).toHaveValue('');
+    await user.type(markup, 'lots');
+    await user.click(within(form).getByRole('button', { name: 'Save job' }));
+    expect(await within(form).findByText(/Enter a percentage from 0 to 1000/)).toBeInTheDocument();
+    expect(callsOf(backend, 'PATCH')).toHaveLength(0);
+
+    await user.clear(markup);
+    await user.type(markup, '25');
+    await user.click(within(form).getByRole('button', { name: 'Save job' }));
+    expect(await screen.findByText('Job saved')).toBeInTheDocument();
+    expect(callsOf(backend, 'PATCH')[0]).toMatchObject({
+      path: '/jobs/j-1',
+      body: { cost_plus_markup_bp: 2500 },
+    });
+  });
+
   it('deletes a job after a confirmation, and keeps the confirmation open when the API refuses', async () => {
     const user = userEvent.setup();
     const backend = setup({ inUse: new Set(['j-1']) });

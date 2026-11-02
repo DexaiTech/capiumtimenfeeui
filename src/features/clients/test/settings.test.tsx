@@ -122,6 +122,22 @@ describe('BillingCard', () => {
     expect(bodies).toEqual([]);
   });
 
+  it("sets the client's own cost-plus mark-up for the recovery analysis", async () => {
+    const bodies: unknown[] = [];
+    const user = userEvent.setup();
+    await openSettings({ handlers: [patchClient(bodies)] });
+    await billingEmail();
+
+    const billing = region('Billing');
+    const markup = billing.getByRole('textbox', { name: 'Cost-plus mark-up (%)' });
+    expect(markup).toHaveValue('');
+    expect(billing.getByText(/Blank: the practice's 50%/)).toBeInTheDocument();
+    await user.type(markup, '40');
+    await user.click(billing.getByRole('button', { name: 'Save billing settings' }));
+
+    await waitFor(() => expect(bodies).toEqual([{ cost_plus_markup_bp: 4000 }]));
+  });
+
   it('offers the VAT codes, services and templates of the practice', async () => {
     await openSettings();
     await billingEmail();

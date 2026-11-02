@@ -68,3 +68,42 @@ describe('General settings: the cost-plus mark-up of the recovery analysis', () 
     expect(bodies).toEqual([]);
   });
 });
+
+describe('General settings: the recovery rate priority', () => {
+  it('lists the client job-specific rate, then the task rate, then the staff rate by default', async () => {
+    const { rates } = await openRates();
+    expect(rates.getByRole('combobox', { name: '1st rate' })).toHaveValue('client_job');
+    expect(rates.getByRole('combobox', { name: '2nd rate' })).toHaveValue('task');
+    expect(rates.getByRole('combobox', { name: '3rd rate' })).toHaveValue('staff');
+    expect(
+      rates.getByText(
+        /Client job-specific rate, then task-specific rate, then staff charge-out rate/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('sends the order the practice chooses', async () => {
+    const bodies = capturePatch();
+    const { user, rates } = await openRates();
+
+    await user.selectOptions(rates.getByRole('combobox', { name: '1st rate' }), 'task');
+    await user.selectOptions(rates.getByRole('combobox', { name: '2nd rate' }), 'client_job');
+    await user.click(rates.getByRole('button', { name: 'Save rate settings' }));
+
+    expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ recovery_rate_order: ['task', 'client_job', 'staff'] }]);
+  });
+
+  it('refuses a rate chosen twice, without asking the API', async () => {
+    const bodies = capturePatch();
+    const { user, rates } = await openRates();
+
+    await user.selectOptions(rates.getByRole('combobox', { name: '1st rate' }), 'staff');
+    await user.click(rates.getByRole('button', { name: 'Save rate settings' }));
+
+    expect(
+      (await rates.findAllByText('Each rate can come once only: choose another rate')).length,
+    ).toBeGreaterThan(0);
+    expect(bodies).toEqual([]);
+  });
+});

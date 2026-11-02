@@ -18,7 +18,10 @@ import { describePermission } from './describePermission';
 export function NoAccessPage({ rule }: { rule?: AccessRule }) {
   const { organization, can } = useOrg();
   useDocumentTitle('No access');
-  const needs = rule?.anyOf.map(describePermission) ?? [];
+  const anyOf = rule?.anyOf.map(describePermission) ?? [];
+  // Every one of `allOf` is needed as well: "… or …, and …".
+  const allOf = (rule?.allOf ?? []).map(describePermission);
+  const needs = anyOf.length > 0 ? [anyOf.join(' or '), ...allOf] : allOf;
   return (
     <>
       <PageHeader title="No access" />
@@ -29,7 +32,7 @@ export function NoAccessPage({ rule }: { rule?: AccessRule }) {
           title="Your role does not include this page"
           description={
             needs.length > 0
-              ? `This page needs permission to: ${needs.join(' or ')}. Ask your practice administrator to add it to your role.`
+              ? `This page needs permission to: ${needs.join(', and ')}. Ask your practice administrator to add it to your role.`
               : 'Ask your practice administrator if you need it.'
           }
           action={

@@ -36,6 +36,7 @@ export const testOrganization: Organization = {
   overtime_enabled: false,
   overtime_multiplier_bp: 15000,
   cost_plus_markup_bp: 5000,
+  recovery_rate_order: ['client_job', 'task', 'staff'],
   email: 'hello@acme.example',
   phone: null,
   address_line1: '1 High Street',

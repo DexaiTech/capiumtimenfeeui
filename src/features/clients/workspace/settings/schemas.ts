@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { isMarkupInput, MARKUP_MESSAGE, markupBpToInput, percentToMarkupBp } from '@/utils/markup';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import { intOrNull, optionalEmail, optionalUuid, orNull, text, wholeNumber } from '../../schemas';
@@ -30,6 +31,8 @@ export const billingFormSchema = z.object({
   /** The contact flagged `is_billing`; blank: none. */
   billing_contact_id: z.string(),
   payment_terms_days: wholeNumber(0, 365, 'Enter a number of days from 0 to 365'),
+  /** The recovery analysis mark-up in percent; blank: the practice's. */
+  cost_plus_markup: z.string().refine(isMarkupInput, MARKUP_MESSAGE),
   default_vat_rate_id: optionalUuid,
   default_service_id: optionalUuid,
   invoice_template_id: optionalUuid,
@@ -42,6 +45,7 @@ export const BILLING_FORM_FIELDS = [
   'invoice_email',
   'billing_contact_id',
   'payment_terms_days',
+  'cost_plus_markup',
   'default_vat_rate_id',
   'default_service_id',
   'invoice_template_id',
@@ -53,6 +57,7 @@ export function billingToForm(client: ClientDetail): BillingFormValues {
     invoice_email: client.invoice_email ?? '',
     billing_contact_id: client.contacts.find((contact) => contact.is_billing)?.id ?? '',
     payment_terms_days: client.payment_terms_days === null ? '' : String(client.payment_terms_days),
+    cost_plus_markup: markupBpToInput(client.cost_plus_markup_bp),
     default_vat_rate_id: client.default_vat_rate_id ?? '',
     default_service_id: client.default_service_id ?? '',
     invoice_template_id: client.invoice_template_id ?? '',
@@ -65,6 +70,9 @@ function billingFields(values: BillingFormValues) {
   return {
     invoice_email: orNull(values.invoice_email),
     payment_terms_days: intOrNull(values.payment_terms_days),
+    cost_plus_markup_bp: values.cost_plus_markup.trim()
+      ? percentToMarkupBp(values.cost_plus_markup)
+      : null,
     default_vat_rate_id: orNull(values.default_vat_rate_id),
     default_service_id: orNull(values.default_service_id),
     invoice_template_id: orNull(values.invoice_template_id),

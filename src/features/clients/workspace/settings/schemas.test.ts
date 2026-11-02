@@ -43,6 +43,7 @@ describe('billingToForm', () => {
       invoice_email: '',
       billing_contact_id: TARAK.id,
       payment_terms_days: '30',
+      cost_plus_markup: '',
       default_vat_rate_id: '',
       default_service_id: '',
       invoice_template_id: '',

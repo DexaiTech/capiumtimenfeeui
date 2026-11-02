@@ -70,9 +70,13 @@ import { ORG_SEGMENTS, modulePath, type ModuleSegment } from './routes';
  * place that says who may open what. UI gating only: the API checks every permission again.
  */
 
-/** Visible when the caller holds at least one of `anyOf`; an empty list means every member. */
+/**
+ * Visible when the caller holds at least one of `anyOf` (an empty list means every member) and,
+ * when given, every one of `allOf`.
+ */
 export interface AccessRule {
   anyOf: ReadonlyArray<PermissionCode>;
+  allOf?: ReadonlyArray<PermissionCode>;
 }
 
 export type ModuleId =
@@ -139,6 +143,7 @@ interface PageDef {
   label: string;
   icon: LucideIcon;
   anyOf?: ReadonlyArray<PermissionCode>;
+  allOf?: ReadonlyArray<PermissionCode>;
   /** Defaults to the id; '' for the module's index page. */
   segment?: string;
   detail?: boolean;
@@ -166,6 +171,7 @@ function pagesOf(
       group: def.group,
       description: PAGE_DESCRIPTIONS[`${moduleId}/${def.id}`],
       anyOf: def.anyOf ?? [],
+      allOf: def.allOf,
       to: (slug: string) => modulePath(slug, moduleSegment, segment),
     };
   });
@@ -621,6 +627,14 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         group: 'Jobs & WIP',
       },
       {
+        id: 'cost-to-business',
+        label: 'Cost to Business',
+        icon: Coins,
+        anyOf: [P.reportFinancial],
+        allOf: [P.rateRead],
+        group: 'Jobs & WIP',
+      },
+      {
         id: 'expenses',
         label: 'Expenses Report',
         icon: Receipt,
@@ -792,7 +806,10 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
 
 /** True when `can` satisfies the rule (an empty rule admits every member). */
 export function allows(rule: AccessRule, can: (permission: string) => boolean): boolean {
-  return rule.anyOf.length === 0 || rule.anyOf.some((permission) => can(permission));
+  return (
+    (rule.anyOf.length === 0 || rule.anyOf.some((permission) => can(permission))) &&
+    (rule.allOf ?? []).every((permission) => can(permission))
+  );
 }
 
 /**

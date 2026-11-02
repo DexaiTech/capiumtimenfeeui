@@ -3,6 +3,8 @@
  * Money is in minor units (pence), durations in whole minutes.
  */
 
+import type { RecoveryRate } from './recovery';
+
 /** The minute increments the API accepts for `time_increment_minutes`. */
 export const TIME_INCREMENTS = [1, 5, 6, 10, 15, 30, 60] as const;
 export type TimeIncrement = (typeof TIME_INCREMENTS)[number];
@@ -67,6 +69,8 @@ export interface Organization {
   /** Basis points added to the cost of the work for the cost-plus value of the recovery analysis
    * (5000 = 50%: time that cost £50.00 is worth £75.00). */
   cost_plus_markup_bp: number;
+  /** The order the recovery analysis looks for the rate the work could have billed at: each once. */
+  recovery_rate_order: RecoveryRate[];
   email: string | null;
   phone: string | null;
   address_line1: string | null;
@@ -125,6 +129,7 @@ export type OrganizationUpdate = Partial<
     | 'overtime_enabled'
     | 'overtime_multiplier_bp'
     | 'cost_plus_markup_bp'
+    | 'recovery_rate_order'
     | 'email'
     | 'phone'
     | 'address_line1'

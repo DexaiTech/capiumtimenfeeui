@@ -4,6 +4,7 @@ import { FIXED_FEE_WIP_MODES, RATE_MODES, TIME_INCREMENTS } from '@/types/organi
 import { parseMultiplierToBp } from '@/utils/multiplier';
 import { hoursToMinutes } from '@/utils/minutes';
 import { parsePounds } from '@/utils/money';
+import { RECOVERY_RATES } from '@/utils/recovery';
 
 import { parsePercentToBp } from '../utils/vat';
 import {
@@ -63,22 +64,39 @@ export const billingSettingsSchema = z.object({
 });
 export type BillingSettingsValues = z.infer<typeof billingSettingsSchema>;
 
-export const rateSettingsSchema = z.object({
-  rate_mode: z.enum(RATE_MODES, 'Choose how rates are applied'),
-  overtime_enabled: z.boolean(),
-  /** Typed as a multiple of the normal rate ("1.5"); the API stores basis points. */
-  overtime_multiplier: z
-    .string()
-    .refine(
-      (value) => parseMultiplierToBp(value) !== null,
-      'Enter a multiple of the normal rate from 1 to 10, for example 1.5',
-    ),
-  /** The cost-plus mark-up of the recovery analysis, typed in percent ("50"). */
-  cost_plus_markup: z.string().refine((value) => {
-    const bp = parseMarkupToBp(value);
-    return bp !== null && bp <= MARKUP_MAX_BP;
-  }, 'Enter a percentage from 0 to 1000 with at most two decimals, for example 50'),
-});
+export const rateSettingsSchema = z
+  .object({
+    rate_mode: z.enum(RATE_MODES, 'Choose how rates are applied'),
+    overtime_enabled: z.boolean(),
+    /** Typed as a multiple of the normal rate ("1.5"); the API stores basis points. */
+    overtime_multiplier: z
+      .string()
+      .refine(
+        (value) => parseMultiplierToBp(value) !== null,
+        'Enter a multiple of the normal rate from 1 to 10, for example 1.5',
+      ),
+    /** The cost-plus mark-up of the recovery analysis, typed in percent ("50"). */
+    cost_plus_markup: z.string().refine((value) => {
+      const bp = parseMarkupToBp(value);
+      return bp !== null && bp <= MARKUP_MAX_BP;
+    }, 'Enter a percentage from 0 to 1000 with at most two decimals, for example 50'),
+    /** The recovery rate priority: which of the three rates comes 1st, 2nd and 3rd. */
+    rate_order_1: z.enum(RECOVERY_RATES),
+    rate_order_2: z.enum(RECOVERY_RATES),
+    rate_order_3: z.enum(RECOVERY_RATES),
+  })
+  .superRefine((values, ctx) => {
+    const chosen = [values.rate_order_1, values.rate_order_2, values.rate_order_3];
+    chosen.forEach((rate, index) => {
+      if (chosen.indexOf(rate) !== index) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [`rate_order_${String(index + 1)}`],
+          message: 'Each rate can come once only: choose another rate',
+        });
+      }
+    });
+  });
 export type RateSettingsValues = z.infer<typeof rateSettingsSchema>;
 
 /** Expenses: pounds per mile, the mark-up in percent and the receipt threshold in pounds. */

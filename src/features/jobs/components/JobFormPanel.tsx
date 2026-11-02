@@ -37,6 +37,7 @@ const FIELDS = [
   'billing_basis',
   'fixed_fee',
   'hourly_rate',
+  'cost_plus_markup',
   'budget_minutes',
   'budget_fee',
   'budget_cost',
@@ -304,6 +305,14 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
             hint="What the work is expected to cost; compared with the actual cost when billing."
             error={errors.budget_cost?.message}
             {...register('budget_cost')}
+          />
+          <Input
+            label="Cost-plus mark-up (%)"
+            inputMode="decimal"
+            autoComplete="off"
+            hint="Recovery analysis: what this job's cost is marked up by. Leave empty to use the client's, else the practice's."
+            error={errors.cost_plus_markup?.message}
+            {...register('cost_plus_markup')}
           />
         </FormSection>
         <FormSection title="Dates" className="grid gap-4 sm:grid-cols-2">

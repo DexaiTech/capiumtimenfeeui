@@ -9,7 +9,14 @@ import { useOrg } from '@/features/organizations';
 import type { BasisPoints, Pence } from '@/types/api';
 import { formatMinutes } from '@/utils/minutes';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
-import { describeShortfall, recoveryLines } from '@/utils/recovery';
+import {
+  costPlusLabel,
+  describeShortfall,
+  invoiceParts,
+  rateMix,
+  rateOrderText,
+  recoveryLines,
+} from '@/utils/recovery';
 
 import { useClientRecovery } from '../../api';
 import { LoadError } from '../records/RecordTable';
@@ -28,8 +35,9 @@ function basisCell(
   shortfall: Pence | null,
   recoveryBp: BasisPoints | null,
   currency: string,
+  compared: boolean,
 ) {
-  if (value === null || shortfall === null) return dash;
+  if (value === null || shortfall === null || !compared) return dash;
   return (
     <div className="flex flex-col items-end">
       <span className="tabular-nums text-text">{formatMoney(value, currency)}</span>
@@ -43,11 +51,23 @@ function basisCell(
   );
 }
 
+/** The job's own rate (the client job-specific rate) and mark-up, under its terms. */
+function jobRates(job: JobRecovery, currency: string): string | null {
+  const parts: string[] = [];
+  if (job.hourly_rate !== null) {
+    parts.push(`Client rate ${formatMoney(job.hourly_rate, currency)}/h`);
+  }
+  if (job.job_markup_bp !== null) parts.push(`mark-up ${formatBasisPoints(job.job_markup_bp)}`);
+  return parts.length ? parts.join(' · ') : null;
+}
+
 /**
  * The "Invoices & Recovery" side of the client's account (`GET /clients/{id}/recovery`,
- * `wip.read`): for each job with billable time, what it was invoiced at (or will be, on its terms)
- * against the task rate, each person's own charge-out rate and cost plus the practice's mark-up,
- * so the practice sees where it leaves revenue on the table. Cost plus needs `rate.read`.
+ * `wip.read`), kept apart from Invoices and Payments: for each job with billable time, what its
+ * invoices bill (less the credit notes allocated to them; a draft counts) against the recovery
+ * rate (the practice's order of the client job-specific, task and staff rates), each person's own
+ * charge-out rate and cost plus the mark-up. Work not invoiced yet is WIP and is not compared, so
+ * a fixed fee counts once it is invoiced. Cost plus needs `rate.read`.
  */
 export function RecoveryTab({ clientId, clientName }: RecoveryTabProps) {
   const { organization } = useOrg();
@@ -73,7 +93,15 @@ export function RecoveryTab({ clientId, clientName }: RecoveryTabProps) {
     );
   }
 
-  const { jobs, totals, markup_bp: markupBp, show_cost: showCost } = recovery.data;
+  const {
+    jobs,
+    totals,
+    show_cost: showCost,
+    rate_order: rateOrder,
+    credit_on_account: credit,
+    client_markup_bp: clientMarkup,
+    practice_markup_bp: practiceMarkup,
+  } = recovery.data;
   if (jobs.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface shadow-card">
@@ -90,26 +118,30 @@ export function RecoveryTab({ clientId, clientName }: RecoveryTabProps) {
     {
       id: 'job',
       header: 'Job',
-      cell: (job) => (
-        <div className="flex min-w-0 flex-col">
-          {job.job_id ? (
-            <Link
-              to={routes.org.job(organization.slug, job.job_id)}
-              className="font-semibold text-brand-text hover:underline"
-            >
-              {job.number}
-              <span className="ml-1.5 font-normal text-text-muted">{job.name}</span>
-            </Link>
-          ) : (
-            <span className="text-text-muted">{job.name}</span>
-          )}
-          <span className="text-xs text-text-muted">{job.terms}</span>
-        </div>
-      ),
+      cell: (job) => {
+        const rates = jobRates(job, currency);
+        return (
+          <div className="flex min-w-0 flex-col">
+            {job.job_id ? (
+              <Link
+                to={routes.org.job(organization.slug, job.job_id)}
+                className="font-semibold text-brand-text hover:underline"
+              >
+                {job.number}
+                <span className="ml-1.5 font-normal text-text-muted">{job.name}</span>
+              </Link>
+            ) : (
+              <span className="text-text-muted">{job.name}</span>
+            )}
+            <span className="text-xs text-text-muted">{job.terms}</span>
+            {rates ? <span className="text-xs text-text-muted">{rates}</span> : null}
+          </div>
+        );
+      },
     },
     {
       id: 'hours',
-      header: 'Hours',
+      header: 'Hours invoiced',
       align: 'end',
       className: 'tabular-nums',
       cell: (job) => formatMinutes(job.minutes),
@@ -124,20 +156,25 @@ export function RecoveryTab({ clientId, clientName }: RecoveryTabProps) {
           <span className="font-semibold tabular-nums text-text">
             {formatMoney(job.invoice_value, currency)}
           </span>
-          {job.to_bill_value > 0 ? (
-            <span className="text-xs text-text-muted">
-              {formatMoney(job.to_bill_value, currency)} still to bill
-            </span>
+          {job.credited_value > 0 || job.draft_value > 0 ? (
+            <span className="text-xs text-text-muted">{invoiceParts(job, currency)}</span>
           ) : null}
         </div>
       ),
     },
     {
-      id: 'task',
-      header: 'At task rate',
+      id: 'recovery',
+      header: 'Potential recovery',
       align: 'end',
       className: 'whitespace-nowrap',
-      cell: (job) => basisCell(job.task_value, job.task_shortfall, job.task_recovery_bp, currency),
+      cell: (job) =>
+        basisCell(
+          job.recovery_value,
+          job.recovery_shortfall,
+          job.recovery_bp,
+          currency,
+          job.minutes > 0,
+        ),
     },
     {
       id: 'staff',
@@ -145,13 +182,19 @@ export function RecoveryTab({ clientId, clientName }: RecoveryTabProps) {
       align: 'end',
       className: 'whitespace-nowrap',
       cell: (job) =>
-        basisCell(job.staff_value, job.staff_shortfall, job.staff_recovery_bp, currency),
+        basisCell(
+          job.staff_value,
+          job.staff_shortfall,
+          job.staff_recovery_bp,
+          currency,
+          job.minutes > 0,
+        ),
     },
   ];
   if (showCost) {
     columns.push({
       id: 'cost-plus',
-      header: `Cost plus ${formatBasisPoints(markupBp)}`,
+      header: costPlusLabel(totals.markup_bp),
       align: 'end',
       className: 'whitespace-nowrap',
       cell: (job) =>
@@ -160,29 +203,61 @@ export function RecoveryTab({ clientId, clientName }: RecoveryTabProps) {
           job.cost_plus_shortfall,
           job.cost_plus_recovery_bp,
           currency,
+          job.minutes > 0,
         ),
     });
   }
+  columns.push({
+    id: 'wip',
+    header: 'Not invoiced (WIP)',
+    align: 'end',
+    className: 'whitespace-nowrap',
+    cell: (job) =>
+      job.wip_minutes > 0 ? (
+        <div className="flex flex-col items-end">
+          <span className="tabular-nums text-text">{formatMoney(job.wip_value, currency)}</span>
+          <span className="text-xs text-text-muted">{formatMinutes(job.wip_minutes)}</span>
+        </div>
+      ) : (
+        dash
+      ),
+  });
+
+  const mix = rateMix(totals);
+  const markup =
+    clientMarkup !== null
+      ? `the client's mark-up of ${formatBasisPoints(clientMarkup)}`
+      : `the practice's mark-up of ${formatBasisPoints(practiceMarkup)}`;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-base font-semibold text-text">Invoices &amp; Recovery</h2>
         <p className="text-sm text-text-muted">
-          What the work was invoiced at against what it would have billed at the task rate (the
-          rate of the job or service), at each person’s own charge-out rate and at cost plus the
-          practice’s mark-up. Revenue left on the table shows where to bill or staff differently.
+          What the invoices bill for the work against what it would have billed at the recovery rate
+          ({rateOrderText(rateOrder)}: the first that exists), at each person’s own charge-out rate
+          and at cost plus {markup} (a job’s own comes first). Work not invoiced yet is WIP: a fixed
+          fee counts here once it is invoiced.
         </p>
       </div>
       <RecoveryComparison
         title="Recovery for the client"
-        description={`All the billable work: ${formatMinutes(totals.minutes)}.`}
+        description={`The invoiced work: ${formatMinutes(totals.minutes)}${mix ? ` (${mix})` : ''}. Not invoiced yet: ${formatMinutes(totals.wip_minutes)}, ${formatMoney(totals.wip_value, currency)} of WIP.`}
         invoiceLabel="Invoice value"
         invoiceValue={totals.invoice_value}
-        invoiceHint={`${formatMoney(totals.invoiced_value, currency)} invoiced, ${formatMoney(totals.to_bill_value, currency)} still to bill`}
-        lines={recoveryLines(totals, markupBp)}
+        invoiceHint={invoiceParts(totals, currency)}
+        lines={recoveryLines(totals)}
         currency={currency}
       />
+      {credit > 0 ? (
+        <p className="text-sm text-text-muted">
+          <span className="font-medium text-text">
+            {formatMoney(credit, currency)} credit on account
+          </span>{' '}
+          (payments not allocated to an invoice): it reduces no invoice until it is allocated to
+          one.
+        </p>
+      ) : null}
       <DataTable
         caption={`Recovery by job for ${clientName}`}
         columns={columns}
