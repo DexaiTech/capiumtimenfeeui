@@ -60,6 +60,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { approvalOn, type ApprovalArea, type ApprovalSwitches } from '@/utils/approvals';
+
 import { PERMISSIONS as P, type PermissionCode } from './permissions';
 import { PAGE_DESCRIPTIONS } from './pageDescriptions';
 import { ORG_SEGMENTS, modulePath, type ModuleSegment } from './routes';
@@ -108,6 +110,11 @@ export interface SubPage extends AccessRule {
   group?: string;
   /** One line in plain words on what the page is for: the tooltip of its menu entry. */
   description?: string;
+  /**
+   * An approval page: not offered when the practice approves none of these areas (its approval
+   * switches in General Settings). The page and its address still exist.
+   */
+  approval?: ReadonlyArray<ApprovalArea>;
   to: (slug: string) => string;
 }
 
@@ -151,6 +158,7 @@ interface PageDef {
   alsoActiveOn?: ReadonlyArray<string>;
   /** Groups the page under a heading in the "More" overflow menu; ungrouped pages get none. */
   group?: string;
+  approval?: ReadonlyArray<ApprovalArea>;
 }
 
 function pagesOf(
@@ -169,6 +177,7 @@ function pagesOf(
       hidden: def.hidden,
       alsoActiveOn: def.alsoActiveOn,
       group: def.group,
+      approval: def.approval,
       description: PAGE_DESCRIPTIONS[`${moduleId}/${def.id}`],
       anyOf: def.anyOf ?? [],
       allOf: def.allOf,
@@ -229,6 +238,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         icon: BadgeCheck,
         anyOf: [P.timesheetApprove, P.expenseApprove],
         group: 'Time & approvals',
+        approval: ['timesheet', 'expense'],
       },
       {
         id: 'missing-timesheets',
@@ -316,6 +326,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         icon: BadgeCheck,
         anyOf: [P.timesheetApprove],
         group: 'Team & review',
+        approval: ['timesheet'],
       },
       {
         id: 'analysis',
@@ -421,6 +432,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         icon: BadgeCheck,
         anyOf: [P.expenseApprove],
         group: 'Review',
+        approval: ['expense'],
       },
       {
         id: 'receipts',
@@ -854,18 +866,28 @@ export interface VisibleModule extends NavModule {
   href: string;
 }
 
+/** False for an approval page whose every area the practice has switched off. */
+export function approvalPageOn(page: Pick<SubPage, 'approval'>, switches?: ApprovalSwitches) {
+  if (!page.approval || !switches) return true;
+  return page.approval.some((area) => approvalOn(switches, area));
+}
+
 /**
  * The modules the caller may open, each with the pages they may open. A module whose every
- * page is hidden is hidden too.
+ * page is hidden is hidden too. With the practice's approval switches, approval pages of
+ * switched-off areas are not offered either.
  */
 export function visibleModules(
   slug: string,
   can: (permission: string) => boolean,
+  switches?: ApprovalSwitches,
 ): VisibleModule[] {
   const result: VisibleModule[] = [];
   for (const module of NAV_MODULES) {
     if (!allows(module, can)) continue;
-    const pages = module.pages.filter((page) => allows(page, can) && !page.hidden);
+    const pages = module.pages.filter(
+      (page) => allows(page, can) && !page.hidden && approvalPageOn(page, switches),
+    );
     if (module.pages.length > 0 && pages.length === 0) continue;
     const first = pages[0];
     result.push({ ...module, pages, href: first ? first.to(slug) : module.to(slug) });

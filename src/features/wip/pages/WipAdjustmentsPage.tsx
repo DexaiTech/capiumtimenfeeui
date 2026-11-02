@@ -26,7 +26,7 @@ const VIEWS = [
  */
 export default function WipAdjustmentsPage() {
   useDocumentTitle('WIP Adjustments');
-  const { can } = useOrg();
+  const { organization, can } = useOrg();
   const { params, setParam } = useUrlParams();
   const view: View =
     VIEWS.find((item) => item.value === params.get('view'))?.value ?? 'adjustments';
@@ -36,7 +36,11 @@ export default function WipAdjustmentsPage() {
   return (
     <PageShell
       title="WIP Adjustments"
-      description="Write work in progress on or off with a reason; larger amounts wait for approval. Items written off from the WIP details can be reversed under Write-offs, and the ledger records every movement."
+      description={`Write work in progress on or off with a reason; ${
+        organization.wip_adjustment_approval_required
+          ? 'larger amounts wait for approval'
+          : 'it takes effect at once'
+      }. Items written off from the WIP details can be reversed under Write-offs, and the ledger records every movement.`}
       actions={
         <>
           <SegmentedControl

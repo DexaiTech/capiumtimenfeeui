@@ -7,7 +7,7 @@ import { hoursToMinutes, minutesToHours } from '@/utils/minutes';
 
 import { useOrganizationForm } from '../../hooks/useOrganizationForm';
 import { timeSettingsSchema, type TimeSettingsValues } from '../../schemas/general';
-import { INCREMENT_OPTIONS } from '../../utils/general';
+import { approvalSwitchHelp, INCREMENT_OPTIONS } from '../../utils/general';
 import { SettingsCard } from './SettingsCard';
 import type { GeneralCardProps } from './types';
 import { WorkingDaysField } from './WorkingDaysField';
@@ -25,6 +25,11 @@ const FIELD_NAMES = { minutes_per_day: 'hours_per_day' };
 const WEEK_START_OPTIONS = WEEKDAYS.map((day) => ({ value: String(day.value), label: day.label }));
 
 const sortedDays = (days: number[]) => [...days].sort((a, b) => a - b);
+
+const APPROVAL_HELP = {
+  on: 'On: weeks are submitted to a manager for approval, and only time on approved timesheets can be billed.',
+  off: 'Off: nobody approves timesheets. Time can be billed as it is recorded, and submitting a week approves it at once.',
+};
 
 function toValues(organization: Organization): TimeSettingsValues {
   return {
@@ -136,11 +141,11 @@ export function TimeSettingsCard({ organization, editable }: GeneralCardProps) {
             onChange={field.onChange}
             disabled={!editable}
             label="Timesheet approval"
-            description={
-              approval
-                ? 'On: only time on approved timesheets can be billed.'
-                : 'Off: time can be billed without an approved timesheet.'
-            }
+            description={approvalSwitchHelp(
+              APPROVAL_HELP,
+              approval,
+              organization.require_timesheet_approval,
+            )}
             className="rounded-md border border-border px-3 py-2"
           />
         )}

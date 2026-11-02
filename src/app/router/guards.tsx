@@ -71,7 +71,9 @@ export function RequireAccess({ rule }: { rule: AccessRule }) {
 /** The index of a module with sub-pages: the first sub-page the caller may open. */
 export function ModuleIndexRedirect({ moduleId }: { moduleId: ModuleId }) {
   const { organization, can } = useOrg();
-  const module = visibleModules(organization.slug, can).find((entry) => entry.id === moduleId);
+  const module = visibleModules(organization.slug, can, organization).find(
+    (entry) => entry.id === moduleId,
+  );
   if (!module) return <NoAccessPage />;
   return <Navigate to={module.href} replace />;
 }

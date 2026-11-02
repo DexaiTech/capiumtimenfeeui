@@ -59,7 +59,7 @@ describe('GeneralSettingsPage', () => {
     expect(time.getByRole('combobox', { name: 'Week starts on' })).toHaveValue('1');
     expect(time.getByRole('button', { name: 'Monday' })).toHaveAttribute('aria-pressed', 'true');
     expect(time.getByRole('button', { name: 'Saturday' })).toHaveAttribute('aria-pressed', 'false');
-    expect(time.getByRole('switch', { name: 'Timesheet approval' })).not.toBeChecked();
+    expect(time.getByRole('switch', { name: 'Timesheet approval' })).toBeChecked();
     expect(save('Time recording', 'Save time settings')).toBeDisabled();
 
     await openTab(user, 'WIP & billing');
@@ -121,8 +121,10 @@ describe('GeneralSettingsPage', () => {
     await user.click(time.getByRole('button', { name: 'Friday' }));
     await user.click(time.getByRole('button', { name: 'Saturday' }));
     await user.click(time.getByRole('switch', { name: 'Timesheet approval' }));
-    // Approval is now required, so the exemption for admins and partners shows (on by default).
-    expect(time.getByRole('switch', { name: 'No approval for admins and partners' })).toBeChecked();
+    // Nobody approves time now, so there is no exemption for admins and partners to offer.
+    expect(
+      time.queryByRole('switch', { name: 'No approval for admins and partners' }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('You have unsaved changes.')).toBeInTheDocument();
     await user.click(save('Time recording', 'Save time settings'));
 
@@ -133,7 +135,7 @@ describe('GeneralSettingsPage', () => {
         minutes_per_day: 480,
         week_start: 7,
         working_days: [1, 2, 3, 4, 6],
-        require_timesheet_approval: true,
+        require_timesheet_approval: false,
       },
     ]);
     await waitFor(() => expect(save('Time recording', 'Save time settings')).toBeDisabled());
@@ -517,12 +519,87 @@ describe('GeneralSettingsPage: time that needs no approval', () => {
   });
 
   it('is not offered while timesheet approval is off', async () => {
-    renderSettings(<GeneralSettingsPage />);
+    renderSettings(<GeneralSettingsPage />, {
+      context: {
+        ...orgContext(),
+        organization: { ...testOrganization, require_timesheet_approval: false },
+      },
+    });
 
     const time = within(card('Time recording'));
     await time.findByRole('switch', { name: 'Timesheet approval' });
     expect(
       time.queryByRole('switch', { name: 'No approval for admins and partners' }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('GeneralSettingsPage: switching approvals off (ticket APT53)', () => {
+  const SETTLES = /Saving approves what is already waiting/;
+
+  it('switches timesheet approval off and says what that means', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+
+    const time = within(card('Time recording'));
+    expect(time.getByText(/On: weeks are submitted to a manager for approval/)).toBeInTheDocument();
+    await user.click(time.getByRole('switch', { name: 'Timesheet approval' }));
+    expect(time.getByText(/Off: nobody approves timesheets/)).toBeInTheDocument();
+    expect(time.getByText(SETTLES)).toBeInTheDocument();
+    await user.click(save('Time recording', 'Save time settings'));
+
+    expect(await screen.findByText('Time settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ require_timesheet_approval: false }]);
+  });
+
+  it('switches expense approval off and on again', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Expenses');
+
+    const expenses = within(card('Expenses'));
+    const approval = expenses.getByRole('switch', { name: 'Expense approval' });
+    expect(approval).toBeChecked();
+    await user.click(approval);
+    expect(expenses.getByText(/Off: nobody approves expense claims/)).toBeInTheDocument();
+    expect(expenses.getByText(SETTLES)).toBeInTheDocument();
+    await user.click(save('Expenses', 'Save expense settings'));
+    expect(await screen.findByText('Expense settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ expense_approval_required: false }]);
+  });
+
+  it('says nothing about waiting items when the switch was already off', async () => {
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />, {
+      context: {
+        ...orgContext(),
+        organization: { ...testOrganization, expense_approval_required: false },
+      },
+    });
+    await openTab(user, 'Expenses');
+
+    const expenses = within(card('Expenses'));
+    expect(expenses.getByRole('switch', { name: 'Expense approval' })).not.toBeChecked();
+    expect(expenses.getByText(/Off: nobody approves expense claims/)).toBeInTheDocument();
+    expect(expenses.queryByText(SETTLES)).not.toBeInTheDocument();
+  });
+
+  it('switches WIP adjustment approval off, which sets its thresholds aside', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'WIP & billing');
+
+    const billing = within(card('WIP and billing'));
+    await user.click(billing.getByRole('switch', { name: 'WIP adjustment approval' }));
+    expect(box('WIP and billing', 'WIP adjustment approval threshold (£)')).toBeDisabled();
+    expect(billing.getByRole('switch', { name: 'Write-off percentage rule' })).toBeDisabled();
+    expect(billing.getByText(/Off: nobody approves WIP adjustments/)).toBeInTheDocument();
+    await user.click(save('WIP and billing', 'Save billing settings'));
+
+    expect(await screen.findByText('WIP and billing settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ wip_adjustment_approval_required: false }]);
   });
 });

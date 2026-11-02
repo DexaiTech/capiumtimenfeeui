@@ -179,7 +179,11 @@ export default function MyExpensesPage() {
   return (
     <PageShell
       title="My Expenses"
-      description="Your expense claims: record what you spent, attach the receipts and send the claim for approval."
+      description={
+        organization.expense_approval_required
+          ? 'Your expense claims: record what you spent, attach the receipts and send the claim for approval.'
+          : 'Your expense claims: record what you spent, attach the receipts and submit the claim.'
+      }
     >
       <NewClaimPanel
         open={creating}

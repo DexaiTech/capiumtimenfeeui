@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
-import { useOrg } from '@/features/organizations';
+import { ApprovalOffNotice, useOrg } from '@/features/organizations';
 import { StaffPicker } from '@/features/team';
 import { useDocumentTitle, useUrlParams } from '@/hooks';
 import { formatUkDate } from '@/utils/dates';
@@ -162,6 +162,7 @@ export default function ExpenseApprovalsPage() {
         />
       ) : (
         <div className="flex flex-col gap-2.5">
+          <ApprovalOffNotice area="expense" />
           <PageToolbar
             start={
               <p aria-live="polite" className="px-2 text-xs font-medium text-text">

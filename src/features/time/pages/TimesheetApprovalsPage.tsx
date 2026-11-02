@@ -18,7 +18,7 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useAuth } from '@/features/auth';
-import { useOrg } from '@/features/organizations';
+import { ApprovalOffNotice, useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
 import { formatUkDate, formatUkDateTime } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
@@ -177,6 +177,7 @@ function Page() {
 
   return (
     <div className="flex flex-col gap-3">
+      <ApprovalOffNotice area="timesheet" />
       <PageToolbar
         start={
           <label className="flex min-h-11 cursor-pointer items-center gap-2.5 px-2 text-xs font-medium text-text md:min-h-8">

@@ -36,6 +36,8 @@ export interface Organization {
   /** Default charge-out rate in pence per hour. */
   default_charge_rate: number;
   time_increment_minutes: number;
+  /** Whether timesheets are approved. Off: nobody approves time, it can be billed as it is
+   * recorded and submitting a week approves it at once. */
   require_timesheet_approval: boolean;
   /** Time of people who hold `timesheet.exempt` (Owner, Admin and Partner) needs no approval. */
   auto_approve_privileged_time: boolean;
@@ -45,6 +47,11 @@ export interface Organization {
   /** A write-off above this share (basis points, 1000 = 10%) of the job's or client's current
    * WIP also needs approval, in addition to the pence threshold above; null turns it off. */
   wip_write_off_approval_threshold_percent: number | null;
+  /** Whether WIP adjustments above the thresholds need approval; off, every one takes effect at
+   * once. */
+  wip_adjustment_approval_required: boolean;
+  /** Whether expense claims are approved; off, a submitted claim is approved at once. */
+  expense_approval_required: boolean;
   /** An expense above this gross amount (pence) must carry a receipt. */
   receipt_required_threshold: number;
   invoice_approval_required: boolean;
@@ -117,6 +124,8 @@ export type OrganizationUpdate = Partial<
     | 'fixed_fee_wip_mode'
     | 'wip_adjustment_approval_threshold'
     | 'wip_write_off_approval_threshold_percent'
+    | 'wip_adjustment_approval_required'
+    | 'expense_approval_required'
     | 'receipt_required_threshold'
     | 'invoice_approval_required'
     | 'invoice_approval_threshold'

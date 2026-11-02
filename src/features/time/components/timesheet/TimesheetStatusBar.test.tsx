@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
+import { ownerContext } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { fail, ok, server } from '@/test/server';
 
@@ -35,19 +36,23 @@ function grid(overrides: Partial<WeekGrid> = {}): WeekGrid {
   };
 }
 
-function setup(week: WeekGrid) {
+function setup(week: WeekGrid, { approving = true } = {}) {
   const calls: string[] = [];
   server.use(
     http.post(orgApiPath('/timesheets/:id/submit'), () => {
       calls.push('submit');
-      return ok({ id: 'ts-1', status: 'submitted' });
+      return ok({ id: 'ts-1', status: approving ? 'submitted' : 'approved' });
     }),
     http.post(orgApiPath('/timesheets/:id/recall'), () => {
       calls.push('recall');
       return ok({ id: 'ts-1', status: 'open' });
     }),
   );
-  renderInOrg(<TimesheetStatusBar grid={week} sheet={undefined} canRecord />);
+  const context = {
+    ...ownerContext,
+    organization: { ...ownerContext.organization, require_timesheet_approval: approving },
+  };
+  renderInOrg(<TimesheetStatusBar grid={week} sheet={undefined} canRecord />, { context });
   return calls;
 }
 
@@ -73,6 +78,28 @@ describe('TimesheetStatusBar: submitting', () => {
     expect(calls).toEqual([]);
     await user.click(within(dialog).getByRole('button', { name: 'Submit timesheet' }));
     await waitFor(() => expect(calls).toEqual(['submit']));
+  });
+});
+
+describe('TimesheetStatusBar: a practice that does not approve timesheets', () => {
+  it('submits the week without mentioning approval, and offers no Undo', async () => {
+    const user = userEvent.setup();
+    const calls = setup(grid(), { approving: false });
+    expect(screen.queryByRole('button', { name: 'Submit for approval' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit timesheet' }));
+    expect(await screen.findByText(/timesheets need no approval here/i)).toBeInTheDocument();
+    expect(calls).toEqual(['submit']);
+    // An approved week cannot be recalled.
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+  });
+
+  it('says in the question that the week is approved at once', async () => {
+    const user = userEvent.setup();
+    setup(grid({ missing_days: [FRIDAY] }), { approving: false });
+    await user.click(screen.getByRole('button', { name: 'Submit timesheet' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
+    expect(within(dialog).getByText(/is approved at once/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/goes to your manager/)).not.toBeInTheDocument();
   });
 });
 

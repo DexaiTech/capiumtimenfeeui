@@ -16,7 +16,7 @@ import {
   RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
-import { useOrg } from '@/features/organizations';
+import { ApprovalOffNotice, useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker } from '@/features/team';
 import { usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatMoney } from '@/utils/money';
@@ -235,6 +235,7 @@ export function AdjustmentsView({ onCreate }: AdjustmentsViewProps) {
 
   return (
     <>
+      {summary && summary.pending > 0 ? <ApprovalOffNotice area="wip_adjustment" /> : null}
       {canApprove && summary && summary.pending > 0 && tab !== 'pending' ? (
         <div
           role="note"
