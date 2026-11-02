@@ -43,6 +43,8 @@ export interface DisbursementFormPanelProps {
   disbursement: Disbursement | null;
   /** The client and job names to show for a disbursement being edited. */
   names?: { client?: string; job?: { number: string; name: string } };
+  /** The client a new disbursement is for, chosen in advance (it can still be changed). */
+  client?: { id: string; name: string };
   open: boolean;
   onClose: () => void;
 }
@@ -50,6 +52,7 @@ export interface DisbursementFormPanelProps {
 function DisbursementForm({
   disbursement,
   names,
+  client,
   onClose,
 }: Omit<DisbursementFormPanelProps, 'open'>) {
   const { organization, can } = useOrg();
@@ -69,7 +72,7 @@ function DisbursementForm({
   } = useForm<DisbursementValues>({
     resolver: zodResolver(disbursementSchema),
     defaultValues: {
-      client_id: disbursement?.client_id ?? '',
+      client_id: disbursement?.client_id ?? client?.id ?? '',
       job_id: disbursement?.job_id ?? '',
       incurred_on: disbursement?.incurred_on ?? today,
       description: disbursement?.description ?? '',
@@ -171,7 +174,7 @@ function DisbursementForm({
             label="Client"
             required
             value={clientId || null}
-            valueLabel={names?.client}
+            valueLabel={names?.client ?? client?.name}
             onChange={(id) => {
               setValue('client_id', id ?? '', { shouldDirty: true, shouldValidate: true });
               setValue('job_id', '', { shouldDirty: true });
@@ -274,6 +277,7 @@ function DisbursementForm({
 export function DisbursementFormPanel({
   disbursement,
   names,
+  client,
   open,
   onClose,
 }: DisbursementFormPanelProps) {
@@ -289,6 +293,7 @@ export function DisbursementFormPanel({
           key={disbursement?.id ?? 'new'}
           disbursement={disbursement}
           names={names}
+          client={client}
           onClose={onClose}
         />
       ) : null}
