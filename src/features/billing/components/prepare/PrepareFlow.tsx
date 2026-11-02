@@ -87,10 +87,8 @@ export function PrepareFlow({
   const allEdits: LineEdits = { ...basisEdits(basis, planned, summary.data), ...edits };
   const lines = previewLines(planned, allEdits, {
     options: vat.options,
-    defaultId:
-      billing.data?.default_vat_rate_id ??
-      vat.options.find((option) => option.is_default)?.id ??
-      null,
+    clientId: billing.data?.default_vat_rate_id ?? null,
+    practiceId: vat.options.find((option) => option.is_default)?.id ?? null,
   });
   const totals = previewTotals(lines);
   const groupable = items.some(

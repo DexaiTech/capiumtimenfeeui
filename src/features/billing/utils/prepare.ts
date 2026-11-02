@@ -57,6 +57,8 @@ export interface PlannedLine {
   itemIds: string[];
   /** How the API's `overrides` find this line. */
   selector: Pick<LineOverride, 'time_entry_id' | 'disbursement_id'>;
+  /** The VAT code of the line's service, which applies when the client has no code of its own. */
+  serviceVatRateId: string | null;
 }
 
 function byDateThenId(a: WipItem, b: WipItem): number {
@@ -73,7 +75,12 @@ function sumOf(items: ReadonlyArray<WipItem>): { minutes: number; value: Pence }
   );
 }
 
-function timeLine(key: string, description: string, items: WipItem[]): PlannedLine {
+function timeLine(
+  key: string,
+  description: string,
+  items: WipItem[],
+  serviceVatRateId = items[0]?.service_vat_rate_id ?? null,
+): PlannedLine {
   const { minutes, value } = sumOf(items);
   return {
     key,
@@ -86,6 +93,7 @@ function timeLine(key: string, description: string, items: WipItem[]): PlannedLi
     wip: value,
     itemIds: items.map((item) => item.id),
     selector: { time_entry_id: items[0]?.id },
+    serviceVatRateId,
   };
 }
 
@@ -105,6 +113,7 @@ function itemLine(item: WipItem): PlannedLine {
     wip: item.value,
     itemIds: [item.id],
     selector: { disbursement_id: item.id },
+    serviceVatRateId: null,
   };
 }
 
@@ -148,6 +157,7 @@ export function planLines(
       wip: fee?.wip ?? value,
       itemIds: entries.map((entry) => entry.id),
       selector: { time_entry_id: entries[0]?.id },
+      serviceVatRateId: entries[0]?.service_vat_rate_id ?? null,
     });
   }
 
@@ -169,8 +179,15 @@ export function planLines(
       lines.push(timeLine(`entry:${item.id}`, `${shortDate(item.date)}: ${label}`, [item]));
     }
   } else if (hourly.length > 0) {
+    // The API takes the service's code only when all the time shares one service.
+    const services = new Set(hourly.map((item) => item.service_id ?? null));
     lines.push(
-      timeLine('single', `${FALLBACK_NAME} (${period(hourly.map((entry) => entry.date))})`, hourly),
+      timeLine(
+        'single',
+        `${FALLBACK_NAME} (${period(hourly.map((entry) => entry.date))})`,
+        hourly,
+        services.size === 1 ? (hourly[0]?.service_vat_rate_id ?? null) : null,
+      ),
     );
   }
 
@@ -203,13 +220,19 @@ export interface PreviewLine extends PlannedLine {
 
 export interface VatDefaults {
   options: ReadonlyArray<VatOption>;
-  /** The client's default VAT code, else the practice's; null: no VAT is charged. */
-  defaultId: string | null;
+  /** The client's own VAT code: it comes before the service's. */
+  clientId: string | null;
+  /** The practice's default VAT code; null: no VAT is charged. */
+  practiceId: string | null;
 }
 
-/** The rate of a chosen VAT code, else of the default one, else 0. */
-export function vatRateOf(vat: VatDefaults, vatRateId: string | null): BasisPoints {
-  const id = vatRateId ?? vat.defaultId;
+/** The rate of the chosen VAT code, else the client's, else the service's, else the practice's, else 0. */
+export function vatRateOf(
+  vat: VatDefaults,
+  vatRateId: string | null,
+  serviceVatRateId: string | null = null,
+): BasisPoints {
+  const id = vatRateId ?? vat.clientId ?? serviceVatRateId ?? vat.practiceId;
   return vat.options.find((option) => option.id === id)?.rate_bp ?? 0;
 }
 
@@ -227,7 +250,7 @@ export function previewLines(
       text: edit?.description ?? line.description,
       billed,
       vatRateId,
-      vatBp: vatRateOf(vat, vatRateId),
+      vatBp: vatRateOf(vat, vatRateId, line.serviceVatRateId),
       adjustment: billed === null ? null : billed - line.wip,
     };
   });

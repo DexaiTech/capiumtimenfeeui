@@ -365,6 +365,8 @@ export interface PrepareBackend {
   /** The billing summary, by client id. */
   summary: Record<string, ClientBillingSummary>;
   vat: VatOption[];
+  /** The client's default VAT code. */
+  clientVatId: string | null;
   /** The client's payment terms in days. */
   termsDays: number;
   calls: Call[];
@@ -377,6 +379,7 @@ export function createPrepareBackend(initial: Partial<PrepareBackend> = {}): Pre
     wip: { [harbour.id]: wipOf(harbourItems()) },
     summary: { [harbour.id]: harbourSummary() },
     vat: vatCodes,
+    clientVatId: null,
     termsDays: 30,
     calls: [],
     refusals: {},
@@ -427,7 +430,7 @@ export function prepareHandlers(backend: PrepareBackend): HttpHandler[] {
       return ok({
         ...found,
         payment_terms_days: backend.termsDays,
-        default_vat_rate_id: null,
+        default_vat_rate_id: backend.clientVatId,
         invoice_email: null,
         invoice_template_id: null,
       });
