@@ -33,6 +33,8 @@ export interface InvoicePreviewProps {
   accentColor?: string;
   /** Printed pale across the page; '' for none. */
   watermarkText?: string;
+  /** A picture printed pale across the page instead of a text, or null. */
+  watermarkImageUrl?: string | null;
   practice: PreviewPractice;
 }
 
@@ -53,6 +55,7 @@ export function InvoicePreview({
   footerText,
   accentColor = '',
   watermarkText = '',
+  watermarkImageUrl = null,
   practice,
 }: InvoicePreviewProps) {
   const invoice = sampleInvoice(layout, practice.currency);
@@ -85,6 +88,15 @@ export function InvoicePreview({
           >
             {watermark}
           </span>
+        ) : null}
+        {watermarkImageUrl ? (
+          <img
+            src={watermarkImageUrl}
+            alt=""
+            aria-hidden="true"
+            data-testid="preview-watermark-image"
+            className="pointer-events-none absolute inset-0 z-0 m-auto max-h-[70%] max-w-[70%] object-contain opacity-[0.1]"
+          />
         ) : null}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">

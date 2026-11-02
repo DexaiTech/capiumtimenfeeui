@@ -55,4 +55,21 @@ export const billingApi = {
     api.post<InvoiceTemplate>(
       `${org(organizationId)}/invoice-templates/${id(templateId)}/make-default`,
     ),
+  /** Multipart upload of the watermark picture (PNG, JPEG, WebP or GIF, up to 2 MB). */
+  uploadWatermarkImage: (organizationId: string, templateId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.upload<InvoiceTemplate>(
+      `${org(organizationId)}/invoice-templates/${id(templateId)}/watermark-image`,
+      form,
+    );
+  },
+  removeWatermarkImage: (organizationId: string, templateId: string) =>
+    api.delete<InvoiceTemplate>(
+      `${org(organizationId)}/invoice-templates/${id(templateId)}/watermark-image`,
+    ),
+  getWatermarkImage: (organizationId: string, templateId: string, signal?: AbortSignal) =>
+    api.getBlob(`${org(organizationId)}/invoice-templates/${id(templateId)}/watermark-image`, {
+      signal,
+    }),
 };

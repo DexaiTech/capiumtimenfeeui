@@ -4,6 +4,7 @@ import { queryKeys } from '@/constants/queryKeys';
 import { useOrg } from '@/features/organizations';
 
 import type {
+  InvoiceTemplate,
   InvoiceTemplateCreate,
   InvoiceTemplateUpdate,
   Sequence,
@@ -156,6 +157,44 @@ export function useDeleteInvoiceTemplate() {
   return useMutation({
     mutationFn: (templateId: string) =>
       billingApi.deleteInvoiceTemplate(organization.id, templateId),
+    onSettled: refresh,
+  });
+}
+
+/** The watermark picture of a template, fetched once per version of the template. */
+export function useWatermarkImage(template: InvoiceTemplate | null) {
+  const { organization } = useOrg();
+  const templateId = template?.id ?? '';
+  return useQuery({
+    queryKey: [
+      ...queryKeys.org.invoiceTemplates(organization.id),
+      'watermark-image',
+      templateId,
+      template?.updated_at,
+    ] as const,
+    queryFn: ({ signal }) => billingApi.getWatermarkImage(organization.id, templateId, signal),
+    enabled: Boolean(template?.watermark_image),
+    staleTime: Infinity,
+    retry: false,
+  });
+}
+
+export function useUploadWatermarkImage() {
+  const { organization } = useOrg();
+  const refresh = useTemplateRefresh();
+  return useMutation({
+    mutationFn: ({ templateId, file }: { templateId: string; file: File }) =>
+      billingApi.uploadWatermarkImage(organization.id, templateId, file),
+    onSettled: refresh,
+  });
+}
+
+export function useRemoveWatermarkImage() {
+  const { organization } = useOrg();
+  const refresh = useTemplateRefresh();
+  return useMutation({
+    mutationFn: (templateId: string) =>
+      billingApi.removeWatermarkImage(organization.id, templateId),
     onSettled: refresh,
   });
 }

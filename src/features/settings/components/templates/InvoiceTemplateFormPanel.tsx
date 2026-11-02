@@ -1,12 +1,21 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
+import { pictureRefusal } from '@/features/account';
 import { useOrg } from '@/features/organizations';
+import { useObjectUrl } from '@/hooks';
+import { isApiError } from '@/services/api';
 
-import { useCreateInvoiceTemplate, useUpdateInvoiceTemplate } from '../../api/billingHooks';
+import {
+  useCreateInvoiceTemplate,
+  useRemoveWatermarkImage,
+  useUpdateInvoiceTemplate,
+  useUploadWatermarkImage,
+  useWatermarkImage,
+} from '../../api/billingHooks';
 import type {
   InvoiceTemplate,
   InvoiceTemplateCreate,
@@ -14,10 +23,17 @@ import type {
 } from '../../billingTypes';
 import { invoiceTemplateSchema, type InvoiceTemplateValues } from '../../schemas/billing';
 import { toBillingFormError } from '../../utils/billingErrors';
-import { FOOTER_MAX, LAYOUT_HINT, LAYOUT_OPTIONS, WATERMARK_MAX } from '../../utils/templates';
+import {
+  FOOTER_MAX,
+  LAYOUT_HINT,
+  LAYOUT_OPTIONS,
+  WATERMARK_KIND_OPTIONS,
+  WATERMARK_MAX,
+} from '../../utils/templates';
 import { DialogActions } from '../DialogActions';
 import { AccentColorField } from './AccentColorField';
 import { InvoicePreview } from './InvoicePreview';
+import { WatermarkImageField } from './WatermarkImageField';
 
 const FIELDS = [
   'name',
@@ -48,12 +64,20 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
   const { organization } = useOrg();
   const create = useCreateInvoiceTemplate();
   const update = useUpdateInvoiceTemplate();
+  const uploadImage = useUploadWatermarkImage();
+  const removeImage = useRemoveWatermarkImage();
+  const savedImage = useWatermarkImage(template);
+  // A picture chosen here, uploaded when the template is saved.
+  const [picture, setPicture] = useState<File | null>(null);
+  const [pictureError, setPictureError] = useState<string | null>(null);
+  const pictureUrl = useObjectUrl(picture ?? savedImage.data);
   const { toast } = useToast();
   const formId = useId();
   const {
     register,
     handleSubmit,
     setError,
+    setValue,
     control,
     formState: { errors, isDirty },
   } = useForm<InvoiceTemplateValues>({
@@ -65,20 +89,39 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
       show_bank_details: template?.show_bank_details ?? true,
       footer_text: template?.footer_text ?? '',
       accent_color: template?.accent_color ?? '',
+      watermark_kind: template?.watermark_image
+        ? 'image'
+        : template?.watermark_text
+          ? 'text'
+          : 'none',
       watermark_text: template?.watermark_text ?? '',
     },
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
     useSubmitError<InvoiceTemplateValues>({ setError, fields: FIELDS });
   const draft = useWatch({ control });
-  const saving = create.isPending || update.isPending;
+  const saving =
+    create.isPending || update.isPending || uploadImage.isPending || removeImage.isPending;
   const footerLength = Array.from(draft.footer_text ?? '').length;
 
-  const onSubmit = handleSubmit((values) => {
+  const choosePicture = (file: File) => {
+    const refusal = pictureRefusal(file);
+    setPictureError(refusal);
+    if (!refusal) setPicture(file);
+  };
+
+  const onSubmit = handleSubmit(async (values) => {
     clearSubmitError();
     const footer = values.footer_text || null;
     const accent = values.accent_color || null;
+    // The text is emptied when another kind of watermark is chosen.
     const watermark = values.watermark_text || null;
+    const withPicture = values.watermark_kind === 'image';
+    const addPicture = withPicture ? picture : null;
+    if (withPicture && !addPicture && !template?.watermark_image) {
+      setPictureError('Choose an image for the watermark');
+      return;
+    }
     const onError = (error: unknown) => handleSubmitError(toBillingFormError(error));
 
     if (!template) {
@@ -91,13 +134,29 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
       if (footer) body.footer_text = footer;
       if (accent) body.accent_color = accent;
       if (watermark) body.watermark_text = watermark;
-      create.mutate(body, {
-        onSuccess: (created) => {
-          toast({ tone: 'success', title: `${created.name} added` });
+      let created: InvoiceTemplate;
+      try {
+        created = await create.mutateAsync(body);
+      } catch (error) {
+        onError(error);
+        return;
+      }
+      if (addPicture) {
+        try {
+          await uploadImage.mutateAsync({ templateId: created.id, file: addPicture });
+        } catch (error) {
+          // The template exists: say so, and why its picture is missing.
+          toast({
+            tone: 'error',
+            title: `${created.name} added without its watermark image`,
+            description: isApiError(error) ? error.message : undefined,
+          });
           onClose();
-        },
-        onError,
-      });
+          return;
+        }
+      }
+      toast({ tone: 'success', title: `${created.name} added` });
+      onClose();
       return;
     }
 
@@ -112,20 +171,28 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
     if (footer !== template.footer_text) changes.footer_text = footer;
     if (accent !== (template.accent_color ?? null)) changes.accent_color = accent;
     if (watermark !== (template.watermark_text ?? null)) changes.watermark_text = watermark;
-    if (Object.keys(changes).length === 0) {
+    const dropPicture = Boolean(template.watermark_image) && !withPicture;
+    if (Object.keys(changes).length === 0 && !dropPicture && !addPicture) {
       onClose();
       return;
     }
-    update.mutate(
-      { templateId: template.id, body: changes },
-      {
-        onSuccess: (saved) => {
-          toast({ tone: 'success', title: `${saved.name} saved` });
-          onClose();
-        },
-        onError,
-      },
-    );
+    // A watermark is a text or a picture: the old picture goes before a text is set, and the
+    // new one is uploaded once the text is gone.
+    let saved = template;
+    try {
+      if (dropPicture) saved = await removeImage.mutateAsync(template.id);
+      if (Object.keys(changes).length > 0) {
+        saved = await update.mutateAsync({ templateId: template.id, body: changes });
+      }
+      if (addPicture) {
+        saved = await uploadImage.mutateAsync({ templateId: template.id, file: addPicture });
+      }
+    } catch (error) {
+      onError(error);
+      return;
+    }
+    toast({ tone: 'success', title: `${saved.name} saved` });
+    onClose();
   });
 
   return (
@@ -175,15 +242,35 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
                 />
               )}
             />
-            <Input
+            <Select
               label="Watermark"
-              autoComplete="off"
-              placeholder="e.g. COPY, PAID or CONFIDENTIAL"
-              maxLength={WATERMARK_MAX}
-              hint="Printed large and pale across every page. Leave empty for none."
-              error={errors.watermark_text?.message}
-              {...register('watermark_text')}
+              options={WATERMARK_KIND_OPTIONS}
+              hint="A text or an image, printed large and pale across every page."
+              {...register('watermark_kind', {
+                onChange: (event: { target: { value: string } }) => {
+                  if (event.target.value !== 'text') setValue('watermark_text', '');
+                },
+              })}
             />
+            {draft.watermark_kind === 'text' ? (
+              <Input
+                label="Watermark text"
+                autoComplete="off"
+                placeholder="e.g. COPY, PAID or CONFIDENTIAL"
+                maxLength={WATERMARK_MAX}
+                hint="Leave empty for none."
+                error={errors.watermark_text?.message}
+                {...register('watermark_text')}
+              />
+            ) : null}
+            {draft.watermark_kind === 'image' ? (
+              <WatermarkImageField
+                url={pictureUrl}
+                onChoose={choosePicture}
+                error={pictureError}
+                disabled={readOnly}
+              />
+            ) : null}
             <Textarea
               label="Footer text"
               rows={4}
@@ -203,6 +290,7 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
           footerText={draft.footer_text ?? ''}
           accentColor={draft.accent_color ?? ''}
           watermarkText={draft.watermark_text ?? ''}
+          watermarkImageUrl={draft.watermark_kind === 'image' ? pictureUrl : null}
           practice={organization}
         />
       </div>
@@ -217,7 +305,7 @@ function TemplateForm({ template, readOnly, onClose }: TemplateFormProps) {
               form={formId}
               variant="primary"
               loading={saving}
-              disabled={(template !== null && !isDirty) || retryIn > 0}
+              disabled={(template !== null && !isDirty && !picture) || retryIn > 0}
             >
               {template ? 'Save template' : 'Add template'}
             </Button>

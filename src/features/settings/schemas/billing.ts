@@ -12,6 +12,7 @@ import {
   isHexColor,
   LAYOUTS,
   TEMPLATE_NAME_MAX,
+  WATERMARK_KINDS,
   WATERMARK_MAX,
   WATERMARK_PATTERN,
 } from '../utils/templates';
@@ -100,6 +101,8 @@ export const invoiceTemplateSchema = z.object({
     .refine((value) => length(value) <= FOOTER_MAX, `Use at most ${FOOTER_MAX} characters`),
   /** '' for none. */
   accent_color: z.string().refine((value) => value === '' || isHexColor(value), 'Choose a colour'),
+  /** A text or a picture (the picture is chosen beside the form), or none. */
+  watermark_kind: z.enum(WATERMARK_KINDS),
   /** '' for none. */
   watermark_text: z
     .string()
