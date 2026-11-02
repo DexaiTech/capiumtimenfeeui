@@ -224,8 +224,8 @@ export function ReviewStep({
           </p>
         ) : null}
         <p className="text-xs text-text-muted">
-          VAT follows each line's code, else the client's default; disbursements keep their own
-          code, so the draft may differ slightly.
+          VAT follows each line's code, else the client's own code, else its service's;
+          disbursements keep their own code, so the draft may differ slightly.
         </p>
       </Card>
 

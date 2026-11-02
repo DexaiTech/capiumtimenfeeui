@@ -12,17 +12,21 @@ import type { Organization } from '@/types/organization';
 
 import { harbour } from '../test/fixtures';
 import {
+  accountsJob,
   createPrepareBackend,
+  fixedFeeItem,
   harbourSummary,
   jobBilling,
   postsOf,
   prepareHandlers,
   timeItem,
+  vatCodes,
+  vatJob,
   wipOf,
   type PrepareBackend,
 } from '../test/prepare';
 import { BILLING, renderBillingPage } from '../test/render';
-import type { JobBilling } from '../types';
+import type { JobBilling, WipItem } from '../types';
 import PrepareInvoicePage from './PrepareInvoicePage';
 
 const PREPARE = `${BILLING}/prepare`;
@@ -325,6 +329,89 @@ describe('reviewing the lines', () => {
     await waitFor(() => expect(row).toHaveTextContent('Quarterly bookkeeping'));
     expect(row).toHaveTextContent('0%');
     expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£0.00');
+  });
+
+  // APT63: the practice's default is 20% and the fixed fee's and the books' services carry 20%.
+  const accsService = { service_id: 's-accs', service_vat_rate_id: 'vat-std' };
+  const serviceWip = (vatJobService: Partial<WipItem> = {}) =>
+    wipOf([
+      timeItem({ id: 't-5', job: accountsJob, value: 0, component: 'fixed_fee', ...accsService }),
+      timeItem({ id: 't-6', job: accountsJob, value: 0, component: 'fixed_fee', ...accsService }),
+      fixedFeeItem(),
+      timeItem({ service_id: 's-books', service_vat_rate_id: 'vat-std' }),
+      timeItem({
+        id: 't-4',
+        date: '2026-10-01',
+        job: vatJob,
+        minutes: 30,
+        hours: '0.50',
+        value: 6000,
+        charge_value: 6000,
+        description: 'VAT return',
+        ...vatJobService,
+      }),
+    ]);
+  const reduced = {
+    id: 'vat-75',
+    name: 'Reduced',
+    code: 'reduced',
+    rate_bp: 750,
+    is_default: false,
+    is_archived: false,
+  };
+
+  it('estimates VAT at the client’s own code before the job’s service, as the draft charges it', async () => {
+    const user = userEvent.setup();
+    const backend = setup({
+      vat: [...vatCodes, reduced],
+      clientVatId: 'vat-75',
+      wip: { [harbour.id]: serviceWip() },
+    });
+    const lines = await review(user, /Partnership accounts/, /Bank reconciliation/, /VAT return/);
+
+    const rows = rowsOf(lines);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent('Partnership accounts (fixed fee)');
+    expect(rows[1]).toHaveTextContent('Bookkeeping 2026/27');
+    expect(rows[2]).toHaveTextContent('VAT returns 2026/27');
+    for (const row of rows) expect(row).toHaveTextContent('7.5%');
+    // £2,000, £180 and £60 at 7.5%.
+    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£168.00');
+
+    // A code chosen for a line is shown and sent.
+    await user.click(await findRowAction(/^Actions for Bookkeeping 2026\/27/, 'Edit the line'));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
+    await user.selectOptions(within(dialog).getByLabelText('VAT code'), 'Standard (20%)');
+    await user.click(within(dialog).getByRole('button', { name: 'Save line' }));
+    await waitFor(() =>
+      expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£190.50'),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Dates and notes' }));
+    await user.click(await screen.findByRole('button', { name: 'Save as draft' }));
+    await screen.findByText('Draft invoice saved');
+    expect(postsOf(backend, '/invoices')[0]?.body).toMatchObject({
+      overrides: [{ time_entry_id: 't-1', vat_rate_id: 'vat-std' }],
+    });
+  });
+
+  it('estimates VAT at the job’s service code when the client has none of its own', async () => {
+    const user = userEvent.setup();
+    setup({
+      vat: [...vatCodes, reduced],
+      wip: {
+        [harbour.id]: serviceWip({ service_id: 's-vat', service_vat_rate_id: 'vat-zero' }),
+      },
+    });
+    const lines = await review(user, /Partnership accounts/, /Bank reconciliation/, /VAT return/);
+
+    const rows = rowsOf(lines);
+    expect(rows[0]).toHaveTextContent('20%');
+    expect(rows[1]).toHaveTextContent('20%');
+    // The service's zero rate, not the practice's 20%.
+    expect(rows[2]).toHaveTextContent('0%');
+    expect(rows[2]).not.toHaveTextContent('20%');
+    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£436.00');
   });
 
   it('refuses an amount that is not money', async () => {

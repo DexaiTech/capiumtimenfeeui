@@ -435,6 +435,10 @@ export interface WipItem {
   component?: string;
   /** False for items billing cannot take by their id (a fixed fee, an adjustment). */
   selectable?: boolean;
+  /** The job's service. */
+  service_id?: string | null;
+  /** The VAT code of the job's service: a drafted time or fixed-fee line takes it when the client has no code of its own. */
+  service_vat_rate_id?: string | null;
   supplier: string | null;
   claim_id?: string | null;
   fixed_fee?: FixedFeeInfo | null;

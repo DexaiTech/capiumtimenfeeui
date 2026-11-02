@@ -82,7 +82,7 @@ function LineForm({
         />
         <VatSelect
           options={vatOptions}
-          defaultLabel="Default for this client"
+          defaultLabel="Default for this line"
           {...register('vat_rate_id')}
         />
       </form>
