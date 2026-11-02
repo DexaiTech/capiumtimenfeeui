@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { useSearchParams } from 'react-router';
 
 import { FormAlert } from '@/components/forms';
 import { Card, CardHeader } from '@/components/ui';
@@ -15,6 +16,7 @@ import { RerateScopeForm } from '../components/rerate/RerateScopeForm';
 import { RunsHistory } from '../components/rerate/RunsHistory';
 import {
   EMPTY_SCOPE,
+  initialScope,
   rerateScopeSchema,
   type ScopeErrors,
   type ScopeState,
@@ -69,8 +71,9 @@ function ReRate() {
   const formId = useId();
   const canRead = can(PERMISSIONS.rateRead);
   const preview = usePreviewRerate();
+  const [params] = useSearchParams();
 
-  const [scope, setScope] = useState<ScopeState>(EMPTY_SCOPE);
+  const [scope, setScope] = useState<ScopeState>(() => initialScope(params));
   const [errors, setErrors] = useState<ScopeErrors>({});
   const [applying, setApplying] = useState<ReratePreview | null>(null);
   const [outcome, setOutcome] = useState<{ run: Rerun; preview: ReratePreview } | null>(null);
