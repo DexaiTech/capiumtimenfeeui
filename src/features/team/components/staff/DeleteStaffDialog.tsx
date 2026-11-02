@@ -5,12 +5,12 @@ import { isApiError } from '@/services/api';
 
 import { useDeleteStaff, useStaffMember } from '../../api';
 import type { StaffMember, StaffUsage } from '../../types';
-import { dialogError, usageOf } from '../../utils/errors';
+import { dialogError } from '../../utils/errors';
 
 export interface DeleteStaffDialogProps {
   staff: StaffMember | null;
   onClose: () => void;
-  /** Offered when the record is in use: the way to take them out of the working lists. */
+  /** Offered when the record is in use: a pause, for someone who may come back. */
   onDeactivateInstead?: (staff: StaffMember) => void;
   /** Called once the person has been deleted (before the dialog closes). */
   onDeleted?: (staff: StaffMember) => void;
@@ -29,19 +29,13 @@ function UsageList({ usage }: { usage: ReadonlyArray<StaffUsage> }) {
   );
 }
 
-function DeleteConfirm({
-  staff,
-  onClose,
-  onDeactivateInstead,
-  onDeleted,
-}: DeleteStaffDialogProps) {
+function DeleteConfirm({ staff, onClose, onDeactivateInstead, onDeleted }: DeleteStaffDialogProps) {
   const detail = useStaffMember(staff?.id ?? null);
   const remove = useDeleteStaff();
   const { toast } = useToast();
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
-  const [usageFromError, setUsageFromError] = useState<StaffUsage[]>([]);
 
-  const usage = usageFromError.length > 0 ? usageFromError : (detail.data?.usage ?? []);
+  const usage = detail.data?.usage ?? [];
   const inUse = usage.length > 0 || detail.data?.can_delete === false;
   const name = staff?.full_name ?? '';
 
@@ -54,10 +48,7 @@ function DeleteConfirm({
         onDeleted?.(staff);
         onClose();
       },
-      onError: (error) => {
-        setUsageFromError(usageOf(error));
-        setRefusal(dialogError(error));
-      },
+      onError: (error) => setRefusal(dialogError(error)),
     });
   };
 
@@ -83,8 +74,10 @@ function DeleteConfirm({
     body = (
       <>
         <p>
-          <strong className="font-medium text-text">{name}</strong> cannot be deleted: these records
-          refer to them. Deactivate them instead; everything recorded stays.
+          <strong className="font-medium text-text">{name}</strong> has records, so they are kept as
+          a deleted user: they can no longer sign in or be chosen for new work, and everything
+          recorded stays, shown as &ldquo;{name} (deleted user)&rdquo;. They can be reactivated
+          later.
         </p>
         <UsageList usage={usage} />
         {onDeactivateInstead && staff ? (
@@ -113,7 +106,7 @@ function DeleteConfirm({
       title="Delete staff member?"
       confirmLabel="Delete"
       loading={remove.isPending}
-      confirmDisabled={detail.isPending || detail.isError || inUse}
+      confirmDisabled={detail.isPending || detail.isError}
       error={refusal}
     >
       {body}
@@ -121,7 +114,10 @@ function DeleteConfirm({
   );
 }
 
-/** Delete a staff member nothing refers to; otherwise explain what does and offer to deactivate. */
+/**
+ * Delete a staff member: one nothing refers to is removed completely; one with records is kept as
+ * a deleted user (ticket APT62), and the dialog lists those records and offers to deactivate.
+ */
 export function DeleteStaffDialog(props: DeleteStaffDialogProps) {
   // A fresh state for every person, so a refusal never carries over to the next one.
   return <DeleteConfirm key={props.staff?.id ?? 'none'} {...props} />;

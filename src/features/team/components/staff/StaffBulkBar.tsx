@@ -31,8 +31,8 @@ export interface StaffBulkBarProps {
 /**
  * Above the staff list while rows are ticked: set the grade or approver, deactivate or reactivate
  * all of them, or delete them (`POST /staff/bulk`, all or nothing). Each person is held to the
- * rules of the single action (nobody deactivates or deletes themselves, a person with records
- * cannot be deleted), and a refusal names every person it stopped.
+ * rules of the single action (nobody deactivates or deletes themselves, a person with records is
+ * kept as a deleted user), and a refusal names every person it stopped.
  */
 export function StaffBulkBar({
   ids,
@@ -213,9 +213,10 @@ export function StaffBulkBar({
         error={flow.refusal}
       >
         <p>
-          The {count} selected {word} will be deleted completely. Someone with time, expenses,
-          rates, invoices or other records cannot be deleted: if any of the selected people has,
-          none is deleted and this dialog lists them. Deactivate those instead.
+          The {count} selected {word} will be deleted. Someone with no records is removed
+          completely. Someone with time, expenses, rates, invoices or other records is kept as a
+          deleted user: they can no longer sign in or be chosen for new work, and their history
+          stays, with &ldquo;(deleted user)&rdquo; after their name.
         </p>
       </ConfirmDialog>
     </div>

@@ -181,12 +181,12 @@ export const timeApi = {
     ),
 
   /* ----------------------------------- Lookups ---------------------------------- */
-  /** Every person of the staff list (active, inactive and left), following the cursor. */
+  /** Every person of the staff list (active, inactive, left and deleted), following the cursor. */
   listStaff: (organizationId: string, signal?: AbortSignal) =>
     fetchEverything<StaffPerson>(
       (cursor) =>
         api.list<StaffPerson>(`${org(organizationId)}/staff`, {
-          query: { status: ['active', 'inactive', 'left'], limit: 100, cursor },
+          query: { status: ['active', 'inactive', 'left', 'deleted'], limit: 100, cursor },
           signal,
         }),
       10,

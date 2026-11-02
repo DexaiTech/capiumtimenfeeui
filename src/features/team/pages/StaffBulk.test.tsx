@@ -136,8 +136,8 @@ describe('bulk actions on the staff list', () => {
             staff_id: sam.id,
             number: 'S002',
             name: 'Sam Staff',
-            error_code: 'STAFF_IN_USE',
-            reason: 'Time and expenses refer to this person.',
+            error_code: 'FORBIDDEN',
+            reason: 'Only an owner can change another owner.',
           },
         ],
       }),
@@ -145,12 +145,14 @@ describe('bulk actions on the staff list', () => {
     const bar = await tick(user, 'Sam Staff', 'Grace Hopper');
     await user.click(within(bar).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete 2 people?' });
+    // People with records are kept as deleted users, with their history.
+    expect(within(dialog).getByText(/kept as a\s+deleted user/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Delete 2 people' }));
 
     expect(await within(dialog).findByText(/nothing was changed/)).toBeInTheDocument();
     expect(within(dialog).getByText('S002')).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/Time and expenses refer to this person\./),
+      within(dialog).getByText(/Only an owner can change another owner\./),
     ).toBeInTheDocument();
     expect(calls).toEqual([{ staff_ids: ['staff-grace', sam.id], action: 'delete' }]);
     // The selection stays so the person can adjust it.

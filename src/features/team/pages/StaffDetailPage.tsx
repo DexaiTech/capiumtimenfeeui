@@ -291,7 +291,7 @@ function UsageCard({ staff }: { staff: StaffDetail }) {
     <Card padding="none" role="region" aria-label="Used by">
       <CardHeader
         title="Used by"
-        description="Records that refer to this person. They stay when someone is deactivated; a person with records cannot be deleted."
+        description="Records that refer to this person. They stay when someone is deactivated or deleted: a person with records is kept as a deleted user."
       />
       <ul className="flex flex-wrap gap-2 p-5">
         {staff.usage.map((item) => (
@@ -394,7 +394,11 @@ function StaffDetailView({ staffId }: { staffId: string }) {
         ) : null}
       </Card>
       {editPanel}
-      <ProfileCard staff={member} canEdit={canUpdate} onEdit={() => edit(member)} />
+      <ProfileCard
+        staff={member}
+        canEdit={canUpdate && member.status !== 'deleted'}
+        onEdit={() => edit(member)}
+      />
       {can(PERMISSIONS.rateRead) ? <RatesCard staff={member} /> : null}
       <StaffSegmentsCard staff={member} />
       {can(PERMISSIONS.roleRead) ? <StaffPermissionsCard staff={member} /> : null}

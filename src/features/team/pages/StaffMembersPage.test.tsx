@@ -19,6 +19,7 @@ import {
   seniorGrade,
   staff,
   staffRole,
+  testStaff,
 } from '../test/fixtures';
 import { orgApiPath, page, teamHandlers } from '../test/handlers';
 import { Route, Routes } from 'react-router';
@@ -416,6 +417,29 @@ describe('StaffMembersPage row actions', () => {
     await user.click(screen.getByRole('tab', { name: 'Left' }));
     const menu = await openActions('Margaret Hamilton');
     expect(menuItems(menu)).toEqual(['Edit', 'Reactivate', 'Delete']);
+  });
+
+  it('keeps deleted users off the list but on their own tab, where they can only be reactivated', async () => {
+    const john = staff('staff-john', 'S007', 'John Smith', {
+      status: 'deleted',
+      is_selectable: false,
+    });
+    const statuses: string[][] = [];
+    server.use(
+      ...teamHandlers({
+        staff: [...testStaff, john],
+        onStaffList: (params) => statuses.push(params.getAll('status')),
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await row(/Sam Staff/);
+    expect(screen.queryByRole('row', { name: /John Smith/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Deleted' }));
+    expect(within(await row(/John Smith/)).getByText('Deleted')).toBeInTheDocument();
+    expect(statuses.at(-1)).toEqual(['deleted']);
+    expect(menuItems(await openActions('John Smith'))).toEqual(['Reactivate']);
   });
 
   it('keeps an Owner locked for anyone but an Owner', async () => {
@@ -1110,7 +1134,7 @@ describe('deactivating and deleting', () => {
     expect(deleted).toBe(1);
   });
 
-  it('refuses to delete a record in use, lists what refers to it and offers to deactivate', async () => {
+  it('keeps a record in use as a deleted user, listing what refers to it', async () => {
     let deleted = 0;
     server.use(
       http.get(orgApiPath(`/staff/${sam.id}`), () =>
@@ -1134,25 +1158,44 @@ describe('deactivating and deleting', () => {
 
     await user.click(await findRowAction('Actions for Sam Staff', 'Delete'));
     const dialog = await screen.findByRole('dialog', { name: 'Delete staff member?' });
-    expect(await within(dialog).findByText(/cannot be deleted/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/kept as\s+a deleted user/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Sam Staff \(deleted user\)/)).toBeInTheDocument();
     const usage = within(dialog).getByRole('list', { name: 'Records that refer to them' });
     expect(within(usage).getByText('Time entries')).toBeInTheDocument();
     expect(within(usage).getByText('12')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeDisabled();
-    expect(deleted).toBe(0);
+    expect(within(dialog).getByRole('button', { name: 'Deactivate instead' })).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: 'Deactivate instead' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    expect(await screen.findByText('Sam Staff deleted')).toBeInTheDocument();
+    expect(deleted).toBe(1);
+  });
+
+  it('still offers to deactivate someone with records instead', async () => {
+    server.use(
+      http.get(orgApiPath(`/staff/${sam.id}`), () =>
+        ok(
+          detailOf(sam, {
+            can_delete: false,
+            usage: [{ kind: 'time_entries', label: 'Time entries', count: 1 }],
+          }),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await findRowAction('Actions for Sam Staff', 'Delete'));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete staff member?' });
+    await user.click(await within(dialog).findByRole('button', { name: 'Deactivate instead' }));
     expect(
       await screen.findByRole('dialog', { name: 'Deactivate staff member?' }),
     ).toBeInTheDocument();
   });
 
-  it('shows the API explanation when the record became used meanwhile', async () => {
+  it('shows the API explanation when the delete is refused', async () => {
     server.use(
       http.delete(orgApiPath(`/staff/${sam.id}`), () =>
-        fail(409, 'STAFF_IN_USE', 'Sam Staff has records. Deactivate them instead.', {
-          details: { usage: [{ kind: 'invoices', label: 'Invoices', count: 3 }] },
-        }),
+        fail(403, 'FORBIDDEN', 'Only an owner can change another owner.'),
       ),
     );
     const user = userEvent.setup();
@@ -1163,10 +1206,8 @@ describe('deactivating and deleting', () => {
     await user.click(await within(dialog).findByRole('button', { name: 'Delete' }));
 
     expect(
-      await within(dialog).findByText('Sam Staff has records. Deactivate them instead.'),
+      await within(dialog).findByText('Only an owner can change another owner.'),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText('Invoices')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeDisabled();
   });
 });
 
