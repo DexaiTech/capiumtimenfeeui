@@ -1,19 +1,30 @@
 import { MoneyTone } from '@/components/ui/MoneyTone';
-import { FileText } from 'lucide-react';
-import { useMemo } from 'react';
-import { Link } from 'react-router';
+import { FilePlus2, FileText } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 
-import { PageToolbar, SearchField, Select, type DataTableColumn } from '@/components/ui';
-import { routes } from '@/constants/routes';
+import {
+  buttonClasses,
+  ConfirmDialog,
+  PageToolbar,
+  RowActions,
+  SearchField,
+  Select,
+  useToast,
+  type DataTableColumn,
+} from '@/components/ui';
+import { PERMISSIONS as P } from '@/constants/permissions';
+import { modulePath, ORG_SEGMENTS, routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useUrlParams } from '@/hooks';
 import { cn } from '@/utils/cn';
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
-import { useClientInvoices, type InvoiceFilters } from '../../api';
+import { useClientInvoices, useDeleteDraftInvoice, type InvoiceFilters } from '../../api';
 import { ToneBadge } from '../badges';
 import { INVOICE_STATUS_LABELS } from '../constants';
+import { describeError, type Failure } from '../errors';
 import { DateRangeFilter } from '../records/DateRangeFilter';
 import { RecordTable } from '../records/RecordTable';
 import { isoDateParam, oneOf, useUrlSearch } from '../records/urlFilters';
@@ -32,9 +43,16 @@ export interface InvoicesViewProps {
   clientName: string;
 }
 
-/** The client's invoices (`GET /invoices?client_id=`, `invoice.read`): status, issue dates, number. */
+/**
+ * The client's invoices (`GET /invoices?client_id=`, `invoice.read`): status, issue dates, number.
+ * With `invoice.create`, as in Billing: "New invoice" opens the invoice preparation for this client,
+ * and a draft is edited on its own page or deleted here. Issued invoices are locked: they are
+ * corrected (credit note, void) from the invoice's page.
+ */
 export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
-  const { organization } = useOrg();
+  const { organization, can } = useOrg();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const { params, setParam } = useUrlParams();
   const { text, setText, searched } = useUrlSearch();
   const status = oneOf(params.get('status'), INVOICE_STATUSES);
@@ -48,6 +66,25 @@ export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
     [searched, status, from, to],
   );
   const query = useClientInvoices(clientId, filters);
+  const remove = useDeleteDraftInvoice();
+  const [deleting, setDeleting] = useState<InvoiceRow | null>(null);
+  const [refusal, setRefusal] = useState<Failure | null>(null);
+  const canChange = can(P.invoiceCreate);
+
+  const confirmDelete = () => {
+    if (!deleting) return;
+    remove.mutate(deleting.id, {
+      onSuccess: () => {
+        toast({
+          tone: 'success',
+          title: 'Draft deleted',
+          description: 'Its work is unbilled WIP again.',
+        });
+        setDeleting(null);
+      },
+      onError: (error) => setRefusal(describeError(error)),
+    });
+  };
 
   const money = (pence: number) => formatMoney(pence, currency);
   const columns: DataTableColumn<InvoiceRow>[] = [
@@ -129,46 +166,103 @@ export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
 
   const filtered = Boolean(searched || status || from || to);
   return (
-    <RecordTable
-      caption={`Invoices of ${clientName}`}
-      columns={columns}
-      rowKey={(invoice) => invoice.id}
-      query={query}
-      noun={['invoice', 'invoices']}
-      filtered={filtered}
-      onClearFilters={() => {
-        setText('');
-        setParam({ q: null, status: null, from: null, to: null });
-      }}
-      emptyIcon={<FileText className="size-6" />}
-      emptyTitle="No invoices yet"
-      emptyDescription="Invoices raised for this client will be listed here."
-      errorTitle="Could not load the invoices"
-      toolbar={
-        <PageToolbar
-          search={
-            <SearchField
-              label="Search invoices"
-              placeholder="Search by number"
-              value={text}
-              onChange={setText}
-            />
-          }
-          actions={
-            <>
-              <Select
-                label="Status"
-                hideLabel
-                options={STATUS_OPTIONS}
-                value={status}
-                onChange={(event) => setParam({ status: event.target.value })}
-                className="w-full sm:w-40"
+    <>
+      <RecordTable
+        caption={`Invoices of ${clientName}`}
+        columns={columns}
+        rowKey={(invoice) => invoice.id}
+        query={query}
+        noun={['invoice', 'invoices']}
+        filtered={filtered}
+        onClearFilters={() => {
+          setText('');
+          setParam({ q: null, status: null, from: null, to: null });
+        }}
+        emptyIcon={<FileText className="size-6" />}
+        emptyTitle="No invoices yet"
+        emptyDescription="Invoices raised for this client will be listed here."
+        errorTitle="Could not load the invoices"
+        rowActions={
+          canChange
+            ? (invoice) => (
+                <RowActions
+                  label={`Actions for ${invoice.number ?? 'Draft'}`}
+                  items={
+                    // Only a draft can change; an issued invoice keeps its link to its own page.
+                    invoice.display_status === 'draft'
+                      ? [
+                          {
+                            id: 'edit',
+                            label: 'Edit draft',
+                            onSelect: () => void navigate(routes.org.invoice(slug, invoice.id)),
+                          },
+                          {
+                            id: 'delete',
+                            label: 'Delete draft',
+                            tone: 'danger',
+                            onSelect: () => {
+                              setRefusal(null);
+                              setDeleting(invoice);
+                            },
+                          },
+                        ]
+                      : []
+                  }
+                />
+              )
+            : undefined
+        }
+        toolbar={
+          <PageToolbar
+            search={
+              <SearchField
+                label="Search invoices"
+                placeholder="Search by number"
+                value={text}
+                onChange={setText}
               />
-              <DateRangeFilter label="Issue date" from={from} to={to} />
-            </>
-          }
-        />
-      }
-    />
+            }
+            actions={
+              <>
+                <Select
+                  label="Status"
+                  hideLabel
+                  options={STATUS_OPTIONS}
+                  value={status}
+                  onChange={(event) => setParam({ status: event.target.value })}
+                  className="w-full sm:w-40"
+                />
+                <DateRangeFilter label="Issue date" from={from} to={to} />
+              </>
+            }
+            primaryAction={
+              canChange ? (
+                <Link
+                  to={`${modulePath(slug, ORG_SEGMENTS.billing, 'prepare')}?client=${clientId}`}
+                  className={buttonClasses({ variant: 'primary', size: 'sm' })}
+                >
+                  <FilePlus2 aria-hidden="true" className="size-4" />
+                  New invoice
+                </Link>
+              ) : undefined
+            }
+          />
+        }
+      />
+      <ConfirmDialog
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+        title="Delete draft?"
+        confirmLabel="Delete draft"
+        loading={remove.isPending}
+        error={refusal}
+      >
+        <p>
+          The draft for <strong className="font-medium text-text">{clientName}</strong> will be
+          removed and the work on it goes back to unbilled WIP.
+        </p>
+      </ConfirmDialog>
+    </>
   );
 }
