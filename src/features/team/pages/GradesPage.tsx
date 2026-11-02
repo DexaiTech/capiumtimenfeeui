@@ -379,7 +379,7 @@ export default function GradesPage() {
   return (
     <PageShell
       title="Grades"
-      description="Staff grades with their default cost rate, charge-out rate and chargeable target. A dated rate overrides a grade's default while it is in force."
+      description="Staff grades with their default cost rate, charge-out rate and chargeable target. A dated rate overrides the grade default rate while it is in force."
     >
       {can(PERMISSIONS.memberRead) ? <GradeList /> : <NoAccess what="grades" />}
     </PageShell>
