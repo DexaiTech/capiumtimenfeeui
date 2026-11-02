@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
@@ -251,7 +251,8 @@ describe('InvoiceTemplateFormPanel: adding', () => {
       'aria-pressed',
       'true',
     );
-    await user.type(within(dialog).getByRole('textbox', { name: 'Watermark' }), 'COPY');
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Watermark' }), 'Text');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Watermark text' }), 'COPY');
     expect(screen.getByTestId('preview-watermark')).toHaveTextContent('COPY');
     const preview = within(dialog).getByRole('region', { name: 'Invoice preview' });
     expect(within(preview).getByText('Invoice')).toHaveStyle({ color: '#1F5CE6' });
@@ -268,7 +269,8 @@ describe('InvoiceTemplateFormPanel: adding', () => {
     renderInOrg(<InvoiceTemplatesPage />);
     const dialog = await openAdd(user);
     await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Odd');
-    await user.type(within(dialog).getByRole('textbox', { name: 'Watermark' }), 'a<b>');
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Watermark' }), 'Text');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Watermark text' }), 'a<b>');
     await user.click(within(dialog).getByRole('button', { name: 'Add template' }));
     expect(
       await within(dialog).findByText('Use up to 24 letters, digits, spaces and hyphens'),
@@ -600,6 +602,144 @@ describe('InvoiceTemplateFormPanel: editing', () => {
     await user.type(name, 'Summary');
     await user.click(within(dialog).getByRole('button', { name: 'Save template' }));
     expect(await screen.findByText('Summary saved')).toBeInTheDocument();
+  });
+});
+
+describe('InvoiceTemplateFormPanel: a watermark image', () => {
+  const png = (name = 'mark.png') => new File([new Uint8Array(3)], name, { type: 'image/png' });
+  const chooseFile = (dialog: HTMLElement, file: File) =>
+    fireEvent.change(within(dialog).getByLabelText('Watermark image file'), {
+      target: { files: [file] },
+    });
+
+  beforeEach(() => {
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: () => 'blob:test/watermark',
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: () => undefined,
+    });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(URL, 'createObjectURL');
+    Reflect.deleteProperty(URL, 'revokeObjectURL');
+  });
+
+  it('adds a template with an image, shown pale in the preview, then uploads it', async () => {
+    const user = userEvent.setup();
+    renderInOrg(<InvoiceTemplatesPage />);
+    await user.click(await screen.findByRole('button', { name: 'Add template' }));
+    const dialog = await screen.findByRole('region', { name: 'Add invoice template' });
+    const kind = within(dialog).getByRole('combobox', { name: 'Watermark' });
+    expect(kind).toHaveValue('none');
+    expect(
+      within(kind)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['None', 'Text', 'Image']);
+
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Pictured');
+    await user.selectOptions(kind, 'Image');
+    expect(within(dialog).queryByRole('textbox', { name: 'Watermark text' })).toBeNull();
+    // An image is needed before anything is sent.
+    await user.click(within(dialog).getByRole('button', { name: 'Add template' }));
+    expect(
+      await within(dialog).findByText('Choose an image for the watermark'),
+    ).toBeInTheDocument();
+    expect(backend.calls.templateCreates).toEqual([]);
+
+    // Only a picture is taken.
+    chooseFile(dialog, new File(['%PDF'], 'cv.pdf', { type: 'application/pdf' }));
+    expect(
+      await within(dialog).findByText('Use a PNG, JPG, WebP or GIF picture.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('preview-watermark-image')).not.toBeInTheDocument();
+
+    chooseFile(dialog, png());
+    expect(await screen.findByTestId('preview-watermark-image')).toHaveAttribute(
+      'src',
+      'blob:test/watermark',
+    );
+    expect(screen.getByTestId('preview-watermark-image')).toHaveClass('opacity-[0.1]');
+    await user.click(within(dialog).getByRole('button', { name: 'Add template' }));
+
+    expect(await screen.findByText('Pictured added')).toBeInTheDocument();
+    const [created] = backend.calls.templateCreates;
+    expect(created).not.toHaveProperty('watermark_text');
+    const id = backend.templates.find((entry) => entry.name === 'Pictured')?.id;
+    expect(backend.calls.watermarkSteps).toEqual([`upload ${id} file`]);
+  });
+
+  it('turns a text watermark into an image: the text goes first, then the image is uploaded', async () => {
+    backend.templates = backend.templates.map((entry) =>
+      entry.id === detailedTemplate.id ? { ...entry, watermark_text: 'COPY' } : entry,
+    );
+    const user = userEvent.setup();
+    renderInOrg(<InvoiceTemplatesPage />);
+    await chooseAction(user, 'Detailed time sheets', 'Edit');
+    const dialog = await screen.findByRole('region', { name: 'Edit invoice template' });
+    expect(within(dialog).getByRole('combobox', { name: 'Watermark' })).toHaveValue('text');
+    expect(within(dialog).getByRole('textbox', { name: 'Watermark text' })).toHaveValue('COPY');
+
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Watermark' }), 'Image');
+    chooseFile(dialog, png());
+    await user.click(within(dialog).getByRole('button', { name: 'Save template' }));
+
+    expect(await screen.findByText('Detailed time sheets saved')).toBeInTheDocument();
+    expect(backend.calls.templateUpdates).toEqual([
+      { id: detailedTemplate.id, body: { watermark_text: null } },
+    ]);
+    expect(backend.calls.watermarkSteps).toEqual([
+      `patch ${detailedTemplate.id}`,
+      `upload ${detailedTemplate.id} file`,
+    ]);
+  });
+
+  it('shows the saved image, and removes it before a text is set', async () => {
+    backend.templates = backend.templates.map((entry) =>
+      entry.id === detailedTemplate.id ? { ...entry, watermark_image: true } : entry,
+    );
+    const user = userEvent.setup();
+    renderInOrg(<InvoiceTemplatesPage />);
+    await chooseAction(user, 'Detailed time sheets', 'Edit');
+    const dialog = await screen.findByRole('region', { name: 'Edit invoice template' });
+    expect(within(dialog).getByRole('combobox', { name: 'Watermark' })).toHaveValue('image');
+    expect(await within(dialog).findByRole('img', { name: 'Watermark image' })).toBeInTheDocument();
+    expect(screen.getByTestId('preview-watermark-image')).toBeInTheDocument();
+
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Watermark' }), 'Text');
+    expect(screen.queryByTestId('preview-watermark-image')).not.toBeInTheDocument();
+    await user.type(within(dialog).getByRole('textbox', { name: 'Watermark text' }), 'PAID');
+    await user.click(within(dialog).getByRole('button', { name: 'Save template' }));
+
+    expect(await screen.findByText('Detailed time sheets saved')).toBeInTheDocument();
+    expect(backend.calls.watermarkSteps).toEqual([
+      `remove ${detailedTemplate.id}`,
+      `patch ${detailedTemplate.id}`,
+    ]);
+    expect(backend.calls.templateUpdates).toEqual([
+      { id: detailedTemplate.id, body: { watermark_text: 'PAID' } },
+    ]);
+  });
+
+  it('removes the image when the watermark is set to none', async () => {
+    backend.templates = backend.templates.map((entry) =>
+      entry.id === detailedTemplate.id ? { ...entry, watermark_image: true } : entry,
+    );
+    const user = userEvent.setup();
+    renderInOrg(<InvoiceTemplatesPage />);
+    await chooseAction(user, 'Detailed time sheets', 'Edit');
+    const dialog = await screen.findByRole('region', { name: 'Edit invoice template' });
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Watermark' }), 'None');
+    await user.click(within(dialog).getByRole('button', { name: 'Save template' }));
+
+    expect(await screen.findByText('Detailed time sheets saved')).toBeInTheDocument();
+    expect(backend.calls.watermarkSteps).toEqual([`remove ${detailedTemplate.id}`]);
+    expect(backend.calls.templateUpdates).toEqual([]);
   });
 });
 

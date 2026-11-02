@@ -87,6 +87,8 @@ export interface InvoiceTemplate {
   accent_color?: string | null;
   /** Printed pale across the page; null for none. */
   watermark_text?: string | null;
+  /** A picture is printed pale across the page instead of a text (`…/watermark-image`). */
+  watermark_image?: boolean;
   /** The template of clients that have not chosen one. */
   is_default: boolean;
   status: InvoiceTemplateStatus;

@@ -1,7 +1,7 @@
 import { http, type HttpHandler } from 'msw';
 
 import { orgApiPath } from '@/test/renderInOrg';
-import { fail, ok } from '@/test/server';
+import { fail, ok, readUpload } from '@/test/server';
 
 import type {
   InvoiceTemplate,
@@ -30,6 +30,8 @@ export interface BillingCalls {
   templateUpdates: Array<{ id: string; body: InvoiceTemplateUpdate }>;
   templateDeletes: string[];
   templateDefaults: string[];
+  /** The changes of templates' watermarks, in order: `patch`, `upload` or `remove`, with the id. */
+  watermarkSteps: string[];
 }
 
 /** An in-memory stand-in for the VAT-rate, sequence and invoice-template endpoints. */
@@ -69,6 +71,7 @@ export function createBillingBackend(
       templateUpdates: [],
       templateDeletes: [],
       templateDefaults: [],
+      watermarkSteps: [],
     },
   };
 }
@@ -250,8 +253,12 @@ export function billingHandlers(backend: BillingBackend): HttpHandler[] {
     http.patch(orgApiPath('/invoice-templates/:id'), async ({ params, request }) => {
       const body = (await request.json()) as InvoiceTemplateUpdate;
       calls.templateUpdates.push({ id: String(params.id), body });
+      calls.watermarkSteps.push(`patch ${String(params.id)}`);
       const found = templateById(params.id);
       if (!found) return fail(404, 'RESOURCE_NOT_FOUND', 'Invoice template not found.');
+      if (body.watermark_text && found.watermark_image) {
+        return fail(422, 'VALIDATION_ERROR', 'Some fields are invalid.');
+      }
       if (body.status === 'inactive' && found.is_default) {
         return fail(
           409,
@@ -298,5 +305,24 @@ export function billingHandlers(backend: BillingBackend): HttpHandler[] {
       found.is_default = true;
       return ok(found, { message: 'Default template changed' });
     }),
+    http.post(orgApiPath('/invoice-templates/:id/watermark-image'), async ({ params, request }) => {
+      calls.watermarkSteps.push(`upload ${String(params.id)} ${(await readUpload(request)).field}`);
+      const found = templateById(params.id);
+      if (!found) return fail(404, 'RESOURCE_NOT_FOUND', 'Invoice template not found.');
+      if (found.watermark_text) return fail(422, 'VALIDATION_ERROR', 'Some fields are invalid.');
+      Object.assign(found, { watermark_image: true, updated_at: NOW });
+      return ok(found, { message: 'Watermark picture updated' });
+    }),
+    http.delete(orgApiPath('/invoice-templates/:id/watermark-image'), ({ params }) => {
+      calls.watermarkSteps.push(`remove ${String(params.id)}`);
+      const found = templateById(params.id);
+      if (!found) return fail(404, 'RESOURCE_NOT_FOUND', 'Invoice template not found.');
+      Object.assign(found, { watermark_image: false, updated_at: NOW });
+      return ok(found, { message: 'Watermark picture removed' });
+    }),
+    http.get(
+      orgApiPath('/invoice-templates/:id/watermark-image'),
+      () => new Response(new Uint8Array([1]), { headers: { 'Content-Type': 'image/png' } }),
+    ),
   ];
 }

@@ -9,6 +9,15 @@ export const FOOTER_MAX = 1000;
 export const WATERMARK_MAX = 24;
 export const WATERMARK_PATTERN = /^[A-Za-z0-9 -]{1,24}$/;
 
+/** A watermark is a text or a picture, or there is none. */
+export const WATERMARK_KINDS = ['none', 'text', 'image'] as const;
+export type WatermarkKind = (typeof WATERMARK_KINDS)[number];
+export const WATERMARK_KIND_OPTIONS: ReadonlyArray<SelectOption<WatermarkKind>> = [
+  { value: 'none', label: 'None' },
+  { value: 'text', label: 'Text' },
+  { value: 'image', label: 'Image' },
+];
+
 /** `#RRGGBB`. */
 export const isHexColor = (value: string): boolean => /^#[0-9A-Fa-f]{6}$/.test(value);
 
