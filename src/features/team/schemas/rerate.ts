@@ -46,5 +46,15 @@ export const EMPTY_SCOPE: ScopeState = {
   include_unchanged: false,
 };
 
+/**
+ * The scope the page opens with: empty, or one job when it is opened from somewhere that changed
+ * the job's rate (`?job_id=…&job=<number and name>`, the client's Jobs tab).
+ */
+export function initialScope(params: URLSearchParams): ScopeState {
+  const jobId = params.get('job_id');
+  if (!jobId) return EMPTY_SCOPE;
+  return { ...EMPTY_SCOPE, jobs: [{ id: jobId, label: params.get('job') || 'This job' }] };
+}
+
 /** The message of each field of the form that failed validation. */
 export type ScopeErrors = Partial<Record<keyof RerateScopeValues, string>>;

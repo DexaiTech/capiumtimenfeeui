@@ -6,6 +6,7 @@ import { fail, ok } from '@/test/server';
 import type { CentralClient, CentralSearchResult } from '../central/types';
 import type { ClientDetail, MemberRead, ServiceRead } from '../types';
 import type {
+  ClientJobRates,
   ClientOverview,
   ClientWip,
   CreditNoteRow,
@@ -40,6 +41,8 @@ export interface WorkspaceData {
   overview?: ClientOverview;
   wip?: ClientWip;
   jobs?: JobRow[];
+  /** `GET /clients/{id}/job-rates`; by default each job's own terms, as the API derives them. */
+  jobRates?: ClientJobRates;
   time?: TimeEntryRow[];
   disbursements?: DisbursementRow[];
   invoices?: InvoiceRow[];
@@ -78,6 +81,9 @@ export function workspaceHandlers(data: WorkspaceData = {}): HttpHandler[] {
       const client = clients.find((candidate) => candidate.id === params.clientId);
       return client ? ok(client) : fail(404, 'RESOURCE_NOT_FOUND', 'Client not found.');
     }),
+    http.get(orgApiPath('/clients/:clientId/job-rates'), ({ params }) =>
+      ok(data.jobRates ?? jobRatesOf(String(params.clientId), data.jobs ?? jobs)),
+    ),
     list('jobs', data.jobs ?? jobs),
     list('time-entries', data.time ?? timeEntries),
     list('disbursements', data.disbursements ?? disbursements),
@@ -89,6 +95,38 @@ export function workspaceHandlers(data: WorkspaceData = {}): HttpHandler[] {
     http.get(orgApiPath('/services'), () => ok(data.services ?? testServices)),
     http.get(orgApiPath('/members'), () => ok(data.members ?? testMembers, { meta: END })),
   ];
+}
+
+/** What `GET /clients/{id}/job-rates` answers for jobs with no rate rules. */
+export function jobRatesOf(clientId: string, rows: ReadonlyArray<JobRow>): ClientJobRates {
+  return {
+    client_id: clientId,
+    as_of: '2026-09-07',
+    show_rates: true,
+    jobs: rows.map((row) => {
+      const basis =
+        row.billing_basis === 'fixed' || row.billing_basis === 'non_billable'
+          ? row.billing_basis
+          : 'hourly';
+      return {
+        job_id: row.id,
+        billing_basis: basis,
+        fixed_fee: row.fixed_fee,
+        job_rate: row.hourly_rate,
+        task_rate: null,
+        client_rule: null,
+        person_rules: 0,
+        source:
+          basis === 'fixed'
+            ? 'fixed_fee'
+            : basis === 'non_billable'
+              ? 'non_billable'
+              : row.hourly_rate !== null
+                ? 'job'
+                : 'staff',
+      };
+    }),
+  };
 }
 
 /** `GET /central-clients`: what the central service (or this practice's cache) answers. */

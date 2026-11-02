@@ -1,6 +1,6 @@
 import { MoneyTone } from '@/components/ui/MoneyTone';
-import { Briefcase, Plus } from 'lucide-react';
-import { useMemo } from 'react';
+import { Briefcase, Pencil, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
 import {
@@ -19,13 +19,15 @@ import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 import { formatMoney } from '@/utils/money';
 
-import { useClientJobs, type JobFilters, type JobSort } from '../../api';
+import { useClientJobRates, useClientJobs, type JobFilters, type JobSort } from '../../api';
 import { ToneBadge } from '../badges';
 import { JOB_STATUS_LABELS } from '../constants';
-import { JOB_STATUSES, type ClientOverview, type JobRow } from '../types';
+import { describeJobRate } from '../jobRates';
+import { JOB_STATUSES, type ClientOverview, type JobRate, type JobRow } from '../types';
 import { RecordTable } from '../records/RecordTable';
 import { SummaryStrip } from '../records/SummaryStrip';
 import { oneOf, useUrlSearch } from '../records/urlFilters';
+import { JobRatePanel, type JobRateTarget } from './JobRatePanel';
 
 const SORT_COLUMNS = ['number', 'due_date'] as const;
 
@@ -46,7 +48,11 @@ export interface JobsTabProps {
   overview: ClientOverview | undefined;
 }
 
-/** The client's jobs (`GET /jobs?client_id=`, `job.read`): search, status and server-side sort. */
+/**
+ * The client's jobs (`GET /jobs?client_id=`, `job.read`): search, status and server-side sort.
+ * Each job shows its rate and where it comes from (`GET /clients/{id}/job-rates`): the task rate
+ * until a custom client rate is agreed for the job, which `job.update` can set here (APT54).
+ */
 export function JobsTab({ clientId, clientName, overview }: JobsTabProps) {
   const { organization, can } = useOrg();
   const { params, setParam } = useUrlParams();
@@ -60,8 +66,16 @@ export function JobsTab({ clientId, clientName, overview }: JobsTabProps) {
     [searched, status, column, order],
   );
   const query = useClientJobs(clientId, filters);
+  const rates = useClientJobRates(clientId);
   const slug = organization.slug;
   const currency = organization.currency;
+  const canEditRate = can(PERMISSIONS.jobUpdate);
+  const [editing, setEditing] = useState<JobRateTarget | null>(null);
+  const rateOf = useMemo(() => {
+    const found = new Map<string, JobRate>();
+    for (const rate of rates.data?.jobs ?? []) found.set(rate.job_id, rate);
+    return found;
+  }, [rates.data]);
 
   const columns: DataTableColumn<JobRow>[] = [
     {
@@ -83,6 +97,33 @@ export function JobsTab({ clientId, clientName, overview }: JobsTabProps) {
       ),
     },
     { id: 'service', header: 'Service', cell: (job) => job.service_name ?? '—' },
+    {
+      id: 'rate',
+      header: 'Rate',
+      cell: (job) => {
+        const rate = rateOf.get(job.id);
+        const text = describeJobRate(job, rate, currency);
+        return (
+          <div className="flex items-start gap-1.5">
+            <div className="flex min-w-0 flex-col">
+              <span className="whitespace-nowrap font-medium text-text">{text.label}</span>
+              <span className="max-w-56 text-xs text-text-muted">{text.detail}</span>
+            </div>
+            {canEditRate && job.billing_basis === 'hourly' ? (
+              <button
+                type="button"
+                onClick={() => setEditing({ job, rate })}
+                aria-label={`Change the rate of ${job.number}`}
+                title="Change the rate"
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover hover:text-text"
+              >
+                <Pencil aria-hidden="true" className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
+        );
+      },
+    },
     {
       id: 'status',
       header: 'Status',
@@ -194,6 +235,7 @@ export function JobsTab({ clientId, clientName, overview }: JobsTabProps) {
           />
         }
       />
+      <JobRatePanel target={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }

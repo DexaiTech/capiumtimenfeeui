@@ -184,6 +184,7 @@ const job = (
   service_name: 'Accounts',
   billing_basis: 'fixed',
   fixed_fee: 150000,
+  hourly_rate: null,
   budget_minutes: 2400,
   budget_fee: null,
   start_date: '2026-04-01',

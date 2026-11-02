@@ -1,7 +1,9 @@
 import {
   keepPreviousData,
   useInfiniteQuery,
+  useMutation,
   useQuery,
+  useQueryClient,
   type InfiniteData,
   type QueryKey,
   type UseInfiniteQueryResult,
@@ -14,6 +16,7 @@ import { api, type RequestOptions } from '@/services/api';
 import { RECORD_PAGE_SIZE } from '../workspace/constants';
 import type {
   BillingStatus,
+  ClientJobRates,
   ClientOverview,
   ClientWip,
   CreditNoteRow,
@@ -99,6 +102,44 @@ export function useClientJobs(clientId: string, filters: JobFilters, enabled = t
       sort: filters.sort,
     },
     enabled,
+  });
+}
+
+/**
+ * `GET /clients/{id}/job-rates` (`job.read`): each job's rate and where it comes from. Kept under
+ * the jobs key, so a job saved anywhere refreshes it.
+ */
+export function useClientJobRates(clientId: string) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: [...queryKeys.org.jobs(organization.id), 'rates', clientId],
+    queryFn: ({ signal }) =>
+      api.get<ClientJobRates>(`${org(organization.id)}/clients/${seg(clientId)}/job-rates`, {
+        signal,
+      }),
+  });
+}
+
+/**
+ * Agree a client rate for a job, or go back to the task rate (`null`): the job's own hourly rate,
+ * `PATCH /jobs/{id}` (`job.update`). Every job view, the client and the dashboard are refreshed.
+ */
+export function useSetJobRate() {
+  const { organization } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ jobId, hourlyRate }: { jobId: string; hourlyRate: number | null }) =>
+      api.patch<JobRow>(`${org(organization.id)}/jobs/${seg(jobId)}`, {
+        hourly_rate: hourlyRate,
+      }),
+    onSettled: () =>
+      Promise.all(
+        [
+          queryKeys.org.jobs(organization.id),
+          queryKeys.org.clients(organization.id),
+          queryKeys.org.dashboard(organization.id),
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      ),
   });
 }
 

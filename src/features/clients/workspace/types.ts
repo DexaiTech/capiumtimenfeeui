@@ -148,6 +148,8 @@ export interface JobRow {
   status: JobStatus;
   billing_basis: string;
   fixed_fee: Pence | null;
+  /** The job's own hourly rate: the client rate agreed for the job (null: the task rate). */
+  hourly_rate: Pence | null;
   budget_minutes: number | null;
   budget_fee: Pence | null;
   start_date: IsoDate | null;
@@ -160,6 +162,41 @@ export interface JobRow {
   wip_value: Pence;
   billed_value: Pence;
   budget_minutes_used_bp: number | null;
+}
+
+/** What a job's time is billed at (`GET /clients/{id}/job-rates`, APT54). */
+export type JobRateSource = 'fixed_fee' | 'non_billable' | 'client_rule' | 'job' | 'task' | 'staff';
+
+/** A rate agreed with the client for everyone, which the ladder uses before a job's own rate. */
+export interface ClientRuleRef {
+  id: string;
+  /** `client_service`: for the job's service; `client`: for any service. */
+  level: 'client_service' | 'client';
+  rate: Pence;
+  effective_from: IsoDate;
+  effective_to: IsoDate | null;
+}
+
+/** One job of `GET /clients/{id}/job-rates`: its rate and where it comes from. */
+export interface JobRate {
+  job_id: string;
+  billing_basis: 'hourly' | 'fixed' | 'non_billable';
+  fixed_fee: Pence | null;
+  /** The job's own hourly rate: the client rate agreed for the job. */
+  job_rate: Pence | null;
+  /** The rates set against the job's service (null without one, or without `rate.read`). */
+  task_rate: { low: Pence; high: Pence; rules: number } | null;
+  client_rule: ClientRuleRef | null;
+  /** Client rates for named people in force (null without `rate.read`). */
+  person_rules: number | null;
+  source: JobRateSource;
+}
+
+export interface ClientJobRates {
+  client_id: string;
+  as_of: IsoDate;
+  show_rates: boolean;
+  jobs: JobRate[];
 }
 
 /* ------------------------------ Time and expenses ------------------------------ */
