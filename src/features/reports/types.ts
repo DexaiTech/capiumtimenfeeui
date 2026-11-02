@@ -4,7 +4,7 @@
  * percentages basis points (`null` when the denominator is zero).
  */
 import type { BasisPoints, IsoDate, Pence } from '@/types/api';
-import type { RecoveryFigures } from '@/types/recovery';
+import type { CostToBusinessFigures, RecoveryFigures, RecoveryRate } from '@/types/recovery';
 
 export interface ReportFilters {
   date_from?: IsoDate | null;
@@ -158,6 +158,33 @@ export interface RecoveryAnalysisRow extends RecoveryFigures {
 }
 
 export type RecoveryAnalysisTotals = RecoveryFigures;
+
+/** The filters of `/reports/recovery-analysis`, with the mark-up and the rate order it used. */
+export interface RecoveryAnalysisFilters extends ReportFilters {
+  /** The what-if mark-up, else null (each job's, client's or the practice's). */
+  markup_bp?: number | null;
+  practice_markup_bp?: number;
+  rate_order?: RecoveryRate[];
+}
+
+/* ----------------------------- Cost to Business ----------------------------- */
+
+/** A row of `/reports/cost-to-business`: a job, client or person (`group_by`). */
+export interface CostToBusinessRow extends CostToBusinessFigures {
+  key: string | null;
+  /** Job number, client code or initials. */
+  code: string | null;
+  name: string;
+  /** The job's client (`group_by=job`). */
+  client_name: string | null;
+  user_id?: string | null;
+  client_id?: string | null;
+  job_id?: string | null;
+  billing_basis?: string | null;
+  fixed_fee?: Pence | null;
+}
+
+export type CostToBusinessTotals = CostToBusinessFigures;
 
 /* ----------------------------- Billing summary ----------------------------- */
 

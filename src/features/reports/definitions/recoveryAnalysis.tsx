@@ -7,11 +7,21 @@ import { routes } from '@/constants/routes';
 import type { BasisPoints, Pence } from '@/types/api';
 import { formatMinutes } from '@/utils/minutes';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
-import { describeShortfall } from '@/utils/recovery';
+import {
+  costPlusLabel,
+  describeShortfall,
+  invoiceParts,
+  rateMix,
+  rateOrderText,
+} from '@/utils/recovery';
 
 import type { Stat } from '../components/StatCards';
 import type { ReportConfig } from '../config';
-import type { RecoveryAnalysisRow, RecoveryAnalysisTotals } from '../types';
+import type {
+  RecoveryAnalysisFilters,
+  RecoveryAnalysisRow,
+  RecoveryAnalysisTotals,
+} from '../types';
 import { words } from '../utils/format';
 import { minutes, money, named } from './cells';
 
@@ -21,10 +31,11 @@ function potential(
   shortfall: Pence | null,
   recoveryBp: BasisPoints | null,
   currency: string,
+  hint?: string,
 ): ReactNode {
   if (value === null || shortfall === null) return money(null, currency);
   return (
-    <div className="flex flex-col items-end">
+    <div className="flex flex-col items-end" title={hint || undefined}>
       {money(value, currency)}
       <MoneyTone kind="out" value={shortfall} className="text-xs">
         {describeShortfall(shortfall, currency)}
@@ -37,7 +48,10 @@ function potential(
 }
 
 /** Under a row's name: a job's client and terms, a client's code, a person's initials. */
-function detailOf(row: RecoveryAnalysisRow, currency: string): string {
+export function detailOf(
+  row: Pick<RecoveryAnalysisRow, 'billing_basis' | 'fixed_fee' | 'job_id' | 'client_name' | 'code'>,
+  currency: string,
+): string {
   const terms =
     row.billing_basis === 'fixed' && typeof row.fixed_fee === 'number'
       ? `Fixed ${formatMoney(row.fixed_fee, currency)}`
@@ -48,7 +62,7 @@ function detailOf(row: RecoveryAnalysisRow, currency: string): string {
 }
 
 /** "J00001 Annual accounts" for a job, the name otherwise. */
-function titleOf(row: RecoveryAnalysisRow): string {
+export function titleOf(row: Pick<RecoveryAnalysisRow, 'job_id' | 'code' | 'name'>): string {
   return row.job_id && row.code ? `${row.code} ${row.name}` : row.name;
 }
 
@@ -57,6 +71,7 @@ function basisColumn(
   header: string,
   of: (row: RecoveryAnalysisRow) => [Pence | null, Pence | null, BasisPoints | null],
   currency: string,
+  hint?: (row: RecoveryAnalysisRow) => string,
 ): DataTableColumn<RecoveryAnalysisRow> {
   return {
     id,
@@ -65,20 +80,28 @@ function basisColumn(
     sortable: true,
     sortValue: (row) => of(row)[1],
     className: 'whitespace-nowrap',
-    cell: (row) => potential(...of(row), currency),
+    cell: (row) => potential(...of(row), currency, hint?.(row)),
   };
 }
 
+/** The rate order the report was worked out with, in words. */
+function orderOf(filters: RecoveryAnalysisFilters | undefined): string | null {
+  const order = filters?.rate_order;
+  return order && order.length > 0 ? rateOrderText(order) : null;
+}
+
 /**
- * Invoices and recovery: what the work was invoiced at against the task rate, each person's own
- * charge-out rate and cost plus the practice's mark-up, with the revenue left on the table.
+ * Invoices and recovery: what the invoiced work was billed at against the recovery rate (the
+ * practice's order of the client job-specific, task and staff rates), each person's own
+ * charge-out rate and cost plus the job's, client's or practice's mark-up, with the revenue left
+ * on the table. Work not invoiced yet is WIP, shown apart.
  */
 export const recoveryAnalysisReport: ReportConfig<RecoveryAnalysisRow, RecoveryAnalysisTotals> = {
   endpoint: 'recovery-analysis',
   fileName: 'recovery-analysis',
   title: 'Recovery Analysis',
   description:
-    'Invoice value against the task rate, the staff charge-out rates and cost plus: where revenue is left on the table.',
+    'Invoice value against the recovery rate (client job, task or staff rate), the staff charge-out rates and cost plus: where revenue is left on the table.',
   what: 'recovery analysis',
   access: [P.reportFinancial],
   period: 'range',
@@ -105,7 +128,7 @@ export const recoveryAnalysisReport: ReportConfig<RecoveryAnalysisRow, RecoveryA
       },
       {
         id: 'hours',
-        header: 'Hours',
+        header: 'Hours invoiced',
         align: 'end',
         sortable: true,
         sortValue: (row) => row.minutes,
@@ -123,19 +146,18 @@ export const recoveryAnalysisReport: ReportConfig<RecoveryAnalysisRow, RecoveryA
             <MoneyTone kind="in" value={row.invoice_value}>
               {formatMoney(row.invoice_value, currency)}
             </MoneyTone>
-            {row.to_bill_value > 0 ? (
-              <span className="text-xs text-text-muted">
-                {formatMoney(row.to_bill_value, currency)} still to bill
-              </span>
+            {row.credited_value > 0 || row.draft_value > 0 ? (
+              <span className="text-xs text-text-muted">{invoiceParts(row, currency)}</span>
             ) : null}
           </div>
         ),
       },
       basisColumn(
-        'task',
-        'At task rate',
-        (row) => [row.task_value, row.task_shortfall, row.task_recovery_bp],
+        'recovery',
+        'Potential recovery',
+        (row) => [row.recovery_value, row.recovery_shortfall, row.recovery_bp],
         currency,
+        rateMix,
       ),
       basisColumn(
         'staff',
@@ -148,7 +170,7 @@ export const recoveryAnalysisReport: ReportConfig<RecoveryAnalysisRow, RecoveryA
       columns.push(
         basisColumn(
           'cost-plus',
-          'Cost plus',
+          costPlusLabel(totals.markup_bp),
           (row) => [row.cost_plus_value, row.cost_plus_shortfall, row.cost_plus_recovery_bp],
           currency,
         ),
@@ -167,22 +189,50 @@ export const recoveryAnalysisReport: ReportConfig<RecoveryAnalysisRow, RecoveryA
         },
       );
     }
+    columns.push({
+      id: 'wip',
+      header: 'Not invoiced (WIP)',
+      align: 'end',
+      sortable: true,
+      sortValue: (row) => row.wip_value,
+      className: 'whitespace-nowrap',
+      cell: (row) =>
+        row.wip_minutes > 0 ? (
+          <div className="flex flex-col items-end">
+            {money(row.wip_value, currency)}
+            <span className="text-xs text-text-muted">{formatMinutes(row.wip_minutes)}</span>
+          </div>
+        ) : (
+          money(null, currency)
+        ),
+    });
     return columns;
   },
-  stats: (totals, { currency }) => {
+  stats: (totals, { currency, filters }) => {
     const pounds = (pence: Pence) => formatMoney(pence, currency);
     const recovered = (bp: BasisPoints | null) => `${formatBasisPoints(bp)} recovered`;
+    const order = orderOf(filters);
+    const wip =
+      totals.wip_minutes > 0
+        ? `${formatMinutes(totals.wip_minutes)} not invoiced yet (${pounds(totals.wip_value)} WIP)`
+        : 'Nothing waiting to be invoiced';
     const stats: Stat[] = [
       {
         label: 'Invoice value',
         value: pounds(totals.invoice_value),
-        hint: `${formatMinutes(totals.minutes)} of work · ${pounds(totals.to_bill_value)} still to bill`,
+        hint: `${formatMinutes(totals.minutes)} invoiced · ${wip}`,
       },
       {
-        label: 'Left on the table at the task rate',
-        value: pounds(totals.task_shortfall),
-        hint: `${pounds(totals.task_value)} at the task rate · ${recovered(totals.task_recovery_bp)}`,
-        danger: totals.task_shortfall > 0,
+        label: 'Left on the table at the recovery rate',
+        value: pounds(totals.recovery_shortfall),
+        hint: [
+          `${pounds(totals.recovery_value)} potential recovery`,
+          recovered(totals.recovery_bp),
+          order ? `Rate order: ${order}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        danger: totals.recovery_shortfall > 0,
       },
       {
         label: 'Left on the table at staff rates',
@@ -195,7 +245,7 @@ export const recoveryAnalysisReport: ReportConfig<RecoveryAnalysisRow, RecoveryA
       stats.push({
         label: 'Left on the table at cost plus',
         value: pounds(totals.cost_plus_shortfall),
-        hint: `${pounds(totals.cost_plus_value)} at cost plus · ${recovered(totals.cost_plus_recovery_bp)}`,
+        hint: `${pounds(totals.cost_plus_value)} at ${costPlusLabel(totals.markup_bp).toLowerCase()} · ${recovered(totals.cost_plus_recovery_bp)}`,
         danger: totals.cost_plus_shortfall > 0,
       });
     }
@@ -213,7 +263,7 @@ export const recoveryAnalysisReport: ReportConfig<RecoveryAnalysisRow, RecoveryA
     }
     return null;
   },
-  note: 'Invoice value is what invoices billed for the time, plus what the rest will bill on the job’s terms (the fixed fee still to bill, else the time’s value); written-off time bills nothing. The task rate is the rate the time was priced at (the job’s or service’s rate); staff rates are each person’s own charge-out rate. A positive figure is revenue left on the table. Cost needs permission to see rates.',
+  note: 'Only invoiced work is compared: what issued and draft invoices bill for it, less credit notes allocated to those invoices; written-off work bills nothing. Work not invoiced yet, a fixed fee included, is WIP until its invoice exists. The recovery rate is the first rate found, in the order set in Settings → General → Rates: the client job-specific rate, the task rate, the staff charge-out rate. Cost plus adds the job’s mark-up, else the client’s, else the practice’s. A positive figure is revenue left on the table. Cost needs permission to see rates.',
   emptyTitle: 'No billable work in these dates',
   emptyDescription: 'Choose other dates or filters to see how the work recovered.',
 };

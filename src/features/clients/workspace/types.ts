@@ -7,7 +7,7 @@
  */
 import type { TimeEntry } from '@/features/time';
 import type { IsoDate, IsoDateTime, Pence } from '@/types/api';
-import type { RecoveryFigures } from '@/types/recovery';
+import type { RecoveryFigures, RecoveryRate } from '@/types/recovery';
 
 import type { ClientRef } from '../types';
 
@@ -347,7 +347,10 @@ export interface JobRecovery extends RecoveryFigures {
   status: string | null;
   billing_basis: string | null;
   fixed_fee: Pence | null;
+  /** The job's own hourly rate: the client job-specific rate agreed for it (APT54). */
   hourly_rate: Pence | null;
+  /** The job's own cost-plus mark-up, if set. */
+  job_markup_bp: number | null;
   /** The contract terms in words: "Fixed fee of £1,500.00". */
   terms: string;
 }
@@ -358,7 +361,13 @@ export interface ClientRecovery {
   jobs: JobRecovery[];
   totals: RecoveryFigures;
   /** The practice's cost-plus mark-up in basis points (5000 = 50%). */
-  markup_bp: number;
+  practice_markup_bp: number;
+  /** The client's own mark-up, if set (a job's comes before it). */
+  client_markup_bp: number | null;
+  /** The practice's order of the rates the recovery rate is looked for in. */
+  rate_order: RecoveryRate[];
+  /** Payments not allocated to an invoice: a credit for a future invoice, reducing no invoice. */
+  credit_on_account: Pence;
   /** Whether the caller may see cost (`rate.read`); cost plus is null otherwise. */
   show_cost: boolean;
 }

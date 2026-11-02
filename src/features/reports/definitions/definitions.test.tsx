@@ -9,6 +9,7 @@ import { server } from '@/test/server';
 
 import AgedDebtorsReportPage from '../pages/AgedDebtorsReportPage';
 import BillingReportPage from '../pages/BillingReportPage';
+import CostToBusinessReportPage from '../pages/CostToBusinessReportPage';
 import ExpensesReportPage from '../pages/ExpensesReportPage';
 import JobProfitabilityReportPage from '../pages/JobProfitabilityReportPage';
 import MissingTimesheetsReportPage from '../pages/MissingTimesheetsReportPage';
@@ -23,6 +24,8 @@ import {
   billingByMonth,
   billingByPartner,
   billingTotals,
+  costToBusinessRows,
+  costToBusinessTotals,
   expenseTotals,
   expensesByClient,
   expensesByStatus,
@@ -334,21 +337,34 @@ describe('Recovery', () => {
 
 describe('Recovery Analysis', () => {
   const answers = () => ({
-    'recovery-analysis': { rows: recoveryAnalysisRows(), totals: recoveryAnalysisTotals() },
+    'recovery-analysis': {
+      rows: recoveryAnalysisRows(),
+      totals: recoveryAnalysisTotals(),
+      filters: {
+        markup_bp: null,
+        practice_markup_bp: 5000,
+        rate_order: ['client_job', 'task', 'staff'],
+      },
+    },
   });
 
-  it('sets the invoice value against the task rate, the staff rates and cost plus', async () => {
+  it('sets the invoice value against the recovery rate, the staff rates and cost plus', async () => {
     setup(<RecoveryAnalysisReportPage />, answers());
     const rows = rowsOf(await table('Recovery Analysis'));
 
     const figures = screen.getByLabelText('Recovery Analysis figures');
-    expect(figures).toHaveTextContent('Invoice value£3,500.00');
-    expect(figures).toHaveTextContent('£2,000.00 still to bill');
-    expect(figures).toHaveTextContent('Left on the table at the task rate£500.00');
-    expect(figures).toHaveTextContent('87.5% recovered');
-    expect(figures).toHaveTextContent('Left on the table at staff rates£100.00');
-    expect(figures).toHaveTextContent('Left on the table at cost plus-£1,250.00');
+    expect(figures).toHaveTextContent('Invoice value£3,300.00');
+    expect(figures).toHaveTextContent('40:00 invoiced · 2:00 not invoiced yet (£200.00 WIP)');
+    expect(figures).toHaveTextContent('Left on the table at the recovery rate£700.00');
+    expect(figures).toHaveTextContent('£4,000.00 potential recovery · 82.5% recovered');
+    expect(figures).toHaveTextContent(
+      'Rate order: Client job-specific rate, then task-specific rate, then staff charge-out rate',
+    );
+    expect(figures).toHaveTextContent('Left on the table at staff rates£300.00');
+    expect(figures).toHaveTextContent('Left on the table at cost plus-£1,050.00');
 
+    // The ticket's example: £1,500 invoiced against £2,000 at the task rate and £1,600 at the
+    // staff rate; cost £700, £1,050 at cost plus 50%.
     for (const text of [
       'J00001 Year-end accounts',
       'Acme Ltd · Fixed £1,500.00',
@@ -357,12 +373,19 @@ describe('Recovery Analysis', () => {
       '£2,000.00£500.00 left on the table75% recovered',
       '£1,600.00£100.00 left on the table93.75% recovered',
       '£1,050.00£450.00 over',
+      '£700.00',
     ]) {
       expect(rows[0]).toHaveTextContent(text);
     }
+    expect(
+      within(await table('Recovery Analysis')).getByRole('columnheader', {
+        name: /Cost plus 50%/,
+      }),
+    ).toBeInTheDocument();
+    // A credit note allocated to the invoice reduces it; work not invoiced yet is WIP.
     expect(rows[1]).toHaveTextContent('Globex plc · Hourly');
-    expect(rows[1]).toHaveTextContent('£2,000.00 still to bill');
-    expect(rows[1]).toHaveTextContent('Matches the invoice');
+    expect(rows[1]).toHaveTextContent('£1,800.00£2,000.00 invoiced, £200.00 credited');
+    expect(rows[1]).toHaveTextContent('£200.002:00');
   });
 
   it('leaves out cost plus for someone who may not see rates', async () => {
@@ -398,6 +421,49 @@ describe('Recovery Analysis', () => {
     });
     expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
     expect(backend.calls.filter((call) => call.path === '/reports/recovery-analysis')).toHaveLength(
+      0,
+    );
+  });
+});
+
+describe('Cost to Business', () => {
+  const answers = () => ({
+    'cost-to-business': { rows: costToBusinessRows(), totals: costToBusinessTotals() },
+  });
+
+  it('sets what the work cost the practice against the invoice value', async () => {
+    setup(<CostToBusinessReportPage />, answers());
+    const rows = rowsOf(await table('Cost to Business'));
+
+    const figures = screen.getByLabelText('Cost to Business figures');
+    expect(figures).toHaveTextContent('Cost to the business£840.00');
+    expect(figures).toHaveTextContent('24:00 of time · £35.00 an hour · £70.00 non-billable');
+    expect(figures).toHaveTextContent('Invoice value£1,500.00');
+    expect(figures).toHaveTextContent('Against £700.00 of cost of the invoiced work');
+    expect(figures).toHaveTextContent('Margin£800.00');
+    expect(figures).toHaveTextContent('53.33% of the invoice value');
+
+    for (const text of [
+      'J00001 Year-end accounts',
+      '24:00',
+      '22:00 billable · 2:00 non-billable',
+      '£840.00',
+      '£35.00',
+      '£700.00',
+      '£70.00',
+      '£1,500.00',
+      '£800.0053.33%',
+    ]) {
+      expect(rows[0]).toHaveTextContent(text);
+    }
+  });
+
+  it('needs permission to see rates as well as the financial reports', async () => {
+    const backend = setup(<CostToBusinessReportPage />, answers(), {
+      permissions: ['organization.read', 'report.financial'],
+    });
+    expect(await screen.findByText("You don't have access to this page")).toBeInTheDocument();
+    expect(backend.calls.filter((call) => call.path === '/reports/cost-to-business')).toHaveLength(
       0,
     );
   });

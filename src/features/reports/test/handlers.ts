@@ -26,6 +26,8 @@ export interface Refusal {
 export interface Answer {
   rows: unknown[];
   totals: unknown;
+  /** Filters the report adds to the echo (the recovery analysis's `rate_order`). */
+  filters?: Record<string, unknown>;
 }
 
 /** The stand-in for the API: what a report answers, and what the page asked for. */
@@ -127,6 +129,7 @@ export function reportsHandlers(backend: ReportsBackend): HttpHandler[] {
           group_by: query.get('group_by'),
           week_from: query.get('week_from') ?? '2026-09-21',
           week_to: query.get('week_to') ?? '2026-10-12',
+          ...answer.filters,
         },
       });
     }),

@@ -219,7 +219,17 @@ const NOTHING: Breakdown = {
   budgeted_cost: null,
   agreed_price: null,
   basis_values: { contract: 0, job: null, team: null },
-  recovery: { minutes: 0, task_value: 0, staff_value: 0, cost_value: null, cost_plus_value: null },
+  recovery: {
+    minutes: 0,
+    recovery_value: 0,
+    client_job_minutes: 0,
+    task_minutes: 0,
+    staff_rate_minutes: 0,
+    staff_value: 0,
+    cost_value: null,
+    cost_plus_value: null,
+    markup_bp: null,
+  },
 };
 
 export function jobBilling(overrides: Partial<JobBilling> = {}): JobBilling {
@@ -259,10 +269,14 @@ export function harbourSummary(): ClientBillingSummary {
       basis_values: { contract: 39400, job: 53400, team: 15400 },
       recovery: {
         minutes: 180,
-        task_value: 36000,
+        recovery_value: 36000,
+        client_job_minutes: 0,
+        task_minutes: 180,
+        staff_rate_minutes: 0,
         staff_value: 30000,
         cost_value: 12000,
         cost_plus_value: 18000,
+        markup_bp: 5000,
       },
     },
   });
@@ -287,10 +301,14 @@ export function harbourSummary(): ClientBillingSummary {
       basis_values: { contract: 200000, job: 200000, team: 20000 },
       recovery: {
         minutes: 300,
-        task_value: 60000,
+        recovery_value: 60000,
+        client_job_minutes: 0,
+        task_minutes: 300,
+        staff_rate_minutes: 0,
         staff_value: 50000,
         cost_value: 20000,
         cost_plus_value: 30000,
+        markup_bp: 5000,
       },
     },
   });
@@ -306,18 +324,23 @@ export function harbourSummary(): ClientBillingSummary {
       other_costs: 3400,
       billable_total: 239400,
       basis_values: { contract: 239400, job: 253400, team: 35400 },
-      // 8 hours ready: £960 at the task rates, £800 at the staff rates, costing £320 (£480 at cost
+      // 8 hours ready: £960 at the task rates (the recovery rate), £800 at the staff rates, costing £320 (£480 at cost
       // plus 50%).
       recovery: {
         minutes: 480,
-        task_value: 96000,
+        recovery_value: 96000,
+        client_job_minutes: 0,
+        task_minutes: 480,
+        staff_rate_minutes: 0,
         staff_value: 80000,
         cost_value: 32000,
         cost_plus_value: 48000,
+        markup_bp: 5000,
       },
     },
     show_cost: true,
     markup_bp: 5000,
+    rate_order: ['client_job', 'task', 'staff'],
     // t-1 (1.5h) costs £60, t-2 (1h) £40, t-3 (2h) £80, t-4 (0.5h) £20; t-5 and t-6 sit on the fixed fee.
     time_costs: { 't-1': 6000, 't-2': 4000, 't-3': 8000, 't-4': 2000, 't-5': 8000, 't-6': 12000 },
   };

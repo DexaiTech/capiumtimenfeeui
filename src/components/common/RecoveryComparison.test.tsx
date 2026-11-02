@@ -5,17 +5,21 @@ import { compareRecovery } from '@/utils/recovery';
 
 import { RecoveryComparison } from './RecoveryComparison';
 
-// The ticket's example: £1,500 fixed for 20 hours, £100 an hour task rate, £80 staff rate.
+// The ticket's example: £1,500 fixed for 20 hours, £100 an hour task rate (the recovery rate),
+// £80 staff rate.
 const lines = compareRecovery(
   {
     minutes: 1200,
-    task_value: 200000,
+    recovery_value: 200000,
+    client_job_minutes: 0,
+    task_minutes: 1200,
+    staff_rate_minutes: 0,
     staff_value: 160000,
     cost_value: 70000,
     cost_plus_value: 105000,
+    markup_bp: 5000,
   },
   150000,
-  5000,
 );
 
 describe('RecoveryComparison', () => {
@@ -34,7 +38,7 @@ describe('RecoveryComparison', () => {
     const panel = screen.getByRole('region', { name: 'Recovery' });
     expect(panel).toHaveTextContent('Invoice value£1,500.00£1,500.00 invoiced');
     expect(panel).toHaveTextContent(
-      'At the task rate£2,000.00£500.00 left on the table75% recovered',
+      'Potential recovery£2,000.00£500.00 left on the table75% recovered',
     );
     expect(panel).toHaveTextContent(
       'At staff rates£1,600.00£100.00 left on the table93.75% recovered',

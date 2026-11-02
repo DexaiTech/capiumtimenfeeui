@@ -179,6 +179,8 @@ interface ClientWritableFields {
   partner_user_id: string | null;
   manager_user_id: string | null;
   payment_terms_days: number | null;
+  /** The client's cost-plus mark-up of the recovery analysis (basis points); null: the practice's. */
+  cost_plus_markup_bp?: number | null;
   default_vat_rate_id: string | null;
   billing_notes: string | null;
   notes: string | null;
@@ -236,6 +238,8 @@ export interface ClientRead {
   partner_user_id: string | null;
   manager_user_id: string | null;
   payment_terms_days: number | null;
+  /** The client's cost-plus mark-up of the recovery analysis (basis points); null: the practice's. */
+  cost_plus_markup_bp?: number | null;
   default_vat_rate_id: string | null;
   billing_notes: string | null;
   notes: string | null;

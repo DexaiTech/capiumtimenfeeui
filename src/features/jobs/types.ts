@@ -40,6 +40,8 @@ export interface Job {
   billing_basis: BillingBasis;
   fixed_fee: Pence | null;
   hourly_rate: Pence | null;
+  /** The job's cost-plus mark-up of the recovery analysis (basis points); null: the client's. */
+  cost_plus_markup_bp?: number | null;
   budget_minutes: Minutes | null;
   budget_fee: Pence | null;
   /** The cost the work is expected to take, to compare with the cost of the people who did it. */
@@ -78,6 +80,7 @@ export interface JobInput {
   billing_basis?: BillingBasis;
   fixed_fee?: Pence | null;
   hourly_rate?: Pence | null;
+  cost_plus_markup_bp?: number | null;
   budget_minutes?: Minutes | null;
   budget_fee?: Pence | null;
   budget_cost?: Pence | null;

@@ -20,7 +20,7 @@ import { usePersistentColumns } from '@/hooks';
 import type { Pence } from '@/types/api';
 import { formatMoney } from '@/utils/money';
 import { formatMinutes } from '@/utils/minutes';
-import { compareRecovery } from '@/utils/recovery';
+import { compareRecovery, rateMix, rateOrderText } from '@/utils/recovery';
 
 import type { BillingBasis, ClientBillingSummary, JobBilling } from '../../types';
 import { BASIS_HINTS, BASIS_LABELS } from '../../utils/basis';
@@ -39,7 +39,7 @@ const HIDDEN_BY_DEFAULT = [
   'fixed',
   'other',
   'budgeted',
-  'task_rate',
+  'recovery',
   'staff_rate',
   'cost_plus',
 ];
@@ -215,11 +215,11 @@ function columnsFor(
   }
   columns.push(
     {
-      id: 'task_rate',
-      header: 'At task rate',
+      id: 'recovery',
+      header: 'Potential recovery',
       sortable: true,
-      ...amount((job) => job.breakdown.recovery.task_value),
-      cell: (job) => money(job.breakdown.recovery.task_value),
+      ...amount((job) => job.breakdown.recovery.recovery_value),
+      cell: (job) => money(job.breakdown.recovery.recovery_value),
     },
     {
       id: 'staff_rate',
@@ -287,7 +287,8 @@ export function BillingSummary({ summary, basis, onBasisChange }: BillingSummary
 
   // The invoice being raised, without its disbursements: what the work itself is billed at.
   const invoiceValue = Math.max((values[basis] ?? 0) - totals.other_costs, 0);
-  const recovery = compareRecovery(totals.recovery, invoiceValue, summary.markup_bp);
+  const recovery = compareRecovery(totals.recovery, invoiceValue);
+  const mix = rateMix(totals.recovery);
 
   const columns = useMemo(
     () => columnsFor(basis, summary.show_cost, money),
@@ -360,7 +361,7 @@ export function BillingSummary({ summary, basis, onBasisChange }: BillingSummary
       {totals.recovery.minutes > 0 ? (
         <RecoveryComparison
           title="Recovery of this invoice"
-          description={`The ${formatMinutes(totals.recovery.minutes)} ready to bill against what the work would bill at the task rate, at each person's own charge-out rate and at cost plus the practice's mark-up.`}
+          description={`The ${formatMinutes(totals.recovery.minutes)} ready to bill against what the work would bill at the recovery rate (${rateOrderText(summary.rate_order)}; first found)${mix ? `: ${mix}` : ''}, at each person's own charge-out rate and at cost plus the mark-up.`}
           invoiceLabel={`This invoice (${BASIS_LABELS[basis].toLowerCase()})`}
           invoiceValue={invoiceValue}
           invoiceHint={

@@ -88,6 +88,7 @@ function Report<TRow, TTotals>({ config }: { config: ReportConfig<TRow, TTotals>
     slug: organization.slug,
     group,
     totals,
+    filters: data?.filters,
   });
   const ctx = contextOf(data?.totals);
   const columns = config.columns(ctx);
@@ -312,7 +313,8 @@ export function ReportScreen<TRow, TTotals>({ config }: { config: ReportConfig<T
   const { can } = useOrg();
   return (
     <PageShell title={config.title} description={config.description}>
-      {config.access.some((permission) => can(permission)) ? (
+      {config.access.some((permission) => can(permission)) &&
+      (config.requires ?? []).every((permission) => can(permission)) ? (
         <Report config={config} />
       ) : (
         <NoAccess what={config.what} />

@@ -1,5 +1,6 @@
 import * as z from 'zod';
 
+import { isMarkupInput, MARKUP_MESSAGE, markupBpToInput, percentToMarkupBp } from '@/utils/markup';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import { LIMITS } from '../constants';
@@ -41,6 +42,8 @@ export const jobSchema = z
     fixed_fee: z.string(),
     /** Pounds; overrides every other charge-out rate for time on the job. */
     hourly_rate: z.string(),
+    /** Percent; the job's cost-plus mark-up in the recovery analysis (blank: the client's). */
+    cost_plus_markup: z.string().refine(isMarkupInput, MARKUP_MESSAGE),
     budget_minutes: z.number().int().min(0).max(MAX_MINUTES).nullable(),
     budget_fee: z.string(),
     /** Pounds; the cost the work is expected to take. */
@@ -71,6 +74,11 @@ export const jobSchema = z
 
 export type JobValues = z.infer<typeof jobSchema>;
 
+/** The mark-up typed in percent as basis points; blank (or invalid) is null: not set. */
+function markupOf(text: string): number | null {
+  return text.trim() ? percentToMarkupBp(text) : null;
+}
+
 /** The form's starting values: a new job, or the job being edited. */
 /** `today` (the practice's date) is the start date and period start of a new job; an existing job keeps its own. */
 export function jobDefaults(job: Job | null, clientId = '', today = ''): JobValues {
@@ -82,6 +90,7 @@ export function jobDefaults(job: Job | null, clientId = '', today = ''): JobValu
     billing_basis: job?.billing_basis ?? 'hourly',
     fixed_fee: penceToPoundsInput(job?.fixed_fee),
     hourly_rate: penceToPoundsInput(job?.hourly_rate),
+    cost_plus_markup: markupBpToInput(job?.cost_plus_markup_bp),
     budget_minutes: job?.budget_minutes ?? null,
     budget_fee: penceToPoundsInput(job?.budget_fee),
     budget_cost: penceToPoundsInput(job?.budget_cost),
@@ -109,6 +118,8 @@ export function toJobInput(values: JobValues): JobInput {
   if (fixedFee !== null) input.fixed_fee = fixedFee;
   const hourlyRate = values.billing_basis === 'hourly' ? money(values.hourly_rate) : null;
   if (hourlyRate !== null) input.hourly_rate = hourlyRate;
+  const markup = markupOf(values.cost_plus_markup);
+  if (markup !== null) input.cost_plus_markup_bp = markup;
   if (values.budget_minutes !== null) input.budget_minutes = values.budget_minutes;
   const budgetFee = money(values.budget_fee);
   if (budgetFee !== null) input.budget_fee = budgetFee;
@@ -136,6 +147,7 @@ export function toJobUpdate(values: JobValues, job: Job): JobUpdate {
     billing_basis: values.billing_basis,
     fixed_fee: values.billing_basis === 'fixed' ? money(values.fixed_fee) : null,
     hourly_rate: values.billing_basis === 'hourly' ? money(values.hourly_rate) : null,
+    cost_plus_markup_bp: markupOf(values.cost_plus_markup),
     budget_minutes: values.budget_minutes,
     budget_fee: money(values.budget_fee),
     budget_cost: money(values.budget_cost),
@@ -148,7 +160,8 @@ export function toJobUpdate(values: JobValues, job: Job): JobUpdate {
   };
   const changes: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(next)) {
-    if (value !== job[key as keyof Job]) changes[key] = value;
+    // A field the job does not carry (an older answer) counts as null.
+    if (value !== (job[key as keyof Job] ?? null)) changes[key] = value;
   }
   return changes;
 }

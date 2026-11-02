@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { DataTableColumn } from '@/components/ui';
 
 import type { Stat } from './components/StatCards';
-import type { ExportFormat } from './types';
+import type { ExportFormat, ReportFilters } from './types';
 
 /** The filters a report offers; each maps to the endpoint's parameter of the same meaning. */
 export type FilterKey =
@@ -41,6 +41,8 @@ export interface ReportContext<TTotals> {
   /** The grouping on show (`group_by`), when the report has one. */
   group: string | undefined;
   totals: TTotals | undefined;
+  /** The filters the report was worked out with, as the API echoes them (once it answered). */
+  filters?: ReportFilters;
 }
 
 /** The period on show, for the links that open the records behind a row. */
@@ -65,6 +67,8 @@ export interface ReportConfig<TRow, TTotals> {
   what: string;
   /** Any of these permissions opens the report. */
   access: ReadonlyArray<string>;
+  /** And every one of these too (Cost to Business: `rate.read`, as cost is its point). */
+  requires?: ReadonlyArray<string>;
   period: PeriodKind;
   /** The period preset a range report opens on (else the API's: this month). */
   defaultPreset?: 'this-month' | 'last-month' | 'last-3-months' | 'this-year' | 'last-12-months';

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Input, Select, Skeleton, Textarea, useToast, type SelectOption } from '@/components/ui';
+import { useOrg } from '@/features/organizations';
 import { isApiError } from '@/services/api';
 import { formatBasisPoints } from '@/utils/money';
 
@@ -58,6 +59,7 @@ function missingChoiceField(error: unknown): keyof BillingFormValues | null {
 }
 
 function BillingForm({ client, abilities }: BillingCardProps) {
+  const { organization } = useOrg();
   const { toast } = useToast();
   const update = useUpdateClient();
   const updateContact = useUpdateContact();
@@ -187,6 +189,15 @@ function BillingForm({ client, abilities }: BillingCardProps) {
           error={errors.payment_terms_days?.message}
           disabled={!canEdit}
           {...register('payment_terms_days')}
+        />
+        <Input
+          label="Cost-plus mark-up (%)"
+          inputMode="decimal"
+          autoComplete="off"
+          hint={`Recovery analysis. Blank: the practice's ${formatBasisPoints(organization.cost_plus_markup_bp)}. A job's own mark-up comes first.`}
+          error={errors.cost_plus_markup?.message}
+          disabled={!canEdit}
+          {...register('cost_plus_markup')}
         />
         <Select
           label="Default VAT code"
