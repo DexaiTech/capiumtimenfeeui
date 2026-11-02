@@ -169,7 +169,7 @@ export default function HistoricWipPage() {
           caption="Historic WIP"
           columns={columns}
           rows={rows}
-          rowKey={(row) => row.key ?? `none:${row.name}`}
+          rowKey={(row) => `${row.client?.id ?? ''}:${row.key ?? 'none'}`}
           hiddenColumns={hidden}
           loading={report.isPending}
           toolbar={

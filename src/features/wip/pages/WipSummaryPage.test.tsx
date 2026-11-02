@@ -121,6 +121,38 @@ describe('WIP summary', () => {
     expect(screen.getByRole('columnheader', { name: 'Job' })).toBeInTheDocument();
   });
 
+  it('leaves no "No job" line of the Job tab behind on the Client tab', async () => {
+    const user = userEvent.setup();
+    const noJob = (client: { id: string; code: string; name: string }) =>
+      groupRow({ group_by: 'job', key: null, name: 'No job', code: null, client });
+    setup(
+      {
+        summary: {
+          client: [groupRow(), globexRow()],
+          job: [
+            noJob({ id: IDS.acme, code: 'ACME', name: 'Acme Ltd' }),
+            noJob({ id: IDS.globex, code: 'GLOB', name: 'Globex plc' }),
+          ],
+        },
+      },
+      { route: `${WIP}?group=job` },
+    );
+    expect(rowsOf(await table())).toHaveLength(2);
+
+    await user.click(screen.getByRole('tab', { name: 'Client' }));
+    await waitFor(() =>
+      expect(screen.getByRole('columnheader', { name: 'Client' })).toBeInTheDocument(),
+    );
+    await waitFor(() => {
+      const rows = rowsOf(screen.getByRole('table', { name: 'WIP summary' }));
+      expect(rows.map((row) => row.textContent)).toEqual([
+        expect.stringContaining('Acme Ltd'),
+        expect.stringContaining('Globex plc'),
+      ]);
+    });
+    expect(screen.getByRole('table', { name: 'WIP summary' })).not.toHaveTextContent('No job');
+  });
+
   it('sorts by the header the person clicks, through the API', async () => {
     const user = userEvent.setup();
     const backend = setup();

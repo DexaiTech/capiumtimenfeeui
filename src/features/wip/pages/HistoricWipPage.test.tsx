@@ -170,6 +170,35 @@ describe('the historic WIP', () => {
     await waitFor(() => expect(screen.getByRole('table')).toHaveTextContent('Hourly'));
   });
 
+  it('leaves no "No job" line of the Job tab behind on the Client tab', async () => {
+    const user = userEvent.setup();
+    const noJob = (client: { id: string; code: string; name: string }) =>
+      historicRow({ group_by: 'job', key: null, name: 'No job', code: null, client });
+    setup(
+      {
+        historic: {
+          client: rows(),
+          job: [
+            noJob({ id: IDS.acme, code: 'ACME', name: 'Acme Ltd' }),
+            noJob({ id: IDS.globex, code: 'GLOB', name: 'Globex plc' }),
+          ],
+        },
+      },
+      { route: `${HISTORIC}?group=job` },
+    );
+    expect(rowsOf(await table())).toHaveLength(2);
+
+    await user.click(screen.getByRole('tab', { name: 'Client' }));
+    await waitFor(() => {
+      const body = rowsOf(screen.getByRole('table', { name: 'Historic WIP' }));
+      expect(body.map((row) => row.textContent)).toEqual([
+        expect.stringContaining('Acme Ltd'),
+        expect.stringContaining('Globex plc'),
+      ]);
+    });
+    expect(screen.getByRole('table', { name: 'Historic WIP' })).not.toHaveTextContent('No job');
+  });
+
   it('filters by manager, and says how many filters apply', async () => {
     const user = userEvent.setup();
     const backend = setup();
