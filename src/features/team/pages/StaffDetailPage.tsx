@@ -42,7 +42,7 @@ import { formatPeriod, formatRate, scopeNames } from '../utils/format';
 
 const SOURCE_LABEL: Record<string, string> = {
   staff: "this person's own rate",
-  grade: "their grade's default",
+  grade: 'their grade default rate',
   staff_first: "this person's first rate (it starts later)",
   default: "the practice's default",
   none: 'none set',

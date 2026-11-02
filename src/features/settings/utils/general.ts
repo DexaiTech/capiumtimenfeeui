@@ -39,15 +39,15 @@ export const WIP_MODE_OPTIONS: ReadonlyArray<SelectOption<FixedFeeWipMode>> = [
 ];
 
 export const RATE_MODE_LABEL: Record<RateMode, string> = {
-  staff_first: "Staff rate first, then the grade's",
+  staff_first: 'Staff rate first, then grade rates',
   grade_only: 'Grade rates only',
 };
 
 export const RATE_MODE_HELP: Record<RateMode, string> = {
   staff_first:
-    "A person's own charge-out rate prices their time; where they have none, their grade's rate does.",
+    "A person's own charge-out rate prices their time; where they have none, their grade rate does.",
   grade_only:
-    "Staff-level rates are skipped, so every person is priced at their grade's rate. The staff rates are kept and apply again if you switch back. Cost rates are not affected.",
+    'Staff-level rates are skipped, so every person is priced at their grade rate. The staff rates are kept and apply again if you switch back. Cost rates are not affected.',
 };
 
 export const RATE_MODE_OPTIONS: ReadonlyArray<SelectOption<RateMode>> = [

@@ -77,7 +77,7 @@ function Result({ resolution }: { resolution: RateResolution }) {
       <Card padding="none">
         <CardHeader
           title="How the cost rate was chosen"
-          description="The person's own cost rate, else their grade's, else none."
+          description="The person's own cost rate, else their grade rate, else none."
         />
         <RateLadder caption="Cost rate levels" steps={resolution.cost_ladder} />
       </Card>

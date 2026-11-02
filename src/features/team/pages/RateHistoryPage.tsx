@@ -336,7 +336,7 @@ export default function RateHistoryPage() {
   return (
     <PageShell
       title="Rate History"
-      description="Every change to a cost rate, a charge-out rate or a grade's default rate, newest first."
+      description="Every change to a cost rate, a charge-out rate or a grade default rate, newest first."
     >
       {can(PERMISSIONS.rateRead) ? <HistoryList /> : <NoAccess what="the rate history" />}
     </PageShell>

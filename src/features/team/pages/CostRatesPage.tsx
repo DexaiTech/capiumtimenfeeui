@@ -12,7 +12,7 @@ export default function CostRatesPage() {
   return (
     <PageShell
       title="Cost Rates"
-      description="What each person and grade costs the practice per hour. A dated rate overrides the grade's default cost rate while it is in force."
+      description="What each person and grade costs the practice per hour. A dated rate overrides the grade default cost rate while it is in force."
     >
       {can(PERMISSIONS.rateRead) ? <RateRulesView kind="cost" /> : <NoAccess what="cost rates" />}
     </PageShell>
