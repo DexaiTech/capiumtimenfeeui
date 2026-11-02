@@ -29,7 +29,8 @@ export interface DeleteOutcome {
 
 /* ----------------------------------- Staff ----------------------------------- */
 
-export type StaffStatus = 'active' | 'inactive' | 'left';
+/** `deleted`: deleted while records refer to them, kept for that history (ticket APT62). */
+export type StaffStatus = 'active' | 'inactive' | 'left' | 'deleted';
 export type LoginStatus = 'none' | 'invited' | 'active';
 export type StaffSort =
   'name' | 'code' | 'email' | 'grade' | 'status' | 'start_date' | 'leaving_date';

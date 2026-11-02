@@ -11,6 +11,7 @@ export const STAFF_STATUS_LABEL: Record<StaffStatus, string> = {
   active: 'Active',
   inactive: 'Inactive',
   left: 'Left',
+  deleted: 'Deleted',
 };
 
 export const LOGIN_STATUS_LABEL: Record<LoginStatus, string> = {

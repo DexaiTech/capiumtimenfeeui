@@ -2,7 +2,7 @@ import { ApiError, isApiError } from '@/services/api';
 import type { FieldErrorDetail } from '@/types/api';
 import { formatWait } from '@/utils/format';
 
-import type { RateConflict, StaffUsage } from '../types';
+import type { RateConflict } from '../types';
 
 export interface ErrorNotice {
   title: string;
@@ -58,26 +58,13 @@ export function toFormError(error: unknown, rename: Record<string, string> = {})
   });
 }
 
-/** `details` of an error when it is an object (as for `STAFF_IN_USE` and `RATE_OVERLAP`). */
+/** `details` of an error when it is an object (as for `RATE_OVERLAP`). */
 function detailsObject(error: unknown): Record<string, unknown> | null {
   if (!isApiError(error)) return null;
   const { details } = error;
   return typeof details === 'object' && details !== null && !Array.isArray(details)
     ? (details as Record<string, unknown>)
     : null;
-}
-
-/** The records a staff member is used by (`details.usage` of 409 `STAFF_IN_USE`). */
-export function usageOf(error: unknown): StaffUsage[] {
-  const usage = detailsObject(error)?.usage;
-  if (!Array.isArray(usage)) return [];
-  return usage.filter(
-    (entry): entry is StaffUsage =>
-      typeof entry === 'object' &&
-      entry !== null &&
-      typeof (entry as StaffUsage).label === 'string' &&
-      typeof (entry as StaffUsage).count === 'number',
-  );
 }
 
 /** The rules in the way of a new period (`details.conflicts` of 409 `RATE_OVERLAP`). */

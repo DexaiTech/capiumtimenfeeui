@@ -50,7 +50,7 @@ import { formatRate } from '../utils/format';
 
 type StaffTab = StaffStatus;
 const TABS: ReadonlyArray<{ value: StaffTab; label: string }> = (
-  ['active', 'inactive', 'left'] as const
+  ['active', 'inactive', 'left', 'deleted'] as const
 ).map((value) => ({ value, label: STAFF_STATUS_LABEL[value] }));
 
 const SORTS: ReadonlyArray<StaffSort> = [

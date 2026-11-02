@@ -354,7 +354,7 @@ export interface StaffPerson {
   id: string;
   code: string;
   full_name: string;
-  status: 'active' | 'inactive' | 'left';
+  status: 'active' | 'inactive' | 'left' | 'deleted';
   has_login: boolean;
   approver: { id: string; full_name: string } | null;
   weekly_capacity_minutes: Minutes;

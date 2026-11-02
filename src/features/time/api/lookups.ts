@@ -2,19 +2,26 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { useOrg } from '@/features/organizations';
 
-import type { JobRef } from '../types';
+import type { JobRef, StaffPerson } from '../types';
+import { staffName } from '../utils/format';
 import { timeKeys } from './keys';
 import { timeApi } from './timeApi';
 
+/** The name every time screen shows: deleted users read "John Smith (deleted user)". */
+const withRecordNames = (people: StaffPerson[]): StaffPerson[] =>
+  people.map((person) => ({ ...person, full_name: staffName(person) }));
+
 /**
- * Everybody on the staff list (also people who left), to name ids and to work out targets. Needs
- * `member.read`; without it the hook stays idle and the screens fall back to what they have.
+ * Everybody on the staff list (also people who left and deleted users), to name ids and to work out
+ * targets. Needs `member.read`; without it the hook stays idle and the screens fall back to what
+ * they have.
  */
 export function useStaffDirectory({ enabled = true }: { enabled?: boolean } = {}) {
   const { organization } = useOrg();
   return useQuery({
     queryKey: timeKeys.staff(organization.id),
     queryFn: ({ signal }) => timeApi.listStaff(organization.id, signal),
+    select: withRecordNames,
     enabled,
     staleTime: 60_000,
   });

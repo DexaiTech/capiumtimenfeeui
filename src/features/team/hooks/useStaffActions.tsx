@@ -127,6 +127,12 @@ export function useStaffActions({
     const isSelf = member.id === user?.id;
     // Only an Owner changes another Owner.
     const ownerLocked = member.role.system_key === OWNER_ROLE_KEY && !isOwner;
+    // A deleted user is only kept for their records: the one thing left is to bring them back.
+    if (member.status === 'deleted') {
+      return canUpdate && !ownerLocked
+        ? [{ id: 'reactivate', label: 'Reactivate', onSelect: () => doReactivate(member) }]
+        : [];
+    }
     const left = member.status === 'left';
     const active = member.status === 'active';
     const items: DropdownItem[] = [];

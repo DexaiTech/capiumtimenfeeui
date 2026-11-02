@@ -1,15 +1,16 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http } from 'msw';
 import { useLocation } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { findRowAction } from '@/test/rowActions';
-import { server } from '@/test/server';
+import { ok, server } from '@/test/server';
 
-import { ACME, entry, SAM } from '../test/fixtures';
-import { callsTo, createBackend, timeHandlers } from '../test/handlers';
+import { ACME, entry, PEOPLE, SAM } from '../test/fixtures';
+import { callsTo, createBackend, orgApiPath, timeHandlers } from '../test/handlers';
 import TimeEntriesPage from './TimeEntriesPage';
 
 describe('TimeEntriesPage: add entry', () => {
@@ -32,6 +33,36 @@ describe('TimeEntriesPage: add entry', () => {
     await user.click(await screen.findByRole('button', { name: 'Add entry' }));
     const form = await screen.findByRole('region', { name: 'Record time' });
     expect(within(form).getByRole('combobox', { name: 'Client' })).toHaveValue('');
+  });
+});
+
+describe('TimeEntriesPage: people', () => {
+  it('names a deleted user as "(deleted user)" on the time they recorded', async () => {
+    const asked: string[][] = [];
+    server.use(
+      ...timeHandlers(
+        createBackend({
+          entries: [entry({ id: 'e-sam', entry_date: '2026-10-12', minutes: 60, user_id: SAM })],
+        }),
+      ),
+    );
+    server.use(
+      http.get(orgApiPath('/staff'), ({ request }) => {
+        asked.push(new URL(request.url).searchParams.getAll('status'));
+        return ok(
+          PEOPLE.map((person) => (person.id === SAM ? { ...person, status: 'deleted' } : person)),
+          { meta: { next_cursor: null, has_more: false } },
+        );
+      }),
+    );
+    renderInOrg(<TimeEntriesPage />, {
+      route: '/acme/time/entries?from=2026-10-12&to=2026-10-18',
+      context: contextWith(OWNER_PERMISSIONS),
+    });
+
+    const table = await screen.findByRole('table', { name: 'Time entries' });
+    expect(await within(table).findByText('Sam Staff (deleted user)')).toBeInTheDocument();
+    expect(asked[0]).toContain('deleted');
   });
 });
 

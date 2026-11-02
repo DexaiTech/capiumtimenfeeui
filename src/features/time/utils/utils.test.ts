@@ -10,7 +10,14 @@ import {
   fieldDetails,
   toFormError,
 } from './errors';
-import { describeVariance, formatClock, formatDayList, formatShare, refLabel } from './format';
+import {
+  describeVariance,
+  formatClock,
+  formatDayList,
+  formatShare,
+  refLabel,
+  staffName,
+} from './format';
 import { changeLines, formatEntryValue } from './history';
 import { chartRows, groupLabel, presetOf, rangePresets, valueLessCost } from './analysis';
 import type { TimeEntryHistory, TimeSummaryRow } from '../types';
@@ -87,6 +94,13 @@ describe('format', () => {
     expect(formatShare(0, 0)).toBe('—');
     expect(refLabel({ code: 'J00001', name: 'Accounts' })).toBe('J00001 Accounts');
     expect(refLabel({ code: null, name: 'Accounts' })).toBe('Accounts');
+  });
+
+  it('names a deleted user as such, and anyone else by their name', () => {
+    expect(staffName({ full_name: 'John Smith', status: 'deleted' })).toBe(
+      'John Smith (deleted user)',
+    );
+    expect(staffName({ full_name: 'John Smith', status: 'left' })).toBe('John Smith');
   });
 });
 

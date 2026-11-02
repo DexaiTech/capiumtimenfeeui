@@ -1,7 +1,7 @@
 import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 
-import type { TimeEntry } from '../types';
+import type { StaffPerson, TimeEntry } from '../types';
 import { formatDayHeader } from './weeks';
 
 export type VarianceKind = 'over' | 'under' | 'on';
@@ -48,6 +48,14 @@ export interface NamedRef {
 /** "J00012 Year-end accounts": a code and a name on one line, whichever exist. */
 export function refLabel({ code, name }: NamedRef): string {
   return [code, name].filter(Boolean).join(' ');
+}
+
+/** A person's name on records: "John Smith (deleted user)" once they were deleted (ticket APT62). */
+export function staffName({
+  full_name,
+  status,
+}: Pick<StaffPerson, 'full_name' | 'status'>): string {
+  return status === 'deleted' ? `${full_name} (deleted user)` : full_name;
 }
 
 /** "1:30 on 12/10/2026": an entry in a sentence. */

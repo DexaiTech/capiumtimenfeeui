@@ -12,6 +12,7 @@ const STAFF_TONE: Record<StaffStatus, BadgeTone> = {
   active: 'success',
   inactive: 'warning',
   left: 'neutral',
+  deleted: 'neutral',
 };
 
 export function StaffStatusBadge({ status }: { status: StaffStatus }) {

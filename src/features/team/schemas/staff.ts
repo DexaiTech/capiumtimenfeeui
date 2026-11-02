@@ -43,7 +43,7 @@ const shape = {
   /** ISO weekdays, 1 = Monday. */
   working_days: z.array(z.number().int().min(1).max(7)).min(1, 'Choose at least one working day'),
   leaving_date: z.string(),
-  status: z.enum(['active', 'inactive', 'left']),
+  status: z.enum(['active', 'inactive', 'left', 'deleted']),
   /** Add only: no login, an invitation by email, or an account with a temporary password. */
   login: z.enum(['none', 'invite', 'create']),
   /** Add only: the sign-in address; empty means the work email. */
