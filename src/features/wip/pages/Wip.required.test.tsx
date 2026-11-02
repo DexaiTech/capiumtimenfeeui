@@ -70,7 +70,10 @@ describe('mandatory fields of the WIP dialogs', () => {
         }),
       ),
     );
-    renderWipPage(<WipDetailsPage />, { route: `${WIP}/details`, path: `${WIP}/details` });
+    renderWipPage(<WipDetailsPage />, {
+      route: `${WIP}/details?view=items`,
+      path: `${WIP}/details`,
+    });
     await user.click(await screen.findByRole('checkbox', { name: 'Select Bank reconciliation' }));
     await user.click(screen.getByRole('button', { name: 'Write off' }));
     const dialog = await screen.findByRole('dialog', { name: 'Write off WIP' });

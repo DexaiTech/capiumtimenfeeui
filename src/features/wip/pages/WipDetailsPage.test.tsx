@@ -5,12 +5,14 @@ import { describe, expect, it } from 'vitest';
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { server } from '@/test/server';
 
-import { IDS, globex, item } from '../test/fixtures';
+import { IDS, acme, globex, groupRow, item } from '../test/fixtures';
 import { callsOf, createBackend, wipHandlers, type WipBackend } from '../test/handlers';
 import { WIP, renderWipPage } from '../test/render';
 import WipDetailsPage from './WipDetailsPage';
 
 const DETAILS = `${WIP}/details`;
+/** The page one row per item, as "By item" shows it. */
+const BY_ITEM = `${DETAILS}?view=items`;
 const READ_ONLY = ['organization.read', 'member.read', 'client.read', 'job.read', 'wip.read'];
 
 const items = () => [
@@ -90,7 +92,7 @@ function setup(
   server.use(...wipHandlers(backend));
   renderWipPage(<WipDetailsPage />, {
     permissions: options.permissions ?? OWNER_PERMISSIONS,
-    route: options.route ?? DETAILS,
+    route: options.route ?? BY_ITEM,
     path: DETAILS,
   });
   return backend;
@@ -105,8 +107,177 @@ const table = async () => {
   return element;
 };
 
+/** Lines of `GET /wip/summary?group_by=job`: two jobs of Acme (one a fixed fee) and Globex's
+ * WIP without a job. */
+const jobLines = () => [
+  groupRow({
+    group_by: 'job',
+    key: 'j-1',
+    name: 'Year-end accounts',
+    code: 'J00001',
+    client: acme,
+    minutes: 240,
+    hours: '4.00',
+    time: 48000,
+    fixed_fee: 0,
+    expense: 1300,
+    total: 49300,
+    item_count: 3,
+    oldest_date: '2026-08-01',
+  }),
+  groupRow({
+    group_by: 'job',
+    key: 'j-2',
+    name: 'Bookkeeping',
+    code: 'J00002',
+    client: acme,
+    minutes: 0,
+    hours: '0.00',
+    time: 0,
+    fixed_fee: 240000,
+    expense: 0,
+    total: 240000,
+    item_count: 1,
+    oldest_date: '2026-10-10',
+  }),
+  groupRow({
+    group_by: 'job',
+    key: null,
+    name: 'No job',
+    code: null,
+    client: globex,
+    minutes: 60,
+    hours: '1.00',
+    time: 12000,
+    fixed_fee: 0,
+    expense: 0,
+    total: 12000,
+    item_count: 1,
+    oldest_date: '2026-09-15',
+  }),
+];
+
+const setupByJob = (route = DETAILS) => setup({ summary: { job: jobLines() } }, { route });
+
+const summaries = (backend: WipBackend) =>
+  callsOf(backend, 'GET').filter((call) => call.path === '/wip/summary');
+
+const jobTable = async () => {
+  const element = await screen.findByRole('table', { name: 'WIP by job' });
+  await waitFor(() => expect(element).not.toHaveAttribute('aria-busy', 'true'));
+  return element;
+};
+
+const location = () => screen.getByTestId('location').textContent;
+
 const rowsOf = (element: HTMLElement) => within(element).getAllByRole('row').slice(1);
 const pick = (name: string) => screen.getByRole('checkbox', { name: `Select ${name}` });
+
+describe('one line per job', () => {
+  it('merges the items of each job into one line, oldest first, without listing the items', async () => {
+    const backend = setupByJob();
+    const rows = rowsOf(await jobTable());
+
+    expect(summaries(backend)[0]?.params?.get('group_by')).toBe('job');
+    expect(summaries(backend)[0]?.params?.get('sort')).toBe('oldest');
+    expect(summaries(backend)[0]?.params?.get('order')).toBe('asc');
+    expect(lists(backend)).toHaveLength(0);
+    expect(rows).toHaveLength(3);
+    const [yearEnd, noJob, fixedFee] = rows as [HTMLElement, HTMLElement, HTMLElement];
+    expect(yearEnd).toHaveTextContent('Acme Ltd');
+    expect(yearEnd).toHaveTextContent('J00001 Year-end accounts');
+    expect(yearEnd).toHaveTextContent('4.00');
+    expect(yearEnd).toHaveTextContent('£493.00');
+    expect(yearEnd).toHaveTextContent('01/08/2026');
+    // A fixed-fee job: its line carries the fee still to bill, not the time behind it.
+    expect(fixedFee).toHaveTextContent('J00002 Bookkeeping');
+    expect(fixedFee).toHaveTextContent('£2,400.00');
+    expect(noJob).toHaveTextContent('Globex plc');
+    expect(noJob).toHaveTextContent('No job');
+    expect(screen.queryByText('Bank reconciliation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'By job' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Showing 3 jobs · End of the list')).toBeInTheDocument();
+  });
+
+  it('opens a job on its items, keeping the kind of item and leaving the search', async () => {
+    const user = userEvent.setup();
+    const backend = setupByJob(`${DETAILS}?kind=time&q=year`);
+    await jobTable();
+    expect(summaries(backend)[0]?.params?.getAll('kind')).toEqual(['time']);
+    expect(summaries(backend)[0]?.params?.get('q')).toBe('year');
+
+    await user.click(
+      screen.getByRole('link', { name: 'J00001 Year-end accounts, Acme Ltd: see the items' }),
+    );
+
+    expect(location()).toBe('/acme/wip/details?kind=time&job_id=j-1');
+    const rows = rowsOf(await table());
+    expect(lists(backend).at(-1)?.params?.get('job_id')).toBe('j-1');
+    expect(lists(backend).at(-1)?.params?.getAll('kind')).toEqual(['time']);
+    expect(lists(backend).at(-1)?.params?.get('q')).toBeNull();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('VAT return');
+    expect(rows[1]).toHaveTextContent('Bank reconciliation');
+    expect(screen.getByRole('searchbox', { name: 'Search WIP items' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'By item' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('opens the WIP without a job on the items of its client, with a click on the line', async () => {
+    const user = userEvent.setup();
+    setupByJob();
+    const rows = rowsOf(await jobTable());
+
+    await user.click(within(rows[1] as HTMLElement).getByText('1.00'));
+
+    expect(location()).toBe(`/acme/wip/details?client_id=${IDS.globex}&view=items`);
+    const items = rowsOf(await table());
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent('Audit planning');
+  });
+
+  it('narrows and sorts the lines through the API', async () => {
+    const user = userEvent.setup();
+    const backend = setupByJob();
+    await jobTable();
+
+    await user.click(screen.getByRole('tab', { name: 'Time' }));
+    await waitFor(() =>
+      expect(summaries(backend).at(-1)?.params?.getAll('kind')).toEqual(['time']),
+    );
+    await user.click(screen.getByRole('button', { name: /Filter/ }));
+    const panel = await screen.findByRole('dialog', { name: 'Filter WIP items' });
+    await user.selectOptions(within(panel).getByLabelText('Age'), 'Over 60 days old');
+    await waitFor(() => expect(summaries(backend).at(-1)?.params?.get('min_age_days')).toBe('61'));
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: /^Value/ }));
+    await waitFor(() => expect(summaries(backend).at(-1)?.params?.get('sort')).toBe('total'));
+    expect(summaries(backend).at(-1)?.params?.get('order')).toBe('asc');
+    expect(lists(backend)).toHaveLength(0);
+  });
+
+  it('shows one row per item to select, and back', async () => {
+    const user = userEvent.setup();
+    setupByJob();
+    await jobTable();
+
+    await user.click(screen.getByRole('button', { name: 'By item' }));
+    expect(rowsOf(await table())).toHaveLength(5);
+    expect(location()).toBe('/acme/wip/details?view=items');
+    expect(pick('Bank reconciliation')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'By job' }));
+    expect(rowsOf(await jobTable())).toHaveLength(3);
+  });
+
+  it('opens on the items when the address names one job, as a link from the summary does', async () => {
+    const backend = setupByJob(`${DETAILS}?job_id=j-1`);
+    expect(rowsOf(await table())).toHaveLength(3);
+    expect(lists(backend)[0]?.params?.get('job_id')).toBe('j-1');
+    expect(summaries(backend)).toHaveLength(0);
+  });
+});
 
 describe('the WIP items', () => {
   it('lists the oldest first with their kind, client, job, person, hours, value and age', async () => {
@@ -181,7 +352,7 @@ describe('the WIP items', () => {
   });
 
   it('opens with the filters of the address, as a link from the summary has them', async () => {
-    const backend = setup({}, { route: `${DETAILS}?client_id=${IDS.globex}&kind=time` });
+    const backend = setup({}, { route: `${DETAILS}?client_id=${IDS.globex}&kind=time&view=items` });
     await table();
     expect(lists(backend)[0]?.params?.get('client_id')).toBe(IDS.globex);
     expect(lists(backend)[0]?.params?.getAll('kind')).toEqual(['time']);
