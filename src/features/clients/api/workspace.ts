@@ -236,6 +236,32 @@ export function useClientInvoices(clientId: string, filters: InvoiceFilters, ena
   });
 }
 
+/**
+ * Deletes a draft invoice, `DELETE /invoices/{id}` (`invoice.create`; 409 `INVOICE_NOT_DRAFT`
+ * otherwise): its work goes back to unbilled WIP. Refreshes what the billing module's delete does.
+ */
+export function useDeleteDraftInvoice() {
+  const { organization } = useOrg();
+  const queryClient = useQueryClient();
+  const id = organization.id;
+  return useMutation({
+    mutationFn: (invoiceId: string) => api.delete<null>(`${org(id)}/invoices/${seg(invoiceId)}`),
+    onSettled: () =>
+      Promise.all(
+        [
+          queryKeys.org.invoices(id),
+          queryKeys.org.wip(id),
+          queryKeys.org.clients(id),
+          queryKeys.org.dashboard(id),
+          queryKeys.org.reports(id),
+          queryKeys.org.debtors(id),
+          queryKeys.org.statements(id),
+          queryKeys.org.auditLogs(id),
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      ),
+  });
+}
+
 export interface CreditNoteFilters {
   q: string;
   from: string;
