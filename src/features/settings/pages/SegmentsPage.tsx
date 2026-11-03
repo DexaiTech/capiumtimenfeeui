@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import {
   Badge,
   Button,
+  Card,
   ConfirmDialog,
   CountTabs,
   DataTable,
@@ -13,6 +14,7 @@ import {
   RowActions,
   SearchField,
   sortRows,
+  Switch,
   useToast,
   type DataTableColumn,
   type DataTableSort,
@@ -20,7 +22,7 @@ import {
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
-import { useOrg } from '@/features/organizations';
+import { useOrg, useUpdateOrganization } from '@/features/organizations';
 import { useDocumentTitle, useUrlParams } from '@/hooks';
 
 import { useDeleteSegment, useSegments, useUpdateSegment } from '../api/segmentHooks';
@@ -345,7 +347,40 @@ export default function SegmentsPage() {
       title="Client Segments"
       description="The groups clients are sorted into, such as Gold or Retail. A client takes one of these segments, and staff members can be given the segments they look after."
     >
+      <SegmentsSwitch />
       <SegmentList />
     </SettingsSection>
+  );
+}
+
+/** "Use client segments": off hides segments everywhere; nothing is deleted. */
+function SegmentsSwitch() {
+  const { organization, can } = useOrg();
+  const { toast } = useToast();
+  const update = useUpdateOrganization(organization.id);
+  const enabled = organization.client_segments_enabled;
+  return (
+    <Card padding="sm">
+      <Switch
+        label="Use client segments"
+        description="Off hides segments everywhere: the client list, its filters and columns, client forms and staff screens. Nothing is deleted; switch it back on to see them again."
+        checked={enabled}
+        disabled={!can(PERMISSIONS.organizationUpdate) || update.isPending}
+        onChange={(checked) =>
+          update.mutate(
+            { client_segments_enabled: checked },
+            {
+              onSuccess: () =>
+                toast({
+                  tone: 'success',
+                  title: checked ? 'Client segments switched on' : 'Client segments hidden',
+                }),
+              onError: (error) =>
+                toast({ tone: 'error', ...describeError(error, 'Could not change the setting') }),
+            },
+          )
+        }
+      />
+    </Card>
   );
 }

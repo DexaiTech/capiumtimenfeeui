@@ -2,6 +2,7 @@ import { ChartColumn } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Popover } from '@/components/ui';
+import { useSegmentsEnabled } from '@/features/settings';
 
 import { CLIENT_STATUS_LABELS, labelOf } from '../constants';
 import type { ClientSummary } from '../types';
@@ -44,6 +45,7 @@ function Bars({ title, bars }: { title: string; bars: Bar[] }) {
 
 /** "Analytics": the summary counts by status and segment. */
 export function AnalyticsPanel({ summary, loading }: AnalyticsPanelProps) {
+  const segmentsOn = useSegmentsEnabled();
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   return (
@@ -84,14 +86,16 @@ export function AnalyticsPanel({ summary, loading }: AnalyticsPanelProps) {
                   count,
                 }))}
               />
-              <Bars
-                title="By segment"
-                bars={summary.by_segment.map((entry) => ({
-                  key: entry.segment ?? '__none',
-                  label: entry.segment ?? 'No segment',
-                  count: entry.count,
-                }))}
-              />
+              {segmentsOn ? (
+                <Bars
+                  title="By segment"
+                  bars={summary.by_segment.map((entry) => ({
+                    key: entry.segment ?? '__none',
+                    label: entry.segment ?? 'No segment',
+                    count: entry.count,
+                  }))}
+                />
+              ) : null}
             </>
           )}
         </div>

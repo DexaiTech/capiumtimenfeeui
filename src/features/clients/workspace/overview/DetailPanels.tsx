@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { HealthBar } from '@/components/ui';
+import { useSegmentsEnabled } from '@/features/settings';
 import { cn } from '@/utils/cn';
 import { formatMinutesLong } from '@/utils/minutes';
 import { formatMoney } from '@/utils/money';
@@ -76,6 +77,7 @@ export interface DetailPanelsProps {
 
 /** The identifiers, the contact details, the practice, the notes and the money snapshot. */
 export function DetailPanels({ client, currency, members }: DetailPanelsProps) {
+  const segmentsOn = useSegmentsEnabled();
   const money = (pence: number | null) => (pence === null ? null : formatMoney(pence, currency));
   const person = (userId: string | null) =>
     userId
@@ -124,9 +126,11 @@ export function DetailPanels({ client, currency, members }: DetailPanelsProps) {
         <Row label="Payment terms">
           {client.payment_terms_days === null ? null : `${client.payment_terms_days} days`}
         </Row>
-        <Row label="Segment">
-          {client.segment ? <SegmentBadge segment={client.segment} /> : null}
-        </Row>
+        {segmentsOn ? (
+          <Row label="Segment">
+            {client.segment ? <SegmentBadge segment={client.segment} /> : null}
+          </Row>
+        ) : null}
         <Row label="Health">
           {client.health_score === null ? null : (
             <HealthBar score={client.health_score} label="Client health" />

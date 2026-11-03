@@ -12,7 +12,12 @@ export type { Member, MemberStatus, Permission, Role } from './types';
 export { useInvoiceTemplates } from './api/billingHooks';
 export type { InvoiceLayout, InvoiceTemplate } from './billingTypes';
 // The practice's client segments, and the ones a staff member looks after.
-export { useSegments, useSetStaffSegments, useStaffSegments } from './api/segmentHooks';
+export {
+  useSegments,
+  useSegmentsEnabled,
+  useSetStaffSegments,
+  useStaffSegments,
+} from './api/segmentHooks';
 export type { Segment, StaffSegments } from './segmentTypes';
 // The set-up checklist of the practice, for the dashboard's Getting started card.
 export { useOnboarding } from './api/adminHooks';

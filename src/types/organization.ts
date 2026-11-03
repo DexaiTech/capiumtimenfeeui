@@ -78,6 +78,8 @@ export interface Organization {
   cost_plus_markup_bp: number;
   /** The order the recovery analysis looks for the rate the work could have billed at: each once. */
   recovery_rate_order: RecoveryRate[];
+  /** Whether the practice uses client segments; off, they are hidden everywhere (data kept). */
+  client_segments_enabled: boolean;
   email: string | null;
   phone: string | null;
   address_line1: string | null;
@@ -139,6 +141,7 @@ export type OrganizationUpdate = Partial<
     | 'overtime_multiplier_bp'
     | 'cost_plus_markup_bp'
     | 'recovery_rate_order'
+    | 'client_segments_enabled'
     | 'email'
     | 'phone'
     | 'address_line1'

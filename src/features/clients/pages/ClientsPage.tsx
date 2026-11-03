@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { ConfirmDialog, useBulkFlow, useToast } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
+import { useSegmentsEnabled } from '@/features/settings';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { isApiError } from '@/services/api';
@@ -91,10 +92,16 @@ export default function ClientsPage() {
   const [search, setSearch] = useState('');
   const q = useDebouncedValue(search, 300);
   // `?segment=` opens the list for those segments (the links of Settings and the staff screen).
-  const [filters, setFilters] = useState<ClientFilters>(() => ({
+  const [chosenFilters, setFilters] = useState<ClientFilters>(() => ({
     ...EMPTY_FILTERS,
     segment: searchParams.getAll('segment'),
   }));
+  // With segments switched off, a segment filter (a link, a saved filter set) is not applied.
+  const segmentsOn = useSegmentsEnabled();
+  const filters = useMemo(
+    () => (segmentsOn ? chosenFilters : { ...chosenFilters, segment: [] }),
+    [segmentsOn, chosenFilters],
+  );
   const [sort, setSort] = useState<ClientSort>(DEFAULT_SORT);
   const [order, setOrder] = useState<SortOrder>('asc');
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -296,40 +303,46 @@ export default function ClientsPage() {
 
   const onBulkExport = () => {
     const chosen = rows.filter((row) => selected.has(row.id));
+    const header = [
+      'code',
+      'name',
+      'client_type',
+      'status',
+      'company_number',
+      'segment',
+      'health_score',
+      'contact_name',
+      'contact_email',
+      'deadline_status',
+      'accounting_software',
+      'services',
+      'last_activity_at',
+    ];
+    const table = [
+      header,
+      ...chosen.map((row) => [
+        row.code,
+        row.name,
+        row.client_type,
+        row.status,
+        row.company_number,
+        row.segment,
+        row.health_score,
+        row.contact_name,
+        row.contact_email,
+        row.deadlines.status,
+        row.accounting_software,
+        row.services.map((service) => service.code).join(';'),
+        row.last_activity_at,
+      ]),
+    ];
+    // No segment column while segments are switched off.
+    const segmentAt = header.indexOf('segment');
     downloadText(
       'clients-selected.csv',
-      toCsv([
-        [
-          'code',
-          'name',
-          'client_type',
-          'status',
-          'company_number',
-          'segment',
-          'health_score',
-          'contact_name',
-          'contact_email',
-          'deadline_status',
-          'accounting_software',
-          'services',
-          'last_activity_at',
-        ],
-        ...chosen.map((row) => [
-          row.code,
-          row.name,
-          row.client_type,
-          row.status,
-          row.company_number,
-          row.segment,
-          row.health_score,
-          row.contact_name,
-          row.contact_email,
-          row.deadlines.status,
-          row.accounting_software,
-          row.services.map((service) => service.code).join(';'),
-          row.last_activity_at,
-        ]),
-      ]),
+      toCsv(
+        segmentsOn ? table : table.map((cells) => cells.filter((_, index) => index !== segmentAt)),
+      ),
     );
   };
 

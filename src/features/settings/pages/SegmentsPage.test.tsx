@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
+import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { findRowAction, rowActionNames } from '@/test/rowActions';
@@ -244,5 +244,41 @@ describe('SegmentsPage: deactivating, activating and deleting', () => {
 
     await chooseAction(user, 'Charities', 'Delete');
     expect(await screen.findByText(/2 staff look after it/)).toBeInTheDocument();
+  });
+});
+
+describe('SegmentsPage: the "Use client segments" switch (APT70)', () => {
+  it('is on by default and switching it off saves the practice setting', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.patch(orgApiPath(''), async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        bodies.push(body);
+        return ok({ ...ownerContext.organization, ...body });
+      }),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<SegmentsPage />);
+
+    const toggle = screen.getByRole('switch', { name: 'Use client segments' });
+    expect(toggle).toBeChecked();
+    expect(toggle).toHaveAccessibleDescription(/Off hides segments everywhere/);
+    await user.click(toggle);
+
+    expect(await screen.findByText('Client segments hidden')).toBeInTheDocument();
+    expect(bodies).toEqual([{ client_segments_enabled: false }]);
+  });
+
+  it('shows the setting off, and only someone who may update the practice changes it', () => {
+    renderInOrg(<SegmentsPage />, {
+      context: {
+        ...contextWith(STAFF_PERMISSIONS),
+        organization: { ...ownerContext.organization, client_segments_enabled: false },
+      },
+    });
+
+    const toggle = screen.getByRole('switch', { name: 'Use client segments' });
+    expect(toggle).not.toBeChecked();
+    expect(toggle).toBeDisabled();
   });
 });

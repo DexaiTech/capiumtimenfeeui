@@ -21,6 +21,14 @@ function useRefresh() {
   };
 }
 
+/**
+ * Whether the practice uses client segments (Settings > Client Segments). Every place that shows
+ * or filters by segment asks this; off, segments are hidden but nothing is deleted.
+ */
+export function useSegmentsEnabled(): boolean {
+  return useOrg().organization.client_segments_enabled;
+}
+
 /** Every segment of the practice, inactive ones included (the list is bounded). */
 export function useSegments() {
   const { organization } = useOrg();

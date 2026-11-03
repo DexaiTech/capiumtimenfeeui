@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { BulkBar, Checkbox, ConfirmDialog, Select, type BulkFlow } from '@/components/ui';
-import { useSegments } from '@/features/settings';
+import { useSegments, useSegmentsEnabled } from '@/features/settings';
 import { MAX_BULK_IDS } from '@/utils/bulk';
 
 import { CLIENT_STATUS_OPTIONS } from '../constants';
@@ -49,6 +49,8 @@ export function ClientsBulkBar({
   const [segment, setSegment] = useState('');
   const [clearSegment, setClearSegment] = useState(false);
   const segments = useSegments();
+  const segmentsOn = useSegmentsEnabled();
+  const edits = segmentsOn ? EDITS : EDITS.filter((edit) => edit.value !== 'segment');
 
   const count = ids.length;
   const word = count === 1 ? 'client' : 'clients';
@@ -110,7 +112,7 @@ export function ClientsBulkBar({
         limit={MAX_BULK_IDS}
         announcement={flow.announcement}
         onClear={onClear}
-        editOptions={canUpdate ? EDITS : undefined}
+        editOptions={canUpdate ? edits : undefined}
         onEdit={(value) => {
           flow.clearRefusal();
           setEditing(value as Editing);

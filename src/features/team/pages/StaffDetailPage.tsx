@@ -17,6 +17,7 @@ import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { RecordHistory } from '@/features/audit';
 import { useOrg } from '@/features/organizations';
+import { useSegmentsEnabled } from '@/features/settings';
 import { useRoleName } from '@/features/system';
 import { useDocumentTitle } from '@/hooks';
 import { formatUkDate, formatWeekdays } from '@/utils/dates';
@@ -310,6 +311,7 @@ function StaffDetailView({ staffId }: { staffId: string }) {
   const { organization, can } = useOrg();
   const navigate = useNavigate();
   const staff = useStaffMember(staffId);
+  const segmentsOn = useSegmentsEnabled();
   const [secret, setSecret] = useState<TemporaryPassword | null>(null);
   const { actionsFor, edit, dialogs, editPanel } = useStaffActions({
     onSecret: setSecret,
@@ -400,7 +402,7 @@ function StaffDetailView({ staffId }: { staffId: string }) {
         onEdit={() => edit(member)}
       />
       {can(PERMISSIONS.rateRead) ? <RatesCard staff={member} /> : null}
-      <StaffSegmentsCard staff={member} />
+      {segmentsOn ? <StaffSegmentsCard staff={member} /> : null}
       {can(PERMISSIONS.roleRead) ? <StaffPermissionsCard staff={member} /> : null}
       <SignInCard staff={member} />
       <UsageCard staff={member} />
