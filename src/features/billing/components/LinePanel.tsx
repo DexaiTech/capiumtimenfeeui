@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import {
   AddAnotherButton,
   Button,
+  Checkbox,
   FormPanel,
   Input,
   useAddAnother,
@@ -43,6 +44,8 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open
   const update = useUpdateInvoiceLine(invoiceId);
   const formId = useId();
   const again = useAddAnother();
+  // A new line may be fees billed in advance: time is assigned to it once the invoice is issued.
+  const [advance, setAdvance] = useState(false);
   const {
     register,
     handleSubmit,
@@ -90,6 +93,7 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open
           quantity: formatQuantity(q),
           unit_amount: u,
           ...(form.vat_rate_id ? { vat_rate_id: form.vat_rate_id } : {}),
+          ...(advance ? { is_advance: true } : {}),
         },
         {
           onSuccess: () => {
@@ -179,6 +183,14 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open
               ? `Line total ${money(net)} before VAT (the default VAT code applies).`
               : `Line total ${money(net)} + VAT ${money(vat)} = ${money(net + vat)}.`}
         </p>
+        {line ? null : (
+          <Checkbox
+            label="Fees in advance"
+            description="Time is assigned to this line once the invoice is issued, and leaves WIP then."
+            checked={advance}
+            onChange={(event) => setAdvance(event.target.checked)}
+          />
+        )}
         {submitError ? (
           <FormAlert message={submitError.message} requestId={submitError.requestId} />
         ) : null}

@@ -110,6 +110,14 @@ export const manualLineSchema = z.object({
 });
 export type ManualLineValues = z.infer<typeof manualLineSchema>;
 
+/** Fees billed in advance: the line's wording, its amount before VAT and its VAT code. */
+export const advanceSchema = z.object({
+  description,
+  amount: positiveMoneyText('Enter the amount billed in advance, such as 6000.00'),
+  vat_rate_id: z.string(),
+});
+export type AdvanceValues = z.infer<typeof advanceSchema>;
+
 /** A line that bills WIP: what to bill for it (never negative) and its VAT code. */
 export const wipLineSchema = z.object({
   description,

@@ -37,6 +37,8 @@ import {
   InvoicePaymentsCard,
   InvoiceWipCard,
 } from '../components/invoice/InvoiceInfoCards';
+import { AssignTimeDialog } from '../components/invoice/AssignTimeDialog';
+import { InvoiceAdvanceCard } from '../components/invoice/InvoiceAdvanceCard';
 import { InvoiceLinesCard } from '../components/invoice/InvoiceLinesCard';
 import { InvoiceSummaryStrip } from '../components/invoice/InvoiceSummaryStrip';
 import { InvoiceTimeline } from '../components/invoice/InvoiceTimeline';
@@ -65,6 +67,7 @@ type DialogState =
   | { type: 'payment' }
   | { type: 'unmatch'; payment: InvoiceDetail['payments'][number] }
   | { type: 'allocate'; paymentId: string }
+  | { type: 'assign'; line: InvoiceLine }
   | null;
 
 /** A status message above the figures: what the invoice's state means for what can be done. */
@@ -329,6 +332,12 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
                 setDialog({ type: 'remove-line', line });
               }}
             />
+            <InvoiceAdvanceCard
+              invoice={invoice}
+              onAssign={
+                can(P.invoiceCreate) ? (line) => setDialog({ type: 'assign', line }) : undefined
+              }
+            />
             <InvoiceWipCard invoice={invoice} />
           </div>
           <div className="flex min-w-0 flex-col gap-4">
@@ -364,6 +373,12 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
 
       <IssueDialog open={dialog?.type === 'issue'} invoice={invoice} onClose={close} />
       <SendInvoiceDialog open={dialog?.type === 'send'} invoice={invoice} onClose={close} />
+      <AssignTimeDialog
+        open={dialog?.type === 'assign'}
+        invoice={invoice}
+        line={dialog?.type === 'assign' ? dialog.line : null}
+        onClose={close}
+      />
       <ReasonDialog
         open={dialog?.type === 'void'}
         onClose={close}

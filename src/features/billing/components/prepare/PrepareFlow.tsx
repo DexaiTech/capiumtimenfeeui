@@ -18,6 +18,7 @@ import {
 } from '../../utils/prepare';
 import { chosenItems, fixedFeesOf, workRowsOf } from '../../utils/workRows';
 import { LoadError } from '../PageShell';
+import { AdvanceInvoicePanel } from './AdvanceInvoicePanel';
 import { DetailsStep } from './DetailsStep';
 import { LineEditDialog } from './LineEditDialog';
 import { ReviewStep } from './ReviewStep';
@@ -45,6 +46,7 @@ export function PrepareFlow({
   const [basis, setBasis] = useState<BillingBasis>('contract');
   const [edits, setEdits] = useState<LineEdits>({});
   const [editing, setEditing] = useState<PreviewLine | null>(null);
+  const [advancing, setAdvancing] = useState(false);
   const currency = organization.currency;
 
   // Time picked on another page is chosen once, when the work first arrives.
@@ -125,8 +127,15 @@ export function PrepareFlow({
           selected={selected}
           onSelectedChange={choose}
           onContinue={() => setStep('review')}
+          onAdvance={() => setAdvancing(true)}
         />
       ) : null}
+      <AdvanceInvoicePanel
+        open={advancing}
+        onClose={() => setAdvancing(false)}
+        clientId={clientId}
+        clientName={wip.data.client.name}
+      />
 
       {step === 'review' ? (
         <>

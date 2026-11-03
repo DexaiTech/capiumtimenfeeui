@@ -43,7 +43,7 @@ export function InvoiceLinesCard({
         <div className="flex min-w-0 flex-col">
           <span className="font-semibold text-text">{line.description}</span>
           <span className="text-xs text-text-muted">
-            {LINE_KIND_LABELS[line.kind] ?? line.kind}
+            {line.is_advance ? 'Fees in advance' : (LINE_KIND_LABELS[line.kind] ?? line.kind)}
             {line.wip
               ? ` · billed from ${plural(line.wip.item_count, 'WIP item', 'WIP items')}`
               : ''}
