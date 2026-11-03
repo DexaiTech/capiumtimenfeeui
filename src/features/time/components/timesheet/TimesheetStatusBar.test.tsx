@@ -7,7 +7,8 @@ import { ownerContext } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { fail, ok, server } from '@/test/server';
 
-import type { WeekGrid } from '../../types';
+import { timesheetOf } from '../../test/fixtures';
+import type { TimesheetDetail, WeekGrid } from '../../types';
 import { TimesheetStatusBar } from './TimesheetStatusBar';
 
 const MONDAY = '2026-10-12';
@@ -36,7 +37,10 @@ function grid(overrides: Partial<WeekGrid> = {}): WeekGrid {
   };
 }
 
-function setup(week: WeekGrid, { approving = true } = {}) {
+function setup(
+  week: WeekGrid,
+  { approving = true, sheet }: { approving?: boolean; sheet?: TimesheetDetail } = {},
+) {
   const calls: string[] = [];
   server.use(
     http.post(orgApiPath('/timesheets/:id/submit'), () => {
@@ -52,7 +56,7 @@ function setup(week: WeekGrid, { approving = true } = {}) {
     ...ownerContext,
     organization: { ...ownerContext.organization, require_timesheet_approval: approving },
   };
-  renderInOrg(<TimesheetStatusBar grid={week} sheet={undefined} canRecord />, { context });
+  renderInOrg(<TimesheetStatusBar grid={week} sheet={sheet} canRecord />, { context });
   return calls;
 }
 
@@ -75,6 +79,27 @@ describe('TimesheetStatusBar: submitting', () => {
     const calls = setup(grid({ missing_days: [FRIDAY] }));
     await user.click(screen.getByRole('button', { name: 'Submit for approval' }));
     const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
+    expect(calls).toEqual([]);
+    await user.click(within(dialog).getByRole('button', { name: 'Submit timesheet' }));
+    await waitFor(() => expect(calls).toEqual(['submit']));
+  });
+});
+
+describe('TimesheetStatusBar: time with no charge-out rate (APT17)', () => {
+  it('asks before submitting a week with billable time at £0', async () => {
+    const user = userEvent.setup();
+    const sheet = {
+      ...timesheetOf('u-1', MONDAY, 'open', { id: 'ts-1', zero_rate_minutes: 90 }),
+      entries: [],
+      day_totals: [],
+    };
+    const calls = setup(grid(), { sheet });
+    await user.click(screen.getByRole('button', { name: 'Submit for approval' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
+    expect(within(dialog).getByText('Time with no charge-out rate')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/1h 30m of your billable time has no charge-out rate/),
+    ).toBeInTheDocument();
     expect(calls).toEqual([]);
     await user.click(within(dialog).getByRole('button', { name: 'Submit timesheet' }));
     await waitFor(() => expect(calls).toEqual(['submit']));

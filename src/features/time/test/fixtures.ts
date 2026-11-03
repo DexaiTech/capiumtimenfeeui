@@ -278,6 +278,7 @@ export function timesheetOf(
     billable_minutes: 0,
     non_billable_minutes: 0,
     billable_value: 0,
+    zero_rate_minutes: 0,
     created_at: '2026-10-12T08:00:00Z',
     updated_at: '2026-10-16T16:00:00Z',
     ...overrides,

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 
 import {
+  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -31,6 +32,7 @@ import {
   useReturnTimesheet,
 } from '../api';
 import { SheetEntries } from '../components/approvals/SheetEntries';
+import { ZeroRateWarning, type UnpricedTime } from '../components/approvals/ZeroRateWarning';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { ReasonDialog } from '../components/ReasonDialog';
 import type { Timesheet } from '../types';
@@ -39,6 +41,20 @@ import { formatShare } from '../utils/format';
 import { formatWeekRange } from '../utils/weeks';
 
 const ROW_CHECKBOX = 'size-4 cursor-pointer rounded-sm accent-primary align-middle';
+
+/** The unpriced billable time of these sheets, added up per person. */
+function unpricedByPerson(sheets: ReadonlyArray<Timesheet>): UnpricedTime[] {
+  const people = new Map<string, UnpricedTime>();
+  for (const sheet of sheets) {
+    people.set(sheet.user_id, {
+      key: sheet.user_id,
+      name: sheet.user_name,
+      minutes: (people.get(sheet.user_id)?.minutes ?? 0) + sheet.zero_rate_minutes,
+      staffId: sheet.user_id,
+    });
+  }
+  return [...people.values()];
+}
 
 function Page() {
   const { organization, can } = useOrg();
@@ -100,8 +116,15 @@ function Page() {
       header: 'Person',
       card: 'title',
       cell: (sheet) => (
-        <span className="font-semibold text-text uppercase">
-          {sheet.user_name ?? 'Unknown person'}
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-text uppercase">
+            {sheet.user_name ?? 'Unknown person'}
+          </span>
+          {sheet.zero_rate_minutes > 0 ? (
+            <Badge size="sm" tone="warning">
+              No rate
+            </Badge>
+          ) : null}
         </span>
       ),
     },
@@ -278,7 +301,7 @@ function Page() {
           );
         }}
         title="Approve this timesheet?"
-        confirmLabel="Approve timesheet"
+        confirmLabel={approving?.zero_rate_minutes ? 'Approve anyway' : 'Approve timesheet'}
         tone="default"
         loading={approve.isPending}
         error={refusal}
@@ -289,6 +312,7 @@ function Page() {
             : ''}{' '}
           Their time is locked once it is approved.
         </p>
+        {approving ? <ZeroRateWarning people={unpricedByPerson([approving])} /> : null}
         <Textarea
           label="Note (optional)"
           rows={2}
@@ -318,7 +342,11 @@ function Page() {
           )
         }
         title={`Approve ${chosen.length} ${chosen.length === 1 ? 'timesheet' : 'timesheets'}?`}
-        confirmLabel="Approve timesheets"
+        confirmLabel={
+          chosen.some((sheet) => sheet.zero_rate_minutes > 0)
+            ? 'Approve anyway'
+            : 'Approve timesheets'
+        }
         tone="default"
         loading={bulk.isPending}
         error={refusal}
@@ -333,6 +361,7 @@ function Page() {
           {chosen.length > 6 ? <li>and {chosen.length - 6} more</li> : null}
         </ul>
         <p>All of them are approved together, or none if one of them cannot be.</p>
+        <ZeroRateWarning people={unpricedByPerson(chosen)} />
       </ConfirmDialog>
 
       <ReasonDialog

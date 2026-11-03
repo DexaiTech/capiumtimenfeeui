@@ -254,6 +254,11 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         week.filter((item) => !item.is_billable).map((item) => item.minutes),
       ),
       billable_value: sum(week.filter((item) => item.is_billable).map((item) => item.charge_value)),
+      zero_rate_minutes: sum(
+        week
+          .filter((item) => item.is_billable && item.charge_rate === 0)
+          .map((item) => item.minutes),
+      ),
       created_at: '2026-10-12T08:00:00Z',
       updated_at: NOW,
     };
