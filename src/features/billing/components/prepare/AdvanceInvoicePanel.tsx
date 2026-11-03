@@ -84,6 +84,11 @@ function AdvanceForm({
   const money = (pence: number) => formatMoney(pence, organization.currency);
 
   const serviceOf = (id: string | undefined) => services.find((service) => service.id === id);
+  // What a service puts on a line: its invoice wording, else its name.
+  const wordingOf = (id: string | undefined) => {
+    const service = serviceOf(id);
+    return service ? service.invoice_description || service.name : undefined;
+  };
   const feeOf = (id: string | undefined) => {
     const fee = serviceOf(id)?.default_fee;
     return fee === null || fee === undefined ? null : penceToPoundsInput(fee);
@@ -96,8 +101,14 @@ function AdvanceForm({
     const options = { shouldDirty: true, shouldValidate: isSubmitted };
     const { description, unit_amount } = getValues(`lines.${index}`);
     const words = description.trim();
-    if (words === '' || words === FIRST_DESCRIPTION || words === serviceOf(previousId)?.name) {
-      setValue(`lines.${index}.description`, chosen.name, options);
+    const previous = serviceOf(previousId);
+    if (
+      words === '' ||
+      words === FIRST_DESCRIPTION ||
+      words === previous?.name ||
+      words === wordingOf(previousId)
+    ) {
+      setValue(`lines.${index}.description`, wordingOf(serviceId) ?? chosen.name, options);
     }
     const fee = feeOf(serviceId);
     if (fee !== null && (unit_amount.trim() === '' || unit_amount === feeOf(previousId))) {
