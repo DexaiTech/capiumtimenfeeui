@@ -125,14 +125,6 @@ function InvoiceList() {
   // "Create invoice" opens the preparation in this page, above the list.
   const [creating, setCreating] = useState<{ clientId: string | null } | null>(null);
   const close = () => setDialog(null);
-  const deletion = useBulkFlow({
-    run: (body: InvoiceBulkRequest) => bulkDelete.mutateAsync(body),
-    noun: ['draft', 'drafts'],
-    onDone: () => {
-      setSelected(new Set());
-      setDialog(null);
-    },
-  });
 
   const columns = useMemo(
     () => invoiceColumns({ slug, currency: organization.currency, today }),
@@ -158,7 +150,21 @@ function InvoiceList() {
   const canIssue = can(P.invoiceIssue);
   const canSend = can(P.invoiceSend);
   const canDelete = can(P.invoiceCreate);
+  // A void invoice is deleted by whoever may void it: it leaves the lists, its number is kept.
+  const canDeleteVoid = canDelete && canIssue;
   const canSubmit = can(P.invoiceCreate);
+  const deletable = chosen.filter(
+    (row) => row.status === 'draft' || (row.status === 'void' && canDeleteVoid),
+  );
+  const onlyDrafts = drafts.length === chosen.length;
+  const deletion = useBulkFlow({
+    run: (body: InvoiceBulkRequest) => bulkDelete.mutateAsync(body),
+    noun: onlyDrafts ? ['draft', 'drafts'] : ['invoice', 'invoices'],
+    onDone: () => {
+      setSelected(new Set());
+      setDialog(null);
+    },
+  });
 
   const openPdf = (invoice: InvoiceSummary) =>
     void download(invoice.id, `${invoice.number ?? 'draft-invoice'}.pdf`, () =>
@@ -233,12 +239,12 @@ function InvoiceList() {
         onSelect: () => correct('void'),
       });
     }
-    if (invoice.status === 'draft' && can(P.invoiceCreate)) {
+    if ((invoice.status === 'draft' && canDelete) || (invoice.status === 'void' && canDeleteVoid)) {
       items.push(
         { id: 'separator', separator: true },
         {
           id: 'delete',
-          label: 'Delete draft',
+          label: invoice.status === 'draft' ? 'Delete draft' : 'Delete invoice',
           tone: 'danger',
           onSelect: () => {
             setRefusal(null);
@@ -252,13 +258,22 @@ function InvoiceList() {
 
   const confirmDelete = () => {
     if (dialog?.type !== 'delete') return;
-    remove.mutate(dialog.invoice.id, {
+    const deleted = dialog.invoice;
+    remove.mutate(deleted.id, {
       onSuccess: () => {
-        toast({
-          tone: 'success',
-          title: 'Draft deleted',
-          description: 'Its work is unbilled WIP again.',
-        });
+        toast(
+          deleted.status === 'draft'
+            ? {
+                tone: 'success',
+                title: 'Draft deleted',
+                description: 'Its work is unbilled WIP again.',
+              }
+            : {
+                tone: 'success',
+                title: `${invoiceLabel(deleted)} deleted`,
+                description: 'It keeps its number and stays in the audit trail.',
+              },
+        );
         close();
       },
       onError: (error) => setRefusal(dialogError(error)),
@@ -579,16 +594,25 @@ function InvoiceList() {
         open={dialog?.type === 'delete'}
         onClose={close}
         onConfirm={confirmDelete}
-        title="Delete draft?"
-        confirmLabel="Delete draft"
+        title={target?.status === 'void' ? `Delete ${invoiceLabel(target)}?` : 'Delete draft?'}
+        confirmLabel={target?.status === 'void' ? 'Delete invoice' : 'Delete draft'}
         loading={remove.isPending}
         error={refusal}
       >
-        <p>
-          The draft for{' '}
-          <strong className="font-medium text-text">{clientLabel(target?.client)}</strong> will be
-          removed and the work on it goes back to unbilled WIP.
-        </p>
+        {target?.status === 'void' ? (
+          <p>
+            The void invoice for{' '}
+            <strong className="font-medium text-text">{clientLabel(target.client)}</strong> leaves
+            the invoice lists and the client&apos;s invoices. It keeps its number and stays in the
+            audit trail.
+          </p>
+        ) : (
+          <p>
+            The draft for{' '}
+            <strong className="font-medium text-text">{clientLabel(target?.client)}</strong> will be
+            removed and the work on it goes back to unbilled WIP.
+          </p>
+        )}
       </ConfirmDialog>
       <ConfirmDialog
         open={dialog?.type === 'bulk-delete'}
@@ -599,22 +623,26 @@ function InvoiceList() {
             'deleted',
           )
         }
-        title={`Delete ${plural(chosen.length, 'draft', 'drafts')}?`}
+        title={`Delete ${onlyDrafts ? plural(chosen.length, 'draft', 'drafts') : plural(chosen.length, 'invoice', 'invoices')}?`}
         confirmLabel={`Delete ${chosen.length}`}
         loading={deletion.busy}
         error={deletion.refusal}
       >
         <p>
-          The {plural(chosen.length, 'selected invoice', 'selected invoices')} will be removed and
-          the work on {chosen.length === 1 ? 'it' : 'them'} goes back to unbilled WIP. Only drafts
-          can be deleted: issued, paid and void invoices are locked and are corrected with a credit
-          note.
+          Drafts are removed and the work on them goes back to unbilled WIP. Void invoices leave the
+          invoice lists but keep their number and stay in the audit trail. Only drafts and void
+          invoices can be deleted: void an issued invoice first (one with payments or credit notes
+          cannot be voided).
         </p>
-        {chosen.length > drafts.length ? (
+        {chosen.length > deletable.length ? (
           <p className="font-medium text-text">
-            {plural(chosen.length - drafts.length, 'selected invoice is', 'selected invoices are')}{' '}
-            not a draft. Untick {chosen.length - drafts.length === 1 ? 'it' : 'them'} first: if any
-            is included, none is deleted.
+            {plural(
+              chosen.length - deletable.length,
+              'selected invoice cannot',
+              'selected invoices cannot',
+            )}{' '}
+            be deleted. Untick {chosen.length - deletable.length === 1 ? 'it' : 'them'} first: if
+            any is included, none is deleted.
           </p>
         ) : null}
       </ConfirmDialog>

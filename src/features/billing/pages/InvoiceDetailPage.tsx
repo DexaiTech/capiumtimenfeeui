@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   Button,
   Card,
+  Checkbox,
   ConfirmDialog,
   Dropdown,
   EmptyState,
@@ -130,7 +131,22 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
     can(P.invoiceIssue) &&
     invoice.payments.length === 0 &&
     invoice.credit_notes.length === 0;
+  // Voiding never removes money: payments are unmatched first; a credited invoice stays as it is.
+  const voidBlocked =
+    !isIssued || !can(P.invoiceIssue)
+      ? null
+      : invoice.credit_notes.length > 0
+        ? 'It has a credit note, so it cannot be voided.'
+        : invoice.payments.length > 0
+          ? 'It cannot be voided while payments are matched to it: unmatch them first (the money stays on the client’s account).'
+          : null;
   const canSend = isIssued && can(P.invoiceSend);
+  // The client is told of a void when it has an address and the person may email invoices.
+  const canNotify = can(P.invoiceSend) && invoice.email_recipients.length > 0;
+  const [notifyClient, setNotifyClient] = useState(true);
+  // A void invoice is deleted by whoever may void it; once deleted it only opens by its address.
+  const canDeleteVoid =
+    isVoid && !invoice.deleted_at && can(P.invoiceCreate) && can(P.invoiceIssue);
   const title = invoice.number ?? 'Draft invoice';
 
   // The invoice list's "Record payment…", "Raise credit note…" and "Void invoice…" open this page
@@ -173,13 +189,16 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
       id: 'void',
       label: 'Void invoice…',
       tone: 'danger',
-      onSelect: () => setDialog({ type: 'void' }),
+      onSelect: () => {
+        setNotifyClient(true);
+        setDialog({ type: 'void' });
+      },
     });
   }
-  if (isDraft && can(P.invoiceCreate)) {
+  if ((isDraft && can(P.invoiceCreate)) || canDeleteVoid) {
     moreItems.push({
       id: 'delete',
-      label: 'Delete draft…',
+      label: isDraft ? 'Delete draft…' : 'Delete invoice…',
       tone: 'danger',
       onSelect: () => {
         setRefusal(null);
@@ -224,11 +243,19 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const confirmDelete = () =>
     removeInvoice.mutate(invoice.id, {
       onSuccess: () => {
-        toast({
-          tone: 'success',
-          title: 'Draft deleted',
-          description: 'Its work is unbilled WIP again.',
-        });
+        toast(
+          isDraft
+            ? {
+                tone: 'success',
+                title: 'Draft deleted',
+                description: 'Its work is unbilled WIP again.',
+              }
+            : {
+                tone: 'success',
+                title: `${title} deleted`,
+                description: 'It keeps its number and stays in the audit trail.',
+              },
+        );
         void navigate(routes.org.invoices(slug));
       },
       onError: (error) => setRefusal(dialogError(error)),
@@ -310,11 +337,14 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
             This invoice was voided
             {invoice.voided_at ? ` on ${dateCell(invoice.voided_at.slice(0, 10))}` : ''}
             {invoice.void_reason ? `: ${invoice.void_reason}` : '.'} Its work is back in WIP.
+            {invoice.deleted_at
+              ? ` It was deleted on ${dateCell(invoice.deleted_at.slice(0, 10))}: it is left out of every list and kept, with its number, for the audit trail.`
+              : ''}
           </Notice>
         ) : isIssued ? (
           <Notice tone="info">
             This invoice has been issued and can no longer be edited. To correct it, raise a credit
-            note.
+            note.{voidBlocked ? ` ${voidBlocked}` : ''}
           </Notice>
         ) : isDraft && approvalNeeded ? (
           <Notice tone="warning">This invoice needs approval before it can be issued.</Notice>
@@ -389,11 +419,14 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
         suggestions={['Issued in error', 'Wrong client', 'Duplicate invoice', 'Wrong amount']}
         confirmLabel="Void invoice"
         onSubmit={async (reason) => {
-          await voidInvoice.mutateAsync({ invoiceId: invoice.id, reason });
+          const told = canNotify && notifyClient;
+          await voidInvoice.mutateAsync({ invoiceId: invoice.id, reason, notifyClient: told });
           toast({
             tone: 'success',
             title: `${title} voided`,
-            description: 'Its work is back in WIP.',
+            description: told
+              ? `Its work is back in WIP, and ${invoice.email_recipients.join(', ')} will be told it is cancelled.`
+              : 'Its work is back in WIP.',
           });
         }}
       >
@@ -401,17 +434,35 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
           Only an invoice with no payments or credit notes can be voided. Its work returns to
           unbilled WIP.
         </p>
+        {canNotify ? (
+          <Checkbox
+            className="mt-3"
+            label="Email the client that this invoice is cancelled"
+            description={`To ${invoice.email_recipients.join(', ')}, with the Invoice cancelled email template.`}
+            checked={notifyClient}
+            onChange={(event) => setNotifyClient(event.target.checked)}
+          />
+        ) : can(P.invoiceSend) ? (
+          <p className="mt-3">
+            The client has no email address, so it cannot be told by email that this invoice is
+            cancelled.
+          </p>
+        ) : null}
       </ReasonDialog>
       <ConfirmDialog
         open={dialog?.type === 'delete'}
         onClose={close}
         onConfirm={confirmDelete}
-        title="Delete draft?"
-        confirmLabel="Delete draft"
+        title={isDraft ? 'Delete draft?' : `Delete ${title}?`}
+        confirmLabel={isDraft ? 'Delete draft' : 'Delete invoice'}
         loading={removeInvoice.isPending}
         error={refusal}
       >
-        <p>The draft is removed and the work on it goes back to unbilled WIP.</p>
+        <p>
+          {isDraft
+            ? 'The draft is removed and the work on it goes back to unbilled WIP.'
+            : 'The void invoice leaves the invoice lists and the client’s invoices. It keeps its number and stays in the audit trail.'}
+        </p>
       </ConfirmDialog>
       <ConfirmDialog
         open={dialog?.type === 'unmatch'}
