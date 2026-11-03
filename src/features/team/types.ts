@@ -276,6 +276,7 @@ export type RateLevel =
   | 'client'
   | 'service_staff'
   | 'service_grade'
+  | 'service'
   | 'staff'
   | 'grade';
 export type RuleStatus = 'current' | 'future' | 'ended';

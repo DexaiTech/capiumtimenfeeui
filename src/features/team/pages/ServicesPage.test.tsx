@@ -15,6 +15,7 @@ import {
   archivedService,
   bookkeeping,
   review,
+  rule,
   service,
   standardVat,
   taxService,
@@ -94,8 +95,9 @@ describe('ServicesPage list', () => {
     expect(tax.getByText('Ad hoc tax questions')).toBeInTheDocument();
     expect(tax.getByText('Hourly')).toBeInTheDocument();
     expect(tax.getByText('Non-billable')).toBeInTheDocument();
-    // Without a fee, a VAT code, an invoice description or default tasks: a dash; no limit: every type.
-    expect(tax.getAllByText('—')).toHaveLength(4);
+    // Without a fee, a charge-out rate, a VAT code, an invoice description or default tasks: a
+    // dash; no limit: every type.
+    expect(tax.getAllByText('—')).toHaveLength(5);
     expect(tax.getByText('All activity types')).toBeInTheDocument();
 
     expect(within(await row(/^Legacy payroll/)).getByText('Inactive')).toBeInTheDocument();
@@ -907,5 +909,175 @@ describe('ServicesPage delete', () => {
       await within(dialog).findByText('You need the settings.manage permission.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Delete service?' })).toBeInTheDocument();
+  });
+});
+
+describe('the charge-out rate of a service (APT68)', () => {
+  const accountsRate = rule('rule-accounts', 'service', {
+    service: { id: accountsService.id, code: 'ACCS', name: 'Year-end accounts' },
+    rate: 12000,
+    effective_from: '2026-01-01',
+  });
+  type Call = { method: string; path: string; body: unknown };
+
+  function recordRates(calls: Call[]) {
+    server.use(
+      http.post(orgApiPath('/rates'), async ({ request }) => {
+        calls.push({ method: 'POST', path: '/rates', body: await request.json() });
+        return ok(rule('rule-new', 'service'), { status: 201 });
+      }),
+      http.patch(orgApiPath('/rates/:ruleId'), async ({ request, params }) => {
+        calls.push({
+          method: 'PATCH',
+          path: `/rates/${String(params.ruleId)}`,
+          body: await request.json(),
+        });
+        return ok(accountsRate);
+      }),
+    );
+  }
+
+  it('shows the charge-out rate of each service in a column, asked for at the service level', async () => {
+    const queries: URLSearchParams[] = [];
+    server.use(
+      ...teamHandlers({
+        rules: [accountsRate],
+        onRuleList: (params) => queries.push(params),
+      }),
+    );
+    renderInOrg(<ServicesPage />);
+
+    expect(screen.getByRole('columnheader', { name: 'Charge-out rate' })).toBeInTheDocument();
+    expect(within(await row(/^Year-end accounts/)).getByText('£120.00/h')).toBeInTheDocument();
+    expect(queries[0]?.get('kind')).toBe('charge');
+    expect(queries[0]?.getAll('level')).toEqual(['service']);
+    expect(queries[0]?.get('status')).toBe('current');
+  });
+
+  it('shows no rate column or field and asks for no rate without rate.read', async () => {
+    let asked = 0;
+    server.use(...teamHandlers({ onRuleList: () => (asked += 1) }));
+    renderInOrg(<ServicesPage />, {
+      context: contextWith(['organization.read', 'settings.manage', 'rate.manage']),
+    });
+
+    expect(await row(/^Year-end accounts/)).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Charge-out rate' })).toBeNull();
+    const dialog = await openEdit(userEvent.setup(), 'Year-end accounts');
+    expect(within(dialog).queryByRole('textbox', { name: /Charge-out rate/ })).toBeNull();
+    expect(asked).toBe(0);
+  });
+
+  it('adds a new service with its charge-out rate from the day given', async () => {
+    const calls: Call[] = [];
+    recordRates(calls);
+    server.use(
+      http.post(orgApiPath('/services'), async ({ request }) => {
+        calls.push({ method: 'POST', path: '/services', body: await request.json() });
+        return ok(service('service-pay', 'PAY', 'Payroll'), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+
+    const dialog = await openAdd(user);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Payroll');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Code' }), 'pay');
+    await user.type(within(dialog).getByRole('textbox', { name: /Charge-out rate/ }), '95');
+    const from = within(dialog).getByLabelText('Rate from');
+    await user.clear(from);
+    await user.type(from, '2026-11-01');
+    await user.click(within(dialog).getByRole('button', { name: 'Add service' }));
+
+    expect(await screen.findByText('Payroll added')).toBeInTheDocument();
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      'POST /services',
+      'POST /rates',
+    ]);
+    expect(calls[1]?.body).toEqual({
+      kind: 'charge',
+      service_id: 'service-pay',
+      rate: 9500,
+      effective_from: '2026-11-01',
+      close_previous: true,
+    });
+  });
+
+  it('changes the rate from a new day, ending the one before, without touching the service', async () => {
+    const calls: Call[] = [];
+    server.use(...teamHandlers({ rules: [accountsRate] }));
+    recordRates(calls);
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+
+    const dialog = await openEdit(user, 'Year-end accounts');
+    const rate = within(dialog).getByRole('textbox', { name: /Charge-out rate/ });
+    expect(rate).toHaveValue('120.00');
+    expect(within(dialog).getByText(/This rate applies since 01\/01\/2026/)).toBeInTheDocument();
+    await user.clear(rate);
+    await user.type(rate, '130');
+    const from = within(dialog).getByLabelText('Rate from');
+    await user.clear(from);
+    await user.type(from, '2026-10-01');
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+
+    expect(await screen.findByText('Year-end accounts saved')).toBeInTheDocument();
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        path: '/rates',
+        body: {
+          kind: 'charge',
+          service_id: accountsService.id,
+          rate: 13000,
+          effective_from: '2026-10-01',
+          close_previous: true,
+        },
+      },
+    ]);
+  });
+
+  it('corrects the amount of the rate when the new one starts the same day', async () => {
+    const calls: Call[] = [];
+    server.use(...teamHandlers({ rules: [accountsRate] }));
+    recordRates(calls);
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+
+    const dialog = await openEdit(user, 'Year-end accounts');
+    const rate = within(dialog).getByRole('textbox', { name: /Charge-out rate/ });
+    await user.clear(rate);
+    await user.type(rate, '125');
+    const from = within(dialog).getByLabelText('Rate from');
+    await user.clear(from);
+    await user.type(from, '2026-01-01');
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+
+    await waitFor(() =>
+      expect(calls).toEqual([
+        { method: 'PATCH', path: '/rates/rule-accounts', body: { rate: 12500 } },
+      ]),
+    );
+  });
+
+  it('keeps the dialog open with the refusal of the rate', async () => {
+    server.use(
+      ...teamHandlers({ rules: [accountsRate] }),
+      http.post(orgApiPath('/rates'), () =>
+        fail(409, 'RATE_OVERLAP', 'Another rate of the same kind already covers this period.'),
+      ),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ServicesPage />);
+
+    const dialog = await openEdit(user, 'Year-end accounts');
+    const rate = within(dialog).getByRole('textbox', { name: /Charge-out rate/ });
+    await user.clear(rate);
+    await user.type(rate, '130');
+    await user.click(within(dialog).getByRole('button', { name: 'Save service' }));
+
+    expect(
+      await within(dialog).findByText(/Another rate of the same kind already covers/),
+    ).toBeInTheDocument();
   });
 });

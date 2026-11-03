@@ -80,6 +80,7 @@ export const RATE_SOURCE_LABEL: Record<string, string> = {
   job: 'Job rate',
   service_staff: 'Staff rate for the service',
   service_grade: 'Service rate for the grade',
+  service: 'Service rate',
   staff: 'Staff rate',
   grade: 'Grade rate',
   default: 'Practice default rate',
