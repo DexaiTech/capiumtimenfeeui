@@ -28,6 +28,8 @@ export interface WorkStepProps {
   selected: ReadonlySet<string>;
   onSelectedChange: (selected: ReadonlySet<string>) => void;
   onContinue: () => void;
+  /** Bills fees in advance instead: time is assigned to that invoice later. */
+  onAdvance?: () => void;
 }
 
 /** Step one: tick the time, disbursements and fixed fees of the client to put on the invoice. */
@@ -38,6 +40,7 @@ export function WorkStep({
   selected,
   onSelectedChange,
   onContinue,
+  onAdvance,
 }: WorkStepProps) {
   const { organization } = useOrg();
   const currency = organization.currency;
@@ -165,7 +168,12 @@ export function WorkStep({
               ? 'Nothing chosen yet.'
               : `${plural(chosen.length, 'item', 'items')} chosen, ${formatMoney(total, currency)} of work in progress.`}
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {onAdvance ? (
+              <Button size="sm" onClick={onAdvance}>
+                Bill fees in advance…
+              </Button>
+            ) : null}
             <Button
               size="sm"
               disabled={chosen.length === 0}

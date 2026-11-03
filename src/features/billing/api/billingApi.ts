@@ -2,6 +2,7 @@ import { api, type ApiResult, type RequestOptions } from '@/services/api';
 import type { BulkResult } from '@/types';
 
 import type {
+  AdvanceItemsBody,
   AllocateBody,
   ClientBillingSummary,
   ClientWip,
@@ -126,6 +127,18 @@ export const billingApi = {
   deleteLine: (organizationId: string, invoiceId: string, lineId: string) =>
     api.delete<InvoiceDetail>(
       `${org(organizationId)}/invoices/${seg(invoiceId)}/lines/${seg(lineId)}`,
+    ),
+  /** Bills WIP against fees billed in advance (`unassign: true` takes it off again). */
+  assignToAdvance: (
+    organizationId: string,
+    invoiceId: string,
+    lineId: string,
+    body: AdvanceItemsBody,
+    unassign = false,
+  ) =>
+    api.post<InvoiceDetail>(
+      `${org(organizationId)}/invoices/${seg(invoiceId)}/lines/${seg(lineId)}/${unassign ? 'unassign' : 'assign'}`,
+      body,
     ),
   issueInvoice: (organizationId: string, invoiceId: string, body: InvoiceIssueBody) =>
     api.post<InvoiceDetail>(`${org(organizationId)}/invoices/${seg(invoiceId)}/issue`, body),

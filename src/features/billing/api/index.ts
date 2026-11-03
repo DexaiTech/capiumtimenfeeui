@@ -6,6 +6,7 @@ export {
 } from './billingApi';
 export {
   useAddInvoiceLine,
+  useAdvanceItems,
   useApproveInvoice,
   useBulkInvoices,
   useCreateInvoice,

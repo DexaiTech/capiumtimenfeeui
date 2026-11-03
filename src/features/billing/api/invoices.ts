@@ -10,6 +10,7 @@ import { useOrg } from '@/features/organizations';
 
 import { LIST_PAGE_SIZE } from '../constants';
 import type {
+  AdvanceItemsBody,
   InvoiceBulkRequest,
   InvoiceCreate,
   InvoiceDetail,
@@ -152,6 +153,29 @@ export function useDeleteInvoiceLine(invoiceId: string) {
   const cache = useDetailCache();
   return useMutation({
     mutationFn: (lineId: string) => billingApi.deleteLine(organization.id, invoiceId, lineId),
+    onSuccess: cache,
+    onSettled: invalidate.invoices,
+  });
+}
+
+/**
+ * Assigns WIP to fees billed in advance on an issued invoice (`unassign` takes it off again): the
+ * work leaves (or returns to) WIP, the invoice's figures stay as issued.
+ */
+export function useAdvanceItems(invoiceId: string) {
+  const { organization } = useOrg();
+  const invalidate = useBillingInvalidation();
+  const cache = useDetailCache();
+  return useMutation({
+    mutationFn: ({
+      lineId,
+      body,
+      unassign = false,
+    }: {
+      lineId: string;
+      body: AdvanceItemsBody;
+      unassign?: boolean;
+    }) => billingApi.assignToAdvance(organization.id, invoiceId, lineId, body, unassign),
     onSuccess: cache,
     onSettled: invalidate.invoices,
   });

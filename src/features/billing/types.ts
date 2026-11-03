@@ -94,8 +94,48 @@ export interface InvoiceLine {
   vat_rate_bp: BasisPoints;
   vat_amount: Pence;
   gross_amount: Pence;
-  /** Null on manual lines. */
+  /** Null on manual lines (an advance line has it once time is assigned to it). */
   wip: InvoiceLineWip | null;
+  /** Fees billed in advance: time is assigned to the line once the invoice is issued. */
+  is_advance?: boolean;
+  /** On an advance line: the work assigned to it and what is left of it. */
+  advance?: InvoiceLineAdvance | null;
+}
+
+/** A piece of work assigned to fees billed in advance. */
+export interface AdvanceItem {
+  kind: 'time' | 'disbursement';
+  id: string;
+  date: IsoDate;
+  person: { user_id: string; full_name: string | null } | null;
+  description: string | null;
+  minutes: number | null;
+  /** A decimal string with two places. */
+  hours: string | null;
+  /** What the work was worth. */
+  wip_value: Pence;
+  /** What the advance covers of it; the rest is written off. */
+  billed_value: Pence;
+  assigned_on: IsoDate | null;
+}
+
+/** How much of an advance line the assigned work has used. */
+export interface InvoiceLineAdvance {
+  /** The advance: the line's net. */
+  amount: Pence;
+  used: Pence;
+  remaining: Pence;
+  /** What the assigned work was worth. */
+  wip_value: Pence;
+  /** Work assigned beyond the advance. */
+  written_off: Pence;
+  items: AdvanceItem[];
+}
+
+/** `POST /invoices/{id}/lines/{line_id}/assign` and `/unassign`. */
+export interface AdvanceItemsBody {
+  time_entry_ids: string[];
+  disbursement_ids: string[];
 }
 
 export interface VatSummaryRow {
@@ -191,6 +231,8 @@ export interface InvoiceCreate {
   overrides: LineOverride[];
   /** What the lines were valued on (kept in the audit entry of the draft). */
   valuation_basis?: BillingBasis;
+  /** Fees billed in advance: one manual line to which time is assigned later. */
+  advance?: { description: string; net_amount: Pence; vat_rate_id?: string };
 }
 
 /** PATCH of the header: a draft takes all four, an issued invoice is not editable. */
@@ -214,6 +256,8 @@ export interface InvoiceLineCreate {
   unit_amount: Pence;
   net_amount?: Pence;
   vat_rate_id?: string | null;
+  /** Fees billed in advance: time is assigned to the line once the invoice is issued. */
+  is_advance?: boolean;
 }
 
 export interface InvoiceLineUpdate {
