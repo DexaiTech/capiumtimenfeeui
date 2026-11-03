@@ -35,7 +35,19 @@ export function useCreateRateRule() {
   const invalidate = useTeamInvalidation();
   return useMutation({
     mutationFn: (body: RateRuleCreate) => teamApi.createRateRule(organization.id, body),
-    onSettled: invalidate.rates,
+    onSettled: (_rule, _error, body) => {
+      invalidate.rates();
+      // A confirmed change re-prices unbilled time, as a re-rate does.
+      if (body.confirm_impact) invalidate.rerate();
+    },
+  });
+}
+
+/** What adding a rate would change (the rates around it, time re-priced); nothing is written. */
+export function useRateImpact() {
+  const { organization } = useOrg();
+  return useMutation({
+    mutationFn: (body: RateRuleCreate) => teamApi.rateImpact(organization.id, body),
   });
 }
 

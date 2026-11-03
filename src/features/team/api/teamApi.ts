@@ -16,6 +16,7 @@ import type {
   MemberRoleChange,
   RateChange,
   RateHistoryFilters,
+  RateImpact,
   RateResolution,
   RateRule,
   RateRuleCreate,
@@ -130,6 +131,8 @@ export const teamApi = {
     }),
   createRateRule: (organizationId: string, body: RateRuleCreate) =>
     api.post<RateRule>(`${org(organizationId)}/rates`, body),
+  rateImpact: (organizationId: string, body: RateRuleCreate) =>
+    api.post<RateImpact>(`${org(organizationId)}/rates/impact`, body),
   updateRateRule: (organizationId: string, ruleId: string, body: RateRuleUpdate) =>
     api.patch<RateRule>(`${org(organizationId)}/rates/${seg(ruleId)}`, body),
   deleteRateRule: (organizationId: string, ruleId: string) =>

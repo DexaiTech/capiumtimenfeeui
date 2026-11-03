@@ -9,6 +9,7 @@ import type {
   JobOption,
   LadderStep,
   RateChange,
+  RateImpact,
   RateResolution,
   RateRule,
   RerateEntry,
@@ -498,6 +499,62 @@ export const preview: ReratePreview = {
   skipped: { billed: 1, in_draft: 1, written_off: 0, period_locked: 1 },
   items: [previewEntry, skippedEntry],
   items_truncated: false,
+};
+
+/** `POST /rates/impact` for a rate that meets no other rate and no recorded time. */
+export const noImpact = (effectiveFrom: string): RateImpact => ({
+  effective_from: effectiveFrom,
+  effective_to: null,
+  ends: null,
+  stops_at: null,
+  reprice: {
+    entries_examined: 0,
+    entries_to_change: 0,
+    entries_unchanged: 0,
+    entries_skipped: 0,
+    charge_value_before: 0,
+    charge_value_after: 0,
+    charge_value_delta: 0,
+    cost_value_before: 0,
+    cost_value_after: 0,
+    cost_value_delta: 0,
+  },
+  skipped: { billed: 0, in_draft: 0, written_off: 0, period_locked: 0 },
+  needs_confirmation: false,
+});
+
+/** A backdated £50 cost rate from 01/04/2026 between £40 (2025) and £60 (from 26/10/2026). */
+export const backdatedImpact: RateImpact = {
+  effective_from: '2026-04-01',
+  effective_to: '2026-10-25',
+  ends: {
+    id: 'rule-cost-2025',
+    rate: 4000,
+    effective_from: '2025-04-01',
+    effective_to: '2026-10-25',
+    new_effective_to: '2026-03-31',
+  },
+  stops_at: {
+    id: 'rule-cost-later',
+    rate: 6000,
+    effective_from: '2026-10-26',
+    effective_to: null,
+    new_effective_to: null,
+  },
+  reprice: {
+    entries_examined: 3,
+    entries_to_change: 3,
+    entries_unchanged: 0,
+    entries_skipped: 2,
+    charge_value_before: 30000,
+    charge_value_after: 30000,
+    charge_value_delta: 0,
+    cost_value_before: 12000,
+    cost_value_after: 15000,
+    cost_value_delta: 3000,
+  },
+  skipped: { billed: 1, in_draft: 0, written_off: 0, period_locked: 1 },
+  needs_confirmation: true,
 };
 
 export const rerun: Rerun = {

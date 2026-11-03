@@ -1,21 +1,29 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, Input, FormPanel, useToast } from '@/components/ui';
+import {
+  Button,
+  Checkbox,
+  Input,
+  FormPanel,
+  useToast,
+  type ConfirmDialogError,
+} from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { parsePounds } from '@/utils/money';
 
-import { useCreateRateRule } from '../../api';
+import { useCreateRateRule, useRateImpact } from '../../api';
 import { RATE_KIND_LABEL } from '../../constants';
 import { requiredRateText } from '../../schemas/common';
-import type { RateKind, StaffMember } from '../../types';
-import { conflictsOf, toFormError } from '../../utils/errors';
-import { formatPeriod } from '../../utils/format';
+import type { RateImpact, RateKind, RateRuleCreate, StaffMember } from '../../types';
+import { conflictsOf, dialogError, toFormError } from '../../utils/errors';
+import { formatPeriod, formatRate } from '../../utils/format';
 import { DialogActions } from '../DialogActions';
+import { RateImpactDialog } from '../rates/RateImpactDialog';
 
 const schema = z.object({
   rate: requiredRateText('Enter the rate in pounds per hour, for example 95.00'),
@@ -43,6 +51,10 @@ function RateForm({
 }) {
   const { organization } = useOrg();
   const create = useCreateRateRule();
+  const impact = useRateImpact();
+  // A save that changes other rates or re-prices time waits here for the pop-up's answer.
+  const [pending, setPending] = useState<{ body: RateRuleCreate; impact: RateImpact } | null>(null);
+  const [refusal, setRefusal] = useState<ConfirmDialogError | null>(null);
   const { toast } = useToast();
   const formId = useId();
   const label = kind === 'cost' ? 'cost rate' : 'charge-out rate';
@@ -65,27 +77,48 @@ function RateForm({
     setError,
     fields: FIELDS,
   });
-  const failure = create.error;
+  const failure = impact.error ?? create.error;
+
+  const saved = () => {
+    toast({ tone: 'success', title: `${staff.full_name}: ${label} saved` });
+    onClose();
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     clearSubmitError();
     const pence = parsePounds(values.rate);
     if (pence === null) return;
+    const body: RateRuleCreate = {
+      kind,
+      user_id: staff.id,
+      rate: pence,
+      effective_from: values.effective_from,
+      close_previous: values.close_previous,
+    };
     try {
-      await create.mutateAsync({
-        kind,
-        user_id: staff.id,
-        rate: pence,
-        effective_from: values.effective_from,
-        close_previous: values.close_previous,
-      });
+      // Asked first: the rates around the new one and the time it would re-price.
+      const found = await impact.mutateAsync(body);
+      if (found.needs_confirmation) {
+        setRefusal(null);
+        setPending({ body, impact: found });
+        return;
+      }
+      await create.mutateAsync(body);
     } catch (error) {
       handleSubmitError(toFormError(error));
       return;
     }
-    toast({ tone: 'success', title: `${staff.full_name}: ${label} saved` });
-    onClose();
+    saved();
   });
+
+  const confirm = () => {
+    if (!pending) return;
+    setRefusal(null);
+    create.mutate(
+      { ...pending.body, confirm_impact: true },
+      { onSuccess: saved, onError: (error) => setRefusal(dialogError(error)) },
+    );
+  };
 
   const conflicts = conflictsOf(failure);
 
@@ -121,7 +154,7 @@ function RateForm({
           render={({ field }) => (
             <Checkbox
               label="End the current rate the day before"
-              description="Otherwise a rate that is already running for this person stops the new one (409)."
+              description="Otherwise you are asked before a rate that is already running for this person ends."
               checked={field.value}
               onChange={(event) => field.onChange(event.target.checked)}
             />
@@ -152,6 +185,14 @@ function RateForm({
           Save rate
         </Button>
       </DialogActions>
+      <RateImpactDialog
+        impact={pending?.impact ?? null}
+        subject={`${staff.full_name}'s new ${label} of ${formatRate(pending?.body.rate)}`}
+        onConfirm={confirm}
+        onClose={() => setPending(null)}
+        loading={create.isPending}
+        error={refusal}
+      />
     </>
   );
 }

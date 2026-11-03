@@ -9,7 +9,14 @@ import { renderInOrg } from '@/test/renderInOrg';
 import { newSegmentCalls, segmentHandlers, testSegments } from '@/test/segments';
 import { apiPath, fail, ok, server } from '@/test/server';
 
-import { detailOf, futureRule, sam, samChargeRule, samCostRule } from '../test/fixtures';
+import {
+  backdatedImpact,
+  detailOf,
+  futureRule,
+  sam,
+  samChargeRule,
+  samCostRule,
+} from '../test/fixtures';
 import { orgApiPath, teamHandlers } from '../test/handlers';
 import StaffDetailPage from './StaffDetailPage';
 
@@ -133,6 +140,77 @@ describe('StaffDetailPage', () => {
     expect(within(dialog).getByRole('list', { name: 'Rates in the way' })).toHaveTextContent(
       '01/03/2026 – open-ended',
     );
+  });
+
+  describe('a backdated rate that changes other rates', () => {
+    async function saveBackdatedCost(bodies: unknown[]) {
+      const user = userEvent.setup();
+      server.use(
+        http.post(orgApiPath('/rates/impact'), () => ok(backdatedImpact)),
+        http.post(orgApiPath('/rates'), async ({ request }) => {
+          bodies.push(await request.json());
+          return ok(samCostRule, { status: 201 });
+        }),
+        ...teamHandlers({ rules: [samCostRule] }),
+      );
+      renderDetail();
+      await user.click(await screen.findByRole('button', { name: 'Set cost rate' }));
+      const panel = await screen.findByRole('region', { name: /new cost/i });
+      await user.type(within(panel).getByRole('textbox', { name: 'Rate (£ per hour)' }), '50');
+      await user.clear(within(panel).getByLabelText('Starts on'));
+      await user.type(within(panel).getByLabelText('Starts on'), '2026-04-01');
+      await user.click(within(panel).getByRole('button', { name: 'Save rate' }));
+      const popUp = await screen.findByRole('dialog', { name: 'Change the rates?' });
+      return { user, panel, popUp };
+    }
+
+    it('shows what changes and saves with confirm_impact when confirmed', async () => {
+      const bodies: unknown[] = [];
+      const { user, popUp } = await saveBackdatedCost(bodies);
+
+      expect(popUp).toHaveTextContent(
+        "Sam Staff's new cost rate of £50.00/h will apply 01/04/2026 – 25/10/2026.",
+      );
+      const changes = within(popUp).getByRole('list', { name: 'Rates that change' });
+      expect(changes).toHaveTextContent('The £40.00/h rate from 01/04/2025 ends on 31/03/2026.');
+      expect(changes).toHaveTextContent(
+        'The £60.00/h rate from 26/10/2026 stays as it is, so the new rate ends the day before it.',
+      );
+      expect(popUp).toHaveTextContent('3 unbilled entries in this period will be re-priced.');
+      expect(popUp).toHaveTextContent('the cost value changes by +£30.00');
+      expect(popUp).toHaveTextContent('Left alone: Already billed 1 · In a locked period 1.');
+      expect(bodies).toEqual([]);
+
+      await user.click(within(popUp).getByRole('button', { name: 'Change rates' }));
+      await waitFor(() =>
+        expect(bodies).toEqual([
+          {
+            kind: 'cost',
+            user_id: sam.id,
+            rate: 5000,
+            effective_from: '2026-04-01',
+            close_previous: true,
+            confirm_impact: true,
+          },
+        ]),
+      );
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog', { name: 'Change the rates?' })).not.toBeInTheDocument(),
+      );
+      expect(screen.queryByRole('region', { name: /new cost/i })).not.toBeInTheDocument();
+    });
+
+    it('saves nothing when the pop-up is cancelled', async () => {
+      const bodies: unknown[] = [];
+      const { user, panel, popUp } = await saveBackdatedCost(bodies);
+
+      await user.click(within(popUp).getByRole('button', { name: 'Cancel' }));
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog', { name: 'Change the rates?' })).not.toBeInTheDocument(),
+      );
+      expect(bodies).toEqual([]);
+      expect(panel).toBeInTheDocument();
+    });
   });
 
   it('hides the rates without rate.read and the buttons without rate.manage', async () => {
