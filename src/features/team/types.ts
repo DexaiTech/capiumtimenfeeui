@@ -330,6 +330,8 @@ export interface RateRuleCreate {
   effective_from: IsoDate;
   effective_to?: IsoDate | null;
   close_previous?: boolean;
+  /** Confirmed what `POST /rates/impact` showed: place the rule between the others and re-price. */
+  confirm_impact?: boolean;
 }
 
 /** Kind and scope never change; null `effective_to` makes the rule open-ended again. */
@@ -502,6 +504,31 @@ export interface RerateSkipped {
   in_draft: number;
   written_off: number;
   period_locked: number;
+}
+
+/** An existing rule a new rate meets (`POST /rates/impact`). */
+export interface ImpactRule {
+  id: string;
+  /** Null for a cost rate without `rate.read`. */
+  rate: Pence | null;
+  effective_from: IsoDate;
+  effective_to: IsoDate | null;
+  /** Its last day once the new rate is added. */
+  new_effective_to: IsoDate | null;
+}
+
+/** What adding a rate with `confirm_impact` would do; nothing has changed yet. */
+export interface RateImpact {
+  effective_from: IsoDate;
+  /** The new rate's last day as it would be saved. */
+  effective_to: IsoDate | null;
+  /** The rate running into the new one, ended the day before it. */
+  ends: ImpactRule | null;
+  /** The later rate that stays; the new one ends the day before it. */
+  stops_at: ImpactRule | null;
+  reprice: RerateTotals;
+  skipped: RerateSkipped;
+  needs_confirmation: boolean;
 }
 
 export interface ReratePreview {

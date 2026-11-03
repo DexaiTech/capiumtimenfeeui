@@ -12,6 +12,7 @@ import type {
   JobOption,
   RateChange,
   RateRule,
+  RateRuleCreate,
   Rerun,
   RerunItem,
   Service,
@@ -22,6 +23,7 @@ import type {
 import {
   accountsService,
   accountsTemplates,
+  noImpact,
   detailOf,
   testActivities,
   testChanges,
@@ -159,6 +161,11 @@ export function teamHandlers(data: TeamData = {}): HttpHandler[] {
       );
       const result = page(rows, params);
       return ok(result.rows, { meta: result.meta });
+    }),
+    // A new rate meets no other rate and no recorded time unless a test says otherwise.
+    http.post(orgApiPath('/rates/impact'), async ({ request }) => {
+      const body = (await request.json()) as RateRuleCreate;
+      return ok(noImpact(body.effective_from));
     }),
     http.get(orgApiPath('/rates/reruns'), () => ok(data.reruns ?? testReruns, { meta: END })),
     http.get(orgApiPath('/rates/reruns/:runId/items'), ({ request }) => {
