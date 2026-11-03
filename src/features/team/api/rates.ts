@@ -14,7 +14,7 @@ import type {
 } from '../types';
 import { useTeamInvalidation } from './invalidation';
 import { teamKeys } from './keys';
-import { nextCursor } from './pages';
+import { fetchEverything, nextCursor } from './pages';
 import { teamApi } from './teamApi';
 
 export function useRateRules(filters: RateRuleFilters, options: { enabled?: boolean } = {}) {
@@ -27,6 +27,24 @@ export function useRateRules(filters: RateRuleFilters, options: { enabled?: bool
     getNextPageParam: nextCursor,
     placeholderData: keepPreviousData,
     enabled: options.enabled ?? true,
+  });
+}
+
+/** The charge-out rate of each service for everyone (the `service` level) in force today. */
+export function useServiceChargeRates(options: { enabled?: boolean } = {}) {
+  const { organization } = useOrg();
+  return useQuery({
+    queryKey: teamKeys.serviceChargeRates(organization.id),
+    queryFn: ({ signal }) =>
+      fetchEverything((cursor) =>
+        teamApi.listRateRules(
+          organization.id,
+          { kind: 'charge', level: ['service'], status: 'current' },
+          { cursor, signal, limit: 100 },
+        ),
+      ),
+    enabled: options.enabled ?? true,
+    staleTime: 30_000,
   });
 }
 

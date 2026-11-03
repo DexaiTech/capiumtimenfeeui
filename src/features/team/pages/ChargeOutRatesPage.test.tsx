@@ -132,6 +132,7 @@ describe('ChargeOutRatesPage', () => {
       'Client (everyone)',
       'Staff + service',
       'Service + grade',
+      'Service (everyone)',
       'Staff',
       'Grade',
     ]);
@@ -191,6 +192,7 @@ describe('ChargeOutRatesPage', () => {
       'Client (everyone)',
       'Staff + service',
       'Service + grade',
+      'Service (everyone)',
       'Staff',
       'Grade',
     ]);
@@ -309,6 +311,7 @@ describe('ChargeOutRatesPage', () => {
     expect(optionNames(within(dialog).getByRole('combobox', { name: 'Applies to' }))).toEqual([
       'Staff + service',
       'Service + grade',
+      'Service (everyone)',
       'Staff',
       'Grade',
     ]);

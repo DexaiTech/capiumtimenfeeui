@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { useOrg } from '@/features/organizations';
+import type { IsoDate, Pence } from '@/types/api';
 
 import type {
   ActivityTypeCreate,
@@ -65,7 +66,18 @@ export function useVatCodes(options: { enabled?: boolean } = {}) {
   });
 }
 
-export type SaveServiceVariables =
+/**
+ * A new charge-out rate for the service, for everyone (APT68). With `ruleId` the rate of that rule
+ * (the one in force, starting the same day) is corrected; without, a rate is added from
+ * `effective_from` and the open-ended one before it is end-dated the day before.
+ */
+export interface ServiceChargeRate {
+  ruleId: string | null;
+  rate: Pence;
+  effective_from: IsoDate;
+}
+
+export type SaveServiceVariables = (
   | {
       mode: 'create';
       body: ServiceCreate;
@@ -79,7 +91,8 @@ export type SaveServiceVariables =
       activityTypeIds?: string[];
       /** The whole new list of default tasks; left out to keep the saved one. */
       templates?: TaskTemplateInput[];
-    };
+    }
+) & { chargeRate?: ServiceChargeRate };
 
 /**
  * The service itself was saved, but replacing the activity types it is limited to failed. The
@@ -117,10 +130,26 @@ export class TaskTemplateSaveError extends Error {
   }
 }
 
+/** The service was saved, but its new charge-out rate was refused (an overlap, usually). */
+export class ChargeRateSaveError extends Error {
+  /** The service as saved; null when only the rate was being changed. */
+  saved: Service | null;
+  /** Why the rate was refused (usually an `ApiError`). */
+  reason: unknown;
+
+  constructor(saved: Service | null, reason: unknown) {
+    super('The charge-out rate of the service could not be saved');
+    this.name = 'ChargeRateSaveError';
+    this.saved = saved;
+    this.reason = reason;
+  }
+}
+
 /**
  * Creates or changes a service and, when given, replaces the activity types it is limited to and
- * its default tasks (separate endpoints). The calls run in order; a failure of a later one leaves
- * the earlier ones saved and is reported as an `ActivityLinkError` or a `TaskTemplateSaveError`.
+ * its default tasks, and sets its charge-out rate (separate endpoints). The calls run in order; a
+ * failure of a later one leaves the earlier ones saved and is reported as an `ActivityLinkError`,
+ * a `TaskTemplateSaveError` or a `ChargeRateSaveError`.
  */
 export function useSaveService() {
   const { organization } = useOrg();
@@ -154,6 +183,26 @@ export function useSaveService() {
           await teamApi.setServiceTaskTemplates(organization.id, serviceId, variables.templates);
         } catch (error) {
           throw new TaskTemplateSaveError(saved, error);
+        }
+      }
+      const chargeRate = variables.chargeRate;
+      if (chargeRate) {
+        try {
+          if (chargeRate.ruleId) {
+            await teamApi.updateRateRule(organization.id, chargeRate.ruleId, {
+              rate: chargeRate.rate,
+            });
+          } else {
+            await teamApi.createRateRule(organization.id, {
+              kind: 'charge',
+              service_id: serviceId,
+              rate: chargeRate.rate,
+              effective_from: chargeRate.effective_from,
+              close_previous: true,
+            });
+          }
+        } catch (error) {
+          throw new ChargeRateSaveError(saved, error);
         }
       }
       return saved;

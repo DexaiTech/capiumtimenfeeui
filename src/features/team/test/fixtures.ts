@@ -224,6 +224,7 @@ const LEVEL_LABEL: Record<RateRule['level'], string> = {
   client: 'Client (everyone)',
   service_staff: 'Staff + service',
   service_grade: 'Service + grade',
+  service: 'Service (everyone)',
   staff: 'Staff',
   grade: 'Grade',
 };
@@ -234,6 +235,7 @@ const PRECEDENCE: Record<RateRule['level'], number> = {
   client: 3,
   service_staff: 5,
   service_grade: 5,
+  service: 5,
   staff: 6,
   grade: 7,
 };

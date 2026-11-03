@@ -32,6 +32,8 @@ export const teamKeys = {
 
   rateRuleList: (organizationId: string, filters: RateRuleFilters) =>
     [...queryKeys.org.rateRules(organizationId), 'list', filters] as const,
+  serviceChargeRates: (organizationId: string) =>
+    [...queryKeys.org.rateRules(organizationId), 'services'] as const,
   rateResolution: (organizationId: string, query: ResolveQuery) =>
     [...queryKeys.org.rateRules(organizationId), 'resolve', query] as const,
   rateHistoryList: (organizationId: string, filters: RateHistoryFilters) =>

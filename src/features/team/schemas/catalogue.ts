@@ -16,6 +16,9 @@ export const serviceSchema = z.object({
   sort_order: wholeNumberText(0, 10_000, 'Enter a whole number from 0 to 10000'),
   /** The activity types the service is limited to; empty means every type. */
   activity_code_ids: z.array(z.string()),
+  /** The charge-out rate for everyone, in pounds per hour, from `charge_rate_from`; empty for none. */
+  charge_rate: optionalRateText('Enter the rate in pounds per hour, for example 95.00'),
+  charge_rate_from: z.string(),
 });
 export type ServiceValues = z.infer<typeof serviceSchema>;
 

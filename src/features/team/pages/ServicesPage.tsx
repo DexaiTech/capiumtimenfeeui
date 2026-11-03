@@ -28,6 +28,7 @@ import { formatMoney } from '@/utils/money';
 import {
   useActivityTypes,
   useDeleteService,
+  useServiceChargeRates,
   useServices,
   useSetServiceActive,
   useVatCodes,
@@ -39,6 +40,7 @@ import { LoadError, PageShell } from '../components/PageShell';
 import { useUrlSearch } from '../hooks/useUrlSearch';
 import type { Service } from '../types';
 import { describeFailure, dialogError } from '../utils/errors';
+import { formatRate } from '../utils/format';
 
 type ServiceTab = 'all' | 'active' | 'inactive';
 const TABS: ReadonlyArray<{ value: ServiceTab; label: string }> = [
@@ -67,10 +69,15 @@ function ServiceList() {
   const order = params.get('order') === 'desc' ? 'desc' : 'asc';
   const canManage = can(PERMISSIONS.settingsManage);
   const canCreateJob = can(PERMISSIONS.jobCreate);
+  const canReadRates = can(PERMISSIONS.rateRead);
 
   const services = useServices();
   const vatCodes = useVatCodes();
   const activityTypes = useActivityTypes();
+  // Each service's own charge-out rate (for everyone), shown and set with the rates permissions.
+  const chargeRates = useServiceChargeRates({ enabled: canReadRates });
+  const chargeRateOf = (service: Service) =>
+    chargeRates.data?.find((rule) => rule.service?.id === service.id) ?? null;
   const setActive = useSetServiceActive();
   const remove = useDeleteService();
 
@@ -207,6 +214,21 @@ function ServiceList() {
         </span>
       ),
     },
+    ...(canReadRates
+      ? [
+          {
+            id: 'charge_rate',
+            header: 'Charge-out rate',
+            align: 'end',
+            className: 'w-36 whitespace-nowrap',
+            cell: (service) => (
+              <span className="text-text tabular-nums">
+                {formatRate(chargeRateOf(service)?.rate)}
+              </span>
+            ),
+          } satisfies DataTableColumn<Service>,
+        ]
+      : []),
     {
       id: 'billable',
       header: 'Billable',
@@ -321,6 +343,15 @@ function ServiceList() {
       <ServiceFormPanel
         open={dialog?.type === 'form'}
         service={dialog?.type === 'form' ? dialog.service : null}
+        chargeRate={
+          !canReadRates
+            ? null
+            : chargeRates.isPending
+              ? undefined
+              : dialog?.type === 'form' && dialog.service
+                ? chargeRateOf(dialog.service)
+                : null
+        }
         onClose={close}
       />
       <DataTable

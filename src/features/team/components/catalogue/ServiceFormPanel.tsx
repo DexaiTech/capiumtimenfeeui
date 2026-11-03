@@ -4,10 +4,14 @@ import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Checkbox, Input, FormPanel, Select, Textarea, useToast } from '@/components/ui';
+import { PERMISSIONS } from '@/constants/permissions';
+import { useOrg } from '@/features/organizations';
+import { formatUkDate, todayInZone } from '@/utils/dates';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import {
   ActivityLinkError,
+  ChargeRateSaveError,
   TaskTemplateSaveError,
   useActivityTypes,
   useSaveService,
@@ -15,7 +19,7 @@ import {
   useVatCodes,
 } from '../../api';
 import { serviceSchema, type ServiceValues } from '../../schemas/catalogue';
-import type { BillingBasis, Service, ServiceCreate, ServiceUpdate } from '../../types';
+import type { BillingBasis, RateRule, Service, ServiceCreate, ServiceUpdate } from '../../types';
 import { dialogError, toFormError } from '../../utils/errors';
 import { TaskTemplateEditor } from './TaskTemplateEditor';
 import {
@@ -54,11 +58,24 @@ const sameSet = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
 export interface ServiceFormPanelProps {
   /** The service to change, null to add one. */
   service: Service | null;
+  /** Its charge-out rate for everyone in force today: null for none, undefined while loading. */
+  chargeRate: RateRule | null | undefined;
   open: boolean;
   onClose: () => void;
 }
 
-function ServiceForm({ service, onClose }: { service: Service | null; onClose: () => void }) {
+function ServiceForm({
+  service,
+  chargeRate,
+  onClose,
+}: {
+  service: Service | null;
+  chargeRate: RateRule | null;
+  onClose: () => void;
+}) {
+  const { organization, can } = useOrg();
+  // The charge-out rate is a rate rule: read with `rate.read`, set with `rate.manage`.
+  const canSetRate = can(PERMISSIONS.rateRead) && can(PERMISSIONS.rateManage);
   const save = useSaveService();
   const { toast } = useToast();
   const formId = useId();
@@ -94,6 +111,8 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
       invoice_description: service?.invoice_description ?? '',
       sort_order: String(service?.sort_order ?? 0),
       activity_code_ids: service?.activity_code_ids ?? [],
+      charge_rate: penceToPoundsInput(chargeRate?.rate),
+      charge_rate_from: todayInZone(organization.timezone),
     },
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
@@ -113,7 +132,37 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
     const invoiceText = values.invoice_description || null;
     const sortOrder = Number(values.sort_order);
     const basis: BillingBasis = values.billing_basis;
+    // A new amount is a new rate from the date given (or a correction of the rate starting then).
+    const rate = canSetRate ? pence(values.charge_rate) : null;
+    if (rate !== null && !values.charge_rate_from) {
+      setError('charge_rate_from', { message: 'Enter the date the rate starts' });
+      return;
+    }
+    const chargeRateChange =
+      rate !== null && rate !== (chargeRate?.rate ?? null)
+        ? {
+            ruleId:
+              chargeRate && chargeRate.effective_from === values.charge_rate_from
+                ? chargeRate.id
+                : null,
+            rate,
+            effective_from: values.charge_rate_from,
+          }
+        : undefined;
     const onError = (error: unknown) => {
+      if (error instanceof ChargeRateSaveError) {
+        if (service) {
+          handleSubmitError(toFormError(error.reason));
+          return;
+        }
+        toast({
+          tone: 'warning',
+          title: `${error.saved?.name ?? values.name} saved, but its charge-out rate was not`,
+          description: `${dialogError(error.reason).message} Edit the service to try again.`,
+        });
+        onClose();
+        return;
+      }
       if (error instanceof TaskTemplateSaveError) {
         if (service) {
           // Editing: the service is saved, nothing is lost; show why and let the person retry.
@@ -159,6 +208,7 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
           body,
           activityTypeIds: values.activity_code_ids,
           templates: templateInputs,
+          chargeRate: chargeRateChange,
         },
         {
           onSuccess: () => {
@@ -185,7 +235,12 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
     if (invoiceText !== service.invoice_description) changes.invoice_description = invoiceText;
     if (sortOrder !== service.sort_order) changes.sort_order = sortOrder;
     const activityChanged = !sameSet(values.activity_code_ids, service.activity_code_ids);
-    if (Object.keys(changes).length === 0 && !activityChanged && !templatesChanged) {
+    if (
+      Object.keys(changes).length === 0 &&
+      !activityChanged &&
+      !templatesChanged &&
+      !chargeRateChange
+    ) {
       onClose();
       return;
     }
@@ -196,6 +251,7 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
         body: changes,
         activityTypeIds: activityChanged ? values.activity_code_ids : undefined,
         templates: templateInputs,
+        chargeRate: chargeRateChange,
       },
       {
         onSuccess: () => {
@@ -275,6 +331,30 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
             {...register('sort_order')}
           />
         </div>
+        {canSetRate ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Charge-out rate (£/h)"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="95.00"
+              hint="What clients are charged per hour on this service, whoever does the work. Cost rates stay per person."
+              error={errors.charge_rate?.message}
+              {...register('charge_rate')}
+            />
+            <Input
+              label="Rate from"
+              type="date"
+              hint={
+                chargeRate
+                  ? `This rate applies since ${formatUkDate(chargeRate.effective_from)}. To end it, use Charge-out Rates.`
+                  : 'The day the rate starts.'
+              }
+              error={errors.charge_rate_from?.message}
+              {...register('charge_rate_from')}
+            />
+          </div>
+        ) : null}
         <Controller
           control={control}
           name="default_billable"
@@ -368,8 +448,11 @@ function ServiceForm({ service, onClose }: { service: Service | null; onClose: (
   );
 }
 
-/** Add a service, or change one: its defaults, VAT, invoice wording and the activity types it allows. */
-export function ServiceFormPanel({ service, open, onClose }: ServiceFormPanelProps) {
+/**
+ * Add a service, or change one: its defaults, VAT, invoice wording, the activity types it allows
+ * and its charge-out rate.
+ */
+export function ServiceFormPanel({ service, chargeRate, open, onClose }: ServiceFormPanelProps) {
   return (
     <FormPanel
       open={open}
@@ -381,7 +464,14 @@ export function ServiceFormPanel({ service, open, onClose }: ServiceFormPanelPro
           : 'A kind of work the practice sells. Jobs and engagements take their defaults from it.'
       }
     >
-      {open ? <ServiceForm key={service?.id ?? 'new'} service={service} onClose={onClose} /> : null}
+      {open && chargeRate !== undefined ? (
+        <ServiceForm
+          key={service?.id ?? 'new'}
+          service={service}
+          chargeRate={chargeRate}
+          onClose={onClose}
+        />
+      ) : null}
     </FormPanel>
   );
 }
