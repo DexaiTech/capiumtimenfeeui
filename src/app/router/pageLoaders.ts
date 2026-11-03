@@ -88,7 +88,6 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
     grades: () => import('@/features/team/pages/GradesPage'),
     'cost-rates': () => import('@/features/team/pages/CostRatesPage'),
     'charge-out-rates': () => import('@/features/team/pages/ChargeOutRatesPage'),
-    services: () => import('@/features/team/pages/ServicesPage'),
     'activity-types': () => import('@/features/team/pages/ActivityTypesPage'),
     'rate-history': () => import('@/features/team/pages/RateHistoryPage'),
     'rate-preview': () => import('@/features/team/pages/RatePreviewPage'),

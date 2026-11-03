@@ -33,7 +33,8 @@ export function ModuleSidebar({ moduleId }: { moduleId: ModuleId }) {
     >
       <ul className="flex gap-1 lg:flex-col">
         {groups.map((group, index) => (
-          <li key={group.name ?? `ungrouped-${index}`} className="flex gap-1 lg:flex-col">
+          // A name can head two groups (Settings has two "Practice" groups): the key needs the place.
+          <li key={`${index}:${group.name ?? ''}`} className="flex gap-1 lg:flex-col">
             {group.name && (
               <div className="hidden px-3 pt-2.5 pb-1 text-[11px] font-semibold tracking-wide text-(--module-accent) uppercase first:pt-1 lg:block">
                 {group.name}

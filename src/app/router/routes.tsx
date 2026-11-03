@@ -154,6 +154,8 @@ const MOVED: ReadonlyArray<readonly [string, string]> = [
   ['billing/wip', 'wip'],
   // Opening Balances import moved from a Billing placeholder to the real feature in Settings.
   ['billing/opening-balances', 'settings/import-export'],
+  // Services moved from Team & Rates to Settings.
+  ['team/services', 'settings/services'],
 ];
 
 /** `/:orgSlug/...`: the ten modules, the account and the redirects of moved pages. */

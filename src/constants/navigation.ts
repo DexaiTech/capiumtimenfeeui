@@ -721,7 +721,6 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         anyOf: [P.rateManage],
         group: 'Rates',
       },
-      { id: 'services', label: 'Services', icon: Layers, group: 'Catalogue' },
       { id: 'activity-types', label: 'Activity Types', icon: Activity, group: 'Catalogue' },
     ],
   ),
@@ -762,7 +761,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         group: 'Access control',
       },
       { id: 'segments', label: 'Client Segments', icon: Tags, group: 'Practice' },
-      // The same page as Team & Rates > Services, with the same rule as that module.
+      // The catalogue of services (it was under Team & Rates), with that module's rule.
       {
         id: 'services',
         label: 'Services',

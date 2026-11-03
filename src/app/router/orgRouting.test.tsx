@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -233,6 +233,23 @@ describe('practice route (/:orgSlug)', () => {
       'aria-current',
       'page',
     );
+  });
+
+  it('keeps Services in Settings only, and sends its old Team & Rates address there', async () => {
+    mockOrganizations([ownerContext]);
+    const { router } = renderApp('/acme/team/services');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/acme/settings/services'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Services' })).toBeInTheDocument();
+
+    // Settings has two "Practice" groups: none of its pages may stay behind in Team & Rates.
+    await act(() => router.navigate('/acme/team/staff'));
+    const team = await screen.findByRole('navigation', { name: 'Team & Rates pages' });
+    const links = within(team)
+      .getAllByRole('link')
+      .map((link) => link.textContent);
+    expect(links).not.toContain('Services');
+    expect(links).not.toContain('General Settings');
+    expect(links).not.toContain('Practice Settings');
   });
 
   it('shows the reports of the caller in a grouped sidebar instead of the secondary bar', async () => {
