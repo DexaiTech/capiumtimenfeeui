@@ -825,6 +825,8 @@ export interface ServiceOption {
   default_fee: Pence | null;
   /** Its VAT code: applies after the client's own. */
   vat_rate_id: string | null;
+  /** The wording for its invoice lines; the name when there is none. */
+  invoice_description: string | null;
 }
 
 export interface VatOption {

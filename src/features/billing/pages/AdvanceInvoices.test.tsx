@@ -200,11 +200,12 @@ describe('billing fees in advance', () => {
       within(panel).getByRole('combobox', { name: new RegExp(`Service of line ${line}`) });
     const totals = within(panel).getByLabelText('Totals');
 
-    // The service's name replaces the starting wording, its fee fills the empty price, and its
+    // The service's wording replaces the starting one, its fee fills the empty price, and its
     // zero-rated code applies (the client has no code of its own).
     await within(panel).findByRole('option', { name: 'Bookkeeping' });
     await user.selectOptions(service(1), 'svc-books');
-    expect(field('Description of line 1')).toHaveValue('Bookkeeping');
+    // Its invoice wording, not its name.
+    expect(field('Description of line 1')).toHaveValue('Monthly bookkeeping 2026/27');
     expect(field('Unit price of line 1')).toHaveValue('1200.00');
     expect(totals).toHaveTextContent('Net£1,200.00VAT£0.00Total£1,200.00');
 
@@ -214,9 +215,10 @@ describe('billing fees in advance', () => {
     await user.click(addRow);
     await user.type(field('Unit price of line 2'), '500');
     await user.selectOptions(service(2), 'svc-books');
-    expect(field('Description of line 2')).toHaveValue('Bookkeeping');
+    expect(field('Description of line 2')).toHaveValue('Monthly bookkeeping 2026/27');
     expect(field('Unit price of line 2')).toHaveValue('500');
-    // Another service rewords a line that still has the previous service's name.
+    // Another service rewords a line that still has the previous service's wording; without
+    // invoice wording of its own, a service gives its name.
     await user.selectOptions(service(2), 'svc-advice');
     expect(field('Description of line 2')).toHaveValue('Tax advice');
     expect(field('Unit price of line 2')).toHaveValue('500');

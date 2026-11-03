@@ -359,10 +359,25 @@ export const vatCodes: VatOption[] = [
   { id: 'vat-zero', name: 'Zero', code: 'zero', rate_bp: 0, is_default: false, is_archived: false },
 ];
 
-/** Services to bill an advance line for: one with a fee and a zero-rated VAT code, one without. */
+/**
+ * Services to bill an advance line for: one with a fee, a zero-rated VAT code and its own invoice
+ * wording, one with none of them.
+ */
 export const serviceOptions: ServiceOption[] = [
-  { id: 'svc-books', name: 'Bookkeeping', default_fee: 120000, vat_rate_id: 'vat-zero' },
-  { id: 'svc-advice', name: 'Tax advice', default_fee: null, vat_rate_id: null },
+  {
+    id: 'svc-books',
+    name: 'Bookkeeping',
+    default_fee: 120000,
+    vat_rate_id: 'vat-zero',
+    invoice_description: 'Monthly bookkeeping 2026/27',
+  },
+  {
+    id: 'svc-advice',
+    name: 'Tax advice',
+    default_fee: null,
+    vat_rate_id: null,
+    invoice_description: null,
+  },
 ];
 
 /** The stand-in for the API behind the preparation: what is read and what the page created. */
