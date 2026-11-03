@@ -39,9 +39,13 @@ export function InvoiceLinesCard({
       id: 'description',
       header: 'Description',
       hideable: false,
+      className: 'min-w-64',
       cell: (line) => (
         <div className="flex min-w-0 flex-col">
-          <span className="font-semibold text-text">{line.description}</span>
+          {/* A long or multi-line description wraps, keeping its line breaks. */}
+          <span className="font-semibold break-words whitespace-pre-line text-text">
+            {line.description}
+          </span>
           <span className="text-xs text-text-muted">
             {line.is_advance ? 'Fees in advance' : (LINE_KIND_LABELS[line.kind] ?? line.kind)}
             {line.wip

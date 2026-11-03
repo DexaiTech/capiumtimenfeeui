@@ -110,11 +110,21 @@ export const manualLineSchema = z.object({
 });
 export type ManualLineValues = z.infer<typeof manualLineSchema>;
 
-/** Fees billed in advance: the line's wording, its amount before VAT and its VAT code. */
+/** Fees billed in advance, one or more lines: wording, quantity, unit price before VAT, VAT code. */
 export const advanceSchema = z.object({
-  description,
-  amount: positiveMoneyText('Enter the amount billed in advance, such as 6000.00'),
-  vat_rate_id: z.string(),
+  lines: z
+    .array(
+      z.object({
+        description,
+        quantity: z
+          .string()
+          .refine((value) => parseQuantity(value) !== null, 'Enter a quantity such as 1 or 2.5'),
+        unit_amount: positiveMoneyText('Enter the price before VAT, such as 6000.00'),
+        vat_rate_id: z.string(),
+      }),
+    )
+    .min(1, 'Add at least one line')
+    .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
 });
 export type AdvanceValues = z.infer<typeof advanceSchema>;
 

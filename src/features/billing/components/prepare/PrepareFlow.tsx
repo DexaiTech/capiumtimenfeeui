@@ -15,6 +15,7 @@ import {
   type LineEdit,
   type LineEdits,
   type PreviewLine,
+  type VatDefaults,
 } from '../../utils/prepare';
 import { chosenItems, fixedFeesOf, workRowsOf } from '../../utils/workRows';
 import { LoadError } from '../PageShell';
@@ -87,11 +88,12 @@ export function PrepareFlow({
   const planned = planLines(items, groupBy, fixedFeesOf(rows, selected));
   // What the chosen basis bills; the person's own edits of a line win over it.
   const allEdits: LineEdits = { ...basisEdits(basis, planned, summary.data), ...edits };
-  const lines = previewLines(planned, allEdits, {
+  const vatDefaults: VatDefaults = {
     options: vat.options,
     clientId: billing.data?.default_vat_rate_id ?? null,
     practiceId: vat.options.find((option) => option.is_default)?.id ?? null,
-  });
+  };
+  const lines = previewLines(planned, allEdits, vatDefaults);
   const totals = previewTotals(lines);
   const groupable = items.some(
     (item) => item.kind === 'time' && item.job?.billing_basis !== 'fixed',
@@ -135,6 +137,7 @@ export function PrepareFlow({
         onClose={() => setAdvancing(false)}
         clientId={clientId}
         clientName={wip.data.client.name}
+        vatDefaults={vatDefaults}
       />
 
       {step === 'review' ? (

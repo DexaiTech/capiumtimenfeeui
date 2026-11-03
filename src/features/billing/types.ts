@@ -237,6 +237,10 @@ export interface InvoiceCreate {
   valuation_basis?: BillingBasis;
   /** Fees billed in advance: one manual line to which time is assigned later. */
   advance?: { description: string; net_amount: Pence; vat_rate_id?: string };
+  /** Fees billed in advance on several lines (not with `advance`): quantity x unit price each. */
+  advance_lines?: Array<
+    Pick<LineInput, 'description' | 'quantity' | 'unit_amount' | 'vat_rate_id'>
+  >;
 }
 
 /** PATCH of the header: a draft takes all four, an issued invoice is not editable. */
