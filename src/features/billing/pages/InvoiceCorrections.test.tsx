@@ -229,6 +229,60 @@ describe('unmatching a payment from a paid invoice', () => {
     expect(await screen.findByText('Payment unmatched')).toBeInTheDocument();
   });
 
+  it('then lets the money on account be allocated to another invoice', async () => {
+    const user = userEvent.setup();
+    const onAccount = {
+      id: 'pay-1',
+      client: bright,
+      received_on: '2026-10-20',
+      amount: 12000,
+      method: 'bank_transfer',
+      reference: null,
+      notes: null,
+      allocated_total: 0,
+      unallocated: 12000,
+      state: 'unallocated',
+      voided_at: null,
+      reversed_at: null,
+      reversed_by: null,
+      reversal_reason: null,
+      bounced: false,
+      created_by: null,
+      created_at: '2026-10-20T09:00:00Z',
+      allocations: [],
+    };
+    const bodies: unknown[] = [];
+    server.use(
+      http.get(orgApiPath('/invoices/inv-1'), () => ok(paidDetail)),
+      http.delete(orgApiPath('/payments/pay-1/allocations/al-1'), () => ok(onAccount)),
+      http.get(orgApiPath('/payments/pay-1'), () => ok(onAccount)),
+      http.get(orgApiPath('/invoices'), () => ok([issued('inv-2', 'INV-0010')], { meta: END })),
+      http.post(orgApiPath('/payments/pay-1/allocations'), async ({ request }) => {
+        bodies.push(await request.json());
+        return ok({ ...onAccount, allocated_total: 12000, unallocated: 0, state: 'allocated' });
+      }),
+      http.get(apiPath('/organizations/:organizationId/*'), () => ok([])),
+    );
+    renderBillingPage(<InvoiceDetailPage />, {
+      route: `${INVOICES}/inv-1`,
+      path: `${INVOICES}/:invoiceId`,
+    });
+
+    await user.click(await screen.findByRole('button', { name: /^Unmatch the payment of/ }));
+    const confirm = await screen.findByRole('dialog', { name: 'Unmatch this payment?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Unmatch payment' }));
+    await user.click(await screen.findByRole('button', { name: 'Allocate it' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Payment' });
+    await user.click(await within(dialog).findByRole('button', { name: 'Choose invoices' }));
+    await user.type(await within(dialog).findByLabelText('Amount to pay on INV-0010'), '120.00');
+    await user.click(within(dialog).getByRole('button', { name: 'Allocate' }));
+
+    await waitFor(() =>
+      expect(bodies).toEqual([{ allocations: [{ invoice_id: 'inv-2', amount: 12000 }] }]),
+    );
+  });
+
   it('is not offered to someone who may not record payments', async () => {
     setupPaid(['organization.read', 'invoice.read']);
 
