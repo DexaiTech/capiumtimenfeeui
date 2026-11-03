@@ -60,7 +60,7 @@ export const FLOW_PHASES: ReadonlyArray<FlowPhase> = [
         id: 'services',
         title: 'Services',
         what: 'The kinds of work you sell, with default fees, activity types and default tasks.',
-        where: { module: 'team', page: 'services' },
+        where: { module: 'settings', page: 'services' },
       },
     ],
   },
