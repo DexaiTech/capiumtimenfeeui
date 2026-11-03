@@ -43,6 +43,7 @@ import { InvoiceTimeline } from '../components/invoice/InvoiceTimeline';
 import { IssueDialog } from '../components/IssueDialog';
 import { LinePanel } from '../components/LinePanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
+import { PaymentDetailDialog } from '../components/payments/PaymentDetailDialog';
 import { ReasonDialog } from '../components/ReasonDialog';
 import { RecordPaymentPanel } from '../components/RecordPaymentPanel';
 import { SendInvoiceDialog } from '../components/SendInvoiceDialog';
@@ -63,6 +64,7 @@ type DialogState =
   | { type: 'credit' }
   | { type: 'payment' }
   | { type: 'unmatch'; payment: InvoiceDetail['payments'][number] }
+  | { type: 'allocate'; paymentId: string }
   | null;
 
 /** A status message above the figures: what the invoice's state means for what can be done. */
@@ -231,14 +233,20 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
 
   const confirmUnmatch = () => {
     if (dialog?.type !== 'unmatch') return;
+    const paymentId = dialog.payment.payment_id;
     unmatch.mutate(
-      { paymentId: dialog.payment.payment_id, allocationId: dialog.payment.allocation_id },
+      { paymentId, allocationId: dialog.payment.allocation_id },
       {
         onSuccess: () => {
           toast({
             tone: 'success',
             title: 'Payment unmatched',
             description: 'The money is on account again, and the invoice owes it.',
+            // The reason to unmatch: matching the money to the right invoice, one click away.
+            action: {
+              label: 'Allocate it',
+              onClick: () => setDialog({ type: 'allocate', paymentId }),
+            },
           });
           close();
         },
@@ -269,6 +277,10 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
       />
       <CreditNotePanel open={dialog?.type === 'credit'} invoice={invoice} onClose={close} />
       <RecordPaymentPanel open={dialog?.type === 'payment'} invoice={invoice} onClose={close} />
+      <PaymentDetailDialog
+        paymentId={dialog?.type === 'allocate' ? dialog.paymentId : null}
+        onClose={close}
+      />
       <BackLink />
       <PageShell
         title={title}
