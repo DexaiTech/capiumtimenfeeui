@@ -23,6 +23,7 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { modulePath, ORG_SEGMENTS, routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
+import { useSegmentsEnabled } from '@/features/settings';
 
 import { useStaffDirectory } from '../api';
 import { CentralChip } from '../central/CentralChip';
@@ -52,6 +53,7 @@ export function ClientHeader({ client }: ClientHeaderProps) {
   const canStartJob =
     can(PERMISSIONS.jobCreate) && !abilities.readOnly && client.status !== 'archived';
   const staff = useStaffDirectory();
+  const segmentsOn = useSegmentsEnabled();
   const lifecycle = useClientLifecycle(client);
   const { sync, syncing } = useSyncAction(client);
   const [editing, setEditing] = useState(false);
@@ -100,7 +102,7 @@ export function ClientHeader({ client }: ClientHeaderProps) {
             <ClientTypeBadge type={client.client_type} />
             <ClientStatusBadge status={client.status} />
             <CentralChip client={client} />
-            {client.segment ? <SegmentBadge segment={client.segment} /> : null}
+            {segmentsOn && client.segment ? <SegmentBadge segment={client.segment} /> : null}
           </div>
           <dl className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
             {partner ? (

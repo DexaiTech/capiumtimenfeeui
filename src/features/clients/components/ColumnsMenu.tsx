@@ -2,6 +2,7 @@ import { ChevronDown } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Popover } from '@/components/ui';
+import { useSegmentsEnabled } from '@/features/settings';
 
 import { TOGGLEABLE_COLUMNS, type ToggleableColumnId } from '../constants';
 
@@ -15,6 +16,8 @@ export interface ColumnsMenuProps {
 export function ColumnsMenu({ hidden, onChange, onShowAll }: ColumnsMenuProps) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
+  const segmentsOn = useSegmentsEnabled();
+  const columns = TOGGLEABLE_COLUMNS.filter((column) => segmentsOn || column.id !== 'segment');
   return (
     <>
       <button
@@ -41,7 +44,7 @@ export function ColumnsMenu({ hidden, onChange, onShowAll }: ColumnsMenuProps) {
           <input type="checkbox" className="cc-checkbox" checked disabled />
           Client
         </label>
-        {TOGGLEABLE_COLUMNS.map((column) => (
+        {columns.map((column) => (
           <label key={column.id} className="cc-check">
             <input
               type="checkbox"

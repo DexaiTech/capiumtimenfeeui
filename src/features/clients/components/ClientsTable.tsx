@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 import { RowActions } from '@/components/ui';
+import { useSegmentsEnabled } from '@/features/settings';
 import { formatActivity, initialsOf } from '../format';
 import type { ToggleableColumnId } from '../constants';
 import type { ClientListItem, ClientSort, SortOrder } from '../types';
@@ -98,7 +99,9 @@ export function ClientsTable({
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const headerCheckRef = useRef<HTMLInputElement>(null);
-  const show = (column: ToggleableColumnId) => !hidden.has(column);
+  const segmentsOn = useSegmentsEnabled();
+  const show = (column: ToggleableColumnId) =>
+    !hidden.has(column) && (segmentsOn || column !== 'segment');
 
   const pageIds = rows.map((row) => row.id);
   const selectedOnPage = pageIds.filter((id) => selected.has(id)).length;

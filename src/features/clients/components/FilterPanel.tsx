@@ -2,7 +2,7 @@ import { Funnel, ListFilter } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Popover } from '@/components/ui';
-import { useSegments } from '@/features/settings';
+import { useSegments, useSegmentsEnabled } from '@/features/settings';
 
 import {
   CENTRAL_FILTER_OPTIONS,
@@ -75,6 +75,7 @@ export function FilterPanel({
 
   // The segments defined in Settings first, then whatever else clients have or is filtered on.
   const defined = useSegments();
+  const segmentsOn = useSegmentsEnabled();
   const segmentNames: string[] = [];
   for (const name of [
     ...(defined.data ?? []).filter((entry) => entry.is_active).map((entry) => entry.name),
@@ -121,12 +122,14 @@ export function FilterPanel({
               values={filters.status}
               onToggle={(value, on) => setList('status', value, on)}
             />
-            <CheckGroup
-              legend="Segment"
-              options={segmentNames.map((name) => ({ value: name, label: name }))}
-              values={filters.segment}
-              onToggle={(value, on) => setList('segment', value, on)}
-            />
+            {segmentsOn ? (
+              <CheckGroup
+                legend="Segment"
+                options={segmentNames.map((name) => ({ value: name, label: name }))}
+                values={filters.segment}
+                onToggle={(value, on) => setList('segment', value, on)}
+              />
+            ) : null}
             <CheckGroup
               legend="Client type"
               options={CLIENT_TYPE_OPTIONS}

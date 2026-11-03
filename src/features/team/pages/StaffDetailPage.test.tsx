@@ -4,7 +4,7 @@ import { http } from 'msw';
 import { Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { contextWith, OWNER_PERMISSIONS, ownerContext } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { newSegmentCalls, segmentHandlers, testSegments } from '@/test/segments';
 import { apiPath, fail, ok, server } from '@/test/server';
@@ -433,6 +433,24 @@ describe('StaffDetailPage: client segments', () => {
     const card = within(await region('Client segments'));
     expect(await card.findByText(/No segments/)).toBeInTheDocument();
     expect(card.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('leaves the card out when the practice has switched segments off', async () => {
+    server.use(...teamHandlers());
+    renderInOrg(
+      <Routes>
+        <Route path={`${STAFF}/:staffId`} element={<StaffDetailPage />} />
+      </Routes>,
+      {
+        context: {
+          ...ownerContext,
+          organization: { ...ownerContext.organization, client_segments_enabled: false },
+        },
+        route: `${STAFF}/${sam.id}`,
+      },
+    );
+    expect(await region('Profile')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Client segments' })).not.toBeInTheDocument();
   });
 
   it('changes the segments: only active ones are offered, and the choice is saved', async () => {

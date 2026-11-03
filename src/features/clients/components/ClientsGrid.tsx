@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { RowActions } from '@/components/ui';
+import { useSegmentsEnabled } from '@/features/settings';
 
 import { formatActivity, initialsOf } from '../format';
 import type { ClientListItem } from '../types';
@@ -50,6 +51,7 @@ export function ClientsGrid({
   onLoadMore,
   placeholder,
 }: ClientsGridProps) {
+  const segmentsOn = useSegmentsEnabled();
   if (placeholder) return <div className="cc-table-card">{placeholder}</div>;
   if (loading && rows.length === 0) {
     return (
@@ -126,10 +128,14 @@ export function ClientsGrid({
               <dl>
                 <dt>Reg No</dt>
                 <dd>{client.company_number ?? '—'}</dd>
-                <dt>Segment</dt>
-                <dd>
-                  <SegmentPill segment={client.segment} />
-                </dd>
+                {segmentsOn ? (
+                  <>
+                    <dt>Segment</dt>
+                    <dd>
+                      <SegmentPill segment={client.segment} />
+                    </dd>
+                  </>
+                ) : null}
                 <dt>Health</dt>
                 <dd>
                   <HealthCell score={client.health_score} />

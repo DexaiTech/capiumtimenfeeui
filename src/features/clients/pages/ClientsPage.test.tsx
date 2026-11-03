@@ -5,7 +5,7 @@ import { useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { tokenStore } from '@/services/api';
-import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
+import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { findRowAction, rowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
@@ -207,6 +207,42 @@ describe('ClientsPage list', () => {
     // Whatever clients have is listed too; an inactive segment nobody has is not.
     expect(segment.getByRole('checkbox', { name: 'Platinum' })).toBeInTheDocument();
     expect(segment.queryByRole('checkbox', { name: 'Retail' })).not.toBeInTheDocument();
+  });
+
+  it('hides the segment column, filter and analytics when segments are switched off', async () => {
+    const seen: URLSearchParams[] = [];
+    server.use(...clientsHandlers({ onList: (params) => seen.push(params) }));
+    const user = userEvent.setup();
+    renderInOrg(<ClientsPage />, {
+      route: '/acme/clients?segment=Silver',
+      context: {
+        ...ownerContext,
+        organization: { ...ownerContext.organization, client_segments_enabled: false },
+      },
+    });
+    const row = await clientRow(techwave.name);
+
+    // A `?segment=` link (or a saved filter set) no longer narrows the list.
+    await waitFor(() => expect(seen.at(-1)?.has('segment')).toBe(false));
+    expect(screen.queryByRole('columnheader', { name: 'Segment' })).toBeNull();
+    expect(within(row).queryByText('Bronze')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
+    const columns = await screen.findByRole('dialog', { name: 'Show or hide columns' });
+    expect(within(columns).getByRole('checkbox', { name: 'Reg No' })).toBeInTheDocument();
+    expect(within(columns).queryByRole('checkbox', { name: 'Segment' })).toBeNull();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: /^Filter$/ }));
+    const filters = await screen.findByRole('dialog', { name: 'Filter clients' });
+    expect(within(filters).getByRole('group', { name: 'Status' })).toBeInTheDocument();
+    expect(within(filters).queryByRole('group', { name: 'Segment' })).toBeNull();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Analytics' }));
+    const analytics = await screen.findByRole('dialog', { name: 'Client analytics' });
+    expect(await within(analytics).findByText('By status')).toBeInTheDocument();
+    expect(within(analytics).queryByText('By segment')).toBeNull();
   });
 
   it('saves, applies and deletes a filter set', async () => {

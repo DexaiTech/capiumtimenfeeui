@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, FormPanel, FormSection, Input, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
-import { useSegments } from '@/features/settings';
+import { useSegments, useSegmentsEnabled } from '@/features/settings';
 import { ApiError, isApiError } from '@/services/api';
 
 import { useCreateClient, useStaffDirectory, useUpdateClient } from '../api';
@@ -54,6 +54,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
   const update = useUpdateClient();
   const staff = useStaffDirectory();
   const segments = useSegments();
+  const segmentsOn = useSegmentsEnabled();
   const canPickPeople = can('member.read');
   const canArchive = can('client.delete');
   // A client linked to the central service takes its name and address from there.
@@ -180,13 +181,15 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
             error={errors.status?.message}
             {...register('status')}
           />
-          <Select
-            label="Segment"
-            options={segmentOptions(segments.data ?? [], client?.segment)}
-            hint="Chosen from the segments in Settings. Use it to filter the client list."
-            error={errors.segment?.message}
-            {...register('segment')}
-          />
+          {segmentsOn ? (
+            <Select
+              label="Segment"
+              options={segmentOptions(segments.data ?? [], client?.segment)}
+              hint="Chosen from the segments in Settings. Use it to filter the client list."
+              error={errors.segment?.message}
+              {...register('segment')}
+            />
+          ) : null}
         </FormSection>
 
         <FormSection
