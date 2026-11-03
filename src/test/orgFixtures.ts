@@ -40,6 +40,7 @@ export const testOrganization: Organization = {
   cost_plus_markup_bp: 5000,
   recovery_rate_order: ['client_job', 'task', 'staff'],
   client_segments_enabled: true,
+  branches_enabled: false,
   email: 'hello@acme.example',
   phone: null,
   address_line1: '1 High Street',

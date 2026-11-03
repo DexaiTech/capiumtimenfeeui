@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { ConfirmDialog, useBulkFlow, useToast } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { useSegmentsEnabled } from '@/features/settings';
+import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { isApiError } from '@/services/api';
@@ -91,16 +91,24 @@ export default function ClientsPage() {
 
   const [search, setSearch] = useState('');
   const q = useDebouncedValue(search, 300);
-  // `?segment=` opens the list for those segments (the links of Settings and the staff screen).
+  // `?segment=` and `?branch=` open the list for those segments or branches (the links of
+  // Settings and the staff screen).
   const [chosenFilters, setFilters] = useState<ClientFilters>(() => ({
     ...EMPTY_FILTERS,
     segment: searchParams.getAll('segment'),
+    branch: searchParams.getAll('branch'),
   }));
-  // With segments switched off, a segment filter (a link, a saved filter set) is not applied.
+  // With segments (or branches) switched off, such a filter (a link, a saved filter set) is not
+  // applied.
   const segmentsOn = useSegmentsEnabled();
+  const branchesOn = useBranchesEnabled();
   const filters = useMemo(
-    () => (segmentsOn ? chosenFilters : { ...chosenFilters, segment: [] }),
-    [segmentsOn, chosenFilters],
+    () => ({
+      ...chosenFilters,
+      segment: segmentsOn ? chosenFilters.segment : [],
+      branch: branchesOn ? chosenFilters.branch : [],
+    }),
+    [segmentsOn, branchesOn, chosenFilters],
   );
   const [sort, setSort] = useState<ClientSort>(DEFAULT_SORT);
   const [order, setOrder] = useState<SortOrder>('asc');
@@ -310,6 +318,7 @@ export default function ClientsPage() {
       'status',
       'company_number',
       'segment',
+      'branch',
       'health_score',
       'contact_name',
       'contact_email',
@@ -327,6 +336,7 @@ export default function ClientsPage() {
         row.status,
         row.company_number,
         row.segment,
+        row.branch?.name ?? null,
         row.health_score,
         row.contact_name,
         row.contact_email,
@@ -336,13 +346,13 @@ export default function ClientsPage() {
         row.last_activity_at,
       ]),
     ];
-    // No segment column while segments are switched off.
-    const segmentAt = header.indexOf('segment');
+    // No segment column while segments are switched off, no branch column while branches are.
+    const dropped = new Set<number>();
+    if (!segmentsOn) dropped.add(header.indexOf('segment'));
+    if (!branchesOn) dropped.add(header.indexOf('branch'));
     downloadText(
       'clients-selected.csv',
-      toCsv(
-        segmentsOn ? table : table.map((cells) => cells.filter((_, index) => index !== segmentAt)),
-      ),
+      toCsv(table.map((cells) => cells.filter((_, index) => !dropped.has(index)))),
     );
   };
 

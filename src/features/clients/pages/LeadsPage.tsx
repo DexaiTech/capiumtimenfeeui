@@ -17,6 +17,7 @@ import {
   Pagination,
   RowActions,
   SearchField,
+  Select,
   useToast,
   type ConfirmDialogError,
   type DataTableColumn,
@@ -25,13 +26,14 @@ import {
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
+import { useBranches, useBranchesEnabled } from '@/features/settings';
 import { useDebouncedValue, useDocumentTitle, useUrlParams } from '@/hooks';
 import { isApiError } from '@/services/api';
 import { formatDayMonthYear } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
 import { flattenPages, useArchiveLead, useConvertLead, useLeadList, useLeadSummary } from '../api';
-import { CLIENT_TYPE_LABELS } from '../constants';
+import { branchOptions, CLIENT_TYPE_LABELS } from '../constants';
 import { LeadFormPanel } from '../leads/LeadFormPanel';
 import { LEAD_STATUSES, type Lead, type LeadStatus } from '../leads/types';
 
@@ -83,9 +85,14 @@ function LeadList() {
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<ConfirmDialogError | null>(null);
+  // While the practice uses branches (APT74), the new client needs one.
+  const branchesOn = useBranchesEnabled();
+  const branches = useBranches(branchesOn);
+  const [convertBranch, setConvertBranch] = useState('');
   const close = () => {
     setDialog(null);
     setRefusal(null);
+    setConvertBranch('');
   };
 
   const clientHref = (clientId: string) => routes.org.client(organization.slug, clientId);
@@ -94,7 +101,7 @@ function LeadList() {
     if (dialog?.type !== 'convert') return;
     const { lead } = dialog;
     convert.mutate(
-      { leadId: lead.id },
+      { leadId: lead.id, body: branchesOn ? { branch_id: convertBranch } : undefined },
       {
         onSuccess: (converted) => {
           const client = converted.converted_client;
@@ -395,6 +402,7 @@ function LeadList() {
         confirmLabel="Convert"
         tone="default"
         loading={convert.isPending}
+        confirmDisabled={branchesOn && convertBranch === ''}
         error={refusal}
       >
         <p>
@@ -404,6 +412,18 @@ function LeadList() {
           client code comes from your client numbering.
         </p>
         <p>The lead moves to Converted and keeps its costs, which you can still change.</p>
+        {branchesOn ? (
+          <Select
+            label="Branch"
+            required
+            options={[
+              { value: '', label: 'Choose a branch' },
+              ...branchOptions(branches.data ?? [], null),
+            ]}
+            value={convertBranch}
+            onChange={(event) => setConvertBranch(event.target.value)}
+          />
+        ) : null}
       </ConfirmDialog>
       <ConfirmDialog
         open={dialog?.type === 'archive'}

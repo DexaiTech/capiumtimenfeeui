@@ -66,6 +66,8 @@ export type LeadUpdate = Partial<LeadCreate>;
 /** `POST /leads/{id}/convert`: the client code, generated from the client sequence if left out. */
 export interface LeadConvert {
   code?: string;
+  /** The new client's branch; required while the practice uses branches (APT74). */
+  branch_id?: string;
 }
 
 /** The list query: one status (default open) and an optional search. */

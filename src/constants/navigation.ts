@@ -8,6 +8,7 @@ import {
   Bell,
   Briefcase,
   Bug,
+  Building2,
   CalendarDays,
   CalendarX2,
   ChartColumn,
@@ -760,6 +761,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         anyOf: [P.settingsManage, P.organizationUpdate],
         group: 'Access control',
       },
+      { id: 'branches', label: 'Branches', icon: Building2, group: 'Practice' },
       { id: 'segments', label: 'Client Segments', icon: Tags, group: 'Practice' },
       // The catalogue of services (it was under Team & Rates), with that module's rule.
       {

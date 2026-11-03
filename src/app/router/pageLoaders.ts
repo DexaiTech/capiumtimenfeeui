@@ -98,6 +98,7 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
     practice: () => import('@/features/settings/pages/PracticeSettingsPage'),
     roles: () => import('@/features/settings/pages/RolesSettingsPage'),
     'period-lock': () => import('@/features/settings/pages/PeriodLockPage'),
+    branches: () => import('@/features/settings/pages/BranchesPage'),
     segments: () => import('@/features/settings/pages/SegmentsPage'),
     services: () => import('@/features/team/pages/ServicesPage'),
     'vat-codes': () => import('@/features/settings/pages/VatCodesPage'),

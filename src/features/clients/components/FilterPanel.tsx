@@ -2,7 +2,12 @@ import { Funnel, ListFilter } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Popover } from '@/components/ui';
-import { useSegments, useSegmentsEnabled } from '@/features/settings';
+import {
+  useBranches,
+  useBranchesEnabled,
+  useSegments,
+  useSegmentsEnabled,
+} from '@/features/settings';
 
 import {
   CENTRAL_FILTER_OPTIONS,
@@ -10,6 +15,7 @@ import {
   CLIENT_TYPE_OPTIONS,
   countFilters,
   EMPTY_FILTERS,
+  NO_BRANCH,
   parseCentralFilter,
   SOFTWARE_OPTIONS,
 } from '../constants';
@@ -25,7 +31,7 @@ export interface FilterPanelProps {
   canPickPeople: boolean;
 }
 
-type ListKey = 'status' | 'segment' | 'client_type' | 'accounting_software';
+type ListKey = 'status' | 'segment' | 'branch' | 'client_type' | 'accounting_software';
 
 function toggle<T extends string>(values: readonly T[], value: T, on: boolean): T[] {
   return on ? Array.from(new Set([...values, value])) : values.filter((item) => item !== value);
@@ -57,7 +63,7 @@ function CheckGroup({ legend, options, values, onToggle }: CheckGroupProps) {
   );
 }
 
-/** "Filter": status, segment, client type, software, service, manager and partner. */
+/** "Filter": status, segment, branch, client type, software, service, manager and partner. */
 export function FilterPanel({
   filters,
   onChange,
@@ -86,6 +92,18 @@ export function FilterPanel({
       segmentNames.push(name);
     }
   }
+
+  // Every branch (an inactive one may still be on clients), then "No branch" to find the clients
+  // that still need one.
+  const branchesOn = useBranchesEnabled();
+  const branches = useBranches(branchesOn);
+  const branchFilterOptions = [
+    ...(branches.data ?? []).map((branch) => ({
+      value: branch.id,
+      label: branch.is_active ? branch.name : `${branch.name} (inactive)`,
+    })),
+    { value: NO_BRANCH, label: 'No branch' },
+  ];
 
   return (
     <>
@@ -128,6 +146,14 @@ export function FilterPanel({
                 options={segmentNames.map((name) => ({ value: name, label: name }))}
                 values={filters.segment}
                 onToggle={(value, on) => setList('segment', value, on)}
+              />
+            ) : null}
+            {branchesOn ? (
+              <CheckGroup
+                legend="Branch"
+                options={branchFilterOptions}
+                values={filters.branch}
+                onToggle={(value, on) => setList('branch', value, on)}
               />
             ) : null}
             <CheckGroup

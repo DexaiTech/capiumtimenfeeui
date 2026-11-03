@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { RowActions } from '@/components/ui';
-import { useSegmentsEnabled } from '@/features/settings';
+import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 
 import { formatActivity, initialsOf } from '../format';
 import type { ClientListItem } from '../types';
@@ -51,6 +51,7 @@ export function ClientsGrid({
   placeholder,
 }: ClientsGridProps) {
   const segmentsOn = useSegmentsEnabled();
+  const branchesOn = useBranchesEnabled();
   if (placeholder) return <div className="cc-table-card">{placeholder}</div>;
   if (loading && rows.length === 0) {
     return (
@@ -133,6 +134,12 @@ export function ClientsGrid({
                     <dd>
                       <SegmentPill segment={client.segment} />
                     </dd>
+                  </>
+                ) : null}
+                {branchesOn ? (
+                  <>
+                    <dt>Branch</dt>
+                    <dd>{client.branch?.name ?? '—'}</dd>
                   </>
                 ) : null}
                 <dt>Contact</dt>

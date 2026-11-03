@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { branchesOnContext, branchHandlers, london } from '@/test/branches';
 import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
@@ -269,6 +270,25 @@ describe('LeadsPage: converting', () => {
 
     await user.click(screen.getByRole('button', { name: 'Open client' }));
     expect(screen.getByTestId('where')).toHaveTextContent('/acme/clients/client-lead-bright');
+  });
+
+  it('asks for the branch of the new client while the practice uses branches (APT74)', async () => {
+    server.use(...branchHandlers());
+    const user = userEvent.setup();
+    renderPage({ context: branchesOnContext });
+    await row(/^Brightside/);
+
+    await chooseAction(user, brightside.name, 'Convert to client');
+    const dialog = await screen.findByRole('dialog', { name: 'Convert to client?' });
+    const convert = within(dialog).getByRole('button', { name: 'Convert' });
+    expect(convert).toBeDisabled();
+    const branch = within(dialog).getByRole('combobox', { name: 'Branch' });
+    await within(branch).findByRole('option', { name: 'London' });
+    await user.selectOptions(branch, 'London');
+    await user.click(convert);
+
+    expect(await screen.findByText(`${brightside.name} is now a client`)).toBeInTheDocument();
+    expect(calls.converts).toEqual([{ id: brightside.id, body: { branch_id: london.id } }]);
   });
 
   it('explains a refusal in the dialog', async () => {

@@ -5,12 +5,18 @@ import { useForm } from 'react-hook-form';
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, FormPanel, FormSection, Input, Select, Textarea, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
-import { useSegments, useSegmentsEnabled } from '@/features/settings';
+import {
+  useBranches,
+  useBranchesEnabled,
+  useSegments,
+  useSegmentsEnabled,
+} from '@/features/settings';
 import { ApiError, isApiError } from '@/services/api';
 
 import { useCreateClient, useStaffDirectory, useUpdateClient } from '../api';
 import { isLinked, MANAGED_MESSAGE, managedFields } from '../central/format';
 import {
+  branchOptions,
   CLIENT_STATUS_OPTIONS,
   CLIENT_TYPE_OPTIONS,
   MONTH_OPTIONS,
@@ -20,6 +26,7 @@ import {
 import {
   CLIENT_FORM_FIELDS,
   clientFormSchema,
+  clientFormSchemaWithBranch,
   clientToForm,
   EMPTY_CLIENT_FORM,
   isClientFormField,
@@ -55,6 +62,9 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
   const staff = useStaffDirectory();
   const segments = useSegments();
   const segmentsOn = useSegmentsEnabled();
+  // While the practice uses branches (APT74), every client needs one.
+  const branchesOn = useBranchesEnabled();
+  const branches = useBranches(branchesOn);
   const canPickPeople = can('member.read');
   const canArchive = can('client.delete');
   // A client linked to the central service takes its name and address from there.
@@ -70,7 +80,7 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
     setError,
     formState: { errors, isSubmitting },
   } = useForm<ClientFormValues>({
-    resolver: zodResolver(clientFormSchema),
+    resolver: zodResolver(branchesOn ? clientFormSchemaWithBranch : clientFormSchema),
     defaultValues: client ? clientToForm(client) : EMPTY_CLIENT_FORM,
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
@@ -188,6 +198,21 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
               hint="Chosen from the segments in Settings. Use it to filter the client list."
               error={errors.segment?.message}
               {...register('segment')}
+            />
+          ) : null}
+          {branchesOn ? (
+            <Select
+              // Mounted again once the branches arrive, so the client's branch shows as chosen.
+              key={branches.data ? 'loaded' : 'loading'}
+              label="Branch"
+              required
+              options={[
+                { value: '', label: 'Choose a branch' },
+                ...branchOptions(branches.data ?? [], client?.branch_id),
+              ]}
+              hint="The office the client belongs to. Branches are set up in Settings."
+              error={errors.branch_id?.message}
+              {...register('branch_id')}
             />
           ) : null}
         </FormSection>

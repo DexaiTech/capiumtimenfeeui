@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 import { RowActions } from '@/components/ui';
-import { useSegmentsEnabled } from '@/features/settings';
+import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 import { formatActivity, initialsOf } from '../format';
 import type { ToggleableColumnId } from '../constants';
 import type { ClientListItem, ClientSort, SortOrder } from '../types';
@@ -99,8 +99,11 @@ export function ClientsTable({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const headerCheckRef = useRef<HTMLInputElement>(null);
   const segmentsOn = useSegmentsEnabled();
+  const branchesOn = useBranchesEnabled();
   const show = (column: ToggleableColumnId) =>
-    !hidden.has(column) && (segmentsOn || column !== 'segment');
+    !hidden.has(column) &&
+    (segmentsOn || column !== 'segment') &&
+    (branchesOn || column !== 'branch');
 
   const pageIds = rows.map((row) => row.id);
   const selectedOnPage = pageIds.filter((id) => selected.has(id)).length;
@@ -176,6 +179,11 @@ export function ClientsTable({
                   order={order}
                   onSort={onSort}
                 />
+              ) : null}
+              {show('branch') ? (
+                <th scope="col" className="cc-col-branch">
+                  Branch
+                </th>
               ) : null}
               {show('contact') ? (
                 <th scope="col" className="cc-col-contact">
@@ -292,6 +300,7 @@ export function ClientsTable({
                         <SegmentPill segment={client.segment} />
                       </td>
                     ) : null}
+                    {show('branch') ? <td>{client.branch?.name ?? ''}</td> : null}
                     {show('contact') ? (
                       <td>
                         <ContactCell client={client} onAddContact={onAddContact} />
@@ -348,6 +357,7 @@ export function ClientsTable({
 const TOGGLE_ORDER: ToggleableColumnId[] = [
   'reg_no',
   'segment',
+  'branch',
   'contact',
   'contact_email',
   'deadlines',
