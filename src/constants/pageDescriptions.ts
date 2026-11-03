@@ -75,7 +75,6 @@ export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'team/rate-history': 'Every change of a rate, with its dates.',
   'team/rate-preview': 'Check which rate applies to a person, client and day.',
   'team/re-rate': 'Re-price time that is not billed yet with today’s rates.',
-  'team/services': 'The work you sell, with default fees, activities and tasks.',
   'team/activity-types': 'What a piece of time was spent on, and whether it is billable.',
 
   'settings/general':
