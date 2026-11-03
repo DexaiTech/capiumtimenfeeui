@@ -148,12 +148,12 @@ describe('billing fees in advance', () => {
     // "Default" charges the practice's standard code.
     expect(totals).toHaveTextContent('Net£3,000.00VAT£600.00Total£3,600.00');
 
-    await user.click(within(panel).getByRole('button', { name: 'Add line' }));
+    await user.click(within(panel).getByRole('button', { name: 'Add row' }));
     await user.type(field('Description of line 2'), 'Payroll 2026/27');
     await user.clear(field('Quantity of line 2'));
     await user.type(field('Quantity of line 2'), '12');
     await user.type(field('Unit price of line 2'), '125');
-    await user.click(within(panel).getByRole('button', { name: 'Add line' }));
+    await user.click(within(panel).getByRole('button', { name: 'Add row' }));
     await user.type(field('Description of line 3'), 'Filing fees');
     await user.clear(field('Quantity of line 3'));
     await user.type(field('Quantity of line 3'), '2.5');
@@ -191,6 +191,67 @@ describe('billing fees in advance', () => {
     expect(await screen.findByTestId('location')).toHaveTextContent(`${INVOICES}/inv-new-1`);
   });
 
+  it('fills an advance line from the service chosen for it', async () => {
+    const user = userEvent.setup();
+    const backend = createPrepareBackend();
+    const panel = await openAdvancePanel(backend);
+    const field = (name: string) => within(panel).getByRole('textbox', { name: new RegExp(name) });
+    const service = (line: number) =>
+      within(panel).getByRole('combobox', { name: new RegExp(`Service of line ${line}`) });
+    const totals = within(panel).getByLabelText('Totals');
+
+    // The service's name replaces the starting wording, its fee fills the empty price, and its
+    // zero-rated code applies (the client has no code of its own).
+    await within(panel).findByRole('option', { name: 'Bookkeeping' });
+    await user.selectOptions(service(1), 'svc-books');
+    expect(field('Description of line 1')).toHaveValue('Bookkeeping');
+    expect(field('Unit price of line 1')).toHaveValue('1200.00');
+    expect(totals).toHaveTextContent('Net£1,200.00VAT£0.00Total£1,200.00');
+
+    // "+ Row" adds a row; a price already typed is kept.
+    const addRow = within(panel).getByRole('button', { name: 'Add row' });
+    expect(addRow).toHaveTextContent('Row');
+    await user.click(addRow);
+    await user.type(field('Unit price of line 2'), '500');
+    await user.selectOptions(service(2), 'svc-books');
+    expect(field('Description of line 2')).toHaveValue('Bookkeeping');
+    expect(field('Unit price of line 2')).toHaveValue('500');
+    // Another service rewords a line that still has the previous service's name.
+    await user.selectOptions(service(2), 'svc-advice');
+    expect(field('Description of line 2')).toHaveValue('Tax advice');
+    expect(field('Unit price of line 2')).toHaveValue('500');
+    // No code on the service: the practice's standard rate.
+    expect(totals).toHaveTextContent('Net£1,700.00VAT£100.00Total£1,800.00');
+
+    // Wording typed by the person stays.
+    await user.clear(field('Description of line 1'));
+    await user.type(field('Description of line 1'), 'Books 2026/27');
+    await user.selectOptions(service(1), 'svc-advice');
+    expect(field('Description of line 1')).toHaveValue('Books 2026/27');
+    await user.selectOptions(service(1), 'svc-books');
+
+    await user.click(within(panel).getByRole('button', { name: 'Draft advance invoice' }));
+    await waitFor(() => expect(postsOf(backend, '/invoices')).toHaveLength(1));
+    expect(postsOf(backend, '/invoices')[0]?.body).toEqual(
+      expect.objectContaining({
+        advance_lines: [
+          {
+            description: 'Books 2026/27',
+            quantity: '1.00',
+            unit_amount: 120000,
+            service_id: 'svc-books',
+          },
+          {
+            description: 'Tax advice',
+            quantity: '1.00',
+            unit_amount: 50000,
+            service_id: 'svc-advice',
+          },
+        ],
+      }),
+    );
+  });
+
   it('asks for a description, a quantity and a price on every advance line', async () => {
     const user = userEvent.setup();
     const backend = createPrepareBackend();
@@ -200,7 +261,7 @@ describe('billing fees in advance', () => {
     await user.clear(within(panel).getByRole('textbox', { name: /Quantity of line 1/ }));
     await user.type(within(panel).getByRole('textbox', { name: /Quantity of line 1/ }), '0');
     await user.type(within(panel).getByRole('textbox', { name: /Unit price of line 1/ }), '0');
-    await user.click(within(panel).getByRole('button', { name: 'Add line' }));
+    await user.click(within(panel).getByRole('button', { name: 'Add row' }));
     await user.click(within(panel).getByRole('button', { name: 'Draft advance invoice' }));
 
     expect(await within(panel).findAllByText('Enter a description')).toHaveLength(2);

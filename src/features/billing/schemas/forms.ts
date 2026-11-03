@@ -121,6 +121,7 @@ export const advanceSchema = z.object({
           .refine((value) => parseQuantity(value) !== null, 'Enter a quantity such as 1 or 2.5'),
         unit_amount: positiveMoneyText('Enter the price before VAT, such as 6000.00'),
         vat_rate_id: z.string(),
+        service_id: z.string(),
       }),
     )
     .min(1, 'Add at least one line')

@@ -72,4 +72,6 @@ export const billingKeys = {
     [...queryKeys.org.recurring(organizationId), 'runs', scheduleId] as const,
   vatOptions: (organizationId: string) =>
     [...queryKeys.org.vatRates(organizationId), 'billing'] as const,
+  serviceOptions: (organizationId: string) =>
+    [...queryKeys.org.services(organizationId), 'billing'] as const,
 };

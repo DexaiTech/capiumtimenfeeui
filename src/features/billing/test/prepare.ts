@@ -11,6 +11,7 @@ import type {
   InvoiceDetail,
   JobBilling,
   JobRef,
+  ServiceOption,
   VatOption,
   WipItem,
 } from '../types';
@@ -358,6 +359,12 @@ export const vatCodes: VatOption[] = [
   { id: 'vat-zero', name: 'Zero', code: 'zero', rate_bp: 0, is_default: false, is_archived: false },
 ];
 
+/** Services to bill an advance line for: one with a fee and a zero-rated VAT code, one without. */
+export const serviceOptions: ServiceOption[] = [
+  { id: 'svc-books', name: 'Bookkeeping', default_fee: 120000, vat_rate_id: 'vat-zero' },
+  { id: 'svc-advice', name: 'Tax advice', default_fee: null, vat_rate_id: null },
+];
+
 /** The stand-in for the API behind the preparation: what is read and what the page created. */
 export interface PrepareBackend {
   /** The client's WIP, by client id. */
@@ -365,6 +372,7 @@ export interface PrepareBackend {
   /** The billing summary, by client id. */
   summary: Record<string, ClientBillingSummary>;
   vat: VatOption[];
+  services: ServiceOption[];
   /** The client's default VAT code. */
   clientVatId: string | null;
   /** The client's payment terms in days. */
@@ -379,6 +387,7 @@ export function createPrepareBackend(initial: Partial<PrepareBackend> = {}): Pre
     wip: { [harbour.id]: wipOf(harbourItems()) },
     summary: { [harbour.id]: harbourSummary() },
     vat: vatCodes,
+    services: serviceOptions,
     clientVatId: null,
     termsDays: 30,
     calls: [],
@@ -443,6 +452,7 @@ export function prepareHandlers(backend: PrepareBackend): HttpHandler[] {
       );
     }),
     http.get(orgApiPath('/vat-rates'), () => ok(backend.vat)),
+    http.get(orgApiPath('/services'), () => ok(backend.services)),
     http.post(orgApiPath('/invoices/:invoiceId/issue'), async ({ request, params }) => {
       const body = (await request.json()) as Record<string, unknown>;
       record('POST', `/invoices/${String(params.invoiceId)}/issue`, body);

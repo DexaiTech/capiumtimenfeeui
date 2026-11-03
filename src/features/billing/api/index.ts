@@ -78,6 +78,7 @@ export {
   useClientBilling,
   useClientBillingSummary,
   useClientWip,
+  useServiceOptions,
   useStatement,
   useVatOptions,
 } from './lookups';

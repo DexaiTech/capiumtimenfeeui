@@ -10,15 +10,16 @@ import {
   DataTable,
   FormPanel,
   Input,
+  Select,
   Textarea,
   useToast,
   type DataTableColumn,
 } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { formatMoney, parsePounds } from '@/utils/money';
+import { formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
 
-import { useCreateInvoice } from '../../api';
+import { useCreateInvoice, useServiceOptions } from '../../api';
 import { MAX_DOCUMENT_LINES } from '../../constants';
 import { advanceSchema, type AdvanceValues } from '../../schemas/forms';
 import { toFormError } from '../../utils/errors';
@@ -36,11 +37,15 @@ export interface AdvanceInvoicePanelProps {
   vatDefaults: VatDefaults;
 }
 
+/** What the first line reads until a service or the person words it. */
+const FIRST_DESCRIPTION = 'Fees in advance';
+
 const newLine = (description = '') => ({
   description,
   quantity: '1',
   unit_amount: '',
   vat_rate_id: '',
+  service_id: '',
 });
 
 /** One row of the grid: its place in the field array. */
@@ -64,25 +69,56 @@ function AdvanceForm({
     control,
     handleSubmit,
     setError,
-    formState: { errors },
+    getValues,
+    setValue,
+    formState: { errors, isSubmitted },
   } = useForm<AdvanceValues>({
     resolver: zodResolver(advanceSchema),
-    defaultValues: { lines: [newLine('Fees in advance')] },
+    defaultValues: { lines: [newLine(FIRST_DESCRIPTION)] },
   });
+  const services = useServiceOptions();
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' });
   const typed = useWatch({ control, name: 'lines' });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
     useSubmitError<AdvanceValues>({ setError, fields: ['lines'] });
   const money = (pence: number) => formatMoney(pence, organization.currency);
 
-  // Each line as typed: net = quantity x unit price, VAT rounded per line as the API does.
+  const serviceOf = (id: string | undefined) => services.find((service) => service.id === id);
+  const feeOf = (id: string | undefined) => {
+    const fee = serviceOf(id)?.default_fee;
+    return fee === null || fee === undefined ? null : penceToPoundsInput(fee);
+  };
+
+  // A service chosen for a line words it and prices it, unless the person already has.
+  const chooseService = (index: number, previousId: string, serviceId: string) => {
+    const chosen = serviceOf(serviceId);
+    if (!chosen) return;
+    const options = { shouldDirty: true, shouldValidate: isSubmitted };
+    const { description, unit_amount } = getValues(`lines.${index}`);
+    const words = description.trim();
+    if (words === '' || words === FIRST_DESCRIPTION || words === serviceOf(previousId)?.name) {
+      setValue(`lines.${index}.description`, chosen.name, options);
+    }
+    const fee = feeOf(serviceId);
+    if (fee !== null && (unit_amount.trim() === '' || unit_amount === feeOf(previousId))) {
+      setValue(`lines.${index}.unit_amount`, fee, options);
+    }
+  };
+
+  // Each line as typed: net = quantity x unit price, VAT rounded per line as the API does
+  // (the line's code, else the client's, else the service's, else the practice's).
   const priced = fields.map((_, index) => {
     const line = typed[index];
     const quantity = parseQuantity(line?.quantity ?? '');
     const unit = parsePounds(line?.unit_amount ?? '');
     if (quantity === null || unit === null) return { net: null, vat: null };
     const net = lineNet(quantity, unit);
-    return { net, vat: vatOn(net, vatRateOf(vatDefaults, line?.vat_rate_id || null)) };
+    const rate = vatRateOf(
+      vatDefaults,
+      line?.vat_rate_id || null,
+      serviceOf(line?.service_id)?.vat_rate_id ?? null,
+    );
+    return { net, vat: vatOn(net, rate) };
   });
   const net = sumPence(priced.map((line) => line.net ?? 0));
   const vat = sumPence(priced.map((line) => line.vat ?? 0));
@@ -100,6 +136,7 @@ function AdvanceForm({
           quantity: formatQuantity(quantity),
           unit_amount: unit,
           ...(line.vat_rate_id ? { vat_rate_id: line.vat_rate_id } : {}),
+          ...(line.service_id ? { service_id: line.service_id } : {}),
         },
       ];
     });
@@ -127,6 +164,31 @@ function AdvanceForm({
   });
 
   const columns: DataTableColumn<Row>[] = [
+    {
+      id: 'service',
+      header: 'Service',
+      plain: true,
+      className: 'w-44 min-w-36',
+      cell: ({ index }) => {
+        const field = register(`lines.${index}.service_id`);
+        return (
+          <Select
+            label={`Service of line ${index + 1}`}
+            hideLabel
+            options={[
+              { value: '', label: 'None' },
+              ...services.map((service) => ({ value: service.id, label: service.name })),
+            ]}
+            {...field}
+            onChange={(event) => {
+              const previousId = getValues(`lines.${index}.service_id`);
+              void field.onChange(event);
+              chooseService(index, previousId, event.target.value);
+            }}
+          />
+        );
+      },
+    },
     {
       id: 'description',
       header: 'Description',
@@ -247,11 +309,12 @@ function AdvanceForm({
             <div className="flex flex-wrap items-start justify-between gap-3 border-t border-row-border px-4 py-3">
               <Button
                 size="sm"
+                aria-label="Add row"
                 leftIcon={<Plus aria-hidden="true" className="size-4" />}
                 disabled={fields.length >= MAX_DOCUMENT_LINES}
                 onClick={() => append(newLine())}
               >
-                Add line
+                Row
               </Button>
               <dl aria-label="Totals" className="flex min-w-56 flex-col gap-1.5 text-sm">
                 <div className="flex justify-between gap-6">
