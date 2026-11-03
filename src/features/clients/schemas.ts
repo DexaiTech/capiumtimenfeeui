@@ -79,6 +79,7 @@ export const clientFormSchema = z
     year_end_month: wholeNumber(1, 12, 'Choose a month'),
     year_end_day: wholeNumber(1, 31, 'Enter a day from 1 to 31'),
     segment: text(40),
+    branch_id: optionalUuid,
     health_score: wholeNumber(0, 100, 'Enter a whole number from 0 to 100'),
     accounting_software: z.union([z.literal(''), z.enum(ACCOUNTING_SOFTWARE)]),
     manager_user_id: optionalUuid,
@@ -107,6 +108,13 @@ export const clientFormSchema = z
 
 export type ClientFormValues = z.input<typeof clientFormSchema>;
 
+/** The client form while the practice uses branches (APT74): the branch is required. */
+export const clientFormSchemaWithBranch = clientFormSchema.superRefine((values, ctx) => {
+  if (values.branch_id === '') {
+    ctx.addIssue({ code: 'custom', path: ['branch_id'], message: "Choose the client's branch" });
+  }
+});
+
 /** Every field the form owns: 422 details for these paths land on the field. */
 export const CLIENT_FORM_FIELDS = [
   'name',
@@ -126,6 +134,7 @@ export const CLIENT_FORM_FIELDS = [
   'year_end_month',
   'year_end_day',
   'segment',
+  'branch_id',
   'health_score',
   'accounting_software',
   'manager_user_id',
@@ -157,6 +166,7 @@ export const EMPTY_CLIENT_FORM: ClientFormValues = {
   year_end_month: '',
   year_end_day: '',
   segment: '',
+  branch_id: '',
   health_score: '',
   accounting_software: '',
   manager_user_id: '',
@@ -190,6 +200,7 @@ export function clientToForm(client: ClientRead): ClientFormValues {
     year_end_month: str(client.year_end_month),
     year_end_day: str(client.year_end_day),
     segment: str(client.segment),
+    branch_id: client.branch_id ?? '',
     health_score: str(client.health_score),
     accounting_software: client.accounting_software
       ? asEnum<AccountingSoftware>(ACCOUNTING_SOFTWARE, client.accounting_software, 'other')
@@ -224,6 +235,7 @@ function commonPayload(values: ClientFormValues) {
     year_end_month: intOrNull(values.year_end_month),
     year_end_day: intOrNull(values.year_end_day),
     segment: orNull(values.segment),
+    branch_id: orNull(values.branch_id),
     health_score: intOrNull(values.health_score),
     accounting_software: values.accounting_software === '' ? null : values.accounting_software,
     manager_user_id: orNull(values.manager_user_id),

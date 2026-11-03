@@ -185,6 +185,8 @@ interface ClientWritableFields {
   billing_notes: string | null;
   notes: string | null;
   segment: string | null;
+  /** The practice branch (APT74); required while the practice uses branches. */
+  branch_id?: string | null;
   aml_status: AmlStatus;
   aml_checked_on: IsoDate | null;
   health_score: number | null;
@@ -244,6 +246,8 @@ export interface ClientRead {
   billing_notes: string | null;
   notes: string | null;
   segment: string | null;
+  /** The practice branch the client belongs to (APT74). */
+  branch_id?: string | null;
   aml_status: string;
   aml_checked_on: IsoDate | null;
   health_score: number | null;
@@ -299,6 +303,8 @@ export interface ClientListItem extends ClientRead {
   deadlines: Deadlines;
   last_activity_at: IsoDateTime;
   services: ServiceTag[];
+  /** The branch named by `branch_id` (APT74). */
+  branch?: { id: string; name: string } | null;
 }
 
 /** WIP figures need `wip.read`, balances `invoice.read`, on-account `payment.read`; else null. */
@@ -463,6 +469,8 @@ export interface MemberRead {
 export interface ClientFilters {
   status: ClientStatus[];
   segment: string[];
+  /** Branch ids, and `NO_BRANCH` for clients without one (APT74). */
+  branch: string[];
   client_type: ClientType[];
   accounting_software: AccountingSoftware[];
   service_id: string | null;

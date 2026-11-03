@@ -13,7 +13,7 @@ import { api, type ApiResult } from '@/services/api';
 import type { BulkResult } from '@/types';
 import type { PageMeta } from '@/types/api';
 
-import { CLIENT_PAGE_SIZE } from '../constants';
+import { CLIENT_PAGE_SIZE, NO_BRANCH } from '../constants';
 import type {
   ClientBulkRequest,
   ClientCreate,
@@ -50,6 +50,8 @@ export function listQuery(params: ClientListParams) {
     q: q || undefined,
     status: filters.status,
     segment: filters.segment,
+    branch_id: filters.branch.filter((value) => value !== NO_BRANCH),
+    without_branch: filters.branch.includes(NO_BRANCH) || undefined,
     client_type: filters.client_type,
     accounting_software: filters.accounting_software,
     service_id: filters.service_id ?? undefined,

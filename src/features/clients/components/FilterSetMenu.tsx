@@ -66,7 +66,9 @@ export function FilterSetMenu({ presets, current, onApply, onSave, onDelete }: F
                   }}
                 >
                   {preset.name}
-                  <span className="cc-muted">({countFilters(preset.filters)})</span>
+                  <span className="cc-muted">
+                    ({countFilters({ ...EMPTY_FILTERS, ...preset.filters })})
+                  </span>
                 </button>
                 <button
                   type="button"

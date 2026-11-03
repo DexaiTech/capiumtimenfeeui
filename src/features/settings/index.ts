@@ -19,6 +19,9 @@ export {
   useStaffSegments,
 } from './api/segmentHooks';
 export type { Segment, StaffSegments } from './segmentTypes';
+// The practice's branches (APT74) and whether every client needs one.
+export { useBranches, useBranchesEnabled } from './api/branchHooks';
+export type { Branch } from './branchTypes';
 // The set-up checklist of the practice, for the dashboard's Getting started card.
 export { useOnboarding } from './api/adminHooks';
 // Asks the browser to confirm closing the tab while a form has unsaved changes.

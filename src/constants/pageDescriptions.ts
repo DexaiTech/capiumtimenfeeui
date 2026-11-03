@@ -82,6 +82,7 @@ export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'settings/practice': 'The practice itself: name, address, VAT number and bank details.',
   'settings/roles': 'What each role may see and do.',
   'settings/period-lock': 'Close the past: no time, expenses or WIP before the date can change.',
+  'settings/branches': 'The offices of the practice, and whether every client needs one.',
   'settings/segments': 'The client segments, and which staff look after them.',
   'settings/services': 'The services the practice offers, and a new job for any of them.',
   'settings/vat-codes': 'The VAT rates invoices and expenses can use.',

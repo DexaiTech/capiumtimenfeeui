@@ -23,7 +23,7 @@ import {
 import { PERMISSIONS } from '@/constants/permissions';
 import { modulePath, ORG_SEGMENTS, routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
-import { useSegmentsEnabled } from '@/features/settings';
+import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 
 import { useStaffDirectory } from '../api';
 import { CentralChip } from '../central/CentralChip';
@@ -54,6 +54,7 @@ export function ClientHeader({ client }: ClientHeaderProps) {
     can(PERMISSIONS.jobCreate) && !abilities.readOnly && client.status !== 'archived';
   const staff = useStaffDirectory();
   const segmentsOn = useSegmentsEnabled();
+  const branchesOn = useBranchesEnabled();
   const lifecycle = useClientLifecycle(client);
   const { sync, syncing } = useSyncAction(client);
   const [editing, setEditing] = useState(false);
@@ -115,6 +116,14 @@ export function ClientHeader({ client }: ClientHeaderProps) {
               <div className="flex gap-1.5">
                 <dt className="text-text-muted">Manager</dt>
                 <dd className="font-medium text-text">{manager}</dd>
+              </div>
+            ) : null}
+            {branchesOn ? (
+              <div className="flex gap-1.5">
+                <dt className="text-text-muted">Branch</dt>
+                <dd className={client.branch ? 'font-medium text-text' : 'text-text-muted'}>
+                  {client.branch?.name ?? 'No branch'}
+                </dd>
               </div>
             ) : null}
             {client.health_score !== null ? (

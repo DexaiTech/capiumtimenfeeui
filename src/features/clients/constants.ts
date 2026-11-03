@@ -80,6 +80,22 @@ export function segmentOptions(
   ];
 }
 
+/** The branch filter value for clients without a branch (APT74). */
+export const NO_BRANCH = 'none';
+
+/** The branch select of a form: the active branches, and the client's own if inactive. */
+export function branchOptions(
+  branches: ReadonlyArray<{ id: string; name: string; is_active: boolean }>,
+  current: string | null | undefined,
+): Array<{ value: string; label: string }> {
+  return branches
+    .filter((branch) => branch.is_active || branch.id === current)
+    .map((branch) => ({
+      value: branch.id,
+      label: branch.is_active ? branch.name : `${branch.name} (inactive)`,
+    }));
+}
+
 const options = <T extends string>(values: readonly T[], labels: Record<T, string>) =>
   values.map((value) => ({ value, label: labels[value] }));
 
@@ -112,6 +128,7 @@ export function labelOf<T extends string>(labels: Record<T, string>, value: stri
 export const TOGGLEABLE_COLUMNS = [
   { id: 'reg_no', label: 'Reg No' },
   { id: 'segment', label: 'Segment' },
+  { id: 'branch', label: 'Branch' },
   { id: 'contact', label: 'Contact' },
   { id: 'contact_email', label: 'Contact Email' },
   { id: 'deadlines', label: 'Deadlines' },
@@ -133,6 +150,7 @@ export const DEFAULT_SORT: ClientSort = 'name';
 export const EMPTY_FILTERS: ClientFilters = {
   status: [],
   segment: [],
+  branch: [],
   client_type: [],
   accounting_software: [],
   service_id: null,
@@ -146,6 +164,7 @@ export function countFilters(filters: ClientFilters): number {
   return (
     filters.status.length +
     filters.segment.length +
+    filters.branch.length +
     filters.client_type.length +
     filters.accounting_software.length +
     (filters.service_id ? 1 : 0) +
@@ -183,6 +202,7 @@ export const IMPORT_TEMPLATE_COLUMNS = [
   'year_end',
   'payment_terms_days',
   'segment',
+  'branch',
   'health_score',
   'accounting_software',
   'contact_name',
@@ -213,6 +233,8 @@ export const IMPORT_TEMPLATE_EXAMPLE: Record<(typeof IMPORT_TEMPLATE_COLUMNS)[nu
   year_end: '31/03',
   payment_terms_days: '30',
   segment: 'Gold',
+  // The name of one of the practice's branches (needed while it uses branches).
+  branch: '',
   health_score: '80',
   accounting_software: 'xero',
   contact_name: 'Jane Doe',

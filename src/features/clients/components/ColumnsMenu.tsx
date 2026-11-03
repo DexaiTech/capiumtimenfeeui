@@ -2,7 +2,7 @@ import { ChevronDown } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Popover } from '@/components/ui';
-import { useSegmentsEnabled } from '@/features/settings';
+import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 
 import { TOGGLEABLE_COLUMNS, type ToggleableColumnId } from '../constants';
 
@@ -17,7 +17,10 @@ export function ColumnsMenu({ hidden, onChange, onShowAll }: ColumnsMenuProps) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const segmentsOn = useSegmentsEnabled();
-  const columns = TOGGLEABLE_COLUMNS.filter((column) => segmentsOn || column.id !== 'segment');
+  const branchesOn = useBranchesEnabled();
+  const columns = TOGGLEABLE_COLUMNS.filter(
+    (column) => (segmentsOn || column.id !== 'segment') && (branchesOn || column.id !== 'branch'),
+  );
   return (
     <>
       <button

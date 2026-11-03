@@ -80,6 +80,8 @@ export interface Organization {
   recovery_rate_order: RecoveryRate[];
   /** Whether the practice uses client segments; off, they are hidden everywhere (data kept). */
   client_segments_enabled: boolean;
+  /** Whether the practice uses branches (APT74); on, every client needs one. Off: hidden (data kept). */
+  branches_enabled: boolean;
   email: string | null;
   phone: string | null;
   address_line1: string | null;
@@ -142,6 +144,7 @@ export type OrganizationUpdate = Partial<
     | 'cost_plus_markup_bp'
     | 'recovery_rate_order'
     | 'client_segments_enabled'
+    | 'branches_enabled'
     | 'email'
     | 'phone'
     | 'address_line1'
