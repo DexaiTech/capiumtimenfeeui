@@ -9,6 +9,7 @@ import {
   Checkbox,
   FormPanel,
   Input,
+  Textarea,
   useAddAnother,
   useToast,
 } from '@/components/ui';
@@ -143,9 +144,10 @@ function ManualLineForm({ invoiceId, line, onClose }: Omit<LinePanelProps, 'open
         onSubmit={(event) => void submit(event)}
         className="flex flex-col gap-4"
       >
-        <Input
+        <Textarea
           label="Description"
           required
+          rows={2}
           autoComplete="off"
           error={errors.description?.message}
           {...register('description')}
@@ -288,9 +290,10 @@ function WipLineForm({
         onSubmit={(event) => void submit(event)}
         className="flex flex-col gap-4"
       >
-        <Input
+        <Textarea
           label="Description"
           required
+          rows={2}
           autoComplete="off"
           error={errors.description?.message}
           {...register('description')}

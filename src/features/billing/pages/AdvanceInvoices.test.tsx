@@ -11,6 +11,7 @@ import {
   createPrepareBackend,
   harbourItems,
   postsOf,
+  type PrepareBackend,
   prepareHandlers,
   wipOf,
 } from '../test/prepare';
@@ -119,34 +120,95 @@ function openInvoice(invoice: InvoiceDetail): Posted[] {
   return posted;
 }
 
+/** The preparation of Harbour's invoice with the "Bill fees in advance" panel open. */
+async function openAdvancePanel(backend: PrepareBackend): Promise<HTMLElement> {
+  const user = userEvent.setup();
+  server.use(...prepareHandlers(backend));
+  renderBillingPage(<PrepareInvoicePage />, {
+    route: `${BILLING}/prepare?client=${harbour.id}`,
+    path: `${BILLING}/prepare`,
+  });
+  await user.click(await screen.findByRole('button', { name: 'Bill fees in advance…' }));
+  return screen.findByRole('region', { name: 'Bill fees in advance' });
+}
+
 describe('billing fees in advance', () => {
-  it('drafts an advance invoice for the client from the preparation', async () => {
+  it('drafts an advance invoice on several lines from the preparation', async () => {
     const user = userEvent.setup();
     const backend = createPrepareBackend();
-    server.use(...prepareHandlers(backend));
-    renderBillingPage(<PrepareInvoicePage />, {
-      route: `${BILLING}/prepare?client=${harbour.id}`,
-      path: `${BILLING}/prepare`,
-    });
+    const panel = await openAdvancePanel(backend);
+    const field = (name: string) => within(panel).getByRole('textbox', { name: new RegExp(name) });
+    const totals = within(panel).getByLabelText('Totals');
+    // One line to start with, which cannot be removed.
+    expect(within(panel).queryByRole('button', { name: /Remove line/ })).toBeNull();
 
-    await user.click(await screen.findByRole('button', { name: 'Bill fees in advance…' }));
-    const panel = await screen.findByRole('region', { name: 'Bill fees in advance' });
-    const description = within(panel).getByRole('textbox', { name: /Description/ });
-    await user.clear(description);
-    await user.type(description, 'Fees in advance 2026/27');
-    await user.type(within(panel).getByRole('textbox', { name: /Amount/ }), '6000');
+    await user.clear(field('Description of line 1'));
+    await user.type(field('Description of line 1'), 'Accounts 2026/27');
+    await user.type(field('Unit price of line 1'), '3000');
+    // "Default" charges the practice's standard code.
+    expect(totals).toHaveTextContent('Net£3,000.00VAT£600.00Total£3,600.00');
+
+    await user.click(within(panel).getByRole('button', { name: 'Add line' }));
+    await user.type(field('Description of line 2'), 'Payroll 2026/27');
+    await user.clear(field('Quantity of line 2'));
+    await user.type(field('Quantity of line 2'), '12');
+    await user.type(field('Unit price of line 2'), '125');
+    await user.click(within(panel).getByRole('button', { name: 'Add line' }));
+    await user.type(field('Description of line 3'), 'Filing fees');
+    await user.clear(field('Quantity of line 3'));
+    await user.type(field('Quantity of line 3'), '2.5');
+    await user.type(field('Unit price of line 3'), '33.33');
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: /VAT code of line 3/ }),
+      'vat-zero',
+    );
+
+    const rows = within(panel).getAllByRole('row');
+    expect(rows[2]).toHaveTextContent('£300.00£1,500.00');
+    // 2.5 x £33.33 = £83.325, rounded as the API does.
+    expect(rows[3]).toHaveTextContent('£0.00£83.33');
+    expect(totals).toHaveTextContent('Net£4,583.33VAT£900.00Total£5,483.33');
+
+    await user.click(within(panel).getByRole('button', { name: 'Remove line 3' }));
+    expect(within(panel).queryByRole('textbox', { name: /line 3/ })).toBeNull();
+    expect(totals).toHaveTextContent('Net£4,500.00VAT£900.00Total£5,400.00');
+
     await user.click(within(panel).getByRole('button', { name: 'Draft advance invoice' }));
-
     await waitFor(() => expect(postsOf(backend, '/invoices')).toHaveLength(1));
-    expect(postsOf(backend, '/invoices')[0]?.body).toEqual(
+    const body = postsOf(backend, '/invoices')[0]?.body;
+    expect(body).toEqual(
       expect.objectContaining({
         client_id: harbour.id,
         time_entry_ids: [],
         disbursement_ids: [],
-        advance: { description: 'Fees in advance 2026/27', net_amount: 600000 },
+        advance_lines: [
+          { description: 'Accounts 2026/27', quantity: '1.00', unit_amount: 300000 },
+          { description: 'Payroll 2026/27', quantity: '12.00', unit_amount: 12500 },
+        ],
       }),
     );
+    expect(body).not.toHaveProperty('advance');
     expect(await screen.findByTestId('location')).toHaveTextContent(`${INVOICES}/inv-new-1`);
+  });
+
+  it('asks for a description, a quantity and a price on every advance line', async () => {
+    const user = userEvent.setup();
+    const backend = createPrepareBackend();
+    const panel = await openAdvancePanel(backend);
+
+    await user.clear(within(panel).getByRole('textbox', { name: /Description of line 1/ }));
+    await user.clear(within(panel).getByRole('textbox', { name: /Quantity of line 1/ }));
+    await user.type(within(panel).getByRole('textbox', { name: /Quantity of line 1/ }), '0');
+    await user.type(within(panel).getByRole('textbox', { name: /Unit price of line 1/ }), '0');
+    await user.click(within(panel).getByRole('button', { name: 'Add line' }));
+    await user.click(within(panel).getByRole('button', { name: 'Draft advance invoice' }));
+
+    expect(await within(panel).findAllByText('Enter a description')).toHaveLength(2);
+    expect(within(panel).getByText('Enter a quantity such as 1 or 2.5')).toBeInTheDocument();
+    expect(within(panel).getAllByText('Enter the price before VAT, such as 6000.00')).toHaveLength(
+      2,
+    );
+    expect(postsOf(backend, '/invoices')).toHaveLength(0);
   });
 
   it('offers fees in advance for a client with nothing to bill', async () => {
