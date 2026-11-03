@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { OWNER_PERMISSIONS } from '@/test/orgFixtures';
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import type { InvoiceBulkRequest, InvoiceSummary } from '../types';
@@ -121,20 +122,20 @@ describe('bulk delete of drafts on the invoice list', () => {
     );
   });
 
-  it('warns that an issued invoice is not a draft, and shows the API refusal naming it', async () => {
+  it('warns that an issued invoice must be voided first, and shows the API refusal naming it', async () => {
     const user = userEvent.setup();
     const calls = setup(OWNER_PERMISSIONS, () =>
       fail(
         409,
         'INVOICE_NOT_DRAFT',
-        '1 of the invoices is not a draft and cannot be deleted. Nothing was deleted.',
+        '1 of the invoices is neither a draft nor void and cannot be deleted. Nothing was deleted.',
         {
           details: [
             {
               invoice_id: 'i-3',
               number: 'INV-0007',
               status: 'issued',
-              reason: 'Only a draft can be deleted: correct an issued invoice with a credit note.',
+              reason: 'Void it first: only drafts and void invoices can be deleted.',
             },
           ],
         },
@@ -147,14 +148,17 @@ describe('bulk delete of drafts on the invoice list', () => {
     await user.click(within(list).getByRole('checkbox', { name: 'Select INV-0007' }));
 
     await user.click(screen.getByRole('button', { name: 'Delete 2' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Delete 2 drafts?' });
-    expect(dialog).toHaveTextContent('1 selected invoice is not a draft');
+    const dialog = await screen.findByRole('dialog', { name: 'Delete 2 invoices?' });
+    expect(dialog).toHaveTextContent(
+      'Only drafts and void invoices can be deleted: void an issued invoice first',
+    );
+    expect(dialog).toHaveTextContent('1 selected invoice cannot be deleted');
     await user.click(within(dialog).getByRole('button', { name: 'Delete 2' }));
 
     const alert = await within(dialog).findByRole('alert');
     expect(alert).toHaveTextContent('Nothing was deleted');
     expect(within(alert).getByText('INV-0007')).toBeInTheDocument();
-    expect(alert).toHaveTextContent('credit note');
+    expect(alert).toHaveTextContent('Void it first');
     expect(calls).toEqual([{ invoice_ids: ['i-1', 'i-3'], action: 'delete' }]);
     expect(screen.getByText('2 selected')).toBeInTheDocument();
   });
@@ -184,5 +188,93 @@ describe('bulk delete of drafts on the invoice list', () => {
     await user.click(within(list).getByRole('checkbox', { name: 'Select INV-0007' }));
     const group = screen.getByRole('group', { name: 'Selected invoices' });
     expect(within(group).queryByRole('button', { name: 'Email 1' }) !== null).toBe(offered);
+  });
+});
+
+const voided = invoice({
+  id: 'i-4',
+  number: 'INV-0005',
+  status: 'void',
+  display_status: 'void',
+  issue_date: '2026-09-01',
+  due_date: '2026-10-01',
+  balance: 0,
+  created_at: '2026-09-01T09:00:00Z',
+});
+
+function setupVoid(permissions = OWNER_PERMISSIONS, route = `${BILLING}/invoices?tab=void`) {
+  const deleted: string[] = [];
+  const bulk: InvoiceBulkRequest[] = [];
+  const statuses: (string | null)[] = [];
+  let rows = [draftOne, voided];
+  server.use(
+    http.get(orgApiPath('/invoices/summary'), () =>
+      ok({
+        counts: { total: 2, draft: 1, void: 1 },
+        outstanding: 0,
+        overdue: 0,
+        awaiting_approval_gross: 0,
+      }),
+    ),
+    http.get(orgApiPath('/invoices'), ({ request }) => {
+      const status = new URL(request.url).searchParams.get('status');
+      statuses.push(status);
+      return ok(status === 'void' ? rows.filter((row) => row.status === 'void') : rows, {
+        meta: END,
+      });
+    }),
+    http.delete(orgApiPath('/invoices/:invoiceId'), ({ params }) => {
+      deleted.push(String(params.invoiceId));
+      rows = rows.filter((row) => row.id !== params.invoiceId);
+      return ok(null);
+    }),
+    http.post(orgApiPath('/invoices/bulk'), async ({ request }) => {
+      const body = (await request.json()) as InvoiceBulkRequest;
+      bulk.push(body);
+      rows = rows.filter((row) => !body.invoice_ids.includes(row.id));
+      return ok({ action: 'delete', affected: body.invoice_ids.length, changed: 2 });
+    }),
+  );
+  renderBillingPage(<InvoicesPage />, { permissions, route, path: `${BILLING}/invoices` });
+  return { deleted, bulk, statuses };
+}
+
+describe('the Void tab: deleting void invoices', () => {
+  it('lists the void invoices under Void and deletes one after a confirmation', async () => {
+    const user = userEvent.setup();
+    const { deleted, statuses } = setupVoid();
+    expect(await screen.findByRole('tab', { name: /Void/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await table();
+    expect(statuses).toContain('void');
+    await user.click(await findRowAction(/Actions for INV-0005/, 'Delete invoice'));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete INV-0005?' });
+    expect(dialog).toHaveTextContent('keeps its number and stays in the audit trail');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete invoice' }));
+    await waitFor(() => expect(deleted).toEqual(['i-4']));
+    expect(await screen.findByText('INV-0005 deleted')).toBeInTheDocument();
+  });
+
+  it('deletes drafts and void invoices together, all or nothing', async () => {
+    const user = userEvent.setup();
+    const { bulk } = setupVoid(OWNER_PERMISSIONS, `${BILLING}/invoices`);
+    const list = await table();
+    await user.click(within(list).getByRole('checkbox', { name: 'Select Draft' }));
+    await user.click(within(list).getByRole('checkbox', { name: 'Select INV-0005' }));
+    await user.click(screen.getByRole('button', { name: 'Delete 2' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete 2 invoices?' });
+    expect(dialog).toHaveTextContent('Void invoices leave the invoice lists');
+    expect(dialog).not.toHaveTextContent('cannot be deleted. Untick');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete 2' }));
+    expect(await screen.findByText('2 invoices deleted')).toBeInTheDocument();
+    expect(bulk).toEqual([{ invoice_ids: ['i-1', 'i-4'], action: 'delete' }]);
+  });
+
+  it('does not offer to delete a void invoice to someone who may not void', async () => {
+    setupVoid(OWNER_PERMISSIONS.filter((code) => code !== 'invoice.issue'));
+    await screen.findByRole('group', { name: /Actions for INV-0005/ });
+    expect(rowActionNames(/Actions for INV-0005/)).not.toContain('Delete invoice');
   });
 });

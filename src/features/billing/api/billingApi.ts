@@ -142,8 +142,12 @@ export const billingApi = {
     ),
   issueInvoice: (organizationId: string, invoiceId: string, body: InvoiceIssueBody) =>
     api.post<InvoiceDetail>(`${org(organizationId)}/invoices/${seg(invoiceId)}/issue`, body),
-  voidInvoice: (organizationId: string, invoiceId: string, reason: string) =>
-    api.post<InvoiceDetail>(`${org(organizationId)}/invoices/${seg(invoiceId)}/void`, { reason }),
+  /** `notify_client` emails the client that the invoice is cancelled (needs `invoice.send`). */
+  voidInvoice: (organizationId: string, invoiceId: string, reason: string, notifyClient = false) =>
+    api.post<InvoiceDetail>(`${org(organizationId)}/invoices/${seg(invoiceId)}/void`, {
+      reason,
+      notify_client: notifyClient,
+    }),
   sendInvoice: (organizationId: string, invoiceId: string, to?: string[]) =>
     api.post<InvoiceSent>(
       `${org(organizationId)}/invoices/${seg(invoiceId)}/send`,

@@ -95,7 +95,10 @@ export function useUpdateInvoice(invoiceId: string) {
   });
 }
 
-/** Deletes a draft; its WIP goes back to unbilled. Takes the id so a list can use it per row. */
+/**
+ * Deletes a draft (its WIP goes back to unbilled) or a void invoice (hidden from the lists, kept
+ * for the audit trail). Takes the id so a list can use it per row.
+ */
 export function useDeleteInvoice() {
   const { organization } = useOrg();
   const queryClient = useQueryClient();
@@ -108,7 +111,7 @@ export function useDeleteInvoice() {
   });
 }
 
-/** Deletes the selected drafts: all or nothing (`POST /invoices/bulk`). */
+/** Deletes the selected drafts and void invoices: all or nothing (`POST /invoices/bulk`). */
 export function useBulkInvoices() {
   const { organization } = useOrg();
   const queryClient = useQueryClient();
@@ -199,8 +202,15 @@ export function useVoidInvoice() {
   const invalidate = useBillingInvalidation();
   const cache = useDetailCache();
   return useMutation({
-    mutationFn: ({ invoiceId, reason }: { invoiceId: string; reason: string }) =>
-      billingApi.voidInvoice(organization.id, invoiceId, reason),
+    mutationFn: ({
+      invoiceId,
+      reason,
+      notifyClient = false,
+    }: {
+      invoiceId: string;
+      reason: string;
+      notifyClient?: boolean;
+    }) => billingApi.voidInvoice(organization.id, invoiceId, reason, notifyClient),
     onSuccess: cache,
     onSettled: invalidate.invoices,
   });

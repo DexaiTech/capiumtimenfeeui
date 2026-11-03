@@ -186,6 +186,10 @@ export interface InvoiceDetail extends InvoiceSummary {
   issued_by: string | null;
   voided_at: IsoDateTime | null;
   void_reason: string | null;
+  /** Set once a void invoice is deleted: it has left every list and is kept for the audit trail. */
+  deleted_at: IsoDateTime | null;
+  /** Where the invoice's emails go by default (empty: the client has no address). */
+  email_recipients: string[];
   created_by: string | null;
   approvals: ApprovalEvent[];
   /** The caller may approve it right now (holds `invoice.approve`, and the self-approval rule allows it). */

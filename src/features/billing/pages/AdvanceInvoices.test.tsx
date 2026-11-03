@@ -76,6 +76,8 @@ function detail(lines: InvoiceLine[], overrides: Partial<InvoiceDetail> = {}): I
     issued_by: null,
     voided_at: null,
     void_reason: null,
+    deleted_at: null,
+    email_recipients: [],
     created_by: null,
     approvals: [],
     can_approve: false,

@@ -125,6 +125,8 @@ const detail = {
   issued_by: null,
   voided_at: null,
   void_reason: null,
+  deleted_at: null,
+  email_recipients: ['accounts@bright.example'],
   created_by: null,
   approvals: [],
   can_approve: false,
@@ -135,17 +137,31 @@ const detail = {
   credit_notes: [],
 } as unknown as InvoiceDetail;
 
-function setupDetail(action: string, permissions = OWNER_PERMISSIONS) {
+function setupDetail(
+  action: string,
+  permissions = OWNER_PERMISSIONS,
+  invoice: InvoiceDetail = detail,
+) {
+  const calls: { method: string; body: unknown }[] = [];
   server.use(
     // The invoice first: the first handler that matches answers.
-    http.get(orgApiPath('/invoices/inv-1'), () => ok(detail)),
+    http.get(orgApiPath('/invoices/inv-1'), () => ok(invoice)),
+    http.post(orgApiPath('/invoices/inv-1/void'), async ({ request }) => {
+      calls.push({ method: 'void', body: await request.json() });
+      return ok({ ...invoice, status: 'void', display_status: 'void' });
+    }),
+    http.delete(orgApiPath('/invoices/inv-1'), () => {
+      calls.push({ method: 'delete', body: null });
+      return ok(null);
+    }),
     http.get(apiPath('/organizations/:organizationId/*'), () => ok([])),
   );
   renderBillingPage(<InvoiceDetailPage />, {
     permissions,
-    route: `${INVOICES}/inv-1?action=${action}`,
+    route: `${INVOICES}/inv-1${action ? `?action=${action}` : ''}`,
     path: `${INVOICES}/:invoiceId`,
   });
+  return calls;
 }
 
 describe('an invoice opened to correct it', () => {
@@ -177,6 +193,106 @@ describe('an invoice opened to correct it', () => {
     setupDetail('void', ['organization.read', 'client.read', 'invoice.read']);
     await screen.findByRole('heading', { level: 1, name: /INV-0009/ });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+const EMAIL_CLIENT = 'Email the client that this invoice is cancelled';
+
+describe('voiding tells the client by email', () => {
+  it('ticks the email to the client by default and asks the API to send it', async () => {
+    const user = userEvent.setup();
+    const calls = setupDetail('void');
+    const dialog = await screen.findByRole('dialog', { name: 'Void invoice?' });
+    const box = within(dialog).getByRole('checkbox', { name: new RegExp(EMAIL_CLIENT) });
+    expect(box).toBeChecked();
+    expect(dialog).toHaveTextContent('accounts@bright.example');
+    await user.click(within(dialog).getByRole('button', { name: 'Wrong client' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Void invoice' }));
+    await waitFor(() =>
+      expect(calls).toEqual([
+        { method: 'void', body: { reason: 'Wrong client', notify_client: true } },
+      ]),
+    );
+    expect(await screen.findByText(/will be told it is cancelled/)).toBeInTheDocument();
+  });
+
+  it('voids without an email when the box is unticked', async () => {
+    const user = userEvent.setup();
+    const calls = setupDetail('void');
+    const dialog = await screen.findByRole('dialog', { name: 'Void invoice?' });
+    await user.click(within(dialog).getByRole('checkbox', { name: new RegExp(EMAIL_CLIENT) }));
+    await user.click(within(dialog).getByRole('button', { name: 'Duplicate invoice' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Void invoice' }));
+    await waitFor(() =>
+      expect(calls).toEqual([
+        { method: 'void', body: { reason: 'Duplicate invoice', notify_client: false } },
+      ]),
+    );
+  });
+
+  it('says so when the client has no email address', async () => {
+    setupDetail('void', OWNER_PERMISSIONS, { ...detail, email_recipients: [] });
+    const dialog = await screen.findByRole('dialog', { name: 'Void invoice?' });
+    expect(within(dialog).queryByRole('checkbox')).toBeNull();
+    expect(dialog).toHaveTextContent('The client has no email address');
+  });
+
+  it('offers no email to someone who may not send invoices', async () => {
+    setupDetail(
+      'void',
+      OWNER_PERMISSIONS.filter((code) => code !== 'invoice.send'),
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Void invoice?' });
+    expect(within(dialog).queryByRole('checkbox')).toBeNull();
+    expect(dialog).not.toHaveTextContent('no email address');
+  });
+
+  it('explains why an invoice with a payment cannot be voided', async () => {
+    setupDetail('', OWNER_PERMISSIONS, {
+      ...detail,
+      paid_total: 1000,
+      balance: 11000,
+      payments: [
+        {
+          allocation_id: 'a-1',
+          payment_id: 'p-1',
+          received_on: '2026-10-01',
+          method: 'bank_transfer',
+          reference: null,
+          amount: 1000,
+        },
+      ],
+    });
+    expect(await screen.findByText(/unmatch them first/)).toBeInTheDocument();
+  });
+});
+
+describe('deleting a void invoice from its page', () => {
+  const voided = {
+    ...detail,
+    status: 'void',
+    display_status: 'void',
+    balance: 0,
+    voided_at: '2026-10-02T09:00:00Z',
+    void_reason: 'Wrong client',
+  } as InvoiceDetail;
+
+  it('deletes it after a confirmation and goes back to the list', async () => {
+    const user = userEvent.setup();
+    const calls = setupDetail('', OWNER_PERMISSIONS, voided);
+    await user.click(await screen.findByRole('button', { name: 'More actions' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Delete invoice…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete INV-0009?' });
+    expect(dialog).toHaveTextContent('keeps its number');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete invoice' }));
+    await waitFor(() => expect(calls).toEqual([{ method: 'delete', body: null }]));
+    expect(await screen.findByTestId('location')).toHaveTextContent(new RegExp(`${INVOICES}$`));
+  });
+
+  it('says when it was deleted, and offers no second delete', async () => {
+    setupDetail('', OWNER_PERMISSIONS, { ...voided, deleted_at: '2026-10-05T09:00:00Z' });
+    expect(await screen.findByText(/It was deleted on/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
   });
 });
 
