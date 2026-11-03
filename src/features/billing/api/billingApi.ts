@@ -52,6 +52,7 @@ import type {
   StatementSendBody,
   StatementSent,
   StatementSort,
+  ServiceOption,
   StatementsPage,
   VatOption,
 } from '../types';
@@ -314,6 +315,8 @@ export const billingApi = {
     api.get<ClientBillingDefaults>(`${org(organizationId)}/clients/${seg(clientId)}`, { signal }),
   listVatRates: (organizationId: string, signal?: AbortSignal) =>
     api.get<VatOption[]>(`${org(organizationId)}/vat-rates`, { signal }),
+  listServices: (organizationId: string, signal?: AbortSignal) =>
+    api.get<ServiceOption[]>(`${org(organizationId)}/services`, { signal }),
 
   /* ------------------------------- Estimates ------------------------------- */
   listEstimates: (

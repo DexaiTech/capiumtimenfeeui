@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { useOrg } from '@/features/organizations';
 
-import type { VatOption } from '../types';
+import type { ServiceOption, VatOption } from '../types';
 import { billingApi } from './billingApi';
 import { billingKeys } from './keys';
 
@@ -70,4 +70,15 @@ export function useVatOptions(): { options: VatOption[]; isPending: boolean; isE
     isPending: query.isPending,
     isError: query.isError,
   };
+}
+
+/** The practice's active services, to bill a line for one (its fee and VAT code). */
+export function useServiceOptions(): ServiceOption[] {
+  const { organization } = useOrg();
+  const query = useQuery({
+    queryKey: billingKeys.serviceOptions(organization.id),
+    queryFn: ({ signal }) => billingApi.listServices(organization.id, signal),
+    staleTime: 5 * 60_000,
+  });
+  return query.data ?? [];
 }

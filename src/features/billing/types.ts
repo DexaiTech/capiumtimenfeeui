@@ -239,7 +239,7 @@ export interface InvoiceCreate {
   advance?: { description: string; net_amount: Pence; vat_rate_id?: string };
   /** Fees billed in advance on several lines (not with `advance`): quantity x unit price each. */
   advance_lines?: Array<
-    Pick<LineInput, 'description' | 'quantity' | 'unit_amount' | 'vat_rate_id'>
+    Pick<LineInput, 'description' | 'quantity' | 'unit_amount' | 'vat_rate_id' | 'service_id'>
   >;
 }
 
@@ -817,6 +817,16 @@ export interface StatementSent {
 /* ---------------------------------- Settings --------------------------------- */
 
 /** A VAT code of the practice as the line selects offer it. */
+/** A service of the practice (`GET /services`), as a line billed for it needs it. */
+export interface ServiceOption {
+  id: string;
+  name: string;
+  /** Its usual fee, filled in as the line's price. */
+  default_fee: Pence | null;
+  /** Its VAT code: applies after the client's own. */
+  vat_rate_id: string | null;
+}
+
 export interface VatOption {
   id: string;
   name: string;
