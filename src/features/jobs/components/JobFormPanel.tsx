@@ -67,6 +67,8 @@ export interface JobFormPanelProps {
   job: Job | null;
   /** The client a new job is for, when the dialog is opened from a client. */
   clientId?: string;
+  /** The service a new job is for, when the dialog is opened from a service. */
+  serviceId?: string;
   onSaved: (job: Job) => void;
 }
 
@@ -74,7 +76,20 @@ interface JobFormProps extends Omit<JobFormPanelProps, 'open'> {
   formId: string;
 }
 
-function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
+/** What a new job takes from its service: the service, its billing basis and its fixed fee. */
+function serviceValues(
+  service: Service,
+): Pick<JobValues, 'service_id' | 'billing_basis' | 'fixed_fee'> {
+  const basis = !service.default_billable
+    ? 'non_billable'
+    : service.billing_basis === 'fixed'
+      ? 'fixed'
+      : 'hourly';
+  const fee = basis === 'fixed' && service.default_fee !== null ? service.default_fee : null;
+  return { service_id: service.id, billing_basis: basis, fixed_fee: penceToPoundsInput(fee) };
+}
+
+function JobForm({ job, clientId, serviceId, onClose, onSaved, formId }: JobFormProps) {
   const { can, organization } = useOrg();
   const { toast } = useToast();
   const create = useCreateJob();
@@ -82,6 +97,8 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
   const members = useMembers();
   const services = useServices();
   const managed = job?.pm_job_id != null;
+  // Opened from a service (the panel waits for the services): the new job starts on it.
+  const startService = job ? undefined : services.data?.find((entry) => entry.id === serviceId);
 
   const {
     register,
@@ -93,7 +110,10 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
     formState: { errors, isDirty },
   } = useForm<JobValues>({
     resolver: zodResolver(jobSchema),
-    defaultValues: jobDefaults(job, clientId, todayInZone(organization.timezone)),
+    defaultValues: {
+      ...jobDefaults(job, clientId, todayInZone(organization.timezone)),
+      ...(startService ? serviceValues(startService) : {}),
+    },
   });
   const { submitError, retryIn, handleSubmitError, clearSubmitError } = useSubmitError<JobValues>({
     setError,
@@ -139,14 +159,10 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
     if (job) return;
     const service: Service | undefined = services.data?.find((entry) => entry.id === serviceId);
     if (!service) return;
-    const next = !service.default_billable
-      ? 'non_billable'
-      : service.billing_basis === 'fixed'
-        ? 'fixed'
-        : 'hourly';
-    setValue('billing_basis', next, { shouldDirty: true });
-    if (next === 'fixed' && service.default_fee !== null && getValues('fixed_fee') === '') {
-      setValue('fixed_fee', penceToPoundsInput(service.default_fee), { shouldDirty: true });
+    const next = serviceValues(service);
+    setValue('billing_basis', next.billing_basis, { shouldDirty: true });
+    if (next.fixed_fee !== '' && getValues('fixed_fee') === '') {
+      setValue('fixed_fee', next.fixed_fee, { shouldDirty: true });
     }
   };
 
@@ -467,6 +483,10 @@ function JobForm({ job, clientId, onClose, onSaved, formId }: JobFormProps) {
 /** Start a job for a client, or change the details of one (its status has its own action). */
 export function JobFormPanel({ open, onClose, ...rest }: JobFormPanelProps) {
   const formId = useId();
+  // A new job opened from a service starts once the services are loaded, so it starts on it.
+  const fromService = open && !rest.job && Boolean(rest.serviceId);
+  const services = useServices({ enabled: fromService });
+  const waiting = fromService && services.isPending;
   return (
     <FormPanel
       open={open}
@@ -474,7 +494,7 @@ export function JobFormPanel({ open, onClose, ...rest }: JobFormPanelProps) {
       title={rest.job ? 'Edit job' : 'New job'}
       description={rest.job ? jobLabel(rest.job) : undefined}
     >
-      {open ? (
+      {open && !waiting ? (
         <JobForm key={rest.job?.id ?? 'new'} formId={formId} onClose={onClose} {...rest} />
       ) : null}
     </FormPanel>
