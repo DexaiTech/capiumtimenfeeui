@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { branchesOnContext, branchHandlers, leeds } from '@/test/branches';
 import { contextWith, OWNER_PERMISSIONS, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { fail, ok, server } from '@/test/server';
@@ -24,10 +25,12 @@ beforeEach(() => {
 function setup(
   permissions = OWNER_PERMISSIONS,
   refuse?: (body: ClientBulkRequest) => Response | null,
+  branchesOn = false,
 ) {
   const calls: ClientBulkRequest[] = [];
   server.use(
     ...clientsHandlers(),
+    ...branchHandlers(),
     http.post(orgApiPath('/clients/bulk'), async ({ request }) => {
       const body = (await request.json()) as ClientBulkRequest;
       calls.push(body);
@@ -40,7 +43,10 @@ function setup(
       });
     }),
   );
-  renderInOrg(<ClientsPage />, { context: contextWith(permissions) });
+  const context = contextWith(permissions);
+  renderInOrg(<ClientsPage />, {
+    context: branchesOn ? { ...context, organization: branchesOnContext.organization } : context,
+  });
   return calls;
 }
 
@@ -123,6 +129,38 @@ describe('bulk actions on the client list', () => {
       { client_ids: [techwave.id], action: 'set_partner', value: null },
       { client_ids: [techwave.id], action: 'set_segment', value: 'Gold' },
     ]);
+  });
+
+  it('sets the branch of the selected clients while branches are on (APT74)', async () => {
+    const user = userEvent.setup();
+    const calls = setup(OWNER_PERMISSIONS, undefined, true);
+    const bar = await tick(user, techwave.name, mutual.name);
+    await user.click(within(bar).getByRole('button', { name: 'Edit' }));
+    await user.click(await screen.findByRole('option', { name: 'Set branch' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Set the branch of 2 clients' });
+    const update = within(dialog).getByRole('button', { name: 'Update 2 clients' });
+    expect(update).toBeDisabled();
+    // The active branches of Settings are offered; an inactive one is not.
+    const picker = within(dialog).getByRole('combobox', { name: 'New branch' });
+    expect(await within(picker).findByRole('option', { name: 'London' })).toBeInTheDocument();
+    expect(within(picker).getByRole('option', { name: 'Leeds' })).toBeInTheDocument();
+    expect(within(picker).queryByRole('option', { name: /Bath/ })).not.toBeInTheDocument();
+    await user.selectOptions(picker, 'Leeds');
+    await user.click(update);
+
+    expect(await screen.findByText('2 clients updated')).toBeInTheDocument();
+    expect(calls).toEqual([
+      { client_ids: [techwave.id, mutual.id], action: 'set_branch', value: leeds.id },
+    ]);
+  });
+
+  it('offers no Set branch while branches are off', async () => {
+    const user = userEvent.setup();
+    setup();
+    const bar = await tick(user, techwave.name);
+    await user.click(within(bar).getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByRole('option', { name: 'Set segment' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Set branch' })).not.toBeInTheDocument();
   });
 
   it('archives from the toolbar with the bulk endpoint', async () => {

@@ -1,19 +1,25 @@
 import { useState } from 'react';
 
 import { BulkBar, Checkbox, ConfirmDialog, Select, type BulkFlow } from '@/components/ui';
-import { useSegments, useSegmentsEnabled } from '@/features/settings';
+import {
+  useBranches,
+  useBranchesEnabled,
+  useSegments,
+  useSegmentsEnabled,
+} from '@/features/settings';
 import { MAX_BULK_IDS } from '@/utils/bulk';
 
-import { CLIENT_STATUS_OPTIONS } from '../constants';
+import { branchOptions, CLIENT_STATUS_OPTIONS } from '../constants';
 import type { ClientBulkRequest, ClientStatus, MemberRead } from '../types';
 
-type Editing = 'status' | 'manager' | 'partner' | 'segment' | null;
+type Editing = 'status' | 'manager' | 'partner' | 'segment' | 'branch' | null;
 
 const EDITS = [
   { value: 'status', label: 'Set status' },
   { value: 'manager', label: 'Set manager' },
   { value: 'partner', label: 'Set partner' },
   { value: 'segment', label: 'Set segment' },
+  { value: 'branch', label: 'Set branch' },
 ] as const;
 
 export interface ClientsBulkBarProps {
@@ -30,8 +36,8 @@ export interface ClientsBulkBarProps {
 }
 
 /**
- * Above the client list while rows are ticked: set the status, manager, partner or segment of all
- * of them, or delete them (`POST /clients/bulk`, all or nothing). A client that is in use stops a
+ * Above the client list while rows are ticked: set the status, manager, partner, segment or branch
+ * (while the practice uses branches) of all of them, or delete them (`POST /clients/bulk`, all or nothing). A client that is in use stops a
  * delete, and the dialog names it; archive such clients instead.
  */
 export function ClientsBulkBar({
@@ -48,9 +54,15 @@ export function ClientsBulkBar({
   const [person, setPerson] = useState('');
   const [segment, setSegment] = useState('');
   const [clearSegment, setClearSegment] = useState(false);
+  const [branch, setBranch] = useState('');
   const segments = useSegments();
   const segmentsOn = useSegmentsEnabled();
-  const edits = segmentsOn ? EDITS : EDITS.filter((edit) => edit.value !== 'segment');
+  // "Set branch" (APT74) gives the "No branch" clients one in one go, while branches are on.
+  const branchesOn = useBranchesEnabled();
+  const branches = useBranches(branchesOn);
+  const edits = EDITS.filter(
+    (edit) => (segmentsOn || edit.value !== 'segment') && (branchesOn || edit.value !== 'branch'),
+  );
 
   const count = ids.length;
   const word = count === 1 ? 'client' : 'clients';
@@ -85,6 +97,8 @@ export function ClientsBulkBar({
         { client_ids, action: 'set_segment', value: clearSegment ? null : segment.trim() || null },
         'updated',
       );
+    } else if (editing === 'branch' && branch !== '') {
+      void finish({ client_ids, action: 'set_branch', value: branch }, 'updated');
     }
   };
 
@@ -93,6 +107,7 @@ export function ClientsBulkBar({
     manager: `Set the manager of ${count} ${word}`,
     partner: `Set the partner of ${count} ${word}`,
     segment: `Set the segment of ${count} ${word}`,
+    branch: `Set the branch of ${count} ${word}`,
   };
   const people = [
     { value: '', label: 'No one (clear it)' },
@@ -134,7 +149,10 @@ export function ClientsBulkBar({
         confirmLabel={`Update ${count} ${word}`}
         tone="default"
         loading={flow.busy}
-        confirmDisabled={editing === 'segment' && !clearSegment && segment.trim() === ''}
+        confirmDisabled={
+          (editing === 'segment' && !clearSegment && segment.trim() === '') ||
+          (editing === 'branch' && branch === '')
+        }
         error={flow.refusal}
       >
         <p>The change is made to every selected client or to none.</p>
@@ -174,6 +192,17 @@ export function ClientsBulkBar({
               onChange={(event) => setClearSegment(event.target.checked)}
             />
           </>
+        ) : null}
+        {editing === 'branch' ? (
+          <Select
+            label="New branch"
+            required
+            placeholder="Choose a branch"
+            options={branchOptions(branches.data ?? [], null)}
+            value={branch}
+            hint="Chosen from the active branches in Settings."
+            onChange={(event) => setBranch(event.target.value)}
+          />
         ) : null}
       </ConfirmDialog>
       <ConfirmDialog
