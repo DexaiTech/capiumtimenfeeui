@@ -10,7 +10,6 @@ import { type MenuAction } from './ActionMenu';
 import {
   CentralCell,
   DeadlineCell,
-  HealthCell,
   Initials,
   MergedNote,
   SegmentPill,
@@ -178,16 +177,6 @@ export function ClientsTable({
                   onSort={onSort}
                 />
               ) : null}
-              {show('health') ? (
-                <SortHeader
-                  label="Health"
-                  className="cc-col-health"
-                  sortKey="health_score"
-                  sort={sort}
-                  order={order}
-                  onSort={onSort}
-                />
-              ) : null}
               {show('contact') ? (
                 <th scope="col" className="cc-col-contact">
                   Contact
@@ -303,11 +292,6 @@ export function ClientsTable({
                         <SegmentPill segment={client.segment} />
                       </td>
                     ) : null}
-                    {show('health') ? (
-                      <td>
-                        <HealthCell score={client.health_score} />
-                      </td>
-                    ) : null}
                     {show('contact') ? (
                       <td>
                         <ContactCell client={client} onAddContact={onAddContact} />
@@ -364,7 +348,6 @@ export function ClientsTable({
 const TOGGLE_ORDER: ToggleableColumnId[] = [
   'reg_no',
   'segment',
-  'health',
   'contact',
   'contact_email',
   'deadlines',

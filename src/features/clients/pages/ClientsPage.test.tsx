@@ -42,7 +42,6 @@ describe('ClientsPage list', () => {
       'Client',
       'Reg No',
       'Segment',
-      'Health',
       'Contact',
       'Contact Email',
       'Deadlines',
@@ -62,11 +61,9 @@ describe('ClientsPage list', () => {
     expect(cells.getByText('xero')).toBeInTheDocument();
     expect(cells.getByText('678654QJ')).toBeInTheDocument();
     expect(cells.getByText('Bronze')).toBeInTheDocument();
-    expect(cells.getByRole('meter', { name: 'Health score' })).toHaveAttribute(
-      'aria-valuenow',
-      '83',
-    );
-    expect(row).toHaveTextContent('83/100');
+    // The health score is not a grid column (APT73).
+    expect(cells.queryByRole('meter', { name: 'Health score' })).not.toBeInTheDocument();
+    expect(row).not.toHaveTextContent('83/100');
     expect(cells.getByText('Ramya Menon')).toBeInTheDocument();
     expect(cells.getByText('ramya@techwave.example')).toBeInTheDocument();
     expect(cells.getByText('1 Overdue by 1d')).toBeInTheDocument();
@@ -124,10 +121,10 @@ describe('ClientsPage list', () => {
     await waitFor(() => expect(sorts).toContain('name:desc'));
     expect(clientHeader).toHaveAttribute('aria-sort', 'descending');
 
-    const healthHeader = screen.getByRole('columnheader', { name: 'Health' });
-    await user.click(within(healthHeader).getByRole('button', { name: 'Health' }));
-    await waitFor(() => expect(sorts).toContain('health_score:asc'));
-    expect(healthHeader).toHaveAttribute('aria-sort', 'ascending');
+    const segmentHeader = screen.getByRole('columnheader', { name: 'Segment' });
+    await user.click(within(segmentHeader).getByRole('button', { name: 'Segment' }));
+    await waitFor(() => expect(sorts).toContain('segment:asc'));
+    expect(segmentHeader).toHaveAttribute('aria-sort', 'ascending');
     expect(clientHeader).toHaveAttribute('aria-sort', 'none');
   });
 

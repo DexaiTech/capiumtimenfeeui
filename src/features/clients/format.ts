@@ -23,15 +23,6 @@ export function initialsOf(name: string): string {
   return `${first[0] ?? ''}${second[0] ?? ''}`.toUpperCase();
 }
 
-export type HealthTone = 'good' | 'fair' | 'poor';
-
-/** Green by default, amber under 60, red under 40 (design spec). */
-export function healthTone(score: number): HealthTone {
-  if (score < 40) return 'poor';
-  if (score < 60) return 'fair';
-  return 'good';
-}
-
 const partsCache = new Map<string, Intl.DateTimeFormat>();
 
 function formatter(timeZone: string): Intl.DateTimeFormat {
