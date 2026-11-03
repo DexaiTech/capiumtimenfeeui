@@ -1,5 +1,6 @@
 import { Briefcase, SearchX } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import {
   Badge,
@@ -19,6 +20,7 @@ import {
   RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
+import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { formatMoney } from '@/utils/money';
@@ -53,7 +55,8 @@ type DialogState =
 const NAMED_TYPES = 3;
 
 function ServiceList() {
-  const { can } = useOrg();
+  const { organization, can } = useOrg();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { params, setParam } = useUrlParams();
   const { text: searchText, setText: setSearchText, searched } = useUrlSearch();
@@ -63,6 +66,7 @@ function ServiceList() {
   const sortId = SORTS.find((item) => item === params.get('sort'));
   const order = params.get('order') === 'desc' ? 'desc' : 'asc';
   const canManage = can(PERMISSIONS.settingsManage);
+  const canCreateJob = can(PERMISSIONS.jobCreate);
 
   const services = useServices();
   const vatCodes = useVatCodes();
@@ -112,7 +116,20 @@ function ServiceList() {
     });
   };
 
-  const actionsFor = (service: Service): DropdownItem[] => [
+  // A new job for an active service opens the New job form of the job list with it chosen.
+  const newJob = (service: Service): DropdownItem[] =>
+    canCreateJob && service.is_active
+      ? [
+          {
+            id: 'new-job',
+            label: 'New job',
+            onSelect: () =>
+              void navigate(`${routes.org.jobs(organization.slug)}?new=1&service_id=${service.id}`),
+          },
+        ]
+      : [];
+
+  const manageActions = (service: Service): DropdownItem[] => [
     { id: 'edit', label: 'Edit', onSelect: () => setDialog({ type: 'form', service }) },
     {
       id: 'toggle',
@@ -129,6 +146,11 @@ function ServiceList() {
         setDialog({ type: 'delete', service });
       },
     },
+  ];
+
+  const actionsFor = (service: Service): DropdownItem[] => [
+    ...newJob(service),
+    ...(canManage ? manageActions(service) : []),
   ];
 
   const typeName = (id: string) =>
@@ -357,7 +379,7 @@ function ServiceList() {
           />
         }
         rowActions={
-          canManage
+          canManage || canCreateJob
             ? (service) => (
                 <RowActions label={`Actions for ${service.name}`} items={actionsFor(service)} />
               )
@@ -433,7 +455,7 @@ function ServiceList() {
   );
 }
 
-/** `/:orgSlug/team/services`: the services the practice sells (any member reads; `settings.manage` writes). */
+/** `/:orgSlug/team/services` and `/:orgSlug/settings/services`: the services the practice sells (any member reads; `settings.manage` writes). */
 export default function ServicesPage() {
   useDocumentTitle('Services');
   return (

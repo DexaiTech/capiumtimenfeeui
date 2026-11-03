@@ -299,6 +299,42 @@ describe('starting a job', () => {
     expect(await within(form).findByText('A fixed-fee job needs a fee.')).toBeInTheDocument();
   });
 
+  it('opens the dialog on the service it was started from, with its billing, and asks for the client', async () => {
+    const user = userEvent.setup();
+    const backend = setup({}, { route: `${JOBS}?new=1&service_id=${IDS.bookkeeping}` });
+
+    const form = await screen.findByRole('region', { name: 'New job' });
+    expect(await within(form).findByLabelText('Service')).toHaveValue(IDS.bookkeeping);
+    expect(within(form).getByLabelText('Billing')).toHaveValue('fixed');
+    expect(within(form).getByLabelText('Fixed fee (£)')).toHaveValue('1200.00');
+    await user.type(within(form).getByLabelText('Job name'), 'Monthly books');
+    await user.click(within(form).getByRole('button', { name: 'Create job' }));
+    expect(await within(form).findByText('Choose the client')).toBeInTheDocument();
+    expect(callsOf(backend, 'POST')).toHaveLength(0);
+
+    await user.click(within(form).getByRole('combobox', { name: 'Client' }));
+    await user.click(await screen.findByRole('option', { name: /Acme Ltd/ }));
+    await user.click(within(form).getByRole('button', { name: 'Create job' }));
+    await waitFor(() => expect(callsOf(backend, 'POST')).toHaveLength(1));
+    expect(callsOf(backend, 'POST')[0]?.body).toMatchObject({
+      client_id: IDS.acme,
+      service_id: IDS.bookkeeping,
+      billing_basis: 'fixed',
+      fixed_fee: 120000,
+    });
+  });
+
+  it('drops the service it was started from when the dialog is closed', async () => {
+    const user = userEvent.setup();
+    setup({}, { route: `${JOBS}?new=1&service_id=${IDS.bookkeeping}` });
+
+    const form = await screen.findByRole('region', { name: 'New job' });
+    await user.click(await within(form).findByRole('button', { name: 'Cancel' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).not.toContain('service_id'),
+    );
+  });
+
   it('opens the dialog from the link of the quick-create menu (?new=1) and drops the parameter on close', async () => {
     const user = userEvent.setup();
     setup({}, { route: `${JOBS}?new=1` });

@@ -107,7 +107,7 @@ export default function JobsPage() {
 
   const closeCreate = () => {
     setCreating(false);
-    if (params.has('new')) setParam({ new: null });
+    if (params.has('new') || params.has('service_id')) setParam({ new: null, service_id: null });
   };
   const clearAll = () => {
     setSearchText('');
@@ -210,6 +210,7 @@ export default function JobsPage() {
         onClose={closeCreate}
         job={null}
         clientId={clientId ?? undefined}
+        serviceId={params.get('service_id') ?? undefined}
         onSaved={(job) => {
           closeCreate();
           void navigate(routes.org.job(organization.slug, job.id));

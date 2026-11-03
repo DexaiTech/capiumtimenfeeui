@@ -762,6 +762,14 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         group: 'Access control',
       },
       { id: 'segments', label: 'Client Segments', icon: Tags, group: 'Practice' },
+      // The same page as Team & Rates > Services, with the same rule as that module.
+      {
+        id: 'services',
+        label: 'Services',
+        icon: Layers,
+        anyOf: [P.memberRead, P.rateRead, P.settingsManage],
+        group: 'Practice',
+      },
       { id: 'vat-codes', label: 'VAT Codes', icon: Percent, group: 'Money & tax' },
       {
         id: 'document-numbering',

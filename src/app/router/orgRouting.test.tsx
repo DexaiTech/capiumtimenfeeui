@@ -215,6 +215,26 @@ describe('practice route (/:orgSlug)', () => {
     );
   });
 
+  it('offers the services of the practice in Settings, next to Client Segments', async () => {
+    mockOrganizations([ownerContext]);
+    const { router } = renderApp('/acme/settings/general');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { level: 1, name: 'General Settings' });
+
+    const bar = screen.getByRole('navigation', { name: 'Settings pages' });
+    const links = within(bar)
+      .getAllByRole('link')
+      .map((link) => link.textContent);
+    expect(links.indexOf('Services')).toBe(links.indexOf('Client Segments') + 1);
+    await user.click(within(bar).getByRole('link', { name: 'Services' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/acme/settings/services'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Services' })).toBeInTheDocument();
+    expect(within(bar).getByRole('link', { name: 'Services' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
   it('shows the reports of the caller in a grouped sidebar instead of the secondary bar', async () => {
     mockOrganizations([contextWith(['report.read'])]);
     const { router } = renderApp('/acme/reports');
@@ -369,7 +389,6 @@ describe('practice route (/:orgSlug)', () => {
   it.each([
     ['/acme/settings/staff', '/acme/team/staff'],
     ['/acme/settings/rates', '/acme/team/charge-out-rates'],
-    ['/acme/settings/services', '/acme/team/services'],
     ['/acme/settings/activity-codes', '/acme/team/activity-types'],
     ['/acme/settings/vat-rates', '/acme/settings/vat-codes'],
     ['/acme/settings/numbering', '/acme/settings/document-numbering'],

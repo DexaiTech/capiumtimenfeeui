@@ -143,7 +143,6 @@ const APPLICATION_TESTING_ROUTE: RouteObject = {
 const MOVED: ReadonlyArray<readonly [string, string]> = [
   ['settings/staff', 'team/staff'],
   ['settings/rates', 'team/charge-out-rates'],
-  ['settings/services', 'team/services'],
   ['settings/activity-codes', 'team/activity-types'],
   ['settings/vat-rates', 'settings/vat-codes'],
   ['settings/numbering', 'settings/document-numbering'],

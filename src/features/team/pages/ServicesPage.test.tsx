@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
+import { useLocation } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { contextWith } from '@/test/orgFixtures';
@@ -22,6 +23,12 @@ import {
 } from '../test/fixtures';
 import { orgApiPath, teamHandlers } from '../test/handlers';
 import ServicesPage from './ServicesPage';
+
+/** Shows where the router is, so a test can assert a navigation. */
+function Where() {
+  const location = useLocation();
+  return <p data-testid="location">{`${location.pathname}${location.search}`}</p>;
+}
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -209,10 +216,36 @@ describe('ServicesPage list', () => {
     expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
   });
 
+  it('starts a new job on an active service from the New job form of the job list', async () => {
+    const user = userEvent.setup();
+    renderInOrg(
+      <>
+        <ServicesPage />
+        <Where />
+      </>,
+      { context: contextWith([...MEMBER, 'job.create']), route: '/acme/settings/services' },
+    );
+
+    // No settings.manage: only the new job is offered, and not for an inactive service.
+    expect(menuItems(await openActions('Tax advice'))).toEqual(['New job']);
+    expect(screen.queryByRole('group', { name: 'Actions for Legacy payroll' })).toBeNull();
+    await user.click(
+      within(await openActions('Tax advice')).getByRole('button', { name: 'New job' }),
+    );
+    expect(screen.getByTestId('location').textContent).toBe(
+      `/acme/jobs?new=1&service_id=${taxService.id}`,
+    );
+  });
+
   it('offers Deactivate to an active service and Activate to an inactive one', async () => {
     renderInOrg(<ServicesPage />);
 
-    expect(menuItems(await openActions('Tax advice'))).toEqual(['Edit', 'Deactivate', 'Delete']);
+    expect(menuItems(await openActions('Tax advice'))).toEqual([
+      'New job',
+      'Edit',
+      'Deactivate',
+      'Delete',
+    ]);
     expect(menuItems(await openActions('Legacy payroll'))).toEqual(['Edit', 'Activate', 'Delete']);
   });
 
