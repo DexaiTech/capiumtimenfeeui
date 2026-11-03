@@ -37,9 +37,13 @@ The staff list moved here from Settings (`settings/staff` redirects to `team/sta
 
 ## Behaviour worth knowing
 
-- **Staff** — one `GET /staff` list (server filters and sort, cursor "Load more"). A person has no
-  login by default; "Add staff member" can also invite them or create an account (the temporary
-  password is shown once and never cached). Status changes use the lifecycle endpoints
+- **Staff** — one `GET /staff` list (server filters and sort, cursor "Load more"). "Add staff
+  member" (ticket APT5) asks for the name, grade and work email (required), staff code, start date,
+  job title, role, hours and working days, creates the record and then invites the person to sign
+  in at their work email; the approver, initials and chargeable target are set later on their page.
+  A record without a login (from the import or after an unlink) can still be given one from the
+  list or their page (an invitation, or an account whose temporary password is shown once and
+  never cached). Status changes use the lifecycle endpoints
   (`deactivate`, `reactivate`), so editing a person's status is an action, not a form field. An
   approver must be a person who can sign in.
 - **Grades** — Delete removes an unused grade and deactivates a used one; the confirmation says

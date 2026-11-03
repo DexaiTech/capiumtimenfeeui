@@ -126,9 +126,10 @@ export interface StaffFilters {
 export interface StaffCreate {
   full_name: string;
   grade_id: string;
-  start_date: IsoDate;
+  /** The work email: required, they are invited to sign in with it. */
+  email: string;
+  start_date?: IsoDate;
   code?: string;
-  email?: string;
   approver_id?: string;
   job_title?: string;
   initials?: string;

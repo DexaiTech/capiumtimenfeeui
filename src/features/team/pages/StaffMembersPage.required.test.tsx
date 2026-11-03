@@ -18,7 +18,7 @@ beforeEach(() => {
 });
 
 describe('mandatory fields of the staff dialogs', () => {
-  it('marks the add form: name, grade, start date, hours, working days', async () => {
+  it('marks the add form: name, grade, work email, hours, working days', async () => {
     const user = userEvent.setup();
     renderInOrg(<StaffMembersPage />, { context: contextWith(OWNER_PERMISSIONS) });
     await user.click(await screen.findByRole('button', { name: 'Add staff member' }));
@@ -26,13 +26,12 @@ describe('mandatory fields of the staff dialogs', () => {
     await within(dialog).findByRole('combobox', { name: 'Grade' });
 
     expectRequiredFields(dialog, {
-      required: ['Full name', 'Grade', 'Start date', 'Hours per working day'],
+      required: ['Full name', 'Grade', 'Work email', 'Hours per working day'],
       optional: [
         'Staff code',
-        'Work email',
+        'Start date',
         'Job title',
-        'Initials',
-        'Chargeable target (%)',
+        'Role',
         'Cost rate (£/h)',
         'Charge-out rate (£/h)',
         'Rates start',
@@ -43,12 +42,6 @@ describe('mandatory fields of the staff dialogs', () => {
       'true',
     );
     expect(within(dialog).getByText('Working days')).toHaveClass('field-required');
-
-    // The sign-in email is mandatory only while there is no work email to fall back on.
-    await user.click(within(dialog).getByRole('radio', { name: /Invite by email/ }));
-    expectRequiredFields(dialog, { required: ['Sign-in email'] });
-    await user.type(within(dialog).getByLabelText('Work email'), 'new@example.com');
-    expectRequiredFields(dialog, { required: [], optional: ['Sign-in email', 'Role'] });
   });
 
   it('marks the edit form: the code and the target are mandatory there', async () => {
