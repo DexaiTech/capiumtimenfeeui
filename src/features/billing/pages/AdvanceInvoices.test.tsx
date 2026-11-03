@@ -147,6 +147,21 @@ describe('billing fees in advance', () => {
     expect(await screen.findByTestId('location')).toHaveTextContent(`${INVOICES}/inv-new-1`);
   });
 
+  it('offers fees in advance for a client with nothing to bill', async () => {
+    const user = userEvent.setup();
+    const backend = createPrepareBackend({ wip: { [harbour.id]: wipOf([]) } });
+    server.use(...prepareHandlers(backend));
+    renderBillingPage(<PrepareInvoicePage />, {
+      route: `${BILLING}/prepare?client=${harbour.id}`,
+      path: `${BILLING}/prepare`,
+    });
+
+    expect(await screen.findByText('Nothing to bill')).toBeInTheDocument();
+    expect(screen.getByText(/You can still bill fees in advance/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Bill fees in advance…' }));
+    expect(await screen.findByRole('region', { name: 'Bill fees in advance' })).toBeInTheDocument();
+  });
+
   it('marks a new manual line of a draft as fees in advance', async () => {
     const user = userEvent.setup();
     const posted = openInvoice(

@@ -74,11 +74,19 @@ export function WorkStep({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-text-muted" aria-live="polite">
-        {wip.client.name} has {formatMoney(totals.total, currency)} of work in progress:{' '}
-        {totals.hours} hours of time ({formatMoney(totals.time_value, currency)}) and{' '}
-        {formatMoney(totals.disbursement_value, currency)} of disbursements.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-text-muted" aria-live="polite">
+          {wip.client.name} has {formatMoney(totals.total, currency)} of work in progress:{' '}
+          {totals.hours} hours of time ({formatMoney(totals.time_value, currency)}) and{' '}
+          {formatMoney(totals.disbursement_value, currency)} of disbursements.
+        </p>
+        {/* With nothing to bill, the empty list offers it instead. */}
+        {onAdvance && rows.length > 0 ? (
+          <Button size="sm" onClick={onAdvance}>
+            Bill fees in advance…
+          </Button>
+        ) : null}
+      </div>
 
       <DataTable
         caption={`Work in progress of ${wip.client.name}`}
@@ -128,7 +136,18 @@ export function WorkStep({
             <EmptyState
               icon={<Banknote className="size-6" />}
               title="Nothing to bill"
-              description="This client has no unbilled time, disbursements or fixed fees that can be invoiced."
+              description={
+                onAdvance
+                  ? 'This client has no unbilled time, disbursements or fixed fees. You can still bill fees in advance and assign time to that invoice later.'
+                  : 'This client has no unbilled time, disbursements or fixed fees that can be invoiced.'
+              }
+              action={
+                onAdvance ? (
+                  <Button variant="primary" onClick={onAdvance}>
+                    Bill fees in advance…
+                  </Button>
+                ) : undefined
+              }
             />
           ) : (
             <EmptyState
@@ -169,11 +188,6 @@ export function WorkStep({
               : `${plural(chosen.length, 'item', 'items')} chosen, ${formatMoney(total, currency)} of work in progress.`}
           </p>
           <div className="flex flex-wrap gap-2">
-            {onAdvance ? (
-              <Button size="sm" onClick={onAdvance}>
-                Bill fees in advance…
-              </Button>
-            ) : null}
             <Button
               size="sm"
               disabled={chosen.length === 0}
