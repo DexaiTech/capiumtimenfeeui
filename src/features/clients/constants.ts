@@ -112,7 +112,6 @@ export function labelOf<T extends string>(labels: Record<T, string>, value: stri
 export const TOGGLEABLE_COLUMNS = [
   { id: 'reg_no', label: 'Reg No' },
   { id: 'segment', label: 'Segment' },
-  { id: 'health', label: 'Health' },
   { id: 'contact', label: 'Contact' },
   { id: 'contact_email', label: 'Contact Email' },
   { id: 'deadlines', label: 'Deadlines' },
@@ -127,7 +126,6 @@ export type ToggleableColumnId = (typeof TOGGLEABLE_COLUMNS)[number]['id'];
 export const SORT_KEYS = {
   client: 'name',
   segment: 'segment',
-  health: 'health_score',
 } as const satisfies Record<string, ClientSort>;
 
 export const DEFAULT_SORT: ClientSort = 'name';

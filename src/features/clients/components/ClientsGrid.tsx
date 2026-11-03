@@ -10,7 +10,6 @@ import { type MenuAction } from './ActionMenu';
 import {
   CentralCell,
   DeadlineCell,
-  HealthCell,
   Initials,
   MergedNote,
   SegmentPill,
@@ -136,10 +135,6 @@ export function ClientsGrid({
                     </dd>
                   </>
                 ) : null}
-                <dt>Health</dt>
-                <dd>
-                  <HealthCell score={client.health_score} />
-                </dd>
                 <dt>Contact</dt>
                 <dd>
                   {contact ? (

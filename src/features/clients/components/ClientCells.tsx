@@ -9,7 +9,7 @@ import { cn } from '@/utils/cn';
 import { useClient } from '../api';
 import { centralChip, type CentralTone } from '../central/format';
 import { CLIENT_STATUS_LABELS, CLIENT_TYPE_LABELS, labelOf, SOFTWARE_LABELS } from '../constants';
-import { avatarColor, deadlinePill, healthTone } from '../format';
+import { avatarColor, deadlinePill } from '../format';
 import type { ClientRead, Deadlines, ServiceTag } from '../types';
 
 export interface InitialsProps {
@@ -80,31 +80,6 @@ const SEGMENT_TONES: Record<string, string> = {
 export function SegmentPill({ segment }: { segment: string | null }) {
   if (!segment) return <span className="cc-muted">—</span>;
   return <span className={cn('cc-pill', SEGMENT_TONES[segment.toLowerCase()])}>{segment}</span>;
-}
-
-export function HealthCell({ score }: { score: number | null }) {
-  if (score === null) return <span className="cc-muted">—</span>;
-  const tone = healthTone(score);
-  return (
-    <span className="cc-health">
-      <span className="cc-health-text">
-        <strong className={`cc-tone-${tone}`}>{score}</strong>/100
-      </span>
-      <span
-        className="cc-health-track"
-        role="meter"
-        aria-label="Health score"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={score}
-      >
-        <span
-          className={`cc-health-fill cc-fill-${tone}`}
-          style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
-        />
-      </span>
-    </span>
-  );
 }
 
 const STATUS_TONES: Record<string, string> = {

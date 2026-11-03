@@ -645,10 +645,6 @@
   width: 105px;
 }
 
-.cc-col-health {
-  width: 107px;
-}
-
 .cc-col-contact {
   width: 118px;
 }
@@ -983,62 +979,6 @@
   min-width: 26px;
   justify-content: center;
   cursor: default;
-}
-
-.cc-health {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.cc-health-text {
-  font-size: 10px;
-  line-height: 12px;
-  font-weight: 500;
-  color: var(--cc-text);
-}
-
-.cc-health-text strong {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.cc-health-track {
-  width: 59px;
-  height: 5px;
-  background: var(--cc-track);
-  border-radius: var(--cc-radius-pill);
-  overflow: hidden;
-}
-
-.cc-health-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-}
-
-.cc-tone-good {
-  color: var(--cc-success);
-}
-
-.cc-tone-fair {
-  color: var(--cc-warning);
-}
-
-.cc-tone-poor {
-  color: var(--cc-danger);
-}
-
-.cc-fill-good {
-  background: var(--cc-success);
-}
-
-.cc-fill-fair {
-  background: var(--cc-warning);
-}
-
-.cc-fill-poor {
-  background: var(--cc-danger);
 }
 
 .cc-contact {
