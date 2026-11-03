@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Card, ConfirmDialog, ProgressBar, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { formatUkDateTime } from '@/utils/dates';
-import { formatMinutes } from '@/utils/minutes';
+import { formatMinutes, formatMinutesLong } from '@/utils/minutes';
 
 import { useDeleteTimesheet, useRecallTimesheet, useSubmitTimesheet } from '../../api';
 import { EDITABLE_SHEET_STATUSES } from '../../constants';
@@ -42,6 +42,8 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
   const variance = describeVariance(grid.total_minutes - target);
   const timesheetId = grid.timesheet_id;
   const missing = editable ? grid.missing_days : [];
+  // Billable time with no charge-out rate goes to WIP at £0 (ticket APT17): ask before submitting.
+  const unpriced = sheet?.zero_rate_minutes ?? 0;
   // The practice may not approve timesheets (General Settings): submitting approves the week.
   const approving = organization.require_timesheet_approval;
   const submittedText = approving
@@ -179,7 +181,9 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
               disabled={timesheetId === null || grid.total_minutes === 0}
               loading={submit.isPending && confirming === null}
               onClick={() =>
-                grid.missing_days.length === 0 ? submitAtOnce() : setConfirming('submit')
+                grid.missing_days.length === 0 && unpriced === 0
+                  ? submitAtOnce()
+                  : setConfirming('submit')
               }
             >
               {approving ? 'Submit for approval' : 'Submit timesheet'}
@@ -296,6 +300,12 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
                   : `${grid.missing_days.length} working days have`}{' '}
                 no time recorded ({formatDayList(grid.missing_days)}).
               </p>
+            ) : null}
+            {unpriced > 0 ? (
+              <Notice tone="warning" title="Time with no charge-out rate">
+                {formatMinutesLong(unpriced)} of your billable time has no charge-out rate, so it
+                will go to WIP at £0. Ask whoever looks after Team &amp; Rates to check your rates.
+              </Notice>
             ) : null}
           </>
         )}

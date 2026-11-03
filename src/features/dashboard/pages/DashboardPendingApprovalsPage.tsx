@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 
 import { PageHeader } from '@/components/layout';
 import {
   Badge,
   Button,
+  ConfirmDialog,
   Table,
   Tabs,
   buttonClasses,
@@ -11,6 +13,7 @@ import {
   type TableColumn,
 } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
+import { ZeroRateWarning } from '@/features/time';
 import { useDocumentTitle } from '@/hooks';
 import { formatUkDateTime } from '@/utils/dates';
 
@@ -47,6 +50,8 @@ export default function DashboardPendingApprovalsPage() {
   const query = usePendingApprovals(kind, PAGE_LIMIT);
   const approveSheet = useApproveTimesheet();
   const approveClaim = useApproveExpenseClaim();
+  /** A timesheet with billable time at no charge-out rate, waiting for "Approve anyway". */
+  const [checking, setChecking] = useState<ApprovalItem | null>(null);
   const working = approveSheet.isPending
     ? approveSheet.variables
     : approveClaim.isPending
@@ -80,6 +85,11 @@ export default function DashboardPendingApprovalsPage() {
           <Badge size="sm" tone={item.kind === 'timesheet' ? 'violet' : 'blue'}>
             {item.kind === 'timesheet' ? 'Timesheet' : 'Expense claim'}
           </Badge>
+          {(item.zero_rate_minutes ?? 0) > 0 ? (
+            <Badge size="sm" tone="warning">
+              No rate
+            </Badge>
+          ) : null}
         </span>
       ),
     },
@@ -149,7 +159,11 @@ export default function DashboardPendingApprovalsPage() {
                               loading={working === item.id}
                               disabled={working !== null}
                               aria-label={`Approve ${item.kind === 'timesheet' ? 'timesheet' : 'expense claim'} of ${item.title}`}
-                              onClick={() => approve(item)}
+                              onClick={() =>
+                                (item.zero_rate_minutes ?? 0) > 0
+                                  ? setChecking(item)
+                                  : approve(item)
+                              }
                             >
                               Approve
                             </Button>
@@ -183,6 +197,25 @@ export default function DashboardPendingApprovalsPage() {
           );
         }}
       </Widget>
+      <ConfirmDialog
+        open={checking !== null}
+        onClose={() => setChecking(null)}
+        onConfirm={() => {
+          if (checking) approve(checking);
+          setChecking(null);
+        }}
+        title="Approve this timesheet?"
+        confirmLabel="Approve anyway"
+        tone="default"
+      >
+        {checking ? (
+          <ZeroRateWarning
+            people={[
+              { key: checking.id, name: checking.title, minutes: checking.zero_rate_minutes ?? 0 },
+            ]}
+          />
+        ) : null}
+      </ConfirmDialog>
     </section>
   );
 }

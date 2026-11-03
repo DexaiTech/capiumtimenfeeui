@@ -187,6 +187,8 @@ export interface ApprovalItem {
   date: string;
   submitted_at: string | null;
   minutes: number | null;
+  /** A timesheet's billable minutes with no charge-out rate (valued at £0); null for a claim. */
+  zero_rate_minutes: number | null;
   amount: number | null;
   link: string;
 }

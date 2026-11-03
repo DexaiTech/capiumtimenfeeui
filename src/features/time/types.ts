@@ -288,6 +288,8 @@ export interface Timesheet {
   billable_minutes: Minutes;
   non_billable_minutes: Minutes;
   billable_value: Pence;
+  /** Billable minutes with no charge-out rate (charge rate 0): they go to WIP at £0. */
+  zero_rate_minutes: Minutes;
   created_at: IsoDateTime;
   updated_at: IsoDateTime;
 }
