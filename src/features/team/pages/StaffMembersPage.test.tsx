@@ -54,7 +54,8 @@ async function openAddDialog(user: User) {
 async function fillRequired(dialog: HTMLElement, user: User) {
   await user.type(within(dialog).getByRole('textbox', { name: 'Full name' }), 'Katherine Johnson');
   await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Grade' }), 'Senior');
-  // The start date opens on today; a date input is set, not typed into.
+  await user.type(within(dialog).getByRole('textbox', { name: 'Work email' }), 'kat@example.com');
+  // The start date (optional) opens on today; a date input is set, not typed into.
   fireEvent.change(within(dialog).getByLabelText('Start date'), {
     target: { value: '2026-10-19' },
   });
@@ -484,12 +485,35 @@ describe('StaffMembersPage row actions', () => {
 });
 
 describe('AddStaffPanel', () => {
-  it('adds a staff member without a login and sends exactly the filled fields', async () => {
-    let body: unknown;
+  beforeEach(() => {
+    // Every person added is invited to sign in (ticket APT5).
+    server.use(
+      http.post(orgApiPath('/staff/:staffId/invite'), () =>
+        ok({
+          staff: detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')),
+          invited_at: '2026-10-18T09:00:00Z',
+          expires_at: '2026-10-25T09:00:00Z',
+          resent: false,
+        }),
+      ),
+    );
+  });
+
+  it('asks only for the essentials and invites the person to their work email', async () => {
+    const calls: Array<{ path: string; body: unknown }> = [];
     server.use(
       http.post(orgApiPath('/staff'), async ({ request }) => {
-        body = await request.json();
+        calls.push({ path: 'staff', body: await request.json() });
         return ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 });
+      }),
+      http.post(orgApiPath('/staff/staff-kj/invite'), async ({ request }) => {
+        calls.push({ path: 'invite', body: await request.json() });
+        return ok({
+          staff: detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')),
+          invited_at: '2026-10-18T09:00:00Z',
+          expires_at: '2026-10-25T09:00:00Z',
+          resent: false,
+        });
       }),
     );
     const user = userEvent.setup();
@@ -504,14 +528,25 @@ describe('AddStaffPanel', () => {
       expect(within(dialog).getByRole('checkbox', { name: day })).toBeChecked();
     }
     expect(within(dialog).getByRole('checkbox', { name: 'Saturday' })).not.toBeChecked();
-    expect(within(dialog).getByRole('radio', { name: /No login/ })).toBeChecked();
+    // Grade and work email are required; staff code and start date are not.
+    expect(within(dialog).getByRole('combobox', { name: 'Grade' })).toBeRequired();
+    expect(within(dialog).getByRole('textbox', { name: 'Work email' })).toBeRequired();
+    expect(within(dialog).getByRole('textbox', { name: 'Staff code' })).not.toBeRequired();
+    expect(within(dialog).getByLabelText('Start date')).not.toBeRequired();
+    // No approver, initials, chargeable target or choice of sign-in access.
+    expect(within(dialog).queryByRole('combobox', { name: 'Approver' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('textbox', { name: 'Initials' })).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('textbox', { name: 'Chargeable target (%)' }),
+    ).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('radio')).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('textbox', { name: 'Sign-in email' }),
+    ).not.toBeInTheDocument();
 
     await fillRequired(dialog, user);
     await user.type(within(dialog).getByRole('textbox', { name: 'Staff code' }), 'kat');
-    await user.type(within(dialog).getByRole('textbox', { name: 'Work email' }), 'kat@example.com');
     await user.type(within(dialog).getByRole('textbox', { name: 'Job title' }), 'Tax senior');
-    await user.type(within(dialog).getByRole('textbox', { name: 'Initials' }), 'kj');
-    await user.type(within(dialog).getByRole('textbox', { name: 'Chargeable target (%)' }), '62.5');
     const hours = within(dialog).getByRole('textbox', { name: 'Hours per working day' });
     await user.clear(hours);
     await user.type(hours, '7:30');
@@ -519,21 +554,44 @@ describe('AddStaffPanel', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
 
     expect(await screen.findByText('Katherine Johnson added')).toBeInTheDocument();
-    expect(body).toEqual({
+    expect(await screen.findByText('Invitation sent to kat@example.com')).toBeInTheDocument();
+    expect(calls.map((call) => call.path)).toEqual(['staff', 'invite']);
+    expect(calls[0]?.body).toEqual({
       full_name: 'Katherine Johnson',
       grade_id: seniorGrade.id,
+      email: 'kat@example.com',
       start_date: '2026-10-19',
       working_minutes_per_day: 450,
       working_days: [1, 2, 3, 4],
       code: 'KAT',
-      email: 'kat@example.com',
       job_title: 'Tax senior',
-      initials: 'KJ',
-      chargeable_target_bp: 6250,
+      role_id: staffRole.id,
     });
+    // The invitation goes to the work email.
+    expect(calls[1]?.body).toEqual({});
     await waitFor(() =>
       expect(screen.queryByRole('region', { name: 'Add staff member' })).not.toBeInTheDocument(),
     );
+  });
+
+  it('leaves the start date out when it is emptied', async () => {
+    let body: Record<string, unknown> = {};
+    server.use(
+      http.post(orgApiPath('/staff'), async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    const dialog = await openAddDialog(user);
+    await fillRequired(dialog, user);
+    fireEvent.change(within(dialog).getByLabelText('Start date'), { target: { value: '' } });
+    await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
+
+    expect(await screen.findByText('Katherine Johnson added')).toBeInTheDocument();
+    expect(body).not.toHaveProperty('start_date');
   });
 
   it('keeps the grade and the start date for the next person with "Save and add another"', async () => {
@@ -656,9 +714,7 @@ describe('AddStaffPanel', () => {
     expect(within(dialog).queryByLabelText('Rates start')).not.toBeInTheDocument();
   });
 
-  it('offers only active grades and only approvers who can sign in', async () => {
-    const lookups: URLSearchParams[] = [];
-    server.use(...teamHandlers({ onStaffList: (params) => lookups.push(params) }));
+  it('offers only active grades', async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -667,22 +723,6 @@ describe('AddStaffPanel', () => {
       .getAllByRole('option')
       .map((option) => option.textContent);
     expect(grades).toEqual(['Choose a grade', 'Partner', 'Senior']);
-
-    await user.click(within(dialog).getByRole('combobox', { name: 'Approver' }));
-    const names = (await within(dialog).findAllByRole('option')).map(
-      (option) => option.textContent,
-    );
-    expect(names.join('|')).toContain('Ada Lovelace');
-    expect(names.join('|')).toContain('Grace Hopper');
-    expect(names.join('|')).not.toContain('Sam Staff');
-    const lookup = lookups.find((params) => params.get('has_login') === 'true');
-    expect(lookup?.get('selectable')).toBe('true');
-
-    await user.click(within(dialog).getByRole('option', { name: /Grace Hopper/ }));
-    expect(within(dialog).getByRole('combobox', { name: 'Approver' })).toHaveAttribute(
-      'placeholder',
-      'Grace Hopper',
-    );
   });
 
   it('validates the required fields before sending anything', async () => {
@@ -700,11 +740,10 @@ describe('AddStaffPanel', () => {
     const hours = within(dialog).getByRole('textbox', { name: 'Hours per working day' });
     await user.clear(hours);
     await user.type(hours, '30');
-    await user.type(within(dialog).getByRole('textbox', { name: 'Initials' }), 'A-B');
     for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
       await user.click(within(dialog).getByRole('checkbox', { name: day }));
     }
-    // The start date opens on today: empty it to see it asked for.
+    // The start date is optional: an empty one is not asked for.
     fireEvent.change(within(dialog).getByLabelText('Start date'), { target: { value: '' } });
     await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
 
@@ -712,8 +751,10 @@ describe('AddStaffPanel', () => {
     expect(within(dialog).getByRole('combobox', { name: 'Grade' })).toHaveAccessibleDescription(
       'Choose a grade',
     );
-    expect(within(dialog).getByText('Enter the start date')).toBeInTheDocument();
-    expect(within(dialog).getByText('Use 1 to 6 letters or digits')).toBeInTheDocument();
+    expect(within(dialog).getByRole('textbox', { name: 'Work email' })).toHaveAccessibleDescription(
+      'Enter the work email',
+    );
+    expect(within(dialog).getByLabelText('Start date')).not.toHaveAttribute('aria-invalid', 'true');
     expect(within(dialog).getByText(/at most 24/)).toBeInTheDocument();
     expect(within(dialog).getByText('Choose at least one working day')).toBeInTheDocument();
     expect(posted).toBe(0);
@@ -744,6 +785,7 @@ describe('AddStaffPanel', () => {
     const dialog = await openAddDialog(user);
     await fillRequired(dialog, user);
     await user.type(within(dialog).getByRole('textbox', { name: 'Staff code' }), 'S002');
+    await user.clear(within(dialog).getByRole('textbox', { name: 'Work email' }));
     await user.type(within(dialog).getByRole('textbox', { name: 'Work email' }), 'sam@example.com');
     await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
 
@@ -756,21 +798,12 @@ describe('AddStaffPanel', () => {
     expect(screen.queryByText('Katherine Johnson added')).not.toBeInTheDocument();
   });
 
-  it('invites them by email after creating the record', async () => {
-    const calls: Array<{ path: string; body: unknown }> = [];
+  it('gives the invited person the role chosen', async () => {
+    let body: unknown;
     server.use(
       http.post(orgApiPath('/staff'), async ({ request }) => {
-        calls.push({ path: 'staff', body: await request.json() });
+        body = await request.json();
         return ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 });
-      }),
-      http.post(orgApiPath('/staff/staff-kj/invite'), async ({ request }) => {
-        calls.push({ path: 'invite', body: await request.json() });
-        return ok({
-          staff: detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')),
-          invited_at: '2026-10-18T09:00:00Z',
-          expires_at: '2026-10-25T09:00:00Z',
-          resent: false,
-        });
       }),
     );
     const user = userEvent.setup();
@@ -778,73 +811,14 @@ describe('AddStaffPanel', () => {
 
     const dialog = await openAddDialog(user);
     await fillRequired(dialog, user);
-    await user.type(within(dialog).getByRole('textbox', { name: 'Work email' }), 'kat@example.com');
-    await user.click(within(dialog).getByRole('radio', { name: /Invite by email/ }));
-    await user.type(
-      within(dialog).getByRole('textbox', { name: 'Sign-in email' }),
-      'kat.login@example.com',
-    );
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Role' }), 'Admin');
     await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
 
-    expect(await screen.findByText('Invitation sent to kat.login@example.com')).toBeInTheDocument();
-    expect(calls.map((call) => call.path)).toEqual(['staff', 'invite']);
-    expect(calls[0]?.body).toMatchObject({ role_id: adminRole.id, email: 'kat@example.com' });
-    expect(calls[1]?.body).toEqual({ email: 'kat.login@example.com' });
+    expect(await screen.findByText('Invitation sent to kat@example.com')).toBeInTheDocument();
+    expect(body).toMatchObject({ role_id: adminRole.id, email: 'kat@example.com' });
   });
 
-  it('creates an account and shows the temporary password once', async () => {
-    let linkBody: unknown;
-    server.use(
-      http.post(orgApiPath('/staff'), () =>
-        ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 }),
-      ),
-      http.post(orgApiPath('/staff/staff-kj/link-login'), async ({ request }) => {
-        linkBody = await request.json();
-        return ok({
-          staff: detailOf(
-            staff('staff-kj', 'S007', 'Katherine Johnson', {
-              has_login: true,
-              login_email: 'kat@example.com',
-              login_status: 'active',
-            }),
-          ),
-          temporary_password: TEMP_PASSWORD,
-          email_sent: true,
-          merged_from: null,
-        });
-      }),
-    );
-    const user = userEvent.setup();
-    renderPage();
-
-    const dialog = await openAddDialog(user);
-    await fillRequired(dialog, user);
-    await user.type(within(dialog).getByRole('textbox', { name: 'Work email' }), 'kat@example.com');
-    await user.click(within(dialog).getByRole('radio', { name: /Create an account now/ }));
-    expect(
-      within(dialog).getByRole('checkbox', { name: /Email them a link to choose/ }),
-    ).toBeChecked();
-    await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
-
-    const result = await screen.findByRole('dialog', { name: 'Staff member added' });
-    expect(linkBody).toEqual({ mode: 'create_account', send_email: true });
-    expect(within(result).getByRole('textbox', { name: 'Temporary password' })).toHaveValue(
-      TEMP_PASSWORD,
-    );
-    expect(within(result).getByText(/also emailed Katherine Johnson a link/)).toBeInTheDocument();
-    // Neither a toast nor any text of the page repeats the password.
-    expect(document.body.textContent).not.toContain(TEMP_PASSWORD);
-
-    // Escape does not discard it: only Done does.
-    await user.keyboard('{Escape}');
-    expect(await within(result).findByRole('alert')).toHaveTextContent(/Select Done/);
-    await user.click(within(result).getByRole('button', { name: 'Done' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.queryByDisplayValue(TEMP_PASSWORD)).not.toBeInTheDocument();
-  });
-
-  it('keeps the new record and reports a login that could not be created', async () => {
+  it('keeps the new record and reports an invitation that could not be sent', async () => {
     server.use(
       http.post(orgApiPath('/staff'), () =>
         ok(detailOf(staff('staff-kj', 'S007', 'Katherine Johnson')), { status: 201 }),
@@ -858,13 +832,11 @@ describe('AddStaffPanel', () => {
 
     const dialog = await openAddDialog(user);
     await fillRequired(dialog, user);
-    await user.type(within(dialog).getByRole('textbox', { name: 'Work email' }), 'kat@example.com');
-    await user.click(within(dialog).getByRole('radio', { name: /Invite by email/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Add staff member' }));
 
     expect(await screen.findByText('Katherine Johnson added')).toBeInTheDocument();
     expect(
-      await screen.findByText('Staff member added, but the login could not be created'),
+      await screen.findByText('Staff member added, but the invitation could not be sent'),
     ).toBeInTheDocument();
     expect(screen.getByText('That address already belongs to an account.')).toBeInTheDocument();
     await waitFor(() =>

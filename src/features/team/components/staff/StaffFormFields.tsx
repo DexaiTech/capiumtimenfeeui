@@ -75,7 +75,11 @@ export function StaffFormFields({
       </FormSection>
       <FormSection
         title="Their place in the practice"
-        description="The grade sets their default rates; the approver signs off their timesheets."
+        description={
+          mode === 'add'
+            ? 'The grade sets their default rates.'
+            : 'The grade sets their default rates; the approver signs off their timesheets.'
+        }
         className="flex flex-col gap-4"
       >
         <div className="grid gap-4 sm:grid-cols-2">
@@ -89,41 +93,43 @@ export function StaffFormFields({
           />
           <Input
             label="Start date"
-            required={mode === 'add'}
             type="date"
             error={errors.start_date?.message}
             {...register('start_date')}
           />
         </div>
+        {/* Adding someone asks only for the essentials (ticket APT5): the approver, the initials
+            and the chargeable target are set later, on their page. */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Work email"
+            required={mode === 'add'}
             type="email"
             autoComplete="off"
             spellCheck={false}
             error={errors.email?.message}
             {...register('email')}
           />
-          <Controller
-            control={control}
-            name="approver_id"
-            render={({ field }) => (
-              <StaffPicker
-                label="Approver"
-                value={field.value}
-                valueLabel={approverName}
-                onChange={(id) => field.onChange(id)}
-                hasLogin
-                selectable
-                excludeId={staffId}
-                placeholder="No approver"
-                hint="Only people who can sign in can approve timesheets."
-                error={errors.approver_id?.message}
-              />
-            )}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+          {mode === 'edit' ? (
+            <Controller
+              control={control}
+              name="approver_id"
+              render={({ field }) => (
+                <StaffPicker
+                  label="Approver"
+                  value={field.value}
+                  valueLabel={approverName}
+                  onChange={(id) => field.onChange(id)}
+                  hasLogin
+                  selectable
+                  excludeId={staffId}
+                  placeholder="No approver"
+                  hint="Only people who can sign in can approve timesheets."
+                  error={errors.approver_id?.message}
+                />
+              )}
+            />
+          ) : null}
           <Input
             label="Job title"
             autoComplete="off"
@@ -131,14 +137,16 @@ export function StaffFormFields({
             error={errors.job_title?.message}
             {...register('job_title')}
           />
-          <Input
-            label="Initials"
-            autoComplete="off"
-            placeholder="Auto"
-            maxLength={6}
-            error={errors.initials?.message}
-            {...register('initials')}
-          />
+          {mode === 'edit' ? (
+            <Input
+              label="Initials"
+              autoComplete="off"
+              placeholder="Auto"
+              maxLength={6}
+              error={errors.initials?.message}
+              {...register('initials')}
+            />
+          ) : null}
         </div>
       </FormSection>
       <FormSection
@@ -156,16 +164,17 @@ export function StaffFormFields({
             error={errors.hours_per_day?.message}
             {...register('hours_per_day')}
           />
-          <Input
-            label="Chargeable target (%)"
-            required={mode === 'edit'}
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder={mode === 'add' ? 'Grade default' : undefined}
-            hint="Share of working time expected to be chargeable."
-            error={errors.target_percent?.message}
-            {...register('target_percent')}
-          />
+          {mode === 'edit' ? (
+            <Input
+              label="Chargeable target (%)"
+              required
+              inputMode="decimal"
+              autoComplete="off"
+              hint="Share of working time expected to be chargeable."
+              error={errors.target_percent?.message}
+              {...register('target_percent')}
+            />
+          ) : null}
           {mode === 'edit' && organization.overtime_enabled ? (
             <Input
               label="Overtime rate (times the normal rate)"

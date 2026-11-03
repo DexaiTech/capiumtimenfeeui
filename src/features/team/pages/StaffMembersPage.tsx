@@ -598,14 +598,7 @@ export default function StaffMembersPage() {
       title="Staff Members"
       description="The people you record time for: grade, approver, working hours, chargeable target and whether they can sign in."
     >
-      <AddStaffPanel
-        open={adding}
-        onClose={closeAdding}
-        onCreated={({ secret: created }) => {
-          closeAdding();
-          if (created) setSecret(created);
-        }}
-      />
+      <AddStaffPanel open={adding} onClose={closeAdding} onCreated={closeAdding} />
       {can(PERMISSIONS.memberRead) ? (
         <StaffList onAdd={() => setAdding(true)} onSecret={setSecret} />
       ) : (

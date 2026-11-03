@@ -44,12 +44,8 @@ const shape = {
   working_days: z.array(z.number().int().min(1).max(7)).min(1, 'Choose at least one working day'),
   leaving_date: z.string(),
   status: z.enum(['active', 'inactive', 'left', 'deleted']),
-  /** Add only: no login, an invitation by email, or an account with a temporary password. */
-  login: z.enum(['none', 'invite', 'create']),
-  /** Add only: the sign-in address; empty means the work email. */
-  login_email: optionalEmailText,
+  /** Add only: the role of the login they are invited to. */
   role_id: z.string(),
-  send_email: z.boolean(),
   /** Add only, with `rate.manage`: the person's own rates, in pounds per hour; empty: none. */
   cost_rate: optionalRateText('Enter the cost rate in pounds per hour, for example 48.00'),
   charge_rate: optionalRateText('Enter the charge-out rate in pounds per hour, for example 95.00'),
@@ -67,13 +63,17 @@ const shape = {
 
 const LEAVING_BEFORE_START = "The leaving date can't be before the start date";
 
-/** Add staff member: a record without a login, and optionally the login to give them. */
+/**
+ * Add staff member: the record, then an invitation to sign in sent to the work email, which is
+ * therefore required (ticket APT5). The start date is optional.
+ */
 export const staffCreateSchema = z
   .object({
     ...shape,
+    email: optionalEmailText.refine((value) => value !== '', 'Enter the work email'),
     /** Empty: the API takes the next number of the staff sequence. */
     code: optionalCodeText(20),
-    start_date: z.string().min(1, 'Enter the start date'),
+    start_date: z.string(),
     /** Empty: the grade's target, else 75%. */
     target_percent: optionalPercentText,
   })
@@ -81,11 +81,7 @@ export const staffCreateSchema = z
     (values) =>
       !values.leaving_date || !values.start_date || values.leaving_date >= values.start_date,
     { path: ['leaving_date'], message: LEAVING_BEFORE_START },
-  )
-  .refine((values) => values.login === 'none' || values.login_email !== '' || values.email !== '', {
-    path: ['login_email'],
-    message: 'Enter the sign-in email address',
-  });
+  );
 
 /** Edit staff member: every profile field, and the status. */
 export const staffEditSchema = z
