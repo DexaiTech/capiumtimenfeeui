@@ -3,13 +3,28 @@ import { useId, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Badge, Button, Checkbox, Input, FormPanel, Select, useToast } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Input,
+  FormPanel,
+  Select,
+  useToast,
+  type ConfirmDialogError,
+} from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
-import { useCreateRateRule, useGradeOptions, useServices, useUpdateRateRule } from '../../api';
+import {
+  useCreateRateRule,
+  useGradeOptions,
+  useRateImpact,
+  useServices,
+  useUpdateRateRule,
+} from '../../api';
 import { RATE_KIND_LABEL, SCOPE_OPTIONS, scopeOptionsFor } from '../../constants';
 import {
   isRateLevel,
@@ -18,12 +33,20 @@ import {
   type RateRuleEditValues,
   type RateRuleValues,
 } from '../../schemas/rate';
-import type { RateKind, RateLevel, RateRule, RateRuleCreate, RateRuleUpdate } from '../../types';
-import { conflictsOf, toFormError } from '../../utils/errors';
-import { formatPeriod, scopeNames } from '../../utils/format';
+import type {
+  RateImpact,
+  RateKind,
+  RateLevel,
+  RateRule,
+  RateRuleCreate,
+  RateRuleUpdate,
+} from '../../types';
+import { conflictsOf, dialogError, toFormError } from '../../utils/errors';
+import { formatPeriod, formatRate, scopeNames } from '../../utils/format';
 import { ClientPicker } from '../pickers/ClientPicker';
 import { StaffPicker } from '../pickers/StaffPicker';
 import { DialogActions } from '../DialogActions';
+import { RateImpactDialog } from './RateImpactDialog';
 
 const CREATE_FIELDS = [
   'level',
@@ -71,6 +94,10 @@ function CreateRateForm({
 }) {
   const { organization, can } = useOrg();
   const create = useCreateRateRule();
+  const impact = useRateImpact();
+  // A save that changes other rates or re-prices time waits here for the pop-up's answer.
+  const [pending, setPending] = useState<{ body: RateRuleCreate; impact: RateImpact } | null>(null);
+  const [refusal, setRefusal] = useState<ConfirmDialogError | null>(null);
   const { toast } = useToast();
   const formId = useId();
   const canPickClient = can(PERMISSIONS.clientRead);
@@ -129,17 +156,36 @@ function CreateRateForm({
     if (wants?.grade && values.grade_id) body.grade_id = values.grade_id;
     if (values.effective_to) body.effective_to = values.effective_to;
     if (values.close_previous) body.close_previous = true;
-    create.mutate(body, {
-      onSuccess: () => {
-        toast({ tone: 'success', title: `${RATE_KIND_LABEL[kind]} rate added` });
-        onClose();
+    // Asked first: the rates around the new one and the time it would re-price.
+    impact.mutate(body, {
+      onSuccess: (found) => {
+        if (found.needs_confirmation) {
+          setRefusal(null);
+          setPending({ body, impact: found });
+        } else {
+          create.mutate(body, { onSuccess: added, onError: refused });
+        }
       },
-      onError: (error) => {
-        setFailure(error);
-        handleSubmitError(toFormError(error));
-      },
+      onError: refused,
     });
   });
+
+  const added = () => {
+    toast({ tone: 'success', title: `${RATE_KIND_LABEL[kind]} rate added` });
+    onClose();
+  };
+  const refused = (error: unknown) => {
+    setFailure(error);
+    handleSubmitError(toFormError(error));
+  };
+  const confirm = () => {
+    if (!pending) return;
+    setRefusal(null);
+    create.mutate(
+      { ...pending.body, confirm_impact: true },
+      { onSuccess: added, onError: (error) => setRefusal(dialogError(error)) },
+    );
+  };
 
   const serviceOptions = (services.data ?? [])
     .filter((service) => service.is_active)
@@ -269,12 +315,20 @@ function CreateRateForm({
           type="submit"
           form={formId}
           variant="primary"
-          loading={create.isPending}
+          loading={impact.isPending || create.isPending}
           disabled={retryIn > 0 || options.length === 0}
         >
           Add rate
         </Button>
       </DialogActions>
+      <RateImpactDialog
+        impact={pending?.impact ?? null}
+        subject={`The new ${kind === 'cost' ? 'cost' : 'charge-out'} rate of ${formatRate(pending?.body.rate)}`}
+        onConfirm={confirm}
+        onClose={() => setPending(null)}
+        loading={create.isPending}
+        error={refusal}
+      />
     </>
   );
 }

@@ -10,6 +10,7 @@ import { findRowAction } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
 import {
+  backdatedImpact,
   grace,
   partnerGrade,
   rule,
@@ -361,6 +362,48 @@ describe('CostRatesPage add rate', () => {
       effective_to: '2026-12-31',
       close_previous: true,
     });
+  });
+
+  it('asks before a backdated rate changes other rates and sends confirm_impact', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(orgApiPath('/rates/impact'), () => ok(backdatedImpact)),
+      http.post(orgApiPath('/rates'), async ({ request }) => {
+        bodies.push(await request.json());
+        return ok(rule('rule-new', 'staff', { kind: 'cost' }), { status: 201 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    const dialog = await openAdd(user);
+    await user.click(within(dialog).getByRole('combobox', { name: 'Staff member' }));
+    await user.click(await within(dialog).findByRole('option', { name: /Grace Hopper/ }));
+    await user.type(within(dialog).getByRole('textbox', { name: 'Rate per hour (£)' }), '50');
+    setDate(dialog, 'Effective from', '2026-04-01');
+    await user.click(within(dialog).getByRole('button', { name: 'Add rate' }));
+
+    const popUp = await screen.findByRole('dialog', { name: 'Change the rates?' });
+    expect(popUp).toHaveTextContent(
+      'The new cost rate of £50.00/h will apply 01/04/2026 – 25/10/2026.',
+    );
+    expect(within(popUp).getByRole('list', { name: 'Rates that change' })).toHaveTextContent(
+      'The £40.00/h rate from 01/04/2025 ends on 31/03/2026.',
+    );
+    expect(popUp).toHaveTextContent('3 unbilled entries in this period will be re-priced.');
+    expect(bodies).toEqual([]);
+
+    await user.click(within(popUp).getByRole('button', { name: 'Change rates' }));
+    expect(await screen.findByText('Cost rate added')).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        kind: 'cost',
+        user_id: grace.id,
+        rate: 5000,
+        effective_from: '2026-04-01',
+        confirm_impact: true,
+      },
+    ]);
   });
 
   it('offers the grade that is in use by name but not the inactive ones', async () => {
