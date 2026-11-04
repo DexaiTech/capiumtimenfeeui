@@ -28,7 +28,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSection> = [
   { id: 'team', label: 'Team', icon: Users, visible: () => true },
   { id: 'services', label: 'Services', icon: Briefcase, visible: () => true },
   { id: 'rates', label: 'Rate overrides', icon: PoundSterling, visible: (a) => a.seeRates },
-  { id: 'central', label: 'Central client', icon: Link2, visible: () => true },
+  { id: 'central', label: 'Central client', icon: Link2, visible: (a) => a.central },
   {
     id: 'danger',
     label: 'Danger zone',

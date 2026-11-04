@@ -1201,4 +1201,19 @@ describe('the left menu of sections', () => {
     await billingEmail();
     expect(sectionNames()).toEqual(['Billing', 'Team', 'Services', 'Central client']);
   });
+
+  it('leaves out the Central client section while the practice has Capium Central off', async () => {
+    await openCentral({ centralOn: false, clients: [linkedDetail] });
+    await billingEmail();
+    expect(sectionNames()).toEqual([
+      'Billing',
+      'Team',
+      'Services',
+      'Rate overrides',
+      'Danger zone',
+    ]);
+    // A link to the section opens Billing instead.
+    expect(menuItem('Billing')).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('region', { name: 'Central client' })).toBeNull();
+  });
 });

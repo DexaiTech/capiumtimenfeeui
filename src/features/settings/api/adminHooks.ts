@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-query';
 
 import { queryKeys } from '@/constants/queryKeys';
-import { useOrg } from '@/features/organizations';
+import { useOrg, type OrganizationContext } from '@/features/organizations';
 import type { ApiResult } from '@/services/api';
 import type { PageMeta } from '@/types/api';
 
@@ -192,10 +192,26 @@ function useRunRefresh() {
 
 export function useUpdateIntegration() {
   const { organization } = useOrg();
+  const queryClient = useQueryClient();
   const refresh = useRefresh(adminKeys.integrations, queryKeys.org.auditLogs);
   return useMutation({
     mutationFn: ({ key, body }: { key: IntegrationKey; body: IntegrationUpdate }) =>
       adminApi.updateIntegration(organization.id, key, body),
+    // The practice context says whether Capium Central is on (APT74): the client screens follow.
+    onSuccess: (card) => {
+      if (card.key !== 'central_client') return;
+      const update = (context: OrganizationContext): OrganizationContext =>
+        context.organization.id === organization.id
+          ? { ...context, central_client_enabled: card.enabled }
+          : context;
+      queryClient.setQueryData<OrganizationContext>(
+        queryKeys.organizationBySlug(organization.slug),
+        (context) => (context ? update(context) : context),
+      );
+      queryClient.setQueryData<OrganizationContext[]>(queryKeys.myOrganizations(), (list) =>
+        list?.map(update),
+      );
+    },
     onSettled: refresh,
   });
 }

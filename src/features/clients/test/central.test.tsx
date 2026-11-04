@@ -57,6 +57,8 @@ interface RenderOptions {
   permissions?: string[];
   clients?: ClientListItem[];
   summary?: ClientSummary;
+  /** Whether the practice has Capium Central on (APT74); on by default. */
+  centralOn?: boolean;
   /** Handlers that win over the list ones, for one test's scenario. */
   handlers?: HttpHandler[];
   onList?: (params: URLSearchParams) => void;
@@ -64,6 +66,7 @@ interface RenderOptions {
 
 function renderList({
   permissions = OWNER_PERMISSIONS,
+  centralOn = true,
   clients = withCentral,
   summary,
   handlers = [],
@@ -80,7 +83,10 @@ function renderList({
       <Route path="/acme/clients" element={<ClientsPage />} />
       <Route path="/acme/clients/:clientId/*" element={<p>Opened client page</p>} />
     </Routes>,
-    { route: '/acme/clients', context: contextWith(permissions) },
+    {
+      route: '/acme/clients',
+      context: { ...contextWith(permissions), central_client_enabled: centralOn },
+    },
   );
 }
 
@@ -156,6 +162,60 @@ describe('the Central column', () => {
     await user.click(screen.getByRole('button', { name: 'Grid view' }));
     expect(await screen.findAllByText('Synced 12/05/2026')).not.toHaveLength(0);
     expect(screen.getAllByText('Local')).not.toHaveLength(0);
+  });
+});
+
+describe('a practice with Capium Central off (APT74)', () => {
+  it('has no Central column, not even in Show/Hide Columns', async () => {
+    const user = userEvent.setup();
+    // Even for someone who had shown it before.
+    useClientsPrefs.setState({ hiddenColumns: [] });
+    renderList({ centralOn: false });
+    await row(techwave.name);
+    expect(screen.queryByRole('columnheader', { name: 'Central' })).toBeNull();
+    expect(screen.queryByText('Synced 12/05/2026')).toBeNull();
+    expect(screen.queryByText('Not found centrally')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
+    const panel = await screen.findByRole('dialog', { name: 'Show or hide columns' });
+    expect(within(panel).queryByRole('checkbox', { name: 'Central' })).toBeNull();
+    expect(within(panel).getByRole('checkbox', { name: 'Services' })).toBeInTheDocument();
+  });
+
+  it('has no Central clients or Sync all linked buttons', async () => {
+    renderList({ centralOn: false });
+    await row(techwave.name);
+    expect(screen.queryByRole('button', { name: 'Central clients' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sync all linked' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Show\/Hide Columns/ })).toBeInTheDocument();
+  });
+
+  it('has no central chip on the cards of the grid view', async () => {
+    const user = userEvent.setup();
+    renderList({ centralOn: false });
+    await row(techwave.name);
+    await user.click(screen.getByRole('button', { name: 'Grid view' }));
+    expect(await screen.findAllByText(linked.name)).not.toHaveLength(0);
+    expect(screen.queryByText('Synced 12/05/2026')).toBeNull();
+    expect(screen.queryByText('Stale')).toBeNull();
+  });
+
+  it('has no central filter', async () => {
+    const seen: URLSearchParams[] = [];
+    const user = userEvent.setup();
+    renderList({ centralOn: false, onList: (params) => seen.push(params) });
+    await row(techwave.name);
+
+    await user.click(screen.getByRole('button', { name: /^Filter$/ }));
+    const panel = await screen.findByRole('dialog', { name: 'Filter clients' });
+    expect(within(panel).queryByRole('combobox', { name: 'Central' })).toBeNull();
+    expect(within(panel).getByRole('combobox', { name: 'Service' })).toBeInTheDocument();
+    expect(seen.at(-1)?.get('central')).toBeNull();
+  });
+
+  it('offers no Sync with central row action, even for a linked client', async () => {
+    renderList({ centralOn: false });
+    expect(await actionsOf(linked.name)).toEqual(['View', 'Edit', 'Archive', 'Delete']);
   });
 });
 

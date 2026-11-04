@@ -27,6 +27,7 @@ import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 
 import { useStaffDirectory } from '../api';
 import { CentralChip } from '../central/CentralChip';
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import { ClientFormPanel } from '../components/ClientFormPanel';
 import type { ClientDetail } from '../types';
 import { clientAbilities } from './abilities';
@@ -47,7 +48,8 @@ export function ClientHeader({ client }: ClientHeaderProps) {
   const { organization, can } = useOrg();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const abilities = clientAbilities(client, can);
+  const centralOn = useCentralEnabled();
+  const abilities = clientAbilities(client, can, centralOn);
   // A new job for this client opens with the client already chosen.
   const canBill = can(PERMISSIONS.invoiceCreate) && !abilities.readOnly;
   const canStartJob =
@@ -102,7 +104,7 @@ export function ClientHeader({ client }: ClientHeaderProps) {
             <span className="font-medium text-text-muted">{client.code}</span>
             <ClientTypeBadge type={client.client_type} />
             <ClientStatusBadge status={client.status} />
-            <CentralChip client={client} />
+            {abilities.central ? <CentralChip client={client} /> : null}
             {segmentsOn && client.segment ? <SegmentBadge segment={client.segment} /> : null}
           </div>
           <dl className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">

@@ -8,6 +8,8 @@ export interface OrgContextValue {
   organization: Organization;
   role: RoleSummary;
   permissions: readonly string[];
+  /** The practice has the Capium Central client integration on (see `useCentralEnabled`). */
+  centralClientEnabled: boolean;
   /** UI gating only: the API checks every permission again. */
   can: (permission: string) => boolean;
   /** At least one of the codes (true for an empty list). */
@@ -24,6 +26,7 @@ export function useOrgContextValue(context: OrganizationContext): OrgContextValu
       organization: context.organization,
       role: context.role,
       permissions: context.permissions,
+      centralClientEnabled: context.central_client_enabled,
       can,
       canAny,
     };

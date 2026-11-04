@@ -210,7 +210,6 @@ export const cardsOf = (): IntegrationCard[] => [
   card('central_client', {
     name: 'Central Client',
     description: "The group's master list of clients.",
-    always_on: true,
     summary: { linked_clients: 12, stale_clients: 1, failed_clients: 0 },
   }),
   card('central_user', {

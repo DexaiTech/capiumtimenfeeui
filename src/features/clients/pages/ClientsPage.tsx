@@ -28,6 +28,7 @@ import {
 } from '../api';
 import { CentralClientsDialog } from '../central/CentralClientsDialog';
 import { canSync, describeSync, describeSyncAll } from '../central/format';
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import type { MenuAction } from '../components/ActionMenu';
 import { ClientFormPanel } from '../components/ClientFormPanel';
 import { ClientsBulkBar } from '../components/ClientsBulkBar';
@@ -98,17 +99,19 @@ export default function ClientsPage() {
     segment: searchParams.getAll('segment'),
     branch: searchParams.getAll('branch'),
   }));
-  // With segments (or branches) switched off, such a filter (a link, a saved filter set) is not
-  // applied.
+  // With segments (or branches, or Capium Central) switched off, such a filter (a link, a saved
+  // filter set) is not applied.
   const segmentsOn = useSegmentsEnabled();
   const branchesOn = useBranchesEnabled();
+  const centralOn = useCentralEnabled();
   const filters = useMemo(
     () => ({
       ...chosenFilters,
       segment: segmentsOn ? chosenFilters.segment : [],
       branch: branchesOn ? chosenFilters.branch : [],
+      central: centralOn ? chosenFilters.central : null,
     }),
-    [segmentsOn, branchesOn, chosenFilters],
+    [segmentsOn, branchesOn, centralOn, chosenFilters],
   );
   const [sort, setSort] = useState<ClientSort>(DEFAULT_SORT);
   const [order, setOrder] = useState<SortOrder>('asc');
@@ -260,7 +263,7 @@ export default function ClientsPage() {
           },
         ]
       : []),
-    ...(canUpdate && canSync(client)
+    ...(centralOn && canUpdate && canSync(client)
       ? [
           {
             id: 'sync',
@@ -536,9 +539,9 @@ export default function ClientsPage() {
         onExport={() => void onExport()}
         exporting={exporter.isPending}
         onAddClient={() => setFormClient(null)}
-        canEnableCentral={canCreate}
+        canEnableCentral={centralOn && canCreate}
         onCentralClients={() => setCentralOpen(true)}
-        canSyncAll={canUpdate}
+        canSyncAll={centralOn && canUpdate}
         onSyncAll={() => void onSyncAll()}
         syncingAll={syncAll.isPending}
         linkedCount={summary.data?.by_central.linked}

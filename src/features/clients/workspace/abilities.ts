@@ -6,6 +6,8 @@ import type { ClientDetail } from '../types';
 export interface ClientAbilities {
   /** A client merged into another is read-only history: nothing on it can be changed. */
   readOnly: boolean;
+  /** The practice has Capium Central on: the central chip, sync, link and its settings card. */
+  central: boolean;
   /** Edit the details, the billing settings, contacts, services and the team (`client.update`). */
   edit: boolean;
   archive: boolean;
@@ -25,18 +27,20 @@ export interface ClientAbilities {
 export function clientAbilities(
   client: ClientDetail,
   can: (permission: string) => boolean,
+  central: boolean,
 ): ClientAbilities {
   const readOnly = isMergedAway(client);
   const archived = client.status === 'archived';
   const seeRates = can(P.rateRead) && client.rates !== null;
   return {
     readOnly,
+    central,
     edit: !readOnly && can(P.clientUpdate),
     archive: !readOnly && can(P.clientDelete) && !archived,
     restore: !readOnly && can(P.clientDelete) && can(P.clientUpdate) && archived,
-    sync: !readOnly && can(P.clientUpdate) && canSync(client),
-    link: !readOnly && can(P.clientCreate) && !isLinked(client),
-    unlink: !readOnly && can(P.clientCreate) && isLinked(client),
+    sync: central && !readOnly && can(P.clientUpdate) && canSync(client),
+    link: central && !readOnly && can(P.clientCreate) && !isLinked(client),
+    unlink: central && !readOnly && can(P.clientCreate) && isLinked(client),
     seeRates,
     manageRates: !readOnly && seeRates && can(P.rateManage),
     pickPeople: can(P.memberRead),
