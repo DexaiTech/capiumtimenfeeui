@@ -280,6 +280,30 @@ describe('the lines of a draft invoice', () => {
     });
   });
 
+  it('asks before leaving a draft with lines not saved, and prints only what is saved', async () => {
+    const user = userEvent.setup();
+    openInvoice(draft(lines()));
+    const grid = await screen.findByRole('form', { name: 'Lines of the draft' });
+    const pdf = screen.getByRole('button', { name: 'Download PDF' });
+    expect(pdf).toBeEnabled();
+
+    await user.type(textbox(grid, 'Description of line 2'), ' 2026');
+    expect(pdf).toBeDisabled();
+    await user.click(screen.getByRole('link', { name: 'Invoices' }));
+    const leave = await screen.findByRole('dialog', { name: 'Leave without saving the lines?' });
+    await user.click(within(leave).getByRole('button', { name: 'Stay' }));
+    expect(screen.getByTestId('location')).toHaveTextContent(`${INVOICES}/inv-1`);
+    expect(textbox(grid, 'Description of line 2')).toHaveValue('Software licence 2026');
+
+    await user.click(screen.getByRole('link', { name: 'Invoices' }));
+    await user.click(
+      within(
+        await screen.findByRole('dialog', { name: 'Leave without saving the lines?' }),
+      ).getByRole('button', { name: 'Leave' }),
+    );
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/invoices$/));
+  });
+
   it('keeps every change in the grid when the save is refused', async () => {
     const user = userEvent.setup();
     const calls = openInvoice(draft(lines()), () =>

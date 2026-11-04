@@ -1,6 +1,6 @@
 import { ArrowLeft, CircleAlert, Ellipsis, FileDown, Info, SearchX } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import {
   Button,
@@ -16,6 +16,7 @@ import {
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
+import { useBeforeUnload } from '@/features/settings';
 import { useDocumentTitle } from '@/hooks';
 import { isApiError } from '@/services/api';
 import { todayInZone } from '@/utils/dates';
@@ -110,6 +111,13 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   // The draft is issued as saved: not while its lines have changes not saved yet.
   const [linesDirty, setLinesDirty] = useState(false);
+  // Leaving the page (or closing the tab) drops those changes: ask first. A deleted draft leaves.
+  const leaving = useRef(false);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      linesDirty && !leaving.current && currentLocation.pathname !== nextLocation.pathname,
+  );
+  useBeforeUnload(linesDirty);
 
   const slug = organization.slug;
   const today = todayInZone(organization.timezone);
@@ -228,6 +236,9 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
       <Button
         leftIcon={<FileDown aria-hidden="true" className="size-4" />}
         loading={busy === invoice.id}
+        // The PDF is of the invoice as saved.
+        disabled={linesDirty}
+        title={linesDirty ? 'Save or discard the changes to the lines first' : undefined}
         onClick={downloadPdf}
       >
         Download PDF
@@ -258,6 +269,7 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
                 description: 'It keeps its number and stays in the audit trail.',
               },
         );
+        leaving.current = true;
         void navigate(routes.org.invoices(slug));
       },
       onError: (error) => setRefusal(dialogError(error)),
@@ -296,6 +308,16 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
         paymentId={dialog?.type === 'allocate' ? dialog.paymentId : null}
         onClose={close}
       />
+      <ConfirmDialog
+        open={blocker.state === 'blocked'}
+        onClose={() => blocker.reset?.()}
+        onConfirm={() => blocker.proceed?.()}
+        title="Leave without saving the lines?"
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+      >
+        The changes to the lines are not saved yet: leave the page and they are lost.
+      </ConfirmDialog>
       <BackLink />
       <PageShell
         title={title}

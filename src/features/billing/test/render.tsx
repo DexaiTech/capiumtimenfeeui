@@ -44,6 +44,8 @@ export function renderBillingPage(
         organization: { ...ownerContext.organization, ...organization },
       },
       route,
+      // The invoice page asks before leaving unsaved lines (`useBlocker`).
+      dataRouter: true,
     },
   );
 }
