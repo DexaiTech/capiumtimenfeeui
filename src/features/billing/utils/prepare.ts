@@ -6,7 +6,14 @@
  */
 import type { BasisPoints, Pence } from '@/types/api';
 
-import type { GroupBy, InvoiceCreate, LineOverride, VatOption, WipItem } from '../types';
+import type {
+  DefaultVat,
+  GroupBy,
+  InvoiceCreate,
+  LineOverride,
+  VatOption,
+  WipItem,
+} from '../types';
 import { averageRate, hoursHundredths, type InvoiceTotals } from './lineMaths';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -51,8 +58,8 @@ export interface PlannedLine {
   itemIds: string[];
   /** How the API's `overrides` find this line. */
   selector: Pick<LineOverride, 'time_entry_id' | 'disbursement_id'>;
-  /** The VAT code of the line's service, which applies when the client has no code of its own. */
-  serviceVatRateId: string | null;
+  /** The VAT code the API gives the line when none is chosen (from the client's WIP). */
+  defaultVat: DefaultVat | null;
 }
 
 function byDateThenId(a: WipItem, b: WipItem): number {
@@ -73,7 +80,7 @@ function timeLine(
   key: string,
   description: string,
   items: WipItem[],
-  serviceVatRateId = items[0]?.service_vat_rate_id ?? null,
+  defaultVat = items[0]?.default_vat ?? null,
 ): PlannedLine {
   const { minutes, value } = sumOf(items);
   return {
@@ -87,7 +94,7 @@ function timeLine(
     wip: value,
     itemIds: items.map((item) => item.id),
     selector: { time_entry_id: items[0]?.id },
-    serviceVatRateId,
+    defaultVat,
   };
 }
 
@@ -107,7 +114,7 @@ function itemLine(item: WipItem): PlannedLine {
     wip: item.value,
     itemIds: [item.id],
     selector: { disbursement_id: item.id },
-    serviceVatRateId: null,
+    defaultVat: item.default_vat ?? null,
   };
 }
 
@@ -123,6 +130,8 @@ export function planLines(
   groupBy: GroupBy,
   /** The figures of each chosen fixed fee by job id, when the WIP says (else the line is unpriced). */
   fixedFees: ReadonlyMap<string, FixedFeeFigures> = new Map(),
+  /** The VAT code of a line with no service (`default_vat` of the client's WIP). */
+  noServiceVat: DefaultVat | null = null,
 ): PlannedLine[] {
   const time = items.filter((item) => item.kind === 'time').sort(byDateThenId);
   const fixed = new Map<string, WipItem[]>();
@@ -151,7 +160,7 @@ export function planLines(
       wip: fee?.wip ?? value,
       itemIds: entries.map((entry) => entry.id),
       selector: { time_entry_id: entries[0]?.id },
-      serviceVatRateId: entries[0]?.service_vat_rate_id ?? null,
+      defaultVat: entries[0]?.default_vat ?? null,
     });
   }
 
@@ -173,14 +182,14 @@ export function planLines(
       lines.push(timeLine(`entry:${item.id}`, `${shortDate(item.date)}: ${label}`, [item]));
     }
   } else if (hourly.length > 0) {
-    // The API takes the service's code only when all the time shares one service.
+    // The line has the service of its time only when all the time shares one service.
     const services = new Set(hourly.map((item) => item.service_id ?? null));
     lines.push(
       timeLine(
         'single',
         `${FALLBACK_NAME} (${period(hourly.map((entry) => entry.date))})`,
         hourly,
-        services.size === 1 ? (hourly[0]?.service_vat_rate_id ?? null) : null,
+        services.size === 1 ? (hourly[0]?.default_vat ?? null) : noServiceVat,
       ),
     );
   }
@@ -206,7 +215,10 @@ export interface PreviewLine extends PlannedLine {
   text: string;
   /** What the line bills now: the edit, else the WIP value; null for a fixed fee not yet priced. */
   billed: Pence | null;
+  /** The VAT code chosen for the line; null: its default code applies. */
   vatRateId: string | null;
+  /** The code the line gets when none is chosen: what the draft charges then. */
+  vatDefault: DefaultVat;
   vatBp: BasisPoints;
   /** Billed minus WIP; null when the line has no amount yet. */
   adjustment: Pence | null;
@@ -218,16 +230,34 @@ export interface VatDefaults {
   clientId: string | null;
   /** The practice's default VAT code; null: no VAT is charged. */
   practiceId: string | null;
+  /** False: the practice is not VAT-registered and no line is charged VAT. */
+  registered: boolean;
 }
 
-/** The rate of the chosen VAT code, else the client's, else the service's, else the practice's, else 0. */
-export function vatRateOf(
-  vat: VatDefaults,
-  vatRateId: string | null,
-  serviceVatRateId: string | null = null,
-): BasisPoints {
-  const id = vatRateId ?? vat.clientId ?? serviceVatRateId ?? vat.practiceId;
+const NO_VAT: DefaultVat = { vat_rate_id: null, rate_bp: 0, source: null };
+
+function rateOf(vat: VatDefaults, id: string | null): BasisPoints {
   return vat.options.find((option) => option.id === id)?.rate_bp ?? 0;
+}
+
+/**
+ * The code a line typed in (or a saved line set back to "Default") gets when none is chosen, as
+ * the API resolves it: the client's own code, else the line's service's, else the practice
+ * default. Lines drafted from WIP take theirs from the client's WIP (`PlannedLine.defaultVat`).
+ */
+export function defaultVatOf(vat: VatDefaults, serviceVatRateId: string | null = null): DefaultVat {
+  if (!vat.registered) return NO_VAT;
+  const [id, source]: [string | null, DefaultVat['source']] = vat.clientId
+    ? [vat.clientId, 'client']
+    : serviceVatRateId
+      ? [serviceVatRateId, 'service']
+      : [vat.practiceId, vat.practiceId ? 'practice' : null];
+  return { vat_rate_id: id, rate_bp: rateOf(vat, id), source };
+}
+
+/** The rate of a VAT code chosen for a line; 0 when the practice is not VAT-registered. */
+export function vatRateOf(vat: VatDefaults, vatRateId: string): BasisPoints {
+  return vat.registered ? rateOf(vat, vatRateId) : 0;
 }
 
 export function previewLines(
@@ -239,12 +269,15 @@ export function previewLines(
     const edit = edits[line.key];
     const billed = edit?.net ?? line.net;
     const vatRateId = edit?.vatRateId ?? null;
+    // The code the API said the line gets (an API that does not say: no service applies).
+    const vatDefault = line.defaultVat ?? defaultVatOf(vat);
     return {
       ...line,
       text: edit?.description ?? line.description,
       billed,
       vatRateId,
-      vatBp: vatRateOf(vat, vatRateId, line.serviceVatRateId),
+      vatDefault,
+      vatBp: vatRateId ? vatRateOf(vat, vatRateId) : vatDefault.rate_bp,
       adjustment: billed === null ? null : billed - line.wip,
     };
   });

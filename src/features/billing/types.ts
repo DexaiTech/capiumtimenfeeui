@@ -492,11 +492,25 @@ export interface WipItem {
   selectable?: boolean;
   /** The job's service. */
   service_id?: string | null;
-  /** The VAT code of the job's service: a drafted time or fixed-fee line takes it when the client has no code of its own. */
-  service_vat_rate_id?: string | null;
+  /** Time, fixed fee, disbursement: the VAT code the drafted line gets when none is chosen. */
+  default_vat?: DefaultVat | null;
   supplier: string | null;
   claim_id?: string | null;
   fixed_fee?: FixedFeeInfo | null;
+}
+
+/**
+ * Where a line's VAT code comes from when none is chosen: the disbursement's own code, the
+ * client's own code, the job's service's code, or the practice default.
+ */
+export type VatSource = 'line' | 'client' | 'service' | 'practice';
+
+/** The VAT code the API gives a line when none is chosen for it: exactly what the draft charges. */
+export interface DefaultVat {
+  /** Null: no VAT (the practice is not VAT-registered, or has no default code). */
+  vat_rate_id: string | null;
+  rate_bp: BasisPoints;
+  source: VatSource | null;
 }
 
 export interface WipTotals {
@@ -512,6 +526,8 @@ export interface ClientWip {
   client: ClientRef;
   items: WipItem[];
   totals: WipTotals;
+  /** The VAT code of a line with no service (one line for all the time of several services). */
+  default_vat?: DefaultVat | null;
 }
 
 /* ------------------------------ Billing summary ------------------------------ */

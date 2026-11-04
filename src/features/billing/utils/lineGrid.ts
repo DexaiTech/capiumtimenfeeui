@@ -8,9 +8,10 @@ import { parsePounds } from '@/utils/money';
 import type { BadgeTone } from '@/components/ui';
 
 import type { GridLineValues } from '../schemas/forms';
-import type { ServiceOption } from '../types';
+import type { DefaultVat, ServiceOption } from '../types';
+import { VAT_SOURCE_LABELS } from './format';
 import { lineNet, parseQuantity, totalsOf, type PricedLine } from './lineMaths';
-import { vatRateOf, type PreviewTotals, type VatDefaults } from './prepare';
+import { defaultVatOf, vatRateOf, type PreviewTotals, type VatDefaults } from './prepare';
 
 /** What the grid shows of a row besides what is typed in it. */
 export interface LineGridMeta {
@@ -27,8 +28,8 @@ export interface LineGridMeta {
   net?: Pence | null;
   /** The line's service, by name (a saved line keeps its service). */
   serviceName?: string | null;
-  /** The VAT code of the work's service: applies after the client's own. */
-  serviceVatRateId?: string | null;
+  /** A row of work in Create invoice: the VAT code the API gives it when none is chosen. */
+  defaultVat?: DefaultVat;
   /** The VAT code a saved line has, and its rate (kept when the code is archived). */
   savedVat?: { id: string; rate_bp: BasisPoints } | null;
 }
@@ -56,6 +57,41 @@ export interface PricedGridLine {
   vatBp: BasisPoints;
 }
 
+/**
+ * The code "Default" gives a row: what the API said for a row of work, else (a row typed in, a
+ * saved line) the client's code, else the row's service's, else the practice default.
+ */
+export function rowDefaultVat(
+  line: GridLineValues,
+  meta: LineGridMeta | undefined,
+  vat: VatDefaults,
+  services: ReadonlyArray<ServiceOption>,
+): DefaultVat {
+  return (
+    meta?.defaultVat ??
+    defaultVatOf(
+      vat,
+      services.find((service) => service.id === line.service_id)?.vat_rate_id ?? null,
+    )
+  );
+}
+
+/** Which code a row's VAT is and why: "Flat VAT, the practice default", "Zero, chosen". */
+export function vatNoteOf(
+  line: GridLineValues,
+  meta: LineGridMeta | undefined,
+  vat: VatDefaults,
+  services: ReadonlyArray<ServiceOption>,
+): string {
+  const chosen = line.vat_rate_id || null;
+  const fallback = rowDefaultVat(line, meta, vat, services);
+  const name = vat.options.find((option) => option.id === (chosen ?? fallback.vat_rate_id))?.name;
+  // A saved line keeps the code it was saved with.
+  if (chosen && chosen === meta?.savedVat?.id) return name ?? 'Archived code';
+  const why = chosen ? 'chosen' : fallback.source ? VAT_SOURCE_LABELS[fallback.source] : 'no VAT';
+  return name ? `${name}, ${why}` : why;
+}
+
 /** One row: net = quantity x unit price (or the amount billed for work), VAT at its code's rate. */
 export function priceGridLine(
   line: GridLineValues,
@@ -75,13 +111,9 @@ export function priceGridLine(
   const vatBp =
     meta?.savedVat && chosen === meta.savedVat.id
       ? meta.savedVat.rate_bp
-      : vatRateOf(
-          vat,
-          chosen,
-          meta?.serviceVatRateId ??
-            services.find((service) => service.id === line.service_id)?.vat_rate_id ??
-            null,
-        );
+      : chosen
+        ? vatRateOf(vat, chosen)
+        : rowDefaultVat(line, meta, vat, services).rate_bp;
   return { net, vatBp };
 }
 

@@ -220,6 +220,39 @@ describe('the lines of a draft invoice', () => {
     );
   });
 
+  it('keeps the code a line was saved with, and names the code "Default" would give it', async () => {
+    const user = userEvent.setup();
+    // Saved at Standard; its service's code is Zero (APT63).
+    const saved = line({
+      id: 'l-9',
+      description: 'Monthly bookkeeping',
+      unit_amount: 10000,
+      net_amount: 10000,
+      vat_amount: 2000,
+      service_id: 'svc-books',
+    });
+    const calls = openInvoice(draft([saved]));
+    const grid = await screen.findByRole('form', { name: 'Lines of the draft' });
+    const vat = within(grid).getByRole('combobox', { name: /^VAT code of line 1/ });
+    const row = () => within(grid).getAllByRole('row')[1] as HTMLElement;
+    await within(grid).findByText('Bookkeeping');
+    expect(vat).toHaveValue('vat-std');
+    expect(row()).toHaveTextContent('£20.0020%Standard');
+    expect(row()).not.toHaveTextContent('chosen');
+    expect(
+      within(vat).getByRole('option', { name: 'Default: Zero (0%), the service’s code' }),
+    ).toBeInTheDocument();
+
+    // Rewording the line keeps its code.
+    await user.type(textbox(grid, 'Description of line 1'), ' 2026');
+    expect(row()).toHaveTextContent('20%Standard');
+    await user.selectOptions(vat, '');
+    expect(row()).toHaveTextContent('£0.000%Zero, the service’s code');
+    await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.body).toEqual({ description: 'Monthly bookkeeping 2026', vat_rate_id: null });
+  });
+
   it('asks for what each row needs before saving anything', async () => {
     const user = userEvent.setup();
     const calls = openInvoice(draft(lines()));
