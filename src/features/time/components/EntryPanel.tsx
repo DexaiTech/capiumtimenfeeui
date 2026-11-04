@@ -258,10 +258,13 @@ function EntryForm({
     };
 
     if (!entry) {
-      const body: TimeEntryCreate = { entry_date: values.entry_date, minutes };
+      const body: TimeEntryCreate = {
+        entry_date: values.entry_date,
+        minutes,
+        client_id: values.client_id,
+        job_id: values.job_id,
+      };
       if (onBehalfOf) body.user_id = onBehalfOf.id;
-      if (values.client_id) body.client_id = values.client_id;
-      if (values.job_id) body.job_id = values.job_id;
       if (values.activity_code_id) body.activity_code_id = values.activity_code_id;
       if (values.description) body.description = values.description;
       if (values.internal_note) body.internal_note = values.internal_note;
@@ -357,6 +360,12 @@ function EntryForm({
             The time belongs to {onBehalfOf.name}; your name is kept as the person who entered it.
           </Notice>
         ) : null}
+        {!readOnly && (!canPickClient || !canPickJob) ? (
+          <Notice tone="warning" title="Time needs a client and a job">
+            Your role cannot see clients or jobs, so it cannot choose them. Ask an administrator for
+            access, or to record this time for you.
+          </Notice>
+        ) : null}
         {correction ? (
           <>
             <Notice tone="warning" title="This time is approved">
@@ -400,9 +409,9 @@ function EntryForm({
             render={({ field }) => (
               <ClientPicker
                 label="Client"
+                required
                 value={field.value || null}
                 valueLabel={clientLabel}
-                placeholder="No client (internal time)"
                 disabled={readOnly}
                 error={errors.client_id?.message}
                 onChange={(id, item) => {
@@ -426,10 +435,11 @@ function EntryForm({
             render={({ field }) => (
               <JobPicker
                 label="Job"
+                required
                 value={field.value || null}
                 valueJob={job ?? undefined}
                 clientId={clientId || null}
-                placeholder="No job"
+                hint={readOnly ? undefined : 'Internal time goes on an internal client and job.'}
                 disabled={readOnly}
                 error={errors.job_id?.message}
                 onChange={(picked) => {

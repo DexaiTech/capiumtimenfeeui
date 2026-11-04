@@ -1,8 +1,8 @@
-import { screen, waitFor } from '@testing-library/react';
-import { describe, it } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { renderInOrg } from '@/test/renderInOrg';
-import { expectRequiredFields } from '@/test/requiredFields';
+import { expectRequiredFields, isMarkedRequired } from '@/test/requiredFields';
 import { server } from '@/test/server';
 
 import { EntryPanel } from '../components/EntryPanel';
@@ -22,7 +22,7 @@ const panelOrDialog = () =>
   });
 
 describe('mandatory fields of the time forms', () => {
-  it('marks the date and the time of a new entry, not the rest', async () => {
+  it('marks the date, the time, the client and the job of a new entry, not the rest', async () => {
     backend();
     renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />);
     const dialog = await panelOrDialog();
@@ -30,6 +30,10 @@ describe('mandatory fields of the time forms', () => {
       required: ['Date', 'Time'],
       optional: ['Activity', 'Description', 'Internal note'],
     });
+    // Every time entry is on a client and a job (APT64).
+    for (const name of ['Client', 'Job']) {
+      expect(isMarkedRequired(within(dialog).getByRole('combobox', { name }))).toBe(true);
+    }
   });
 
   it('marks the reason of a correction as well', async () => {

@@ -21,6 +21,7 @@ const SKIP_REASON: Record<string, string> = {
   AFTER_LEAVING_DATE: 'After the leaving date',
   TIME_LOCKED: 'The timesheet is locked',
   RESOURCE_NOT_FOUND: 'It no longer exists',
+  REQUIRED: 'It has no client or job',
   VALIDATION_ERROR: 'It is not valid',
 };
 

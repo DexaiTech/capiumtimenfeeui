@@ -7,7 +7,7 @@ import { renderInOrg } from '@/test/renderInOrg';
 import { server } from '@/test/server';
 
 import { callsTo, createBackend, timeHandlers } from '../test/handlers';
-import { entry, TODAY } from '../test/fixtures';
+import { ACCOUNTS_JOB, entry, TODAY } from '../test/fixtures';
 import { EntryPanel } from './EntryPanel';
 
 const withOvertime = {
@@ -33,9 +33,10 @@ describe('EntryPanel: overtime', () => {
     const user = userEvent.setup();
     const backend = createBackend();
     server.use(...timeHandlers(backend));
-    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />, {
-      context: withOvertime,
-    });
+    renderInOrg(
+      <EntryPanel open onClose={() => undefined} defaults={{ date: TODAY, job: ACCOUNTS_JOB }} />,
+      { context: withOvertime },
+    );
     const form = await screen.findByRole('region', { name: 'Record time' });
 
     const box = within(form).getByRole('checkbox', { name: /^Overtime/ });
@@ -56,9 +57,10 @@ describe('EntryPanel: overtime', () => {
     const user = userEvent.setup();
     const backend = createBackend();
     server.use(...timeHandlers(backend));
-    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />, {
-      context: withOvertime,
-    });
+    renderInOrg(
+      <EntryPanel open onClose={() => undefined} defaults={{ date: TODAY, job: ACCOUNTS_JOB }} />,
+      { context: withOvertime },
+    );
     const form = await screen.findByRole('region', { name: 'Record time' });
 
     await user.type(within(form).getByLabelText(/^Time/), '1:00');

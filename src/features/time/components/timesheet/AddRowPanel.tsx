@@ -54,22 +54,23 @@ function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowPanelProps, 'op
       (job ? jobRefs.get(job.id)?.billing_basis !== 'non_billable' : true));
 
   const submit = () => {
-    if (!clientId && !job && !activityId) {
-      setError('Choose a client, a job or an activity for the row.');
+    // Every time entry is on a client and one of its jobs (the job brings its client).
+    if (!job) {
+      setError(clientId ? 'Choose a job for the row.' : 'Choose a client and a job for the row.');
       return;
     }
     const draft: DraftRow = {
       client_id: clientId,
       client_code: client?.code ?? job?.client_code ?? null,
       client_name: client?.name ?? job?.client_name ?? null,
-      job_id: job?.id ?? null,
-      job_number: job?.number ?? null,
-      job_name: job?.name ?? null,
+      job_id: job.id,
+      job_number: job.number,
+      job_name: job.name,
       activity_code_id: activityId || null,
       activity_code: activity?.code ?? null,
       activity_name: activity?.name ?? null,
       is_billable: billable,
-      service_name: job?.service_name ?? null,
+      service_name: job.service_name,
     };
     if (existingKeys.has(rowKey(draft))) {
       setError('That row is already on this timesheet. Type in its cells instead.');
@@ -93,9 +94,9 @@ function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowPanelProps, 'op
         {can(PERMISSIONS.clientRead) ? (
           <ClientPicker
             label="Client"
+            required
             value={client?.id ?? job?.client_id ?? null}
             valueLabel={client?.name ?? job?.client_name}
-            placeholder="No client (internal time)"
             onChange={(id, item) => {
               setError(null);
               setClient(item ? { id: item.id, code: item.detail ?? null, name: item.label } : null);
@@ -106,10 +107,11 @@ function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowPanelProps, 'op
         {can(PERMISSIONS.jobRead) ? (
           <JobPicker
             label="Job"
+            required
             value={job?.id ?? null}
             valueJob={job ?? undefined}
             clientId={clientId}
-            placeholder="No job"
+            hint="Internal time goes on an internal client and job."
             onChange={(picked) => {
               setError(null);
               setJob(picked);
@@ -169,8 +171,8 @@ function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowPanelProps, 'op
 }
 
 /**
- * Adds a row to the timesheet: a client, a job (its service is shown) and an activity. The row
- * holds no time until a day is typed in, and then the first entry is created.
+ * Adds a row to the timesheet: a client and a job (both required; its service is shown) and an
+ * activity. The row holds no time until a day is typed in, and then the first entry is created.
  */
 export function AddRowPanel({ open, onClose, existingKeys, onAdd }: AddRowPanelProps) {
   return (

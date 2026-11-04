@@ -81,10 +81,19 @@ function StartTimerForm({ onClose }: { onClose: () => void }) {
 
   const submit = () => {
     setRefusal(null);
+    // The timer's client and job cannot change once it runs, and every time entry needs them.
+    if (!job) {
+      setRefusal({
+        message: clientId
+          ? 'Choose a job for the timer.'
+          : 'Choose a client and a job for the timer.',
+      });
+      return;
+    }
     start.mutate(
       {
-        ...(clientId ? { client_id: clientId } : {}),
-        ...(job ? { job_id: job.id } : {}),
+        client_id: job.client_id,
+        job_id: job.id,
         ...(activityId ? { activity_code_id: activityId } : {}),
         ...(description.trim() ? { description: description.trim() } : {}),
         ...(billableChoice !== null ? { is_billable: billableChoice } : {}),
@@ -113,9 +122,9 @@ function StartTimerForm({ onClose }: { onClose: () => void }) {
         {can(PERMISSIONS.clientRead) ? (
           <ClientPicker
             label="Client"
+            required
             value={clientId}
             valueLabel={client?.label ?? job?.client_name}
-            placeholder="No client (internal time)"
             onChange={(id, item) => {
               setClient(item ? { id: item.id, label: item.label } : null);
               if (job && job.client_id !== id) setJob(null);
@@ -125,10 +134,11 @@ function StartTimerForm({ onClose }: { onClose: () => void }) {
         {can(PERMISSIONS.jobRead) ? (
           <JobPicker
             label="Job"
+            required
             value={job?.id ?? null}
             valueJob={job ?? undefined}
             clientId={clientId}
-            placeholder="No job"
+            hint="Internal time goes on an internal client and job."
             onChange={(picked) => {
               setJob(picked);
               if (picked) {

@@ -57,13 +57,14 @@ export interface TimeEntry {
   task_name?: string | null;
 }
 
-/** Body of `POST /time-entries` (and one item of `/bulk`). */
+/** Body of `POST /time-entries` (and one item of `/bulk`). Every entry is on a job (it brings its
+ * client), billable or not: without one the API answers 422 `required` on `client_id`/`job_id`. */
 export interface TimeEntryCreate {
   user_id?: string;
   entry_date: IsoDate;
   minutes: Minutes;
   client_id?: string | null;
-  job_id?: string | null;
+  job_id: string;
   activity_code_id?: string | null;
   description?: string | null;
   internal_note?: string | null;
@@ -262,7 +263,8 @@ export interface Timer {
 
 export interface TimerStart {
   client_id?: string | null;
-  job_id?: string | null;
+  /** Required, like every time entry's: the timer's job cannot change once it runs. */
+  job_id: string;
   activity_code_id?: string | null;
   description?: string | null;
   is_billable?: boolean;

@@ -20,7 +20,7 @@ const EXAMPLE: Record<Column, string> = {
   date: '2025-03-31',
   hours: '3.5',
   activity: 'ACC',
-  job: '',
+  job: 'J0001',
   billable: 'Y',
 };
 

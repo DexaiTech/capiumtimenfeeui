@@ -87,10 +87,10 @@ function ImportBody({ onClose }: { onClose: () => void }) {
       <div className="flex flex-col gap-4">
         <p className="text-sm text-text-muted">
           Upload a CSV of historic unbilled time from a previous system (at most 100 rows): client
-          code, staff email, date (ISO <code>YYYY-MM-DD</code>) and hours are required; activity
-          code, job number and billable (Y/N, default Y) are optional. The file is checked first;
-          nothing is created until every row is valid. Imported time is shown separately from newly
-          recorded time, and can still be billed together with it.
+          code, staff email, date (ISO <code>YYYY-MM-DD</code>), hours and the job number (a job of
+          that client) are required; activity code and billable (Y/N, default Y) are optional. The
+          file is checked first; nothing is created until every row is valid. Imported time is shown
+          separately from newly recorded time, and can still be billed together with it.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <label

@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { fail, server } from '@/test/server';
 
-import { createBackend, timeHandlers } from '../test/handlers';
-import { entry, TODAY } from '../test/fixtures';
+import { callsTo, createBackend, timeHandlers } from '../test/handlers';
+import { ACCOUNTS_JOB, ACME, entry, TODAY } from '../test/fixtures';
 import { EntryPanel } from './EntryPanel';
 
 describe('EntryPanel: save and add another', () => {
@@ -16,7 +16,9 @@ describe('EntryPanel: save and add another', () => {
     const backend = createBackend();
     server.use(...timeHandlers(backend));
     const before = backend.entries.length;
-    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />);
+    renderInOrg(
+      <EntryPanel open onClose={() => undefined} defaults={{ date: TODAY, job: ACCOUNTS_JOB }} />,
+    );
     const form = await screen.findByRole('region', { name: 'Record time' });
 
     await user.type(within(form).getByLabelText(/^Time/), '1:30');
@@ -62,11 +64,97 @@ describe('EntryPanel: save and add another', () => {
           !(handler.info.method === 'POST' && String(handler.info.path).endsWith('/time-entries')),
       ),
     );
-    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />);
+    renderInOrg(
+      <EntryPanel open onClose={() => undefined} defaults={{ date: TODAY, job: ACCOUNTS_JOB }} />,
+    );
     const form = await screen.findByRole('region', { name: 'Record time' });
     await user.type(within(form).getByLabelText(/^Time/), '1:30');
     await user.click(within(form).getByRole('button', { name: 'Record time' }));
     expect(await within(form).findByText(new RegExp(advice))).toBeInTheDocument();
     expect(within(form).getByText(/its time cannot be changed/)).toBeInTheDocument();
+  });
+});
+
+describe('EntryPanel: a client and a job are required (APT64)', () => {
+  it('does not record time without a client and a job, billable or not', async () => {
+    const user = userEvent.setup();
+    const backend = createBackend();
+    server.use(...timeHandlers(backend));
+    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />);
+    const form = await screen.findByRole('region', { name: 'Record time' });
+    expect(form).not.toHaveTextContent('internal time)');
+
+    await user.type(within(form).getByLabelText(/^Time/), '10:00');
+    await user.click(within(form).getByRole('checkbox', { name: /^Billable/ }));
+    await user.click(within(form).getByRole('button', { name: 'Record time' }));
+
+    expect(await within(form).findByText('Choose a client')).toBeInTheDocument();
+    expect(within(form).getByText('Choose a job')).toBeInTheDocument();
+    expect(callsTo(backend, 'POST', '/time-entries')).toHaveLength(0);
+  });
+
+  it('records the time once a job is chosen, with its client', async () => {
+    const user = userEvent.setup();
+    const backend = createBackend();
+    server.use(...timeHandlers(backend));
+    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />);
+    const form = await screen.findByRole('region', { name: 'Record time' });
+
+    await user.type(within(form).getByLabelText(/^Time/), '1:00');
+    await user.click(within(form).getByRole('combobox', { name: 'Job' }));
+    await user.click(
+      await screen.findByRole('option', { name: /J00001 · Year-end accounts 2026/ }),
+    );
+    await user.click(within(form).getByRole('button', { name: 'Record time' }));
+
+    await waitFor(() => expect(callsTo(backend, 'POST', '/time-entries')).toHaveLength(1));
+    expect(callsTo(backend, 'POST', '/time-entries')[0]?.body).toMatchObject({
+      minutes: 60,
+      client_id: ACME.id,
+      job_id: ACCOUNTS_JOB.id,
+    });
+  });
+
+  it('makes an older entry without a client or job get them before an edit is saved', async () => {
+    const user = userEvent.setup();
+    const backend = createBackend();
+    server.use(...timeHandlers(backend));
+    renderInOrg(
+      <EntryPanel
+        open
+        onClose={() => undefined}
+        entry={entry({
+          id: 'old',
+          entry_date: TODAY,
+          minutes: 600,
+          job: null,
+          client: null,
+          activity: null,
+          is_billable: false,
+        })}
+      />,
+    );
+    const form = await screen.findByRole('region', { name: 'Edit time entry' });
+    const time = within(form).getByLabelText(/^Time/);
+    await user.clear(time);
+    await user.type(time, '9:00');
+    await user.click(within(form).getByRole('button', { name: 'Save entry' }));
+
+    expect(await within(form).findByText('Choose a client')).toBeInTheDocument();
+    expect(within(form).getByText('Choose a job')).toBeInTheDocument();
+    expect(callsTo(backend, 'PATCH', '/time-entries/old')).toHaveLength(0);
+
+    await user.click(within(form).getByRole('combobox', { name: 'Job' }));
+    await user.click(
+      await screen.findByRole('option', { name: /J00001 · Year-end accounts 2026/ }),
+    );
+    await user.click(within(form).getByRole('button', { name: 'Save entry' }));
+    await waitFor(() =>
+      expect(callsTo(backend, 'PATCH', '/time-entries/old')[0]?.body).toMatchObject({
+        minutes: 540,
+        client_id: ACME.id,
+        job_id: ACCOUNTS_JOB.id,
+      }),
+    );
   });
 });

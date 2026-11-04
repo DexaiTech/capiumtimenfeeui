@@ -8,7 +8,7 @@ import { server } from '@/test/server';
 import { addDays } from '@/utils/dates';
 
 import { useRangeEntries, useWeek } from '../../api';
-import { entry, weekEntries, WEEK } from '../../test/fixtures';
+import { ACME, entry, VAT_JOB, weekEntries, WEEK } from '../../test/fixtures';
 import { callsTo, createBackend, timeHandlers } from '../../test/handlers';
 import type { TimeEntry } from '../../types';
 import { WeekView } from './WeekView';
@@ -115,5 +115,80 @@ describe('WeekView: the entries of a cell', () => {
     ]);
     expect(rowAction(ENTRY, /^Delete entry/)).toBeDisabled();
     expect(panel).toHaveTextContent('Locked: the timesheet is submitted.');
+  });
+});
+
+describe('WeekView: a row needs a client and a job (APT64)', () => {
+  it('does not add a row without a client and a job, and saves the hours of one that has them', async () => {
+    const backend = setup();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Add row' }));
+    const panel = await screen.findByRole('region', { name: 'Add a row' });
+    expect(panel).not.toHaveTextContent('internal time)');
+
+    // The tester's row: no client, no job, no activity.
+    await user.click(within(panel).getByRole('button', { name: 'Add row' }));
+    expect(
+      await within(panel).findByText('Choose a client and a job for the row.'),
+    ).toBeInTheDocument();
+    await user.click(within(panel).getByRole('combobox', { name: 'Client' }));
+    await user.click(await screen.findByRole('option', { name: /Acme Ltd/ }));
+    await user.click(within(panel).getByRole('button', { name: 'Add row' }));
+    expect(await within(panel).findByText('Choose a job for the row.')).toBeInTheDocument();
+    expect(screen.queryByText('New row')).not.toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('combobox', { name: 'Job' }));
+    await user.click(await screen.findByRole('option', { name: /J00002 · VAT returns/ }));
+    await user.click(within(panel).getByRole('button', { name: 'Add row' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Add a row' })).not.toBeInTheDocument(),
+    );
+    const cell = await screen.findByRole('textbox', {
+      name: 'Acme Ltd · J00002 VAT returns, Wednesday 14/10/2026',
+    });
+    await user.type(cell, '10:00');
+    await user.tab();
+
+    await waitFor(
+      () =>
+        expect(callsTo(backend, 'POST', '/time-entries')[0]?.body).toMatchObject({
+          entry_date: '2026-10-14',
+          minutes: 600,
+          client_id: ACME.id,
+          job_id: VAT_JOB.id,
+        }),
+      { timeout: 3000 },
+    );
+  });
+
+  it('keeps an older row without a client or job, but its hours change only through the entry', async () => {
+    setup([
+      ...weekEntries(),
+      entry({
+        id: 'old',
+        entry_date: '2026-10-14',
+        minutes: 600,
+        job: null,
+        client: null,
+        activity: null,
+        is_billable: false,
+      }),
+    ]);
+
+    expect(
+      await screen.findByLabelText('No client, Wednesday 14/10/2026: 10:00'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: 'No client, Wednesday 14/10/2026' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: 'No client, Thursday 15/10/2026' }),
+    ).not.toBeInTheDocument();
+    // A row with a client and a job stays editable.
+    expect(
+      screen.getByRole('textbox', {
+        name: 'Acme Ltd · J00001 Year-end accounts 2026 · Preparation, Wednesday 14/10/2026',
+      }),
+    ).toBeInTheDocument();
   });
 });

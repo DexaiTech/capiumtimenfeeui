@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { ACME, entry } from '@/features/time/test/fixtures';
+import { ACCOUNTS_JOB, ACME, entry } from '@/features/time/test/fixtures';
 import { callsTo, createBackend, timeHandlers } from '@/features/time/test/handlers';
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
@@ -40,11 +40,20 @@ describe('TimeTab: add time', () => {
     await waitFor(() => expect((client as HTMLInputElement).value).toContain(ACME.name));
 
     await user.type(within(form).getByLabelText(/^Time/), '2:30');
+    // A job of the client is required too (APT64).
+    await user.click(within(form).getByRole('button', { name: 'Record time' }));
+    expect(await within(form).findByText('Choose a job')).toBeInTheDocument();
+    expect(callsTo(backend, 'POST', '/time-entries')).toHaveLength(0);
+    await user.click(within(form).getByRole('combobox', { name: 'Job' }));
+    await user.click(
+      await screen.findByRole('option', { name: /J00001 · Year-end accounts 2026/ }),
+    );
     await user.click(within(form).getByRole('button', { name: 'Record time' }));
 
     await waitFor(() => expect(callsTo(backend, 'POST', '/time-entries')).toHaveLength(1));
     expect(callsTo(backend, 'POST', '/time-entries')[0]?.body).toMatchObject({
       client_id: ACME.id,
+      job_id: ACCOUNTS_JOB.id,
       minutes: 150,
     });
     // The tab asks for the list again, so the new time is there without a reload.
