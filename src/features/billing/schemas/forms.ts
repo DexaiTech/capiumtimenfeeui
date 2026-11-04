@@ -121,13 +121,21 @@ export type GridLineValues = z.infer<typeof gridLineSchema>;
  * What every row needs: a description, then for a row typed in a quantity and a unit price
  * (more than zero for fees in advance, else may be negative for a discount), for a row of work the
  * amount to bill (0 or more; empty keeps what the work bills when `blankNet`). One pass over
- * all the rows, so every message shows at once.
+ * all the rows, so every message shows at once. At most 200 rows typed in, as the API takes;
+ * the rows of work are as many as the work chosen (one line per entry).
  */
 function checkGridLines(
   lines: ReadonlyArray<GridLineValues>,
   ctx: z.RefinementCtx,
   { blankNet }: { blankNet: boolean },
 ) {
+  if (lines.filter((line) => !line.wip).length > MAX_DOCUMENT_LINES) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['lines'],
+      message: `Add at most ${MAX_DOCUMENT_LINES} lines that bill no work`,
+    });
+  }
   lines.forEach((line, index) => {
     const issue = (field: keyof GridLineValues, message: string) =>
       ctx.addIssue({ code: 'custom', path: ['lines', index, field], message });
@@ -161,10 +169,7 @@ function checkGridLines(
 /** The lines of the invoice being created: the work's, and rows typed in (fees in advance or not). */
 export const prepareLinesSchema = z
   .object({
-    lines: z
-      .array(gridLineSchema)
-      .min(1, 'Add a line, or go back and choose work to bill')
-      .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
+    lines: z.array(gridLineSchema).min(1, 'Add a line, or go back and choose work to bill'),
   })
   .superRefine((values, ctx) => checkGridLines(values.lines, ctx, { blankNet: true }));
 export type PrepareLinesValues = z.infer<typeof prepareLinesSchema>;
@@ -172,9 +177,7 @@ export type PrepareLinesValues = z.infer<typeof prepareLinesSchema>;
 /** The lines of a draft, edited in place. */
 export const draftLinesSchema = z
   .object({
-    lines: z
-      .array(gridLineSchema)
-      .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
+    lines: z.array(gridLineSchema),
   })
   .superRefine((values, ctx) => checkGridLines(values.lines, ctx, { blankNet: false }));
 export type DraftLinesValues = z.infer<typeof draftLinesSchema>;

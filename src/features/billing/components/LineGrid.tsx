@@ -383,7 +383,8 @@ export function LineGrid<TForm extends FieldValues & WithGridLines>({
               size="sm"
               aria-label="Add row"
               leftIcon={<Plus aria-hidden="true" className="size-4" />}
-              disabled={fields.length >= MAX_DOCUMENT_LINES}
+              // The rows typed in are capped; the rows of work are as many as the work chosen.
+              disabled={typed.filter((line) => !line.wip).length >= MAX_DOCUMENT_LINES}
               onClick={() => append(newGridLine())}
             >
               Row

@@ -348,6 +348,34 @@ describe('the lines of a draft invoice', () => {
     );
   });
 
+  it('saves a draft of one line per entry over 200 entries, and a line added to it', async () => {
+    const user = userEvent.setup();
+    const work = Array.from({ length: 205 }, (_, index) =>
+      line({
+        id: `l-${index + 1}`,
+        position: index + 1,
+        kind: 'time',
+        description: `Time entry ${index + 1}`,
+        unit_amount: 10000,
+        net_amount: 10000,
+        vat_amount: 2000,
+      }),
+    );
+    const calls = openInvoice(draft(work));
+    const grid = await screen.findByRole('form', { name: 'Lines of the draft' });
+
+    // Only the lines typed in count towards the 200 a draft may have.
+    await user.click(within(grid).getByRole('button', { name: 'Add row' }));
+    await user.type(textbox(grid, 'Description of line 206'), 'Fee');
+    await user.type(textbox(grid, 'Unit price of line 206'), '34');
+    await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.body).toEqual({
+      lines: work.map(({ id }) => ({ id })),
+      new_lines: [{ description: 'Fee', quantity: '1.00', unit_amount: 3400 }],
+    });
+  }, 30_000);
+
   it('shows the lines of an issued invoice as they are', async () => {
     openInvoice(draft(lines(), { status: 'issued', display_status: 'issued', number: 'INV-1' }));
     const table = await screen.findByRole('table', { name: 'Invoice lines' });
