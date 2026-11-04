@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -15,6 +16,7 @@ import {
   createPrepareBackend,
   disbursementItem,
   fixedFeeItem,
+  harbourItems,
   harbourSummary,
   jobBilling,
   postsOf,
@@ -304,6 +306,43 @@ describe('reviewing the lines', () => {
     expect(amount(1)).toHaveValue('300.00');
     expect(screen.getByLabelText('Totals')).toHaveTextContent('Net£300.00');
     expect(screen.queryByRole('button', { name: 'Undo the changes of line 1' })).toBeNull();
+  });
+
+  it('keeps the changes to the lines when the work is read again', async () => {
+    const user = userEvent.setup();
+    const backend = setup();
+    await review(user, /Bank reconciliation/, /Payroll queries/);
+    await user.clear(amount(1));
+    await user.type(amount(1), '250');
+    await user.clear(description(1));
+    await user.type(description(1), 'Quarterly bookkeeping');
+
+    // Back on the tab the work is read again: unchanged, then with the time re-rated meanwhile.
+    // The same work stays chosen, so what was typed on its lines stays.
+    const reads = () =>
+      backend.calls.filter((call) => call.method === 'GET' && call.path.endsWith('/wip')).length;
+    const readAgain = async () => {
+      const before = reads();
+      act(() => {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+      });
+      await waitFor(() => expect(reads()).toBeGreaterThan(before));
+    };
+    await readAgain();
+    expect(screen.getByLabelText('Work in progress')).toHaveTextContent('Written off£50.00');
+    backend.wip[harbour.id] = wipOf(
+      harbourItems().map((item) => ({ ...item, value: item.value + 6000 })),
+    );
+    await readAgain();
+    await waitFor(() =>
+      expect(screen.getByLabelText('Work in progress')).toHaveTextContent(
+        'Work in progress cleared£420.00Written off£170.00',
+      ),
+    );
+    expect(amount(1)).toHaveValue('250');
+    expect(description(1)).toHaveValue('Quarterly bookkeeping');
+    act(() => focusManager.setFocused(undefined));
   });
 
   it('changes the wording and the VAT code of a line', async () => {
