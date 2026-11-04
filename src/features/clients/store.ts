@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
-import type { ToggleableColumnId } from './constants';
+import { DEFAULT_HIDDEN_COLUMNS, type ToggleableColumnId } from './constants';
 import type { ClientFilters } from './types';
 
 export type ClientsView = 'list' | 'grid';
@@ -61,8 +61,8 @@ const newId = () =>
 export const CLIENTS_PREFS_KEY = 'capium-clients';
 
 export const INITIAL_CLIENTS_PREFS = {
-  // The Capium Central link is hidden unless someone shows it (APT74).
-  hiddenColumns: ['central'] as ToggleableColumnId[],
+  // Segment, Branch and Activity are shown from Show/Hide Columns (APT76).
+  hiddenColumns: DEFAULT_HIDDEN_COLUMNS,
   view: 'list' as ClientsView,
   presets: {} as Record<string, FilterPreset[]>,
 };
@@ -105,14 +105,14 @@ export const useClientsPrefs = create<ClientsPrefsState>()(
     }),
     {
       name: CLIENTS_PREFS_KEY,
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => guardedStorage),
-      // Version 2 hides the Central column for people who saved their columns before.
+      // Version 3 (APT76) has new columns (Contact, Contact Email, Deadlines and Central are gone,
+      // Client Type is new): saved column choices start again from the new layout once. The view
+      // and the saved filter sets are kept.
       migrate: (persisted, version) => {
         const state = persisted as { hiddenColumns?: ToggleableColumnId[] };
-        if (version < 2) {
-          state.hiddenColumns = Array.from(new Set([...(state.hiddenColumns ?? []), 'central']));
-        }
+        if (version < 3) state.hiddenColumns = DEFAULT_HIDDEN_COLUMNS;
         return state;
       },
       partialize: (state) => ({

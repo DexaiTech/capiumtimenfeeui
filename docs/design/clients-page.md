@@ -98,6 +98,13 @@ Font: **Inter** throughout.
 | Services      | 1179 | First service chip (violet 10% background, violet text) + a "+N" round outline chip; hover shows all                                                                                                                                                                                 | —                  |
 | Action        | 1319 | 24 px "more" circle icon → menu: View, Edit, Log time, New job, Create invoice, Archive                                                                                                                                                                                              | —                  |
 
+**Since APT76** the list opens on Client, Client Type (the type badge, moved out of the
+Client cell), Registration (the company number), Services and Action. Segment, Branch and
+Activity are shown from Show/Hide Columns. Contact, Contact Email and Deadlines are not
+columns: contacts are on the client's own page and deadlines in Practice Manager. There is no
+Central column. While the practice uses branches, a Branch select next to the quick search
+filters the list by one branch, or by the clients without one.
+
 5. **Floating buttons** (bottom right): three 62 px violet circles with the floating shadow
    and white icons (chat, history, messages). They are part of the global Capium chrome:
    render them only if a feature exists behind them. Omit them for now.

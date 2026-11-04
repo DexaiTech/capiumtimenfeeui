@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import { Popover } from '@/components/ui';
 import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 
-import { useCentralEnabled } from '../central/useCentralEnabled';
 import { TOGGLEABLE_COLUMNS, type ToggleableColumnId } from '../constants';
 
 export interface ColumnsMenuProps {
@@ -19,12 +18,8 @@ export function ColumnsMenu({ hidden, onChange, onShowAll }: ColumnsMenuProps) {
   const anchorRef = useRef<HTMLButtonElement>(null);
   const segmentsOn = useSegmentsEnabled();
   const branchesOn = useBranchesEnabled();
-  const centralOn = useCentralEnabled();
   const columns = TOGGLEABLE_COLUMNS.filter(
-    (column) =>
-      (segmentsOn || column.id !== 'segment') &&
-      (branchesOn || column.id !== 'branch') &&
-      (centralOn || column.id !== 'central'),
+    (column) => (segmentsOn || column.id !== 'segment') && (branchesOn || column.id !== 'branch'),
   );
   return (
     <>
@@ -68,7 +63,8 @@ export function ColumnsMenu({ hidden, onChange, onShowAll }: ColumnsMenuProps) {
           type="button"
           className="cc-menu-item"
           onClick={onShowAll}
-          disabled={hidden.size === 0}
+          // Only the columns listed count: Segment and Branch stay hidden while switched off.
+          disabled={!columns.some((column) => hidden.has(column.id))}
         >
           Show all columns
         </button>

@@ -7,10 +7,9 @@ import { useOrg } from '@/features/organizations';
 import { cn } from '@/utils/cn';
 
 import { useClient } from '../api';
-import { centralChip, type CentralTone } from '../central/format';
 import { CLIENT_STATUS_LABELS, CLIENT_TYPE_LABELS, labelOf, SOFTWARE_LABELS } from '../constants';
-import { avatarColor, deadlinePill } from '../format';
-import type { ClientRead, Deadlines, ServiceTag } from '../types';
+import { avatarColor } from '../format';
+import type { ServiceTag } from '../types';
 
 export interface InitialsProps {
   name: string;
@@ -93,41 +92,6 @@ export function StatusPill({ status }: { status: string }) {
   return (
     <span className={cn('cc-pill', STATUS_TONES[status])}>
       {labelOf(CLIENT_STATUS_LABELS, status)}
-    </span>
-  );
-}
-
-export function DeadlineCell({ deadlines, today }: { deadlines: Deadlines; today: string }) {
-  const pill = deadlinePill(deadlines, today);
-  if (!pill) return null;
-  return (
-    <span
-      className={cn('cc-pill', pill.tone === 'danger' ? 'cc-pill--danger' : 'cc-pill--warning')}
-    >
-      {pill.label}
-    </span>
-  );
-}
-
-const CENTRAL_TONES: Record<CentralTone, string> = {
-  success: 'cc-pill--success',
-  warning: 'cc-pill--warning',
-  danger: 'cc-pill--danger',
-  neutral: '',
-};
-
-/** The Central column: `Local`, `Linked`, `Synced dd/MM/yyyy`, `Stale` or `Not found centrally`. */
-export function CentralCell({
-  client,
-  timeZone,
-}: {
-  client: Pick<ClientRead, 'central_client_id' | 'central_sync_state' | 'central_synced_at'>;
-  timeZone: string;
-}) {
-  const info = centralChip(client, timeZone);
-  return (
-    <span className={cn('cc-pill', CENTRAL_TONES[info.tone])} title={info.title}>
-      {info.label}
     </span>
   );
 }

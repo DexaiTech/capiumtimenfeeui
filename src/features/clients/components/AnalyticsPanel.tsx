@@ -74,9 +74,9 @@ export function AnalyticsPanel({ summary, loading }: AnalyticsPanelProps) {
             <p className="cc-empty-note">Loading the figures…</p>
           ) : (
             <>
+              {/* No deadlines on the client list: they are in Practice Manager (APT76). */}
               <div className="cc-analytics-total">
-                <strong>{summary.total}</strong> clients (archived excluded) ·{' '}
-                {summary.with_overdue_deadlines} with overdue deadlines
+                <strong>{summary.total}</strong> clients (archived excluded)
               </div>
               <Bars
                 title="By status"

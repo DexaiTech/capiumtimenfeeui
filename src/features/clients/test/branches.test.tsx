@@ -33,23 +33,66 @@ beforeEach(() => {
 });
 
 describe('the clients grid with branches on', () => {
-  it('shows a Branch column that the column menu can hide', async () => {
+  it('shows a Branch column from the column menu', async () => {
     server.use(...clientsHandlers({ clients }), ...branchHandlers());
     const user = userEvent.setup();
     renderInOrg(<ClientsPage />, { context: branchesOnContext });
 
     const row = await clientRow(techwave.name);
-    const headers = within(table())
-      .getAllByRole('columnheader')
-      .map((header) => header.textContent);
-    expect(headers.slice(2, 6)).toEqual(['Reg No', 'Segment', 'Branch', 'Contact']);
-    expect(within(row).getByText('London')).toBeInTheDocument();
+    // Hidden at first (APT76): the grid opens on Client, Client Type, Registration, Services.
+    expect(screen.queryByRole('columnheader', { name: 'Branch' })).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
     const columns = await screen.findByRole('dialog', { name: 'Show or hide columns' });
     await user.click(within(columns).getByRole('checkbox', { name: 'Branch' }));
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('columnheader', { name: 'Branch' })).toBeNull();
+    const headers = within(table())
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent);
+    expect(headers.slice(2)).toEqual([
+      'Client Type',
+      'Registration',
+      'Services',
+      'Branch',
+      'Action',
+    ]);
+    expect(within(row).getByText('London')).toBeInTheDocument();
+  });
+
+  it('filters by one branch from the Branch select at the top (APT76)', async () => {
+    const seen: URLSearchParams[] = [];
+    server.use(
+      ...clientsHandlers({ clients, onList: (params) => seen.push(params) }),
+      ...branchHandlers(),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<ClientsPage />, { context: branchesOnContext });
+    await clientRow(techwave.name);
+
+    const select = screen.getByRole('combobox', { name: 'Filter by branch' });
+    expect(select).toHaveValue('');
+    expect(await within(select).findByRole('option', { name: 'Leeds' })).toBeInTheDocument();
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['All branches', 'Bath (inactive)', 'Leeds', 'London', 'No branch']);
+
+    await user.selectOptions(select, 'Leeds');
+    await waitFor(() =>
+      expect(seen.at(-1)?.getAll('branch_id')).toEqual(['0198c1f2-0000-7000-8000-0000000b0002']),
+    );
+    // The same filter as the Branch section of Filter.
+    expect(screen.getByRole('button', { name: /^Filter\s*1/ })).toBeInTheDocument();
+
+    await user.selectOptions(select, 'No branch');
+    await waitFor(() => expect(seen.at(-1)?.get('without_branch')).toBe('true'));
+
+    await user.selectOptions(select, 'All branches');
+    await waitFor(() => {
+      expect(seen.at(-1)?.getAll('branch_id')).toEqual([]);
+      expect(seen.at(-1)?.get('without_branch')).toBeNull();
+    });
   });
 
   it('filters by branch and finds the clients without one', async () => {
@@ -96,6 +139,7 @@ describe('the clients grid with branches off', () => {
     await waitFor(() => expect(seen.at(-1)?.has('branch_id')).toBe(false));
     expect(screen.queryByRole('columnheader', { name: 'Branch' })).toBeNull();
     expect(within(row).queryByText('London')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Filter by branch' })).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
     const columns = await screen.findByRole('dialog', { name: 'Show or hide columns' });

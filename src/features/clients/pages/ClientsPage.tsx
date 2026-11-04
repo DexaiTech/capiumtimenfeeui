@@ -35,7 +35,6 @@ import { ClientsBulkBar } from '../components/ClientsBulkBar';
 import { ClientsGrid } from '../components/ClientsGrid';
 import { ClientsTable } from '../components/ClientsTable';
 import { ClientsToolbar } from '../components/ClientsToolbar';
-import { ContactFormPanel, type ContactTarget } from '../components/ContactFormPanel';
 import { ImportDialog } from '../components/ImportDialog';
 import {
   countFilters,
@@ -44,7 +43,7 @@ import {
   EMPTY_FILTERS,
   isDraftsView,
 } from '../constants';
-import { downloadBlob, todayIn } from '../format';
+import { downloadBlob } from '../format';
 import { useClientsPrefs, type FilterPreset } from '../store';
 import type {
   ClientBulkRequest,
@@ -118,7 +117,6 @@ export default function ClientsPage() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
 
   const [formClient, setFormClient] = useState<ClientRead | null | undefined>(undefined);
-  const [contactTarget, setContactTarget] = useState<ContactTarget | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [centralOpen, setCentralOpen] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<ClientListItem | null>(null);
@@ -148,7 +146,6 @@ export default function ClientsPage() {
   const syncAll = useSyncAllClients();
 
   const rows = useMemo(() => flattenPages(list.data), [list.data]);
-  const today = todayIn(organization.timezone);
 
   // A bulk action only ever reaches the clients on screen: a ticked row that is no longer listed
   // (another filter or search, a refresh) is left out.
@@ -211,16 +208,6 @@ export default function ClientsPage() {
 
   const openClient = (client: ClientListItem) =>
     void navigate(routes.org.client(organization.slug, client.id));
-
-  const onAddContact = canUpdate
-    ? (client: ClientListItem) =>
-        setContactTarget({
-          clientId: client.id,
-          clientName: client.name,
-          contact: null,
-          primary: true,
-        })
-    : null;
 
   const onSyncClient = async (client: ClientListItem) => {
     try {
@@ -481,10 +468,8 @@ export default function ClientsPage() {
     selected,
     onToggle,
     onOpen: openClient,
-    onAddContact,
     actionsFor,
     timeZone: organization.timezone,
-    today,
     loading: list.isPending,
     hasMore: list.hasNextPage,
     loadingMore: list.isFetchingNextPage,
@@ -501,7 +486,6 @@ export default function ClientsPage() {
         onClose={closeForm}
         onSaved={openCreated}
       />
-      <ContactFormPanel target={contactTarget} onClose={() => setContactTarget(null)} />
       <ClientsToolbar
         clientCount={summary.data?.total}
         leadsHref={routes.org.leads(organization.slug)}

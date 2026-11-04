@@ -96,6 +96,19 @@ export function branchOptions(
     }));
 }
 
+/** The branch filter choices: every branch (an inactive one may still be on clients), then "No branch". */
+export function branchFilterOptions(
+  branches: ReadonlyArray<{ id: string; name: string; is_active: boolean }>,
+): Array<{ value: string; label: string }> {
+  return [
+    ...branches.map((branch) => ({
+      value: branch.id,
+      label: branch.is_active ? branch.name : `${branch.name} (inactive)`,
+    })),
+    { value: NO_BRANCH, label: 'No branch' },
+  ];
+}
+
 const options = <T extends string>(values: readonly T[], labels: Record<T, string>) =>
   values.map((value) => ({ value, label: labels[value] }));
 
@@ -124,22 +137,26 @@ export function labelOf<T extends string>(labels: Record<T, string>, value: stri
   return (labels as Record<string, string>)[value] ?? value;
 }
 
-/** Table columns that can be hidden (the checkbox and the client name always show). */
+/**
+ * Table columns that can be hidden, in table order (the checkbox and the client name always
+ * show). Contact details are on the client's own page and deadlines in Practice Manager, so
+ * neither is a column here (APT76).
+ */
 export const TOGGLEABLE_COLUMNS = [
-  { id: 'reg_no', label: 'Reg No' },
+  { id: 'client_type', label: 'Client Type' },
+  { id: 'reg_no', label: 'Registration' },
+  { id: 'services', label: 'Services' },
   { id: 'segment', label: 'Segment' },
   { id: 'branch', label: 'Branch' },
-  { id: 'contact', label: 'Contact' },
-  { id: 'contact_email', label: 'Contact Email' },
-  { id: 'deadlines', label: 'Deadlines' },
   { id: 'activity', label: 'Activity' },
-  { id: 'services', label: 'Services' },
-  { id: 'central', label: 'Central' },
   { id: 'action', label: 'Action' },
 ] as const;
 export type ToggleableColumnId = (typeof TOGGLEABLE_COLUMNS)[number]['id'];
 
-/** Sortable columns and the API sort key each maps to. Contact Email has no API sort key. */
+/** Shown from Show/Hide Columns only: the grid opens on Client, Client Type, Registration, Services. */
+export const DEFAULT_HIDDEN_COLUMNS: ToggleableColumnId[] = ['segment', 'branch', 'activity'];
+
+/** Sortable columns and the API sort key each maps to. */
 export const SORT_KEYS = {
   client: 'name',
   segment: 'segment',

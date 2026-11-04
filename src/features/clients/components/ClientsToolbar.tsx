@@ -17,6 +17,7 @@ import type { ToggleableColumnId } from '../constants';
 import type { ClientsView, FilterPreset } from '../store';
 import type { ClientFilters, ClientSummary, MemberRead, ServiceRead } from '../types';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { BranchFilter } from './BranchFilter';
 import { BulkActionsMenu } from './BulkActionsMenu';
 import { ColumnsMenu } from './ColumnsMenu';
 import { FilterPanel } from './FilterPanel';
@@ -95,6 +96,10 @@ export function ClientsToolbar(props: ClientsToolbarProps) {
             onChange={(event) => props.onSearchChange(event.target.value)}
           />
         </div>
+        <BranchFilter
+          values={props.filters.branch}
+          onChange={(branch) => props.onFiltersChange({ ...props.filters, branch })}
+        />
       </div>
 
       <div className="cc-toolbar-group">
