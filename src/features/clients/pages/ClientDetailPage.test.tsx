@@ -534,6 +534,18 @@ describe('editing a client linked to the central service', () => {
     expect(within(dialog).getByRole('textbox', { name: 'Client name' })).toBeInvalid();
   });
 
+  it('lets the name and the address be edited while the practice has Capium Central off', async () => {
+    const user = userEvent.setup();
+    renderWorkspace(OVERVIEW, { centralOn: false, clients: [linked] });
+    await heading('Techwave Innovations Ltd');
+
+    await user.click(within(header()).getByRole('button', { name: 'Edit' }));
+    const dialog = await screen.findByRole('region', { name: /Edit Techwave Innovations Ltd/ });
+    expect(within(dialog).getByRole('textbox', { name: 'Client name' })).toBeEnabled();
+    expect(within(dialog).getByRole('textbox', { name: 'Town or city' })).toBeEnabled();
+    expect(within(dialog).queryByText(MANAGED)).toBeNull();
+  });
+
   it('lets an unlinked client be edited fully', async () => {
     const user = userEvent.setup();
     renderWorkspace(`/acme/clients/${mutual.id}/overview`, {
