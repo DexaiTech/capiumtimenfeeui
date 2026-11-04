@@ -5,6 +5,7 @@ import { useFieldArray, useWatch, type FieldValues, type UseFormReturn } from 'r
 import {
   Badge,
   Button,
+  Checkbox,
   DataTable,
   Input,
   Select,
@@ -65,8 +66,8 @@ interface Row {
 
 /**
  * The lines of an invoice as a grid, edited in place: service, description, quantity, unit
- * price, VAT code, VAT and net of each row, "+ Row" to add one, a bin to remove one, and the
- * totals as typed. A row of work (`wip`) keeps the work's quantity and unit price; what it bills
+ * price, VAT code, VAT and net of each row, whether a row typed in is fees in advance, "+ Row" to
+ * add one, a bin to remove one, and the totals as typed. A row of work (`wip`) keeps the work's quantity and unit price; what it bills
  * is typed as its net, against what the work is worth. Used to create an invoice and to edit a
  * draft; the caller owns the form, checks it and saves it.
  */
@@ -160,6 +161,22 @@ export function LineGrid<TForm extends FieldValues & WithGridLines>({
 
   const readOnly = (text: ReactNode) => <span className="tabular-nums text-text">{text}</span>;
 
+  /** A row typed in is fees in advance when ticked: only a row of more than zero can be. */
+  const advanceBox = (index: number) => {
+    const net = priced[index]?.net ?? null;
+    const allowed = net === null || net > 0;
+    return (
+      <Checkbox
+        label="Fees in advance"
+        aria-label={`Fees in advance on line ${index + 1}`}
+        description={allowed ? undefined : 'Only a line of more than zero can be fees in advance'}
+        // Ticked already, it can still be unticked.
+        disabled={!allowed && !lineAt(index).advance}
+        {...register(`lines.${index}.advance`)}
+      />
+    );
+  };
+
   const columns: DataTableColumn<Row>[] = [
     {
       id: 'service',
@@ -217,6 +234,7 @@ export function LineGrid<TForm extends FieldValues & WithGridLines>({
                 {meta.note ? <span>{meta.note}</span> : null}
               </div>
             ) : null}
+            {lineAt(index).wip ? null : advanceBox(index)}
           </div>
         );
       },

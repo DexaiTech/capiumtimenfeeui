@@ -39,8 +39,8 @@ export type LineGridMetas = ReadonlyMap<string, LineGridMeta>;
 /** What the first row of fees in advance reads until a service or the person words it. */
 export const FIRST_DESCRIPTION = 'Fees in advance';
 
-/** A row typed in: quantity 1, the rest empty. */
-export const newGridLine = (description = ''): GridLineValues => ({
+/** A row typed in: quantity 1, the rest empty, not fees in advance. */
+export const newGridLine = (description = '', advance = false): GridLineValues => ({
   key: '',
   wip: false,
   description,
@@ -49,6 +49,7 @@ export const newGridLine = (description = ''): GridLineValues => ({
   net_amount: '',
   vat_rate_id: '',
   service_id: '',
+  advance,
 });
 
 export interface PricedGridLine {

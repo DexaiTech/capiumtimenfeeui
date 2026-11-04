@@ -57,6 +57,7 @@ function workRow(line: PreviewLine): GridLineValues {
     net_amount: line.billed === null ? '' : penceToPoundsInput(line.billed),
     vat_rate_id: line.vatRateId ?? '',
     service_id: '',
+    advance: false,
   };
 }
 
@@ -88,8 +89,8 @@ function editsOf(lines: ReadonlyArray<GridLineValues>): LineEdits {
   return edits;
 }
 
-/** The rows typed in, as the API's `manual_lines`; fees in advance when the box is ticked. */
-function manualLinesOf({ advance, lines }: PrepareLinesValues): InvoiceLineCreate[] {
+/** The rows typed in, as the API's `manual_lines`; fees in advance where the row is ticked. */
+function manualLinesOf({ lines }: PrepareLinesValues): InvoiceLineCreate[] {
   return lines.flatMap((line) => {
     const quantity = parseQuantity(line.quantity);
     const unit = parsePounds(line.unit_amount);
@@ -101,7 +102,7 @@ function manualLinesOf({ advance, lines }: PrepareLinesValues): InvoiceLineCreat
         unit_amount: unit,
         ...(line.vat_rate_id ? { vat_rate_id: line.vat_rate_id } : {}),
         ...(line.service_id ? { service_id: line.service_id } : {}),
-        ...(advance ? { is_advance: true } : {}),
+        ...(line.advance ? { is_advance: true } : {}),
       },
     ];
   });
@@ -128,10 +129,8 @@ export function PrepareFlow({
   const [basis, setBasis] = useState<BillingBasis>('contract');
   const form = useForm<PrepareLinesValues>({
     resolver: zodResolver(prepareLinesSchema),
-    defaultValues: { advance: true, lines: [] },
+    defaultValues: { lines: [] },
   });
-  // "Fees in advance" ticked or unticked by the person stays; else it follows the work chosen.
-  const advanceChosen = useRef(false);
   const currency = organization.currency;
 
   // Time picked on another page is chosen once, when the work first arrives.
@@ -174,11 +173,8 @@ export function PrepareFlow({
   useEffect(() => {
     if (signature === null) return;
     const work = JSON.parse(signature) as GridLineValues[];
-    const { advance, lines: current } = form.getValues();
-    form.reset({
-      advance: advanceChosen.current ? advance : work.length === 0,
-      lines: [...work, ...current.filter((line) => !line.wip)],
-    });
+    const current = form.getValues('lines');
+    form.reset({ lines: [...work, ...current.filter((line) => !line.wip)] });
   }, [signature, form]);
 
   if (wip.isError) {
@@ -210,13 +206,15 @@ export function PrepareFlow({
     // The job's value is set per job: lines grouped by job are the ones it applies to.
     if (next === 'job') setGroupBy('job');
   };
-  // Fees billed in advance: a line typed in, to which time is assigned once the invoice is issued.
-  const billInAdvance = () => {
+  // Lines typed in: "Bill fees in advance" adds one ticked as fees in advance (time is assigned
+  // to it once the invoice is issued), "Add line items" an ordinary one.
+  const addLines = (advance: boolean) => {
     if (!typedIn) {
-      form.setValue('lines', [...form.getValues('lines'), newGridLine(FIRST_DESCRIPTION)]);
+      form.setValue('lines', [
+        ...form.getValues('lines'),
+        newGridLine(advance ? FIRST_DESCRIPTION : '', advance),
+      ]);
     }
-    form.setValue('advance', true);
-    advanceChosen.current = true;
     setStep('review');
   };
 
@@ -237,7 +235,7 @@ export function PrepareFlow({
           onSelectedChange={setSelected}
           hasLines={typedIn}
           onContinue={() => setStep('review')}
-          onAdvance={billInAdvance}
+          onAddLines={addLines}
         />
       ) : null}
 
@@ -251,9 +249,6 @@ export function PrepareFlow({
           groupBy={groupBy}
           onGroupByChange={setGroupBy}
           groupable={groupable}
-          onAdvanceChosen={() => {
-            advanceChosen.current = true;
-          }}
           onBack={() => setStep('work')}
           onContinue={() => setStep('details')}
         />

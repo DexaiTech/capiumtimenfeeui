@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 
-import { Button, Checkbox, Select } from '@/components/ui';
+import { Button, Select } from '@/components/ui';
 import { formatMoney } from '@/utils/money';
 
 import { GROUP_BY_OPTIONS } from '../../constants';
@@ -38,8 +38,6 @@ export interface ReviewStepProps {
   onGroupByChange: (groupBy: GroupBy) => void;
   /** Hourly time is chosen: how it is grouped matters. */
   groupable: boolean;
-  /** The person ticked or unticked "Fees in advance": their choice stays. */
-  onAdvanceChosen: () => void;
   onBack: () => void;
   onContinue: () => void;
 }
@@ -58,18 +56,16 @@ export function ReviewStep({
   groupBy,
   onGroupByChange,
   groupable,
-  onAdvanceChosen,
   onBack,
   onContinue,
 }: ReviewStepProps) {
   // Only what changes as rows come and go: typing in the grid does not redraw the step.
-  const [lineCount, typedIn, unpriced] = useWatch({
+  const [lineCount, unpriced] = useWatch({
     control: form.control,
     name: 'lines',
     compute: (lines) =>
       [
         lines.length,
-        lines.filter((line) => !line.wip).length,
         // A fixed fee only the API can price yet.
         lines.some((line) => line.wip && metas.get(line.key)?.net === null),
       ] as const,
@@ -144,13 +140,6 @@ export function ReviewStep({
         }
       />
 
-      {typedIn > 0 ? (
-        <Checkbox
-          label="Fees in advance"
-          description="Time is assigned to the lines added here once the invoice is issued, and leaves WIP then. Untick it for an ordinary fee, a discount or a correction."
-          {...form.register('advance', { onChange: onAdvanceChosen })}
-        />
-      ) : null}
       {unpriced ? (
         <p className="text-xs text-text-muted">
           A fixed fee left empty is priced when the draft is made: it bills the fee less what is

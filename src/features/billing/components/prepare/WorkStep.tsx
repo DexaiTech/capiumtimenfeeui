@@ -30,8 +30,11 @@ export interface WorkStepProps {
   /** Lines that bill no work are typed in already: the review can go on without work. */
   hasLines?: boolean;
   onContinue: () => void;
-  /** Adds lines that bill no work, fees in advance by default: time is assigned to them later. */
-  onAdvance?: () => void;
+  /**
+   * Adds a line that bills no work: fees in advance (`true`, "Bill fees in advance": time is
+   * assigned to it later) or an ordinary line (`false`, "Add line items" when nothing is to bill).
+   */
+  onAddLines?: (advance: boolean) => void;
 }
 
 /** Step one: tick the time, disbursements and fixed fees of the client to put on the invoice. */
@@ -43,7 +46,7 @@ export function WorkStep({
   onSelectedChange,
   hasLines = false,
   onContinue,
-  onAdvance,
+  onAddLines,
 }: WorkStepProps) {
   const { organization } = useOrg();
   const currency = organization.currency;
@@ -84,8 +87,8 @@ export function WorkStep({
           {formatMoney(totals.disbursement_value, currency)} of disbursements.
         </p>
         {/* With nothing to bill, the empty list offers it instead. */}
-        {onAdvance && rows.length > 0 ? (
-          <Button size="sm" onClick={onAdvance}>
+        {onAddLines && rows.length > 0 ? (
+          <Button size="sm" onClick={() => onAddLines(true)}>
             Bill fees in advance
           </Button>
         ) : null}
@@ -140,13 +143,13 @@ export function WorkStep({
               icon={<Banknote className="size-6" />}
               title="Nothing to bill"
               description={
-                onAdvance
+                onAddLines
                   ? 'This client has no unbilled time, disbursements or fixed fees. You can still add line items, such as fees billed in advance, and assign time to them later.'
                   : 'This client has no unbilled time, disbursements or fixed fees that can be invoiced.'
               }
               action={
-                onAdvance ? (
-                  <Button variant="primary" onClick={onAdvance}>
+                onAddLines ? (
+                  <Button variant="primary" onClick={() => onAddLines(false)}>
                     Add line items
                   </Button>
                 ) : undefined

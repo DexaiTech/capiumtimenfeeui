@@ -278,6 +278,8 @@ export interface InvoiceLineUpdate {
   net_amount?: Pence;
   /** Null re-applies the default VAT resolution. */
   vat_rate_id?: string | null;
+  /** A line typed in becomes, or stops being, fees billed in advance. */
+  is_advance?: boolean;
 }
 
 /**
