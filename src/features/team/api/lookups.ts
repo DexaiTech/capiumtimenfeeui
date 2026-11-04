@@ -5,12 +5,16 @@ import { useOrg } from '@/features/organizations';
 import { teamKeys } from './keys';
 import { teamApi } from './teamApi';
 
-/** Clients matching a search, for a picker. Needs `client.read`. */
-export function useClientLookup(q: string, enabled: boolean) {
+/**
+ * Clients matching a search, for a picker. Needs `client.read`. `includeInternal` adds the
+ * practice's built-in Internal client (APT64), for recording time.
+ */
+export function useClientLookup(q: string, enabled: boolean, includeInternal = false) {
   const { organization } = useOrg();
   return useQuery({
-    queryKey: teamKeys.clientLookup(organization.id, q),
-    queryFn: async ({ signal }) => (await teamApi.listClients(organization.id, q, signal)).data,
+    queryKey: teamKeys.clientLookup(organization.id, q, includeInternal),
+    queryFn: async ({ signal }) =>
+      (await teamApi.listClients(organization.id, q, includeInternal, signal)).data,
     placeholderData: keepPreviousData,
     enabled,
   });

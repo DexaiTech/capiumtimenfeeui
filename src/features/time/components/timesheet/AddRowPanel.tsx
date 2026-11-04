@@ -97,6 +97,7 @@ function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowPanelProps, 'op
             required
             value={client?.id ?? job?.client_id ?? null}
             valueLabel={client?.name ?? job?.client_name}
+            includeInternal
             onChange={(id, item) => {
               setError(null);
               setClient(item ? { id: item.id, code: item.detail ?? null, name: item.label } : null);
@@ -111,7 +112,7 @@ function AddRowForm({ existingKeys, onAdd, onClose }: Omit<AddRowPanelProps, 'op
             value={job?.id ?? null}
             valueJob={job ?? undefined}
             clientId={clientId}
-            hint="Internal time goes on an internal client and job."
+            hint="Internal time goes on the Internal client and its jobs."
             onChange={(picked) => {
               setError(null);
               setJob(picked);

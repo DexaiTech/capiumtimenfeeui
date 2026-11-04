@@ -222,9 +222,15 @@ export const teamApi = {
     api.get<VatCode[]>(`${org(organizationId)}/vat-rates`, { signal }),
 
   /* ---------------------------------- Lookups -------------------------------- */
-  listClients: (organizationId: string, q: string, signal?: AbortSignal) =>
+  /** `includeInternal` adds the built-in Internal client, which only the time pickers offer. */
+  listClients: (
+    organizationId: string,
+    q: string,
+    includeInternal: boolean,
+    signal?: AbortSignal,
+  ) =>
     api.list<ClientOption>(`${org(organizationId)}/clients`, {
-      query: { q: q || undefined, limit: 20 },
+      query: { q: q || undefined, limit: 20, include_internal: includeInternal || undefined },
       signal,
     }),
   getClient: (organizationId: string, clientId: string, signal?: AbortSignal) =>

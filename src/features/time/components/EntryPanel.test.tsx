@@ -3,11 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
+import { PERMISSIONS } from '@/constants/permissions';
+import { ClientPicker } from '@/features/team';
+import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { fail, server } from '@/test/server';
 
 import { callsTo, createBackend, timeHandlers } from '../test/handlers';
-import { ACCOUNTS_JOB, ACME, entry, TODAY } from '../test/fixtures';
+import { ACCOUNTS_JOB, ACME, ADMIN_JOB, entry, INTERNAL, TODAY } from '../test/fixtures';
 import { EntryPanel } from './EntryPanel';
 
 describe('EntryPanel: save and add another', () => {
@@ -156,5 +159,61 @@ describe('EntryPanel: a client and a job are required (APT64)', () => {
         job_id: ACCOUNTS_JOB.id,
       }),
     );
+  });
+});
+
+describe('EntryPanel: the built-in Internal client (APT64)', () => {
+  it('offers the Internal client and its jobs for internal time', async () => {
+    const user = userEvent.setup();
+    const backend = createBackend();
+    server.use(...timeHandlers(backend));
+    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />);
+    const form = await screen.findByRole('region', { name: 'Record time' });
+    expect(form).toHaveTextContent('Internal time goes on the Internal client and its jobs.');
+
+    await user.type(within(form).getByLabelText(/^Time/), '1:00');
+    await user.click(within(form).getByRole('combobox', { name: 'Client' }));
+    await user.click(await screen.findByRole('option', { name: /^Internal/ }));
+    await user.click(within(form).getByRole('combobox', { name: 'Job' }));
+    await user.click(
+      await screen.findByRole('option', { name: /INT-ADM · Practice administration/ }),
+    );
+    await user.click(within(form).getByRole('button', { name: 'Record time' }));
+
+    await waitFor(() => expect(callsTo(backend, 'POST', '/time-entries')).toHaveLength(1));
+    expect(callsTo(backend, 'POST', '/time-entries')[0]?.body).toMatchObject({
+      client_id: INTERNAL.id,
+      job_id: ADMIN_JOB.id,
+    });
+  });
+
+  it('is not offered by the client pickers outside time', async () => {
+    const user = userEvent.setup();
+    server.use(...timeHandlers(createBackend()));
+    renderInOrg(<ClientPicker label="Client" value={null} onChange={() => undefined} />);
+    await user.click(screen.getByRole('combobox', { name: 'Client' }));
+    expect(await screen.findByRole('option', { name: /^Acme Ltd/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /^Internal/ })).not.toBeInTheDocument();
+  });
+
+  it('warns only a role that cannot choose a job: a job brings its client', async () => {
+    server.use(...timeHandlers(createBackend()));
+    const withoutClients = OWNER_PERMISSIONS.filter((code) => code !== PERMISSIONS.clientRead);
+    const { unmount } = renderInOrg(
+      <EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />,
+      { context: contextWith(withoutClients) },
+    );
+    const form = await screen.findByRole('region', { name: 'Record time' });
+    expect(within(form).getByRole('combobox', { name: 'Job' })).toBeInTheDocument();
+    expect(form).not.toHaveTextContent('Time needs a client and a job');
+    unmount();
+
+    const withoutJobs = OWNER_PERMISSIONS.filter((code) => code !== PERMISSIONS.jobRead);
+    renderInOrg(<EntryPanel open onClose={() => undefined} defaults={{ date: TODAY }} />, {
+      context: contextWith(withoutJobs),
+    });
+    expect(
+      await screen.findByText('Time needs a client and a job', { exact: false }),
+    ).toBeInTheDocument();
   });
 });

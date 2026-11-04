@@ -712,6 +712,8 @@ export interface ClientOption {
   id: string;
   code: string;
   name: string;
+  /** The practice's built-in Internal client, for internal time only (APT64). */
+  is_internal?: boolean;
 }
 
 /** A job in a picker (`GET {org}/jobs`). */

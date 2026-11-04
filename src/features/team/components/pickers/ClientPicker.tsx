@@ -23,15 +23,26 @@ export interface ClientPickerProps extends Pick<
   value: string | null;
   /** The name to show for `value` when the caller knows it (otherwise it is looked up). */
   valueLabel?: string;
+  /**
+   * Also offers the practice's built-in Internal client, which only holds internal time: for the
+   * time pickers only, never billing (APT64).
+   */
+  includeInternal?: boolean;
   onChange: (id: string | null, item: PickerItem | null) => void;
 }
 
 /** Searchable single choice of a client. The caller shows it only to people with `client.read`. */
-export function ClientPicker({ value, valueLabel, onChange, ...field }: ClientPickerProps) {
+export function ClientPicker({
+  value,
+  valueLabel,
+  includeInternal = false,
+  onChange,
+  ...field
+}: ClientPickerProps) {
   const search = usePickerSearch();
   const [picked, setPicked] = useState<PickerItem | null>(null);
 
-  const lookup = useClientLookup(search.query, search.open);
+  const lookup = useClientLookup(search.query, search.open, includeInternal);
   const known = value !== null && (picked?.id === value || valueLabel !== undefined);
   const fetched = useClientOption(value, !known);
 

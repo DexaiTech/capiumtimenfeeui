@@ -54,8 +54,8 @@ export const teamKeys = {
     [...queryKeys.org.vatRates(organizationId), 'list'] as const,
 
   /** Pickers of clients and jobs sit under their own modules' keys, so those modules refresh them. */
-  clientLookup: (organizationId: string, q: string) =>
-    [...queryKeys.org.clients(organizationId), 'team-lookup', q] as const,
+  clientLookup: (organizationId: string, q: string, includeInternal: boolean) =>
+    [...queryKeys.org.clients(organizationId), 'team-lookup', q, includeInternal] as const,
   clientOption: (organizationId: string, clientId: string) =>
     [...queryKeys.org.clients(organizationId), 'team-option', clientId] as const,
   jobLookup: (organizationId: string, q: string, clientId: string | null) =>

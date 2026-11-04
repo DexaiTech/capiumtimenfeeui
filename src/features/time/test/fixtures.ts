@@ -19,6 +19,13 @@ export const LEE = '0198c1f2-0000-7000-8000-0000000000c2';
 export const ACME = { id: '0198c1f2-0000-7000-8000-0000000000d1', code: 'AC001', name: 'Acme Ltd' };
 export const BETA = { id: '0198c1f2-0000-7000-8000-0000000000d2', code: 'BE002', name: 'Beta LLP' };
 export const CLIENTS = [ACME, BETA];
+/** The practice's built-in Internal client (APT64): listed only to the time pickers. */
+export const INTERNAL = {
+  id: '0198c1f2-0000-7000-8000-0000000000d9',
+  code: 'INTERNAL',
+  name: 'Internal',
+  is_internal: true,
+};
 
 export const ACCOUNTS = { id: '0198c1f2-0000-7000-8000-0000000000e1', name: 'Year-end accounts' };
 export const TAX = { id: '0198c1f2-0000-7000-8000-0000000000e2', name: 'Tax returns' };
@@ -82,6 +89,19 @@ export const CLOSED_JOB: JobRef = {
   service_name: null,
 };
 export const JOBS = [ACCOUNTS_JOB, VAT_JOB, CLOSED_JOB];
+/** The Internal client's jobs: listed only for that client, as the API does. */
+export const ADMIN_JOB: JobRef = {
+  billing_basis: 'non_billable',
+  id: '0198c1f2-0000-7000-8000-000000000a09',
+  number: 'INT-ADM',
+  name: 'Practice administration',
+  status: 'in_progress',
+  client_id: INTERNAL.id,
+  client_code: INTERNAL.code,
+  client_name: INTERNAL.name,
+  service_id: null,
+  service_name: null,
+};
 
 export const PEOPLE: StaffPerson[] = [
   {
