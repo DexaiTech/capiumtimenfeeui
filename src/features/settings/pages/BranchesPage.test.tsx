@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  bath,
   branchesOnContext,
   branchHandlers,
   newBranchCalls,
@@ -15,7 +16,7 @@ import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures
 import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { findRowAction, rowActionNames } from '@/test/rowActions';
-import { ok, server } from '@/test/server';
+import { fail, ok, server } from '@/test/server';
 
 import BranchesPage from './BranchesPage';
 
@@ -126,5 +127,60 @@ describe('BranchesPage: the "Use branches" switch (APT74)', () => {
     expect(toggle).toBeChecked();
     expect(toggle).toBeDisabled();
     expect(await row(/^London/)).toBeInTheDocument();
+  });
+
+  it('cannot be switched on until the practice has an active branch', async () => {
+    setup([bath]);
+    renderInOrg(<BranchesPage />);
+
+    expect(await row(/^Bath/)).toBeInTheDocument();
+    const toggle = screen.getByRole('switch', { name: 'Use branches' });
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAccessibleDescription(
+      /Add an active branch before switching branches on\./,
+    );
+  });
+
+  it('says why the practice refuses to switch branches on', async () => {
+    const message = 'Add an active branch before switching branches on.';
+    server.use(
+      http.patch(orgApiPath(''), () =>
+        fail(422, 'NO_ACTIVE_BRANCH', message, {
+          details: [{ field: 'branches_enabled', code: 'no_active_branch', message }],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderInOrg(<BranchesPage />);
+    await row(/^London/);
+
+    await user.click(screen.getByRole('switch', { name: 'Use branches' }));
+    expect(await screen.findByText(`${message} (Request ID: req-test-123)`)).toBeInTheDocument();
+  });
+});
+
+describe('BranchesPage: the last active branch while branches are on (APT74)', () => {
+  const message =
+    'This is the last active branch, and every new client needs one. Add another branch, or switch branches off, first.';
+  const refuse = () => fail(409, 'LAST_ACTIVE_BRANCH', message);
+
+  it('says why it cannot be deactivated', async () => {
+    server.use(http.patch(orgApiPath('/branches/:id'), refuse));
+    const user = userEvent.setup();
+    renderInOrg(<BranchesPage />, { context: branchesOnContext });
+
+    await user.click(await findRowAction('Actions for Leeds', 'Deactivate'));
+    expect(await screen.findByText(`${message} (Request ID: req-test-123)`)).toBeInTheDocument();
+  });
+
+  it('says why it cannot be deleted, inside the dialog', async () => {
+    server.use(http.delete(orgApiPath('/branches/:id'), refuse));
+    const user = userEvent.setup();
+    renderInOrg(<BranchesPage />, { context: branchesOnContext });
+
+    await user.click(await findRowAction('Actions for Leeds', 'Delete'));
+    const confirm = await screen.findByRole('dialog', { name: 'Delete branch?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    expect(await within(confirm).findByText(message)).toBeInTheDocument();
   });
 });
