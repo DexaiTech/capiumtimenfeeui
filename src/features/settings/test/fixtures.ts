@@ -158,5 +158,6 @@ export function orgContext(
     organization: testOrganization,
     role: summary(source),
     permissions: overrides.permissions ?? source.permissions,
+    central_client_enabled: true,
   };
 }

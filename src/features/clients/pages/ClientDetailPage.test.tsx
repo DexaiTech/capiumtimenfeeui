@@ -193,6 +193,17 @@ describe('ClientHeader', () => {
     expect(card.queryByRole('button', { name: 'Restore' })).toBeNull();
   });
 
+  it('shows nothing about Capium Central while the practice has it off', async () => {
+    renderWorkspace(OVERVIEW, { centralOn: false, clients: [linkedDetail] });
+    await heading('Techwave Innovations Ltd');
+
+    const card = within(header());
+    expect(card.getByText('APX006')).toBeInTheDocument();
+    expect(card.queryByText('Synced 12/05/2026')).toBeNull();
+    expect(card.queryByRole('button', { name: 'Sync with central' })).toBeNull();
+    expect(card.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+  });
+
   it('leaves out the actions a read-only role may not use', async () => {
     renderWorkspace(OVERVIEW, { permissions: STAFF_PERMISSIONS, overview: staffOverview });
     await heading('Techwave Innovations Ltd');

@@ -10,6 +10,7 @@ import { useOrg } from '@/features/organizations';
 import { useDocumentTitle } from '@/hooks';
 
 import { CentralClientsDialog } from '../central/CentralClientsDialog';
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import { ClientPicker } from '../picker/ClientPicker';
 import { useRecentClients, useRecentClientsStore } from '../recents';
 import { CLIENT_STATUSES } from '../types';
@@ -26,6 +27,7 @@ export default function Client360Page() {
   const recents = useRecentClients(organization.id);
   const clearRecents = useRecentClientsStore((state) => state.clear);
   const [centralOpen, setCentralOpen] = useState(false);
+  const centralOn = useCentralEnabled();
   useDocumentTitle('Client Overview');
 
   const overview = (clientId: string) => routes.org.client(organization.slug, clientId, 'overview');
@@ -49,7 +51,7 @@ export default function Client360Page() {
               if (client) void navigate(overview(client.id));
             }}
           />
-          {can(PERMISSIONS.clientCreate) ? (
+          {centralOn && can(PERMISSIONS.clientCreate) ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-4 text-sm text-text-muted">
               <span>Not in your client list yet?</span>
               <Button

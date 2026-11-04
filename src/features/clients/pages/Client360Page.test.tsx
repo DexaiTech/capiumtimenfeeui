@@ -21,8 +21,13 @@ function Opened() {
 
 function renderLanding({
   permissions = OWNER_PERMISSIONS,
+  centralOn = true,
   onList,
-}: { permissions?: string[]; onList?: (params: URLSearchParams) => void } = {}) {
+}: {
+  permissions?: string[];
+  centralOn?: boolean;
+  onList?: (params: URLSearchParams) => void;
+} = {}) {
   server.use(
     ...clientsHandlers({ onList }),
     // After the list handlers: `/clients/summary` must not be taken for a client id.
@@ -34,7 +39,10 @@ function renderLanding({
       <Route path="/acme/clients/360" element={<Client360Page />} />
       <Route path="/acme/clients/:clientId/*" element={<Opened />} />
     </Routes>,
-    { route: '/acme/clients/360', context: contextWith(permissions) },
+    {
+      route: '/acme/clients/360',
+      context: { ...contextWith(permissions), central_client_enabled: centralOn },
+    },
   );
 }
 
@@ -196,6 +204,13 @@ describe('Find a client in Capium central', () => {
   it('is left out for a role that may not create clients', () => {
     renderLanding({ permissions: STAFF_PERMISSIONS });
     expect(screen.queryByRole('button', { name: 'Find a client in Capium central' })).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Find a client' })).toBeInTheDocument();
+  });
+
+  it('is left out while the practice has Capium Central off', () => {
+    renderLanding({ centralOn: false });
+    expect(screen.queryByRole('button', { name: 'Find a client in Capium central' })).toBeNull();
+    expect(screen.queryByText('Not in your client list yet?')).toBeNull();
     expect(screen.getByRole('combobox', { name: 'Find a client' })).toBeInTheDocument();
   });
 });

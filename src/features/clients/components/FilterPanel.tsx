@@ -9,6 +9,7 @@ import {
   useSegmentsEnabled,
 } from '@/features/settings';
 
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import {
   CENTRAL_FILTER_OPTIONS,
   CLIENT_STATUS_OPTIONS,
@@ -97,6 +98,7 @@ export function FilterPanel({
   // that still need one.
   const branchesOn = useBranchesEnabled();
   const branches = useBranches(branchesOn);
+  const centralOn = useCentralEnabled();
   const branchFilterOptions = [
     ...(branches.data ?? []).map((branch) => ({
       value: branch.id,
@@ -187,24 +189,28 @@ export function FilterPanel({
                   </option>
                 ))}
               </select>
-              <label className="cc-label" htmlFor="cc-filter-central" style={{ marginTop: 8 }}>
-                Central
-              </label>
-              <select
-                id="cc-filter-central"
-                className="cc-select"
-                value={filters.central ?? ''}
-                onChange={(event) =>
-                  onChange({ ...filters, central: parseCentralFilter(event.target.value) })
-                }
-              >
-                <option value="">Any</option>
-                {CENTRAL_FILTER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {centralOn ? (
+                <>
+                  <label className="cc-label" htmlFor="cc-filter-central" style={{ marginTop: 8 }}>
+                    Central
+                  </label>
+                  <select
+                    id="cc-filter-central"
+                    className="cc-select"
+                    value={filters.central ?? ''}
+                    onChange={(event) =>
+                      onChange({ ...filters, central: parseCentralFilter(event.target.value) })
+                    }
+                  >
+                    <option value="">Any</option>
+                    {CENTRAL_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
               {canPickPeople ? (
                 <>
                   <label className="cc-label" htmlFor="cc-filter-manager" style={{ marginTop: 8 }}>

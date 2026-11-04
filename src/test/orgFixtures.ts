@@ -140,6 +140,14 @@ export const ownerContext: OrganizationContext = {
   organization: testOrganization,
   role: { id: '0198c1f2-0000-7000-8000-0000000000b1', name: 'Owner', system_key: 'owner' },
   permissions: OWNER_PERMISSIONS,
+  // The test practice has Capium Central on, so the client screens show it (APT74).
+  central_client_enabled: true,
+};
+
+/** The owner's context in a practice that has Capium Central switched off (the API default). */
+export const centralOffContext: OrganizationContext = {
+  ...ownerContext,
+  central_client_enabled: false,
 };
 
 /** A second practice in which the user is a plain member of staff. */
@@ -152,6 +160,7 @@ export const memberContext: OrganizationContext = {
   },
   role: { id: '0198c1f2-0000-7000-8000-0000000000b2', name: 'Staff', system_key: 'staff' },
   permissions: STAFF_PERMISSIONS,
+  central_client_enabled: true,
 };
 
 export function contextWith(

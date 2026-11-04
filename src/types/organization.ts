@@ -107,6 +107,9 @@ export interface OrganizationContext {
   organization: Organization;
   role: RoleSummary;
   permissions: string[];
+  /** Whether the practice has the Capium Central client integration switched on (Settings >
+   * Integrations, APT74). Off (the default), the client screens show nothing about Central. */
+  central_client_enabled: boolean;
 }
 
 /** Body of PATCH /organizations/{id}; every field is optional. */

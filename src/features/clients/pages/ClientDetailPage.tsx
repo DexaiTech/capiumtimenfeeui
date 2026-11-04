@@ -9,6 +9,7 @@ import { useDocumentTitle } from '@/hooks';
 import { isApiError } from '@/services/api';
 
 import { useClient, useClientOverview, useStaffDirectory } from '../api';
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import { useRecentClientsStore } from '../recents';
 import { clientAbilities, type ClientAbilities } from '../workspace/abilities';
 import { ClientHeader } from '../workspace/ClientHeader';
@@ -105,6 +106,7 @@ function TabPanel({ tab, client, abilities, overview, members }: TabPanelProps) 
 
 function ClientWorkspace({ clientId, tab }: { clientId: string; tab: ClientTabId }) {
   const { organization, can } = useOrg();
+  const centralOn = useCentralEnabled();
   const detail = useClient(clientId);
   const overview = useClientOverview(clientId);
   const staff = useStaffDirectory();
@@ -163,7 +165,7 @@ function ClientWorkspace({ clientId, tab }: { clientId: string; tab: ClientTabId
     );
   }
 
-  const abilities = clientAbilities(detail.data, can);
+  const abilities = clientAbilities(detail.data, can, centralOn);
   const tabs = visibleTabs(can);
   const current = tabs.find((entry) => entry.id === tab);
 

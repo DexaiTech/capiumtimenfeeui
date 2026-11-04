@@ -3,6 +3,7 @@ import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 import { RowActions } from '@/components/ui';
 import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import { formatActivity, initialsOf } from '../format';
 import type { ToggleableColumnId } from '../constants';
 import type { ClientListItem, ClientSort, SortOrder } from '../types';
@@ -100,10 +101,12 @@ export function ClientsTable({
   const headerCheckRef = useRef<HTMLInputElement>(null);
   const segmentsOn = useSegmentsEnabled();
   const branchesOn = useBranchesEnabled();
+  const centralOn = useCentralEnabled();
   const show = (column: ToggleableColumnId) =>
     !hidden.has(column) &&
     (segmentsOn || column !== 'segment') &&
-    (branchesOn || column !== 'branch');
+    (branchesOn || column !== 'branch') &&
+    (centralOn || column !== 'central');
 
   const pageIds = rows.map((row) => row.id);
   const selectedOnPage = pageIds.filter((id) => selected.has(id)).length;

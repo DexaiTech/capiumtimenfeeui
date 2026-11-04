@@ -66,12 +66,21 @@ describe('the cards', () => {
     expect(bookkeeping.getByText('Documents sent').nextSibling).toHaveTextContent('7');
   });
 
-  it('cannot switch off the central client service', async () => {
-    setup();
+  it('switches Capium Central off like any other integration (APT74)', async () => {
+    const user = userEvent.setup();
+    const backend = setup();
     const central = await cardOf('Central Client');
 
-    expect(central.getByRole('switch', { name: 'Enabled' })).toBeDisabled();
-    expect(central.getByText('Always on: it is part of the client flow.')).toBeInTheDocument();
+    expect(central.queryByText('Always on: it is part of the client flow.')).toBeNull();
+    await user.click(central.getByRole('switch', { name: 'Enabled' }));
+
+    await waitFor(() =>
+      expect(callsOf(backend, 'PATCH', '/integrations/central_client')).toHaveLength(1),
+    );
+    expect(callsOf(backend, 'PATCH', '/integrations/central_client')[0]?.body).toEqual({
+      enabled: false,
+    });
+    expect(await screen.findByText('Central Client switched off')).toBeInTheDocument();
   });
 
   it('switches an integration on, and off again', async () => {

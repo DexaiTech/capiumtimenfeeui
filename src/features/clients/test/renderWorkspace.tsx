@@ -12,6 +12,8 @@ import { workspaceHandlers, type WorkspaceData } from './workspaceHandlers';
 
 export interface RenderWorkspaceOptions extends WorkspaceData {
   permissions?: string[];
+  /** Whether the practice has Capium Central on (APT74); on by default. */
+  centralOn?: boolean;
   /** Handlers that win over the workspace ones, for one test's scenario. */
   handlers?: HttpHandler[];
 }
@@ -19,7 +21,12 @@ export interface RenderWorkspaceOptions extends WorkspaceData {
 /** The Client 360 page at `route`, on the practice route and with the workspace's API mocked. */
 export function renderWorkspace(
   route: string,
-  { permissions = OWNER_PERMISSIONS, handlers = [], ...data }: RenderWorkspaceOptions = {},
+  {
+    permissions = OWNER_PERMISSIONS,
+    centralOn = true,
+    handlers = [],
+    ...data
+  }: RenderWorkspaceOptions = {},
 ) {
   server.use(...handlers, ...workspaceHandlers(data));
   return renderInOrg(
@@ -35,7 +42,7 @@ export function renderWorkspace(
       />
       <Route path="/acme/clients" element={<p>Client list</p>} />
     </Routes>,
-    { route, context: contextWith(permissions) },
+    { route, context: { ...contextWith(permissions), central_client_enabled: centralOn } },
   );
 }
 

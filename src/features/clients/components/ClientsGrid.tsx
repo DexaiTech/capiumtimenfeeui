@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { RowActions } from '@/components/ui';
 import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import { formatActivity, initialsOf } from '../format';
 import type { ClientListItem } from '../types';
 import { type MenuAction } from './ActionMenu';
@@ -52,6 +53,7 @@ export function ClientsGrid({
 }: ClientsGridProps) {
   const segmentsOn = useSegmentsEnabled();
   const branchesOn = useBranchesEnabled();
+  const centralOn = useCentralEnabled();
   if (placeholder) return <div className="cc-table-card">{placeholder}</div>;
   if (loading && rows.length === 0) {
     return (
@@ -178,10 +180,14 @@ export function ClientsGrid({
                 <dd>
                   <ServicesCell services={client.services} />
                 </dd>
-                <dt>Central</dt>
-                <dd>
-                  <CentralCell client={client} timeZone={timeZone} />
-                </dd>
+                {centralOn ? (
+                  <>
+                    <dt>Central</dt>
+                    <dd>
+                      <CentralCell client={client} timeZone={timeZone} />
+                    </dd>
+                  </>
+                ) : null}
               </dl>
             </li>
           );
