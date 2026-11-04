@@ -28,8 +28,7 @@ import type {
   InvoiceDetail,
   InvoiceHeaderUpdate,
   InvoiceIssueBody,
-  InvoiceLineCreate,
-  InvoiceLineUpdate,
+  InvoiceLinesSave,
   InvoiceListFilters,
   InvoiceListSummary,
   InvoiceSent,
@@ -113,22 +112,9 @@ export const billingApi = {
     api.post<BulkResult<'delete'>>(`${org(organizationId)}/invoices/bulk`, body),
   deleteInvoice: (organizationId: string, invoiceId: string) =>
     api.delete<null>(`${org(organizationId)}/invoices/${seg(invoiceId)}`),
-  addLine: (organizationId: string, invoiceId: string, body: InvoiceLineCreate) =>
-    api.post<InvoiceDetail>(`${org(organizationId)}/invoices/${seg(invoiceId)}/lines`, body),
-  updateLine: (
-    organizationId: string,
-    invoiceId: string,
-    lineId: string,
-    body: InvoiceLineUpdate,
-  ) =>
-    api.patch<InvoiceDetail>(
-      `${org(organizationId)}/invoices/${seg(invoiceId)}/lines/${seg(lineId)}`,
-      body,
-    ),
-  deleteLine: (organizationId: string, invoiceId: string, lineId: string) =>
-    api.delete<InvoiceDetail>(
-      `${org(organizationId)}/invoices/${seg(invoiceId)}/lines/${seg(lineId)}`,
-    ),
+  /** Saves a draft's lines in one request, all or nothing. */
+  saveLines: (organizationId: string, invoiceId: string, body: InvoiceLinesSave) =>
+    api.put<InvoiceDetail>(`${org(organizationId)}/invoices/${seg(invoiceId)}/lines`, body),
   /** Bills WIP against fees billed in advance (`unassign: true` takes it off again). */
   assignToAdvance: (
     organizationId: string,

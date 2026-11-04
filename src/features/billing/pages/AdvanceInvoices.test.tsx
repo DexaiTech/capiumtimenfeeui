@@ -110,7 +110,7 @@ function openInvoice(invoice: InvoiceDetail): Posted[] {
     http.post(orgApiPath('/invoices/inv-1/lines/:lineId/unassign'), ({ request }) =>
       record(request),
     ),
-    http.post(orgApiPath('/invoices/inv-1/lines'), ({ request }) => record(request)),
+    http.put(orgApiPath('/invoices/inv-1/lines'), ({ request }) => record(request)),
     http.get(apiPath('/organizations/:organizationId/*'), () => ok([])),
   );
   renderBillingPage(<InvoiceDetailPage />, {
@@ -463,10 +463,10 @@ describe('billing fees in advance', () => {
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]?.path).toMatch(/\/invoices\/inv-1\/lines$/);
     expect(posted[0]?.body).toEqual({
-      description: 'Fees in advance',
-      quantity: '1.00',
-      unit_amount: 600000,
-      is_advance: true,
+      lines: [],
+      new_lines: [
+        { description: 'Fees in advance', quantity: '1.00', unit_amount: 600000, is_advance: true },
+      ],
     });
   });
 

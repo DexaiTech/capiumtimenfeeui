@@ -16,8 +16,7 @@ import type {
   InvoiceDetail,
   InvoiceHeaderUpdate,
   InvoiceIssueBody,
-  InvoiceLineCreate,
-  InvoiceLineUpdate,
+  InvoiceLinesSave,
   InvoiceListFilters,
 } from '../types';
 import { billingApi } from './billingApi';
@@ -127,35 +126,13 @@ export function useBulkInvoices() {
   });
 }
 
-export function useAddInvoiceLine(invoiceId: string) {
+/** Saves a draft's lines in one request: every change is saved, or none is. */
+export function useSaveInvoiceLines(invoiceId: string) {
   const { organization } = useOrg();
   const invalidate = useBillingInvalidation();
   const cache = useDetailCache();
   return useMutation({
-    mutationFn: (body: InvoiceLineCreate) => billingApi.addLine(organization.id, invoiceId, body),
-    onSuccess: cache,
-    onSettled: invalidate.invoices,
-  });
-}
-
-export function useUpdateInvoiceLine(invoiceId: string) {
-  const { organization } = useOrg();
-  const invalidate = useBillingInvalidation();
-  const cache = useDetailCache();
-  return useMutation({
-    mutationFn: ({ lineId, body }: { lineId: string; body: InvoiceLineUpdate }) =>
-      billingApi.updateLine(organization.id, invoiceId, lineId, body),
-    onSuccess: cache,
-    onSettled: invalidate.invoices,
-  });
-}
-
-export function useDeleteInvoiceLine(invoiceId: string) {
-  const { organization } = useOrg();
-  const invalidate = useBillingInvalidation();
-  const cache = useDetailCache();
-  return useMutation({
-    mutationFn: (lineId: string) => billingApi.deleteLine(organization.id, invoiceId, lineId),
+    mutationFn: (body: InvoiceLinesSave) => billingApi.saveLines(organization.id, invoiceId, body),
     onSuccess: cache,
     onSettled: invalidate.invoices,
   });
