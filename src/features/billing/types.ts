@@ -280,6 +280,15 @@ export interface InvoiceLineUpdate {
   vat_rate_id?: string | null;
 }
 
+/**
+ * `PUT /invoices/{id}/lines`: a draft's lines saved in one go, all or nothing. A saved line not
+ * in `lines` is removed (its WIP is unbilled again).
+ */
+export interface InvoiceLinesSave {
+  lines: Array<InvoiceLineUpdate & { id: string }>;
+  new_lines: InvoiceLineCreate[];
+}
+
 export interface InvoiceIssueBody {
   issue_date?: IsoDate;
   due_date?: IsoDate;

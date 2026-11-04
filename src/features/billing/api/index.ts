@@ -5,22 +5,20 @@ export {
   type SortOrder,
 } from './billingApi';
 export {
-  useAddInvoiceLine,
   useAdvanceItems,
   useApproveInvoice,
   useBulkInvoices,
   useCreateInvoice,
   useDeleteInvoice,
-  useDeleteInvoiceLine,
   useInvoice,
   useInvoiceList,
   useInvoiceSummary,
   useIssueInvoice,
   useRejectInvoice,
+  useSaveInvoiceLines,
   useSendInvoice,
   useSubmitInvoice,
   useUpdateInvoice,
-  useUpdateInvoiceLine,
   useVoidInvoice,
 } from './invoices';
 export {

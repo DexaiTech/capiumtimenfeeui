@@ -4,7 +4,7 @@ import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { orgApiPath } from '@/test/renderInOrg';
-import { apiPath, ok, server } from '@/test/server';
+import { apiPath, fail, ok, server } from '@/test/server';
 
 import { harbour } from '../test/fixtures';
 import { serviceOptions, vatCodes } from '../test/prepare';
@@ -119,21 +119,20 @@ interface Call {
   body?: unknown;
 }
 
-/** The invoice page of `invoice`; returns the line requests it makes, in order. */
-function openInvoice(invoice: InvoiceDetail): Call[] {
+/**
+ * The invoice page of `invoice`; returns the line requests it makes, in order. Saving answers
+ * `reply` when given, else the invoice.
+ */
+function openInvoice(invoice: InvoiceDetail, reply?: () => Response): Call[] {
   const calls: Call[] = [];
   const record = async (request: Request) => {
     const body: unknown = request.method === 'DELETE' ? undefined : await request.json();
     calls.push({ method: request.method, path: new URL(request.url).pathname, body });
-    // A new line comes back with an id of its own.
-    return ok(
-      request.method === 'POST'
-        ? { ...invoice, lines: [...invoice.lines, line({ id: 'l-new', position: 9 })] }
-        : invoice,
-    );
+    return reply ? reply() : ok(invoice);
   };
   server.use(
     http.get(orgApiPath('/invoices/inv-1'), () => ok(invoice)),
+    http.put(orgApiPath('/invoices/inv-1/lines'), ({ request }) => record(request)),
     http.post(orgApiPath('/invoices/inv-1/lines'), ({ request }) => record(request)),
     http.patch(orgApiPath('/invoices/inv-1/lines/:lineId'), ({ request }) => record(request)),
     http.delete(orgApiPath('/invoices/inv-1/lines/:lineId'), ({ request }) => record(request)),
@@ -200,21 +199,18 @@ describe('the lines of a draft invoice', () => {
 
     await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
     expect(await screen.findByText('Lines saved')).toBeInTheDocument();
-    // Removed lines first, then the changed ones, then the new ones.
+    // One request, all or nothing: the lines kept with their changes (l-3 is not listed, so it
+    // is removed) and the new ones.
     expect(
       calls.map((call) => `${call.method} ${call.path.replace(/^.*\/invoices\//, '')}`),
-    ).toEqual([
-      'DELETE inv-1/lines/l-3',
-      'PATCH inv-1/lines/l-1',
-      'PATCH inv-1/lines/l-2',
-      'POST inv-1/lines',
-    ]);
-    expect(calls.map((call) => call.body)).toEqual([
-      undefined,
-      { net_amount: 25000 },
-      { quantity: '3.00', unit_amount: 6000, vat_rate_id: 'vat-zero' },
-      { description: 'Filing fee', quantity: '1.00', unit_amount: 3400 },
-    ]);
+    ).toEqual(['PUT inv-1/lines']);
+    expect(calls[0]?.body).toEqual({
+      lines: [
+        { id: 'l-1', net_amount: 25000 },
+        { id: 'l-2', quantity: '3.00', unit_amount: 6000, vat_rate_id: 'vat-zero' },
+      ],
+      new_lines: [{ description: 'Filing fee', quantity: '1.00', unit_amount: 3400 }],
+    });
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Issue invoice' })).toBeEnabled(),
     );
@@ -250,7 +246,30 @@ describe('the lines of a draft invoice', () => {
     expect(row()).toHaveTextContent('£0.000%Zero, the service’s code');
     await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
     await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]?.body).toEqual({ description: 'Monthly bookkeeping 2026', vat_rate_id: null });
+    expect(calls[0]?.body).toEqual({
+      lines: [{ id: 'l-9', description: 'Monthly bookkeeping 2026', vat_rate_id: null }],
+      new_lines: [],
+    });
+  });
+
+  it('keeps every change in the grid when the save is refused', async () => {
+    const user = userEvent.setup();
+    const calls = openInvoice(draft(lines()), () =>
+      fail(422, 'INVOICE_TOTAL_NEGATIVE', 'The invoice total cannot be negative.'),
+    );
+    const grid = await screen.findByRole('form', { name: 'Lines of the draft' });
+
+    await user.click(within(grid).getByRole('button', { name: 'Remove line 1' }));
+    await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
+
+    expect(await within(grid).findByText('The invoice total cannot be negative.')).toBeVisible();
+    expect(calls.map((call) => call.method)).toEqual(['PUT']);
+    // Nothing was saved: the grid still holds the change, to correct or discard.
+    expect(within(grid).getAllByRole('row')).toHaveLength(3);
+    expect(within(grid).getByText(/Changes not saved yet/)).toBeInTheDocument();
+    expect(within(grid).getByRole('button', { name: 'Save lines' })).toBeEnabled();
+    expect(within(grid).getByRole('button', { name: 'Discard changes' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Issue invoice' })).toBeDisabled();
   });
 
   it('asks for what each row needs before saving anything', async () => {

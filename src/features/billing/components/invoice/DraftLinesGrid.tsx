@@ -7,17 +7,17 @@ import { Button, Checkbox, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
-import {
-  useAddInvoiceLine,
-  useClientBilling,
-  useDeleteInvoiceLine,
-  useServiceOptions,
-  useUpdateInvoiceLine,
-  useVatOptions,
-} from '../../api';
+import { useClientBilling, useSaveInvoiceLines, useServiceOptions, useVatOptions } from '../../api';
 import { WIP_KIND_LABELS } from '../../constants';
 import { draftLinesSchema, type DraftLinesValues, type GridLineValues } from '../../schemas/forms';
-import type { InvoiceDetail, InvoiceLine, InvoiceLineUpdate, ServiceOption } from '../../types';
+import type {
+  InvoiceDetail,
+  InvoiceLine,
+  InvoiceLineCreate,
+  InvoiceLinesSave,
+  InvoiceLineUpdate,
+  ServiceOption,
+} from '../../types';
 import { toFormError } from '../../utils/errors';
 import { plural } from '../../utils/format';
 import type { LineGridMeta } from '../../utils/lineGrid';
@@ -94,9 +94,8 @@ export interface DraftLinesGridProps {
 
 /**
  * The lines of a draft in the line grid, edited in place: change a row, add one with "+ Row",
- * remove one with its bin, then "Save lines" saves every change (removed lines first, then the
- * changed ones, then the new ones, in the grid's order). A removed line of work goes back to
- * unbilled WIP.
+ * remove one with its bin, then "Save lines" saves every change in one request, all or nothing.
+ * A removed line of work goes back to unbilled WIP.
  */
 export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) {
   const { organization } = useOrg();
@@ -104,9 +103,7 @@ export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) 
   const vat = useVatOptions();
   const billing = useClientBilling(invoice.client?.id ?? null);
   const services = useServiceOptions();
-  const add = useAddInvoiceLine(invoice.id);
-  const update = useUpdateInvoiceLine(invoice.id);
-  const removeLine = useDeleteInvoiceLine(invoice.id);
+  const saveLines = useSaveInvoiceLines(invoice.id);
   const form = useForm<DraftLinesValues>({
     resolver: zodResolver(draftLinesSchema),
     defaultValues: valuesOf(invoice.lines),
@@ -135,36 +132,30 @@ export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) 
 
   const save = form.handleSubmit(async ({ advance, lines }) => {
     clearSubmitError();
-    const kept = new Set(lines.map((row) => row.key));
-    let latest = invoice;
+    const kept: InvoiceLinesSave['lines'] = [];
+    const added: InvoiceLineCreate[] = [];
+    for (const row of lines) {
+      const line = invoice.lines.find((saved) => saved.id === row.key);
+      if (line) {
+        kept.push({ id: line.id, ...changesOf(line, row) });
+        continue;
+      }
+      const quantity = parseQuantity(row.quantity);
+      const unit = parsePounds(row.unit_amount);
+      if (quantity === null || unit === null) continue;
+      added.push({
+        description: row.description.trim(),
+        quantity: formatQuantity(quantity),
+        unit_amount: unit,
+        ...(row.vat_rate_id ? { vat_rate_id: row.vat_rate_id } : {}),
+        ...(row.service_id ? { service_id: row.service_id } : {}),
+        ...(advance ? { is_advance: true } : {}),
+      });
+    }
+    let latest: InvoiceDetail;
     try {
-      for (const line of invoice.lines) {
-        if (!kept.has(line.id)) latest = await removeLine.mutateAsync(line.id);
-      }
-      for (const row of lines) {
-        const line = invoice.lines.find((saved) => saved.id === row.key);
-        const changes = line ? changesOf(line, row) : {};
-        if (line && Object.keys(changes).length > 0) {
-          latest = await update.mutateAsync({ lineId: line.id, body: changes });
-        }
-      }
-      for (const [index, row] of lines.entries()) {
-        const quantity = parseQuantity(row.quantity);
-        const unit = parsePounds(row.unit_amount);
-        if (row.key !== '' || quantity === null || unit === null) continue;
-        const before = new Set(latest.lines.map((line) => line.id));
-        latest = await add.mutateAsync({
-          description: row.description.trim(),
-          quantity: formatQuantity(quantity),
-          unit_amount: unit,
-          ...(row.vat_rate_id ? { vat_rate_id: row.vat_rate_id } : {}),
-          ...(row.service_id ? { service_id: row.service_id } : {}),
-          ...(advance ? { is_advance: true } : {}),
-        });
-        // Saved: should a later change fail, saving again does not add it twice.
-        const created = latest.lines.find((line) => !before.has(line.id));
-        if (created) form.setValue(`lines.${index}.key`, created.id);
-      }
+      // One request, all or nothing: a saved line not listed is removed.
+      latest = await saveLines.mutateAsync({ lines: kept, new_lines: added });
     } catch (error) {
       handleSubmitError(toFormError(error));
       return;
