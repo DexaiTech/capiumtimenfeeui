@@ -9,8 +9,8 @@ export interface Branch {
   id: string;
   name: string;
   is_active: boolean;
-  /** Live clients in the branch. */
-  client_count: number;
+  /** Live clients in the branch; null for a member without `client.read`. */
+  client_count: number | null;
   /** False once clients have it: DELETE then deactivates. */
   can_delete: boolean;
   created_at: IsoDateTime;
