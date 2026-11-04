@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, CircleCheck, Trash2, TriangleAlert } from 'lucide-react';
 import { useRef } from 'react';
 
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, Tooltip } from '@/components/ui';
 import { cn } from '@/utils/cn';
 import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
@@ -28,6 +28,8 @@ export interface WeekGridTableProps {
   autosave?: GridAutosave;
   /** Opens the entries of a cell (its details icon), to see, edit or delete them. */
   onOpenCell?: (cell: { key: string; label: string }) => void;
+  /** Opens an entry in the time panel: an older row's badge links to its entry (APT64). */
+  onEditEntry?: (entry: TimeEntry) => void;
   onOpenDay?: (date: string) => void;
   onRemoveDraft?: (rowKey: string) => void;
 }
@@ -45,6 +47,7 @@ export function WeekGridTable({
   closedJobs,
   autosave,
   onOpenCell,
+  onEditEntry,
   onOpenDay,
   onRemoveDraft,
 }: WeekGridTableProps) {
@@ -110,6 +113,11 @@ export function WeekGridTable({
           {rows.map((row, rowIndex) => {
             const closed = row.job_id !== null && closedJobs.has(row.job_id);
             const title = rowTitle(row);
+            // Older time without a client or job (APT64): its entries are edited one by one.
+            const needsClientAndJob = !row.draft && (row.client_id === null || row.job_id === null);
+            const firstEntry = needsClientAndJob
+              ? grid.days.flatMap((date) => cellEntries.get(cellKey(row.key, date)) ?? [])[0]
+              : undefined;
             return (
               <tr key={row.key} data-row-key={row.key} className="hover:bg-surface-hover/40">
                 <th
@@ -142,6 +150,23 @@ export function WeekGridTable({
                         <Badge tone="violet" size="sm">
                           New row
                         </Badge>
+                      ) : null}
+                      {needsClientAndJob ? (
+                        <Tooltip content="Recorded before every entry needed a client and a job. Edit the entry to add them.">
+                          {firstEntry && onEditEntry ? (
+                            <button
+                              type="button"
+                              onClick={() => onEditEntry(firstEntry)}
+                              className="rounded-full focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
+                            >
+                              <NeedsClientAndJob />
+                            </button>
+                          ) : (
+                            <span tabIndex={0} className="rounded-full">
+                              <NeedsClientAndJob />
+                            </span>
+                          )}
+                        </Tooltip>
                       ) : null}
                     </span>
                   </span>
@@ -324,5 +349,14 @@ export function WeekGridTable({
         </tfoot>
       </table>
     </div>
+  );
+}
+
+/** The mark of an older row that has no client or job (APT64). */
+function NeedsClientAndJob() {
+  return (
+    <Badge tone="amber" size="sm" icon={<TriangleAlert className="size-3" aria-hidden="true" />}>
+      Needs a client and job
+    </Badge>
   );
 }

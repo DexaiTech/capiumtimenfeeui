@@ -234,6 +234,7 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
           closedJobs={closedJobs}
           autosave={editable ? autosave : undefined}
           onOpenCell={setOpenCell}
+          onEditEntry={entryActions.edit}
           onOpenDay={onOpenDay}
           onRemoveDraft={(key) =>
             setDrafts((current) => current.filter((draft) => rowKey(draft) !== key))
