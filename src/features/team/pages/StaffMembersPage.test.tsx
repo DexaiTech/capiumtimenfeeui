@@ -377,12 +377,12 @@ describe('StaffMembersPage row actions', () => {
       'Delete',
     ]);
 
-    // A login: change role, unlink, reset password.
+    // A login: change role, reset password (in the place of Invite), unlink.
     expect(menuItems(await openActions('Grace Hopper'))).toEqual([
       'Edit',
       'Change role',
-      'Unlink login',
       'Reset password',
+      'Unlink login',
       'Deactivate',
       'Delete',
     ]);

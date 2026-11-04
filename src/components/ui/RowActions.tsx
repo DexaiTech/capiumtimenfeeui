@@ -35,19 +35,24 @@ function rowActionName(label: string): string {
   return label.replace(/\s*(…|\.\.\.)$/, '');
 }
 
-/** The actions in their places: `null` where a place has no action on this row. */
+/**
+ * The actions in their places: `null` where a place has no action on this row. An action that is
+ * not in a place (it has none, or another action of its shared place took it) follows at the end,
+ * so no action is ever hidden.
+ */
 function placeActions(
   actions: DropdownActionItem[],
   slots: ReadonlyArray<string | ReadonlyArray<string>> | undefined,
 ): Array<{ key: string; action: DropdownActionItem | null }> {
   if (!slots) return actions.map((action) => ({ key: action.id, action }));
-  const placed = new Set<string>();
+  const placed = new Set<DropdownActionItem>();
   const inSlots = slots.map((slot) => {
     const ids: ReadonlyArray<string> = typeof slot === 'string' ? [slot] : slot;
-    ids.forEach((id) => placed.add(id));
-    return { key: ids.join('|'), action: actions.find((item) => ids.includes(item.id)) ?? null };
+    const action = actions.find((item) => ids.includes(item.id)) ?? null;
+    if (action) placed.add(action);
+    return { key: ids.join('|'), action };
   });
-  const rest = actions.filter((action) => !placed.has(action.id));
+  const rest = actions.filter((action) => !placed.has(action));
   return [...inSlots, ...rest.map((action) => ({ key: action.id, action }))];
 }
 

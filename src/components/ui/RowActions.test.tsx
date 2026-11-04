@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { DropdownItem } from './Dropdown';
 import { RowActions } from './RowActions';
+import { slotsInUse } from './rowActionSlots';
 import { rowActionColor, rowActionIcon } from './rowActionIcon';
 
 const items = (onEdit = vi.fn(), onDelete = vi.fn()): DropdownItem[] => [
@@ -167,6 +168,27 @@ describe('RowActions slots (APT77)', () => {
       />,
     );
     expect(places()).toEqual(['Open', 'Extra']);
+  });
+
+  it('never hides an action whose shared place another action took', () => {
+    render(
+      <RowActions
+        label="Actions"
+        slots={['open', ['issue', 'send']]}
+        items={[action('open', 'Open'), action('issue', 'Issue'), action('send', 'Send')]}
+      />,
+    );
+    expect(places()).toEqual(['Open', 'Issue', 'Send']);
+  });
+
+  it('keeps only the places some row of the grid uses', () => {
+    const rows = [
+      [action('open', 'Open'), { id: 'sep', separator: true as const }, action('send', 'Send')],
+      [action('open', 'Open'), action('delete', 'Delete')],
+    ];
+    // Nothing on this list can be paid: that place would only be an empty gap on every row.
+    expect(slotsInUse(slots, rows)).toEqual(['open', ['issue', 'send'], 'delete']);
+    expect(slotsInUse(slots, [])).toEqual([]);
   });
 });
 
