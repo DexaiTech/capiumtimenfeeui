@@ -71,10 +71,18 @@ function withLockedHint(error: ApiError): ApiError {
   });
 }
 
-/** The text of a refusal, for the error line of a confirmation dialog or a grid cell. */
+/**
+ * The text of a refusal, for the error line of a confirmation dialog or a grid cell: what is
+ * wrong with the first field at fault when the API names one ("Time must be recorded against a
+ * job."), else the refusal's message.
+ */
 export function dialogError(error: unknown): { message: string; requestId?: string } {
   if (isApiError(error)) {
-    return { message: error.message, requestId: error.retryable ? error.requestId : undefined };
+    const [first] = fieldDetails(error);
+    return {
+      message: first?.message ?? error.message,
+      requestId: error.retryable ? error.requestId : undefined,
+    };
   }
   return { message: 'An unexpected error occurred. Please try again.' };
 }

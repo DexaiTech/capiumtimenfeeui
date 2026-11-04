@@ -191,4 +191,27 @@ describe('WeekView: a row needs a client and a job (APT64)', () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it('marks an older row as needing a client and a job, and opens its entry to add them', async () => {
+    const user = userEvent.setup();
+    setup([
+      ...weekEntries(),
+      entry({
+        id: 'old',
+        entry_date: '2026-10-14',
+        minutes: 600,
+        job: null,
+        client: null,
+        activity: null,
+        is_billable: false,
+      }),
+    ]);
+
+    const needs = await screen.findByRole('button', { name: 'Needs a client and job' });
+    expect(screen.getAllByRole('button', { name: 'Needs a client and job' })).toHaveLength(1);
+    await user.click(needs);
+    const form = await screen.findByRole('region', { name: 'Edit time entry' });
+    expect(within(form).getByLabelText(/^Time/)).toHaveValue('10:00');
+    expect(within(form).getByRole('combobox', { name: 'Job' })).toBeInTheDocument();
+  });
 });
