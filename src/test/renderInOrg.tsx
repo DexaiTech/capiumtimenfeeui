@@ -14,6 +14,8 @@ export interface RenderInOrgOptions {
   context?: OrganizationContext;
   user?: User;
   route?: string;
+  /** Mounts `ui` in a data router, as the app does (needed by `useBlocker`). */
+  dataRouter?: boolean;
 }
 
 /** A path under the test practice, for MSW handlers. */
@@ -23,7 +25,12 @@ export const orgApiPath = (path: string, context: OrganizationContext = ownerCon
 /** Renders the way the practice route does: signed in, inside a practice. */
 export function renderInOrg(
   ui: ReactElement,
-  { context = ownerContext, user = testUser, route = '/' }: RenderInOrgOptions = {},
+  {
+    context = ownerContext,
+    user = testUser,
+    route = '/',
+    dataRouter = false,
+  }: RenderInOrgOptions = {},
 ): RenderResult {
   return renderWithProviders(
     <AuthContext.Provider
@@ -40,6 +47,6 @@ export function renderInOrg(
     >
       <OrgProvider value={context}>{ui}</OrgProvider>
     </AuthContext.Provider>,
-    { route },
+    { route, dataRouter },
   );
 }
