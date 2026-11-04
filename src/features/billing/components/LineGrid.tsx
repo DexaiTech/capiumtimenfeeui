@@ -16,11 +16,14 @@ import { formatBasisPoints, formatMoney, penceToPoundsInput } from '@/utils/mone
 import { useServiceOptions } from '../api';
 import { MAX_DOCUMENT_LINES } from '../constants';
 import type { GridLineValues } from '../schemas/forms';
+import { defaultVatLabel } from '../utils/format';
 import {
   FIRST_DESCRIPTION,
   gridTotals,
   newGridLine,
   priceGridLine,
+  rowDefaultVat,
+  vatNoteOf,
   type LineGridMeta,
   type LineGridMetas,
 } from '../utils/lineGrid';
@@ -271,7 +274,10 @@ export function LineGrid<TForm extends FieldValues & WithGridLines>({
           label={`VAT code of line ${index + 1}`}
           hideLabel
           options={vat.options}
-          defaultLabel="Default"
+          defaultLabel={defaultVatLabel(
+            rowDefaultVat(lineAt(index), metaAt(index), vat, services),
+            vat.options,
+          )}
           current={metaAt(index)?.savedVat ?? null}
           error={lineErrors?.[index]?.vat_rate_id?.message}
           {...register(`lines.${index}.vat_rate_id`)}
@@ -291,6 +297,9 @@ export function LineGrid<TForm extends FieldValues & WithGridLines>({
           <div className="flex flex-col">
             <span>{line.net === null ? '—' : money(vatOn(line.net, line.vatBp))}</span>
             <span className="text-xs text-text-muted">{formatBasisPoints(line.vatBp)}</span>
+            <span className="text-xs text-text-muted">
+              {vatNoteOf(lineAt(index), metaAt(index), vat, services)}
+            </span>
           </div>
         );
       },

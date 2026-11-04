@@ -158,8 +158,9 @@ export function ReviewStep({
         </p>
       ) : null}
       <p className="text-xs text-text-muted">
-        VAT follows each line's code, else the client's own code, else its service's; disbursements
-        keep their own code, so the draft may differ slightly.
+        VAT is the code chosen for a line, else the code the draft gives it (named under each rate):
+        the client's own code, else the job's service's, else the practice default; a disbursement
+        keeps its own code.
       </p>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">

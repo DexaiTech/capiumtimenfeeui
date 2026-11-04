@@ -4,6 +4,7 @@ import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Checkbox, useToast } from '@/components/ui';
+import { useOrg } from '@/features/organizations';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import {
@@ -98,6 +99,7 @@ export interface DraftLinesGridProps {
  * unbilled WIP.
  */
 export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) {
+  const { organization } = useOrg();
   const { toast } = useToast();
   const vat = useVatOptions();
   const billing = useClientBilling(invoice.client?.id ?? null);
@@ -127,6 +129,7 @@ export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) 
     options: vat.options,
     clientId: billing.data?.default_vat_rate_id ?? null,
     practiceId: vat.options.find((option) => option.is_default)?.id ?? null,
+    registered: organization.vat_registered,
   };
   const metas = new Map(invoice.lines.map((line) => [line.id, metaOf(line, services)]));
 

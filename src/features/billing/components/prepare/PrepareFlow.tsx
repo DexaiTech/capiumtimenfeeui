@@ -69,7 +69,7 @@ function workMeta(line: PreviewLine): LineGridMeta {
     unitAmount: time ? line.unitAmount : null,
     wip: line.wip,
     net: line.net,
-    serviceVatRateId: line.serviceVatRateId,
+    defaultVat: line.vatDefault,
   };
 }
 
@@ -151,11 +151,17 @@ export function PrepareFlow({
   const ready = wip.data !== undefined && !vat.isPending && !billing.isPending;
   const { rows, blocked } = workRowsOf(wip.data?.items ?? []);
   const items = chosenItems(wip.data?.items ?? [], rows, selected);
-  const planned = planLines(items, groupBy, fixedFeesOf(rows, selected));
+  const planned = planLines(
+    items,
+    groupBy,
+    fixedFeesOf(rows, selected),
+    wip.data?.default_vat ?? null,
+  );
   const vatDefaults: VatDefaults = {
     options: vat.options,
     clientId: billing.data?.default_vat_rate_id ?? null,
     practiceId: vat.options.find((option) => option.is_default)?.id ?? null,
+    registered: organization.vat_registered,
   };
   // The lines of the work as the chosen basis bills them, before the person changes any.
   const lines = previewLines(planned, basisEdits(basis, planned, summary.data), vatDefaults);

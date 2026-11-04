@@ -13,19 +13,19 @@ import { harbour } from '../test/fixtures';
 import {
   accountsJob,
   createPrepareBackend,
+  disbursementItem,
   fixedFeeItem,
   harbourSummary,
   jobBilling,
   postsOf,
   prepareHandlers,
   timeItem,
-  vatCodes,
   vatJob,
   wipOf,
   type PrepareBackend,
 } from '../test/prepare';
 import { BILLING, renderBillingPage } from '../test/render';
-import type { JobBilling, WipItem } from '../types';
+import type { ClientWip, DefaultVat, JobBilling, VatOption } from '../types';
 import PrepareInvoicePage from './PrepareInvoicePage';
 
 const PREPARE = `${BILLING}/prepare`;
@@ -383,14 +383,34 @@ describe('reviewing the lines', () => {
     expect(description(3)).toHaveValue('Software licence');
   });
 
-  // APT63: the practice's default is 20% and the fixed fee's and the books' services carry 20%.
-  const accsService = { service_id: 's-accs', service_vat_rate_id: 'vat-std' };
-  const serviceWip = (vatJobService: Partial<WipItem> = {}) =>
-    wipOf([
-      timeItem({ id: 't-5', job: accountsJob, value: 0, component: 'fixed_fee', ...accsService }),
-      timeItem({ id: 't-6', job: accountsJob, value: 0, component: 'fixed_fee', ...accsService }),
-      fixedFeeItem(),
-      timeItem({ service_id: 's-books', service_vat_rate_id: 'vat-std' }),
+  // APT63: the practice default is Flat VAT (7.5%) and the services carry Standard (20%). The
+  // client's WIP says which code each drafted line gets; the grid shows exactly that.
+  const standard: VatOption = {
+    id: 'vat-std',
+    name: 'Standard',
+    code: 'standard',
+    rate_bp: 2000,
+    is_default: false,
+    is_archived: false,
+  };
+  const flat: VatOption = {
+    id: 'vat-flat',
+    name: 'Flat VAT',
+    code: 'standard',
+    rate_bp: 750,
+    is_default: true,
+    is_archived: false,
+  };
+  const fromService: DefaultVat = { vat_rate_id: 'vat-std', rate_bp: 2000, source: 'service' };
+  const fromPractice: DefaultVat = { vat_rate_id: 'vat-flat', rate_bp: 750, source: 'practice' };
+  const accounts = { service_id: 's-accs', default_vat: fromService };
+  const flatPractice = (): ClientWip => ({
+    ...wipOf([
+      timeItem({ id: 't-5', job: accountsJob, value: 0, component: 'fixed_fee', ...accounts }),
+      timeItem({ id: 't-6', job: accountsJob, value: 0, component: 'fixed_fee', ...accounts }),
+      fixedFeeItem(accounts),
+      timeItem({ service_id: 's-books', default_vat: fromService }),
+      // The job has no service: the practice default.
       timeItem({
         id: 't-4',
         date: '2026-10-01',
@@ -400,64 +420,98 @@ describe('reviewing the lines', () => {
         value: 6000,
         charge_value: 6000,
         description: 'VAT return',
-        ...vatJobService,
+        default_vat: fromPractice,
       }),
-    ]);
-  const reduced = {
-    id: 'vat-75',
-    name: 'Reduced',
-    code: 'reduced',
-    rate_bp: 750,
-    is_default: false,
-    is_archived: false,
-  };
+      // A disbursement keeps its own code.
+      disbursementItem({
+        service_id: 's-books',
+        default_vat: { vat_rate_id: 'vat-std', rate_bp: 2000, source: 'line' },
+      }),
+    ]),
+    default_vat: fromPractice,
+  });
+  const gridRows = () => rowsOf(screen.getByRole('table', { name: 'Lines of the invoice' }));
 
-  it('estimates VAT at the client’s own code before the job’s service, as the draft charges it', async () => {
+  it('shows the VAT code the draft gives each line, and why, for every grouping', async () => {
     const user = userEvent.setup();
-    const backend = setup({
-      vat: [...vatCodes, reduced],
-      clientVatId: 'vat-75',
-      wip: { [harbour.id]: serviceWip() },
-    });
-    const lines = await review(user, /Partnership accounts/, /Bank reconciliation/, /VAT return/);
+    setup({ vat: [standard, flat], wip: { [harbour.id]: flatPractice() } });
+    await review(user, /Partnership accounts/, /Bank reconciliation/, /VAT return/, /Filing fee/);
 
-    const rows = rowsOf(lines);
-    expect(rows).toHaveLength(3);
+    let rows = gridRows();
+    expect(rows).toHaveLength(4);
     expect(description(1)).toHaveValue('Partnership accounts (fixed fee)');
+    expect(vatCell(rows[0])).toHaveTextContent('£400.0020%Standard, the service’s code');
     expect(description(2)).toHaveDisplayValue(/^Bookkeeping 2026\/27/);
+    expect(vatCell(rows[1])).toHaveTextContent('£36.0020%Standard, the service’s code');
     expect(description(3)).toHaveDisplayValue(/^VAT returns 2026\/27/);
-    for (const row of rows) expect(vatCell(row)).toHaveTextContent('7.5%');
-    // £2,000, £180 and £60 at 7.5%.
-    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£168.00');
+    expect(vatCell(rows[2])).toHaveTextContent('£4.507.5%Flat VAT, the practice default');
+    expect(description(4)).toHaveValue('Filing fee (Companies House)');
+    expect(vatCell(rows[3])).toHaveTextContent('£6.8020%Standard, its own code');
+    // £2,000, £180 and £34 at 20%, £60 at 7.5%.
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£447.30');
 
-    // A code chosen for a line is shown and sent.
-    await user.selectOptions(vatCode(2), 'Standard (20%)');
-    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£190.50');
+    await user.selectOptions(screen.getByLabelText('Group the time'), 'One line per time entry');
+    rows = gridRows();
+    expect(description(2)).toHaveValue('7 Sep 2026: Bank reconciliation');
+    expect(vatCell(rows[1])).toHaveTextContent('20%Standard, the service’s code');
+    expect(description(3)).toHaveValue('1 Oct 2026: VAT return');
+    expect(vatCell(rows[2])).toHaveTextContent('7.5%Flat VAT, the practice default');
+
+    // One line for time of two services has no service: the practice default.
+    await user.selectOptions(screen.getByLabelText('Group the time'), 'One line for all time');
+    rows = gridRows();
+    expect(description(2)).toHaveDisplayValue(/^Professional services/);
+    expect(vatCell(rows[1])).toHaveTextContent('7.5%Flat VAT, the practice default');
+    expect(vatCell(rows[0])).toHaveTextContent('20%Standard, the service’s code');
+  });
+
+  it('names the default code of each line and keeps a chosen 7.5% as chosen', async () => {
+    const user = userEvent.setup();
+    const backend = setup({ vat: [standard, flat], wip: { [harbour.id]: flatPractice() } });
+    await review(user, /Bank reconciliation/, /VAT return/);
+
+    expect(vatCode(1)).toHaveValue('');
+    expect(
+      within(vatCode(1)).getByRole('option', {
+        name: 'Default: Standard (20%), the service’s code',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(vatCode(2)).getByRole('option', {
+        name: 'Default: Flat VAT (7.5%), the practice default',
+      }),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(vatCode(1), 'Flat VAT (7.5%)');
+    expect(vatCell(gridRows()[0])).toHaveTextContent('7.5%Flat VAT, chosen');
+    // £180 and £60 at 7.5%.
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£18.00');
 
     await user.click(screen.getByRole('button', { name: 'Dates and notes' }));
+    expect(await screen.findByText(/including VAT/)).toHaveTextContent(
+      'about £258.00 including VAT',
+    );
     await user.click(await screen.findByRole('button', { name: 'Save as draft' }));
     await screen.findByText('Draft invoice saved');
     expect(postsOf(backend, '/invoices')[0]?.body).toMatchObject({
-      overrides: [{ time_entry_id: 't-1', vat_rate_id: 'vat-std' }],
+      overrides: [{ time_entry_id: 't-1', vat_rate_id: 'vat-flat' }],
     });
   });
 
-  it('estimates VAT at the job’s service code when the client has none of its own', async () => {
+  it('charges no VAT when the practice is not VAT-registered, whatever the code', async () => {
     const user = userEvent.setup();
-    setup({
-      vat: [...vatCodes, reduced],
-      wip: {
-        [harbour.id]: serviceWip({ service_id: 's-vat', service_vat_rate_id: 'vat-zero' }),
-      },
-    });
-    const lines = await review(user, /Partnership accounts/, /Bank reconciliation/, /VAT return/);
+    const none: DefaultVat = { vat_rate_id: null, rate_bp: 0, source: null };
+    setup(
+      { wip: { [harbour.id]: wipOf([timeItem({ default_vat: none })]) } },
+      { organization: { vat_registered: false } },
+    );
+    await review(user, /Bank reconciliation/);
+    expect(vatCell(gridRows()[0])).toHaveTextContent('0%no VAT');
+    expect(within(vatCode(1)).getByRole('option', { name: 'Default: No VAT' })).toBeInTheDocument();
 
-    const rows = rowsOf(lines);
-    expect(vatCell(rows[0])).toHaveTextContent('20%');
-    expect(vatCell(rows[1])).toHaveTextContent('20%');
-    // The service's zero rate, not the practice's 20%.
-    expect(vatCell(rows[2])).toHaveTextContent('£0.000%');
-    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£436.00');
+    await user.selectOptions(vatCode(1), 'Standard (20%)');
+    expect(vatCell(gridRows()[0])).toHaveTextContent('£0.000%Standard, chosen');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£0.00');
   });
 
   it('refuses an amount that is not money', async () => {

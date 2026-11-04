@@ -276,6 +276,114 @@ describe('billing fees in advance', () => {
     );
   });
 
+  // APT63: the practice default is Flat VAT (7.5%) and the service carries Standard (20%).
+  const flatPractice = (init: Partial<PrepareBackend> = {}) =>
+    createPrepareBackend({
+      vat: [
+        {
+          id: 'vat-std',
+          name: 'Standard',
+          code: 'standard',
+          rate_bp: 2000,
+          is_default: false,
+          is_archived: false,
+        },
+        {
+          id: 'vat-flat',
+          name: 'Flat VAT',
+          code: 'standard',
+          rate_bp: 750,
+          is_default: true,
+          is_archived: false,
+        },
+        {
+          id: 'vat-zero',
+          name: 'Zero',
+          code: 'zero',
+          rate_bp: 0,
+          is_default: false,
+          is_archived: false,
+        },
+      ],
+      services: [
+        {
+          id: 'svc-ct',
+          name: 'Corporation tax return',
+          default_fee: null,
+          vat_rate_id: 'vat-std',
+          invoice_description: null,
+        },
+      ],
+      ...init,
+    });
+
+  it('names the code "Default" charges on an advance line, and keeps a chosen one', async () => {
+    const user = userEvent.setup();
+    const backend = flatPractice();
+    const panel = await openAdvanceGrid(backend);
+    const vat = within(panel).getByRole('combobox', { name: /VAT code of line 1/ });
+    const totals = within(panel).getByLabelText('Totals');
+    const row = () => within(panel).getAllByRole('row')[1] as HTMLElement;
+    await user.type(within(panel).getByRole('textbox', { name: /Unit price of line 1/ }), '100');
+
+    // No service: the practice default.
+    expect(vat).toHaveValue('');
+    expect(
+      within(vat).getByRole('option', { name: 'Default: Flat VAT (7.5%), the practice default' }),
+    ).toBeInTheDocument();
+    expect(row()).toHaveTextContent('Flat VAT, the practice default');
+    expect(totals).toHaveTextContent('Net£100.00VAT£7.50Total£107.50');
+
+    // A service with a code of its own: the service's code.
+    await within(panel).findByRole('option', { name: 'Corporation tax return' });
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: /Service of line 1/ }),
+      'svc-ct',
+    );
+    expect(
+      within(vat).getByRole('option', { name: 'Default: Standard (20%), the service’s code' }),
+    ).toBeInTheDocument();
+    expect(row()).toHaveTextContent('Standard, the service’s code');
+    expect(totals).toHaveTextContent('Net£100.00VAT£20.00Total£120.00');
+
+    // A code chosen for the line is charged and sent as chosen.
+    await user.selectOptions(vat, 'vat-flat');
+    expect(row()).toHaveTextContent('Flat VAT, chosen');
+    expect(totals).toHaveTextContent('Net£100.00VAT£7.50Total£107.50');
+    await saveDraft(user);
+    await waitFor(() => expect(postsOf(backend, '/invoices')).toHaveLength(1));
+    expect(postsOf(backend, '/invoices')[0]?.body).toEqual(
+      expect.objectContaining({
+        manual_lines: [
+          {
+            description: 'Corporation tax return',
+            quantity: '1.00',
+            unit_amount: 10000,
+            vat_rate_id: 'vat-flat',
+            service_id: 'svc-ct',
+            is_advance: true,
+          },
+        ],
+      }),
+    );
+  });
+
+  it('gives an advance line the client’s own code before its service’s', async () => {
+    const user = userEvent.setup();
+    const panel = await openAdvanceGrid(flatPractice({ clientVatId: 'vat-zero' }));
+    const vat = within(panel).getByRole('combobox', { name: /VAT code of line 1/ });
+    await user.type(within(panel).getByRole('textbox', { name: /Unit price of line 1/ }), '100');
+    await within(panel).findByRole('option', { name: 'Corporation tax return' });
+    await user.selectOptions(
+      within(panel).getByRole('combobox', { name: /Service of line 1/ }),
+      'svc-ct',
+    );
+    expect(
+      within(vat).getByRole('option', { name: 'Default: Zero (0%), the client’s code' }),
+    ).toBeInTheDocument();
+    expect(within(panel).getByLabelText('Totals')).toHaveTextContent('VAT£0.00');
+  });
+
   it('asks for a description, a quantity and a price on every advance line', async () => {
     const user = userEvent.setup();
     const backend = createPrepareBackend();
