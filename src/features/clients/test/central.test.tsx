@@ -9,7 +9,7 @@ import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
-import { INITIAL_CLIENTS_PREFS, useClientsPrefs } from '../store';
+import { CLIENTS_PREFS_KEY, INITIAL_CLIENTS_PREFS, useClientsPrefs } from '../store';
 import type { ClientListItem, ClientSummary } from '../types';
 import ClientsPage from '../pages/ClientsPage';
 import { mutual, techwave, techwaveDetail, testSummary } from './fixtures';
@@ -107,6 +107,8 @@ beforeEach(() => {
 
 describe('the Central column', () => {
   it('shows where each client stands with the central service', async () => {
+    // Hidden by default (APT74): shown here as from Show/Hide Columns.
+    useClientsPrefs.setState({ hiddenColumns: [] });
     renderList();
     expect(within(await row(techwave.name)).getByText('Local')).toBeInTheDocument();
     expect(within(await row(linked.name)).getByText('Synced 12/05/2026')).toBeInTheDocument();
@@ -122,17 +124,29 @@ describe('the Central column', () => {
     expect(note).toHaveAttribute('href', `/acme/clients/${techwave.id}/overview`);
   });
 
-  it('can be hidden from the Columns menu', async () => {
+  it('is hidden by default and can be shown from the Columns menu', async () => {
     const user = userEvent.setup();
     renderList();
     await row(techwave.name);
-    expect(screen.getByRole('columnheader', { name: 'Central' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Central' })).toBeNull();
+    expect(screen.queryByText('Synced 12/05/2026')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
     const panel = await screen.findByRole('dialog', { name: 'Show or hide columns' });
     await user.click(within(panel).getByRole('checkbox', { name: 'Central' }));
-    expect(screen.queryByRole('columnheader', { name: 'Central' })).toBeNull();
-    expect(screen.queryByText('Synced 12/05/2026')).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Central' })).toBeInTheDocument();
+  });
+
+  it('is hidden for people whose columns were saved before', async () => {
+    window.localStorage.setItem(
+      CLIENTS_PREFS_KEY,
+      JSON.stringify({
+        state: { hiddenColumns: ['reg_no'], view: 'list', presets: {} },
+        version: 1,
+      }),
+    );
+    await useClientsPrefs.persist.rehydrate();
+    expect(useClientsPrefs.getState().hiddenColumns).toEqual(['reg_no', 'central']);
   });
 
   it('shows the central chip on the cards of the grid view', async () => {

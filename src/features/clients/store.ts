@@ -61,7 +61,8 @@ const newId = () =>
 export const CLIENTS_PREFS_KEY = 'capium-clients';
 
 export const INITIAL_CLIENTS_PREFS = {
-  hiddenColumns: [] as ToggleableColumnId[],
+  // The Capium Central link is hidden unless someone shows it (APT74).
+  hiddenColumns: ['central'] as ToggleableColumnId[],
   view: 'list' as ClientsView,
   presets: {} as Record<string, FilterPreset[]>,
 };
@@ -104,8 +105,16 @@ export const useClientsPrefs = create<ClientsPrefsState>()(
     }),
     {
       name: CLIENTS_PREFS_KEY,
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => guardedStorage),
+      // Version 2 hides the Central column for people who saved their columns before.
+      migrate: (persisted, version) => {
+        const state = persisted as { hiddenColumns?: ToggleableColumnId[] };
+        if (version < 2) {
+          state.hiddenColumns = Array.from(new Set([...(state.hiddenColumns ?? []), 'central']));
+        }
+        return state;
+      },
       partialize: (state) => ({
         hiddenColumns: state.hiddenColumns,
         view: state.view,

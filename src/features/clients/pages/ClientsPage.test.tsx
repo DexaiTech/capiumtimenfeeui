@@ -47,7 +47,6 @@ describe('ClientsPage list', () => {
       'Deadlines',
       'Activity',
       'Services',
-      'Central',
       'Action',
     ]);
 
@@ -71,8 +70,8 @@ describe('ClientsPage list', () => {
     expect(cells.getByText('20/05/2026 - 09:23PM')).toBeInTheDocument();
     expect(cells.getByText('Accounts')).toBeInTheDocument();
     expect(cells.getByRole('button', { name: 'Show all 2 services' })).toHaveTextContent('+1');
-    // Created in this practice: not linked to the central client service.
-    expect(cells.getByText('Local')).toBeInTheDocument();
+    // The Central column is hidden by default (APT74).
+    expect(cells.queryByText('Local')).not.toBeInTheDocument();
     expect(cells.getByRole('checkbox', { name: `Select ${techwave.name}` })).toBeInTheDocument();
 
     const second = await clientRow(mutual.name);
