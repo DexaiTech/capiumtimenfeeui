@@ -1,37 +1,29 @@
-import { Plus } from 'lucide-react';
-
-import {
-  Button,
-  DataTable,
-  EmptyState,
-  PageToolbar,
-  type DataTableColumn,
-  type DropdownItem,
-  RowActions,
-} from '@/components/ui';
+import { DataTable, EmptyState, PageToolbar, type DataTableColumn } from '@/components/ui';
 import { formatBasisPoints, formatMoney } from '@/utils/money';
 
 import { LINE_KIND_LABELS } from '../../constants';
 import type { InvoiceDetail, InvoiceLine } from '../../types';
 import { plural } from '../../utils/format';
+import { DraftLinesGrid } from './DraftLinesGrid';
 
 export interface InvoiceLinesCardProps {
   invoice: InvoiceDetail;
-  /** A draft the caller may change: lines can be added, edited and removed. */
+  /** A draft the caller may change: its lines are edited in place in the line grid. */
   editable: boolean;
-  onAdd: () => void;
-  onEdit: (line: InvoiceLine) => void;
-  onRemove: (line: InvoiceLine) => void;
+  /** Told when the line grid has changes not saved yet. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-/** The lines of an invoice with their VAT and, under the table, the totals by VAT rate. */
-export function InvoiceLinesCard({
-  invoice,
-  editable,
-  onAdd,
-  onEdit,
-  onRemove,
-}: InvoiceLinesCardProps) {
+/**
+ * The lines of an invoice: a draft's in the line grid, edited in place; an invoice that can no
+ * longer change shows them with their VAT and, under the table, the totals by VAT rate.
+ */
+export function InvoiceLinesCard({ invoice, editable, onDirtyChange }: InvoiceLinesCardProps) {
+  if (editable) return <DraftLinesGrid invoice={invoice} onDirtyChange={onDirtyChange} />;
+  return <InvoiceLinesTable invoice={invoice} />;
+}
+
+function InvoiceLinesTable({ invoice }: { invoice: InvoiceDetail }) {
   const money = (pence: number) => formatMoney(pence, invoice.currency);
 
   const columns: DataTableColumn<InvoiceLine>[] = [
@@ -97,12 +89,6 @@ export function InvoiceLinesCard({
     },
   ];
 
-  const actionsFor = (line: InvoiceLine): DropdownItem[] => [
-    { id: 'edit', label: 'Edit line', onSelect: () => onEdit(line) },
-    { id: 'separator', separator: true },
-    { id: 'remove', label: 'Remove line', tone: 'danger', onSelect: () => onRemove(line) },
-  ];
-
   return (
     <DataTable
       caption="Invoice lines"
@@ -110,39 +96,9 @@ export function InvoiceLinesCard({
       rows={invoice.lines}
       rowKey={(line) => line.id}
       toolbar={
-        <PageToolbar
-          start={<h2 className="px-2 text-sm font-semibold text-text">Lines</h2>}
-          primaryAction={
-            editable ? (
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Plus aria-hidden="true" className="size-4" />}
-                onClick={onAdd}
-              >
-                Add line
-              </Button>
-            ) : undefined
-          }
-        />
+        <PageToolbar start={<h2 className="px-2 text-sm font-semibold text-text">Lines</h2>} />
       }
-      rowActions={
-        editable
-          ? (line) => (
-              <RowActions label={`Actions for ${line.description}`} items={actionsFor(line)} />
-            )
-          : undefined
-      }
-      empty={
-        <EmptyState
-          title="No lines yet"
-          description={
-            editable
-              ? 'Add a line to bill a fee, or remove this draft.'
-              : 'This invoice has no lines.'
-          }
-        />
-      }
+      empty={<EmptyState title="No lines yet" description="This invoice has no lines." />}
       footer={
         <dl className="ml-auto flex max-w-sm flex-col gap-1.5 border-t border-row-border px-4 py-3 text-sm">
           <div className="flex justify-between gap-6">

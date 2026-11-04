@@ -99,16 +99,76 @@ const description = z
   .min(1, 'Enter a description')
   .max(1000, 'Use at most 1000 characters');
 
-/** A line that bills no WIP: quantity times unit price, negative for a discount. */
-export const manualLineSchema = z.object({
-  description,
-  quantity: z
-    .string()
-    .refine((value) => parseQuantity(value) !== null, 'Enter a quantity such as 1 or 2.5'),
-  unit_amount: signedMoneyText('Enter an amount such as 120.00 (negative for a discount)'),
+/** One row of an invoice's line grid (Create invoice, a draft): text as typed. */
+export const gridLineSchema = z.object({
+  /** The saved line's id, or the key of a line of the chosen work; '' for a row typed in. */
+  key: z.string(),
+  /** Bills work: its quantity and unit price are the work's, what it bills is typed as its net. */
+  wip: z.boolean(),
+  description: z.string(),
+  quantity: z.string(),
+  unit_amount: z.string(),
+  /** What a row of work bills, in pounds; unused on a row typed in. */
+  net_amount: z.string(),
   vat_rate_id: z.string(),
+  service_id: z.string(),
 });
-export type ManualLineValues = z.infer<typeof manualLineSchema>;
+export type GridLineValues = z.infer<typeof gridLineSchema>;
+
+/**
+ * What every row needs: a description, then for a row typed in a quantity and a unit price
+ * (more than zero for fees in advance, else may be negative for a discount), for a row of work the
+ * amount to bill (0 or more; empty keeps what the work bills when `blankNet`). One pass over
+ * all the rows, so every message shows at once.
+ */
+function checkGridLines(
+  lines: ReadonlyArray<GridLineValues>,
+  ctx: z.RefinementCtx,
+  { advance, blankNet }: { advance: (line: GridLineValues) => boolean; blankNet: boolean },
+) {
+  lines.forEach((line, index) => {
+    const issue = (field: keyof GridLineValues, message: string) =>
+      ctx.addIssue({ code: 'custom', path: ['lines', index, field], message });
+    const words = line.description.trim();
+    if (words === '') issue('description', 'Enter a description');
+    else if (words.length > 1000) issue('description', 'Use at most 1000 characters');
+    if (line.wip) {
+      if (blankNet && line.net_amount.trim() === '') return;
+      const pence = parsePounds(line.net_amount);
+      if (pence === null || pence < 0 || pence > MAX_PENCE) {
+        issue('net_amount', 'Enter the amount to bill, such as 120.00 (0 or more)');
+      }
+      return;
+    }
+    if (parseQuantity(line.quantity) === null) {
+      issue('quantity', 'Enter a quantity such as 1 or 2.5');
+    }
+    const unit = parsePounds(line.unit_amount);
+    if (advance(line)) {
+      if (unit === null || unit <= 0 || unit > MAX_PENCE) {
+        issue('unit_amount', 'Enter the price before VAT, such as 6000.00');
+      }
+    } else if (unit === null || Math.abs(unit) > MAX_PENCE) {
+      issue('unit_amount', 'Enter an amount such as 120.00 (negative for a discount)');
+    }
+  });
+}
+
+/** The lines of a draft, edited in place; `advance` makes the rows added fees in advance. */
+export const draftLinesSchema = z
+  .object({
+    advance: z.boolean(),
+    lines: z
+      .array(gridLineSchema)
+      .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
+  })
+  .superRefine((values, ctx) =>
+    checkGridLines(values.lines, ctx, {
+      advance: (line) => values.advance && line.key === '',
+      blankNet: false,
+    }),
+  );
+export type DraftLinesValues = z.infer<typeof draftLinesSchema>;
 
 /** Fees billed in advance, one or more lines: wording, quantity, unit price before VAT, VAT code. */
 export const advanceSchema = z.object({
@@ -128,17 +188,6 @@ export const advanceSchema = z.object({
     .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
 });
 export type AdvanceValues = z.infer<typeof advanceSchema>;
-
-/** A line that bills WIP: what to bill for it (never negative) and its VAT code. */
-export const wipLineSchema = z.object({
-  description,
-  net_amount: z.string().refine((value) => {
-    const pence = parsePounds(value);
-    return pence !== null && pence >= 0 && pence <= MAX_PENCE;
-  }, 'Enter the amount to bill, such as 120.00 (0 or more)'),
-  vat_rate_id: z.string(),
-});
-export type WipLineValues = z.infer<typeof wipLineSchema>;
 
 /** Issue date, and a due date that may be left empty (the client's terms then apply). */
 export const issueSchema = z

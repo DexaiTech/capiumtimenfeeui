@@ -289,7 +289,7 @@ describe('billing fees in advance', () => {
     expect(await screen.findByRole('region', { name: 'Bill fees in advance' })).toBeInTheDocument();
   });
 
-  it('marks a new manual line of a draft as fees in advance', async () => {
+  it('marks a line added to a draft as fees in advance', async () => {
     const user = userEvent.setup();
     const posted = openInvoice(
       detail([], {
@@ -307,22 +307,24 @@ describe('billing fees in advance', () => {
       }),
     );
 
-    await user.click(await screen.findByRole('button', { name: 'Add line' }));
-    const panel = await screen.findByRole('region', { name: 'Add a line' });
-    await user.type(within(panel).getByRole('textbox', { name: /Description/ }), 'Fees in advance');
-    await user.type(within(panel).getByRole('textbox', { name: /Unit price/ }), '6000');
-    await user.click(within(panel).getByRole('checkbox', { name: /Fees in advance/ }));
-    await user.click(within(panel).getByRole('button', { name: 'Add line' }));
+    const grid = await screen.findByRole('form', { name: 'Lines of the draft' });
+    await user.click(within(grid).getByRole('button', { name: 'Add row' }));
+    await user.type(
+      within(grid).getByRole('textbox', { name: /Description of line 1/ }),
+      'Fees in advance',
+    );
+    await user.type(within(grid).getByRole('textbox', { name: /Unit price of line 1/ }), '6000');
+    await user.click(within(grid).getByRole('checkbox', { name: /Fees in advance/ }));
+    await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]?.path).toMatch(/\/invoices\/inv-1\/lines$/);
-    expect(posted[0]?.body).toEqual(
-      expect.objectContaining({
-        description: 'Fees in advance',
-        unit_amount: 600000,
-        is_advance: true,
-      }),
-    );
+    expect(posted[0]?.body).toEqual({
+      description: 'Fees in advance',
+      quantity: '1.00',
+      unit_amount: 600000,
+      is_advance: true,
+    });
   });
 
   it('assigns the chosen time to the advance and warns of what is beyond it', async () => {

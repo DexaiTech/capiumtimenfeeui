@@ -9,17 +9,17 @@ import { CreditNotePanel } from '../components/CreditNotePanel';
 import { CreditNoteWipDialog } from '../components/CreditNoteWipDialog';
 import { InvoiceHeaderPanel } from '../components/InvoiceHeaderPanel';
 import { IssueDialog } from '../components/IssueDialog';
-import { LinePanel } from '../components/LinePanel';
 import { ReasonDialog } from '../components/ReasonDialog';
 import { RecordPaymentPanel } from '../components/RecordPaymentPanel';
 import { SendInvoiceDialog } from '../components/SendInvoiceDialog';
 import { StartCreditNoteDialog } from '../components/creditNotes/CreditNoteLauncher';
 import { EstimateFormPanel } from '../components/estimates/EstimateFormPanel';
+import { DraftLinesGrid } from '../components/invoice/DraftLinesGrid';
 import { LineEditDialog } from '../components/prepare/LineEditDialog';
 import { DetailsStep } from '../components/prepare/DetailsStep';
 import { ScheduleFormPanel } from '../components/recurring/ScheduleFormPanel';
 import { SendStatementDialog } from '../components/statements/SendStatementDialog';
-import type { InvoiceDetail, InvoiceLine } from '../types';
+import type { InvoiceDetail } from '../types';
 import { harbour } from '../test/fixtures';
 import { renderBillingPage } from '../test/render';
 import PrepareInvoicePage from './PrepareInvoicePage';
@@ -119,28 +119,37 @@ describe('the billing dialogs mark their mandatory fields', () => {
     });
   });
 
-  it('add a line: description, quantity and unit price, not the VAT code', async () => {
-    renderBillingPage(<LinePanel open onClose={noop} invoiceId="inv-1" line={null} />);
-    expectRequiredFields(await dialog(), {
-      required: ['Description', 'Quantity', 'Unit price (£)'],
-      optional: ['VAT code'],
-    });
-  });
-
-  it('edit a line that bills work: description and the amount to bill', async () => {
-    const line = {
-      id: 'l-2',
-      kind: 'time',
-      description: 'Time',
-      net_amount: 5000,
-      vat_rate_id: null,
-      vat_rate_bp: 2000,
-      wip: null,
-    } as unknown as InvoiceLine;
-    renderBillingPage(<LinePanel open onClose={noop} invoiceId="inv-1" line={line} />);
-    expectRequiredFields(await dialog(), {
-      required: ['Description', 'Amount to bill (£)'],
-      optional: ['VAT code'],
+  it('the line grid: description, quantity and unit price, and what a line of work bills', async () => {
+    renderBillingPage(
+      <DraftLinesGrid
+        invoice={
+          {
+            ...invoice,
+            status: 'draft',
+            lines: [
+              { ...invoice.lines[0], kind: 'manual', quantity: '1.00', unit_amount: 10000 },
+              {
+                ...invoice.lines[0],
+                id: 'l-2',
+                kind: 'time',
+                quantity: '1.00',
+                unit_amount: 5000,
+                wip: null,
+              },
+            ],
+          } as unknown as InvoiceDetail
+        }
+      />,
+    );
+    expectRequiredFields(await screen.findByRole('table', { name: 'Invoice lines' }), {
+      required: [
+        'Description of line 1',
+        'Quantity of line 1',
+        'Unit price of line 1',
+        'Description of line 2',
+        'Amount to bill of line 2',
+      ],
+      optional: ['VAT code of line 1', 'VAT code of line 2'],
     });
   });
 
