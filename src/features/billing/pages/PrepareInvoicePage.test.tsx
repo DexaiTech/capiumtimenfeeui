@@ -1,4 +1,3 @@
-import { findRowAction } from '@/test/rowActions';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -55,6 +54,14 @@ const work = async () => {
 
 const rowsOf = (element: HTMLElement) => within(element).getAllByRole('row').slice(1);
 const rowOf = (element: HTMLElement, name: RegExp) => within(element).getByRole('row', { name });
+/** The cells of line n of the grid, by their accessible names. */
+const description = (n: number) =>
+  screen.getByRole('textbox', { name: `Description of line ${n}` });
+const amount = (n: number) => screen.getByRole('textbox', { name: `Amount to bill of line ${n}` });
+const vatCode = (n: number) => screen.getByRole('combobox', { name: `VAT code of line ${n}` });
+/** The VAT column: the amount, then the rate. */
+const vatCell = (row: HTMLElement | undefined) =>
+  within(row as HTMLElement).getAllByRole('cell')[5];
 
 async function choose(user: ReturnType<typeof userEvent.setup>, ...names: RegExp[]) {
   const table = await work();
@@ -224,17 +231,18 @@ describe('reviewing the lines', () => {
     expect(screen.getByRole('list', { name: 'Steps' })).toBeInTheDocument();
     const rows = rowsOf(lines);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)');
+    expect(description(1)).toHaveValue('Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)');
     expect(rows[0]).toHaveTextContent('2.50');
-    expect(rows[0]).toHaveTextContent('£300.00');
-    expect(rows[0]).toHaveTextContent('20%');
+    expect(amount(1)).toHaveValue('300.00');
+    expect(vatCell(rows[0])).toHaveTextContent('£60.0020%');
 
-    const totals = screen.getByLabelText('Invoice totals');
+    const totals = screen.getByLabelText('Totals');
     expect(totals).toHaveTextContent('Net£300.00');
-    expect(totals).toHaveTextContent('VAT (estimate)£60.00');
+    expect(totals).toHaveTextContent('VAT£60.00');
     expect(totals).toHaveTextContent('Total£360.00');
-    expect(totals).toHaveTextContent('Work in progress cleared£300.00');
-    expect(totals).toHaveTextContent('Written on or off£0.00');
+    const work = screen.getByLabelText('Work in progress');
+    expect(work).toHaveTextContent('Work in progress cleared£300.00');
+    expect(work).toHaveTextContent('Written on or off£0.00');
   });
 
   it('groups the time another way', async () => {
@@ -245,8 +253,8 @@ describe('reviewing the lines', () => {
     await user.selectOptions(screen.getByLabelText('Group the time'), 'One line per time entry');
     const rows = rowsOf(screen.getByRole('table', { name: 'Lines of the invoice' }));
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent('7 Sep 2026: Bank reconciliation');
-    expect(rows[1]).toHaveTextContent('8 Sep 2026: Payroll queries');
+    expect(description(1)).toHaveValue('7 Sep 2026: Bank reconciliation');
+    expect(description(2)).toHaveValue('8 Sep 2026: Payroll queries');
 
     await user.selectOptions(screen.getByLabelText('Group the time'), 'One line for all time');
     expect(rowsOf(screen.getByRole('table', { name: 'Lines of the invoice' }))).toHaveLength(1);
@@ -258,9 +266,9 @@ describe('reviewing the lines', () => {
     const lines = await review(user, /Bank reconciliation/, /Filing fee/);
     const rows = rowsOf(lines);
     expect(rows).toHaveLength(2);
-    expect(rows[1]).toHaveTextContent('Filing fee (Companies House)');
-    expect(rows[1]).toHaveTextContent('£34.00');
-    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£214.00');
+    expect(description(2)).toHaveValue('Filing fee (Companies House)');
+    expect(amount(2)).toHaveValue('34.00');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('Net£214.00');
   });
 
   it('prices a fixed fee as the fee less what is billed already', async () => {
@@ -270,9 +278,9 @@ describe('reviewing the lines', () => {
 
     const rows = rowsOf(lines);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('Partnership accounts (fixed fee)');
-    expect(rows[0]).toHaveTextContent('£2,000.00');
-    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£2,000.00');
+    expect(description(1)).toHaveValue('Partnership accounts (fixed fee)');
+    expect(amount(1)).toHaveValue('2000.00');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('Net£2,000.00');
     expect(screen.queryByText(/priced when the draft is made/)).not.toBeInTheDocument();
   });
 
@@ -281,54 +289,98 @@ describe('reviewing the lines', () => {
     setup();
     await review(user, /Bank reconciliation/, /Payroll queries/);
 
-    await user.click(
-      await findRowAction(
-        'Actions for Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)',
-        'Edit the line',
-      ),
-    );
-    const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
-    const amount = within(dialog).getByLabelText('Amount to bill (£)');
-    await user.clear(amount);
-    await user.type(amount, '250');
-    await user.click(within(dialog).getByRole('button', { name: 'Save line' }));
+    // What a line of work bills is typed in its row; its hours and rate stay the work's.
+    expect(screen.queryByRole('textbox', { name: /Quantity of line 1/ })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: /Unit price of line 1/ })).toBeNull();
+    await user.clear(amount(1));
+    await user.type(amount(1), '250');
 
-    await waitFor(() =>
-      expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Written off£50.00'),
-    );
+    expect(screen.getByLabelText('Work in progress')).toHaveTextContent('Written off£50.00');
     const row = rowsOf(screen.getByRole('table', { name: 'Lines of the invoice' }))[0];
-    expect(row).toHaveTextContent('£250.00');
-    expect(row).toHaveTextContent('-£50.00');
-    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£250.00');
+    expect(row).toHaveTextContent('Work £300.00, write-off £50.00');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('Net£250.00');
 
-    await user.click(
-      await findRowAction(
-        'Actions for Bookkeeping 2026/27 (7 Sep 2026 to 8 Sep 2026)',
-        'Undo the changes',
-      ),
-    );
-    await waitFor(() =>
-      expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£300.00'),
-    );
+    await user.click(screen.getByRole('button', { name: 'Undo the changes of line 1' }));
+    expect(amount(1)).toHaveValue('300.00');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('Net£300.00');
+    expect(screen.queryByRole('button', { name: 'Undo the changes of line 1' })).toBeNull();
   });
 
   it('changes the wording and the VAT code of a line', async () => {
     const user = userEvent.setup();
     setup();
+    const lines = await review(user, /Bank reconciliation/);
+
+    await user.clear(description(1));
+    await user.type(description(1), 'Quarterly bookkeeping');
+    await user.selectOptions(vatCode(1), 'Zero (0%)');
+
+    const row = rowsOf(lines)[0];
+    expect(description(1)).toHaveValue('Quarterly bookkeeping');
+    expect(vatCell(row)).toHaveTextContent('£0.000%');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£0.00');
+  });
+
+  it('adds lines that bill no work with + Row, drafted with the work', async () => {
+    const user = userEvent.setup();
+    const backend = setup();
     await review(user, /Bank reconciliation/);
+    // A line of work leaves by unticking the work, not from here.
+    expect(screen.queryByRole('button', { name: 'Remove line 1' })).toBeNull();
 
-    await user.click(await findRowAction(/^Actions for Bookkeeping 2026\/27/, 'Edit the line'));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
-    const description = within(dialog).getByLabelText('Description');
-    await user.clear(description);
-    await user.type(description, 'Quarterly bookkeeping');
-    await user.selectOptions(within(dialog).getByLabelText('VAT code'), 'Zero (0%)');
-    await user.click(within(dialog).getByRole('button', { name: 'Save line' }));
+    await user.click(screen.getByRole('button', { name: 'Add row' }));
+    // With work chosen, a line typed in is an ordinary fee unless ticked.
+    expect(screen.getByRole('checkbox', { name: /Fees in advance/ })).not.toBeChecked();
+    await user.type(description(2), 'Companies House filing');
+    await user.clear(screen.getByRole('textbox', { name: /Quantity of line 2/ }));
+    await user.type(screen.getByRole('textbox', { name: /Quantity of line 2/ }), '2');
+    await user.type(screen.getByRole('textbox', { name: /Unit price of line 2/ }), '17');
+    await user.selectOptions(vatCode(2), 'Zero (0%)');
+    await user.click(screen.getByRole('button', { name: 'Add row' }));
+    await user.type(description(3), 'Loyalty discount');
+    await user.type(screen.getByRole('textbox', { name: /Unit price of line 3/ }), '-10');
 
-    const row = rowsOf(await screen.findByRole('table', { name: 'Lines of the invoice' }))[0];
-    await waitFor(() => expect(row).toHaveTextContent('Quarterly bookkeeping'));
-    expect(row).toHaveTextContent('0%');
-    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£0.00');
+    const rows = rowsOf(screen.getByRole('table', { name: 'Lines of the invoice' }));
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toHaveTextContent('£34.00');
+    // £180 and £34, less £10; VAT at 20% on the time and the discount, 0% on the filing.
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('Net£204.00VAT£34.00Total£238.00');
+    expect(screen.getByLabelText('Work in progress')).toHaveTextContent(
+      'Work in progress cleared£180.00',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Dates and notes' }));
+    await user.click(await screen.findByRole('button', { name: 'Save as draft' }));
+    await screen.findByText('Draft invoice saved');
+    expect(postsOf(backend, '/invoices')[0]?.body).toMatchObject({
+      time_entry_ids: ['t-1'],
+      overrides: [],
+      manual_lines: [
+        {
+          description: 'Companies House filing',
+          quantity: '2.00',
+          unit_amount: 1700,
+          vat_rate_id: 'vat-zero',
+        },
+        { description: 'Loyalty discount', quantity: '1.00', unit_amount: -1000 },
+      ],
+    });
+  });
+
+  it('keeps the lines typed in when the work chosen changes', async () => {
+    const user = userEvent.setup();
+    setup();
+    await review(user, /Bank reconciliation/);
+    await user.click(screen.getByRole('button', { name: 'Add row' }));
+    await user.type(description(2), 'Software licence');
+
+    await user.click(screen.getByRole('button', { name: 'Back to the work' }));
+    await choose(user, /Filing fee/);
+    await user.click(screen.getByRole('button', { name: 'Review the lines' }));
+    await screen.findByRole('table', { name: 'Lines of the invoice' });
+    expect(description(1)).toHaveDisplayValue(/^Bookkeeping 2026\/27/);
+    expect(description(2)).toHaveValue('Filing fee (Companies House)');
+    expect(description(3)).toHaveValue('Software licence');
   });
 
   // APT63: the practice's default is 20% and the fixed fee's and the books' services carry 20%.
@@ -371,21 +423,16 @@ describe('reviewing the lines', () => {
 
     const rows = rowsOf(lines);
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent('Partnership accounts (fixed fee)');
-    expect(rows[1]).toHaveTextContent('Bookkeeping 2026/27');
-    expect(rows[2]).toHaveTextContent('VAT returns 2026/27');
-    for (const row of rows) expect(row).toHaveTextContent('7.5%');
+    expect(description(1)).toHaveValue('Partnership accounts (fixed fee)');
+    expect(description(2)).toHaveDisplayValue(/^Bookkeeping 2026\/27/);
+    expect(description(3)).toHaveDisplayValue(/^VAT returns 2026\/27/);
+    for (const row of rows) expect(vatCell(row)).toHaveTextContent('7.5%');
     // £2,000, £180 and £60 at 7.5%.
-    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£168.00');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£168.00');
 
     // A code chosen for a line is shown and sent.
-    await user.click(await findRowAction(/^Actions for Bookkeeping 2026\/27/, 'Edit the line'));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
-    await user.selectOptions(within(dialog).getByLabelText('VAT code'), 'Standard (20%)');
-    await user.click(within(dialog).getByRole('button', { name: 'Save line' }));
-    await waitFor(() =>
-      expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£190.50'),
-    );
+    await user.selectOptions(vatCode(2), 'Standard (20%)');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£190.50');
 
     await user.click(screen.getByRole('button', { name: 'Dates and notes' }));
     await user.click(await screen.findByRole('button', { name: 'Save as draft' }));
@@ -406,12 +453,11 @@ describe('reviewing the lines', () => {
     const lines = await review(user, /Partnership accounts/, /Bank reconciliation/, /VAT return/);
 
     const rows = rowsOf(lines);
-    expect(rows[0]).toHaveTextContent('20%');
-    expect(rows[1]).toHaveTextContent('20%');
+    expect(vatCell(rows[0])).toHaveTextContent('20%');
+    expect(vatCell(rows[1])).toHaveTextContent('20%');
     // The service's zero rate, not the practice's 20%.
-    expect(rows[2]).toHaveTextContent('0%');
-    expect(rows[2]).not.toHaveTextContent('20%');
-    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('VAT (estimate)£436.00');
+    expect(vatCell(rows[2])).toHaveTextContent('£0.000%');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('VAT£436.00');
   });
 
   it('refuses an amount that is not money', async () => {
@@ -419,16 +465,14 @@ describe('reviewing the lines', () => {
     setup();
     await review(user, /Bank reconciliation/);
 
-    await user.click(await findRowAction(/^Actions for Bookkeeping 2026\/27/, 'Edit the line'));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
-    const amount = within(dialog).getByLabelText('Amount to bill (£)');
-    await user.clear(amount);
-    await user.type(amount, 'lots');
-    await user.click(within(dialog).getByRole('button', { name: 'Save line' }));
+    await user.clear(amount(1));
+    await user.type(amount(1), 'lots');
+    await user.click(screen.getByRole('button', { name: 'Dates and notes' }));
 
     expect(
-      await within(dialog).findByText('Enter the amount to bill, such as 120.00 (0 or more)'),
+      await screen.findByText('Enter the amount to bill, such as 120.00 (0 or more)'),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Invoice details' })).toBeNull();
   });
 
   it('goes back to the work with the choice kept', async () => {
@@ -480,17 +524,10 @@ describe('making the draft', () => {
     await review(user, /Bank reconciliation/, /Payroll queries/, /Filing fee/);
     await user.selectOptions(screen.getByLabelText('Group the time'), 'One line per time entry');
 
-    await user.click(
-      await findRowAction('Actions for 7 Sep 2026: Bank reconciliation', 'Edit the line'),
-    );
-    const dialog = await screen.findByRole('dialog', { name: 'Edit the line' });
-    const amount = within(dialog).getByLabelText('Amount to bill (£)');
-    await user.clear(amount);
-    await user.type(amount, '150.00');
-    await user.click(within(dialog).getByRole('button', { name: 'Save line' }));
-    await waitFor(() =>
-      expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Written off£30.00'),
-    );
+    expect(description(1)).toHaveValue('7 Sep 2026: Bank reconciliation');
+    await user.clear(amount(1));
+    await user.type(amount(1), '150.00');
+    expect(screen.getByLabelText('Work in progress')).toHaveTextContent('Written off£30.00');
 
     await user.click(screen.getByRole('button', { name: 'Dates and notes' }));
     await user.click(await screen.findByRole('button', { name: 'Save as draft' }));
@@ -775,8 +812,8 @@ describe('the billing summary', () => {
     // 1.5 hours cost £60 and 1 hour £40: the line bills the cost, not the £300 of the rates.
     const rows = rowsOf(lines);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('£100.00');
-    expect(screen.getByLabelText('Invoice totals')).toHaveTextContent('Net£100.00');
+    expect(amount(1)).toHaveValue('100.00');
+    expect(screen.getByLabelText('Totals')).toHaveTextContent('Net£100.00');
   });
 
   it('bills the value set for the job when the job value is chosen', async () => {
@@ -785,10 +822,10 @@ describe('the billing summary', () => {
     await work();
 
     await user.click(screen.getByRole('button', { name: /Job value/ }));
-    const lines = await review(user, /Bank reconciliation/);
+    await review(user, /Bank reconciliation/);
 
     // The fee budget of £500, less nothing billed so far: the time line bills that.
-    expect(rowsOf(lines)[0]).toHaveTextContent('£500.00');
+    expect(amount(1)).toHaveValue('500.00');
   });
 
   it('sends the basis the invoice was valued on with the draft', async () => {
@@ -807,8 +844,8 @@ describe('the billing summary', () => {
   it('keeps the contract value as the default, which changes nothing', async () => {
     const user = userEvent.setup();
     setup();
-    const lines = await review(user, /Bank reconciliation/);
-    expect(rowsOf(lines)[0]).toHaveTextContent('£180.00');
+    await review(user, /Bank reconciliation/);
+    expect(amount(1)).toHaveValue('180.00');
   });
 
   it('compares the invoice with the recovery rate, the staff rates and cost plus', async () => {

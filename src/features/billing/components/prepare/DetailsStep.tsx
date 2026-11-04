@@ -28,7 +28,7 @@ export interface DetailsStepProps {
   invoiceEmail?: string;
   /** The client's payment terms in days, else the practice's: the default due date. */
   termsDays: number;
-  itemCount: number;
+  lineCount: number;
   totals: PreviewTotals;
   /** What the draft request carries besides the header the person fills in. */
   buildRequest: (
@@ -42,7 +42,7 @@ export function DetailsStep({
   clientName,
   invoiceEmail = '',
   termsDays,
-  itemCount,
+  lineCount,
   totals,
   buildRequest,
   onBack,
@@ -233,7 +233,7 @@ export function DetailsStep({
 
       <Card padding="sm" className="flex flex-col gap-1">
         <p className="text-sm text-text">
-          {plural(itemCount, 'item', 'items')} for {clientName}: about{' '}
+          {plural(lineCount, 'line', 'lines')} for {clientName}: about{' '}
           <strong>{formatMoney(totals.gross, currency)}</strong> including VAT.
         </p>
         {approval ? (

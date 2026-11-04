@@ -1,16 +1,37 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 import { Skeleton } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
+import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
-import { useClientBilling, useClientBillingSummary, useClientWip, useVatOptions } from '../../api';
-import type { BillingBasis, GroupBy } from '../../types';
+import {
+  useClientBilling,
+  useClientBillingSummary,
+  useClientWip,
+  useServiceOptions,
+  useVatOptions,
+} from '../../api';
+import { WIP_KIND_LABELS } from '../../constants';
+import {
+  prepareLinesSchema,
+  type GridLineValues,
+  type PrepareLinesValues,
+} from '../../schemas/forms';
+import type { BillingBasis, GroupBy, InvoiceLineCreate } from '../../types';
 import { basisEdits } from '../../utils/basis';
+import {
+  FIRST_DESCRIPTION,
+  gridTotals,
+  newGridLine,
+  type LineGridMeta,
+} from '../../utils/lineGrid';
+import { formatQuantity, parseQuantity } from '../../utils/lineMaths';
 import {
   overridesOf,
   planLines,
   previewLines,
-  previewTotals,
   selectionOf,
   type LineEdit,
   type LineEdits,
@@ -19,13 +40,72 @@ import {
 } from '../../utils/prepare';
 import { chosenItems, fixedFeesOf, workRowsOf } from '../../utils/workRows';
 import { LoadError } from '../PageShell';
-import { AdvanceInvoicePanel } from './AdvanceInvoicePanel';
 import { DetailsStep } from './DetailsStep';
-import { LineEditDialog } from './LineEditDialog';
 import { ReviewStep } from './ReviewStep';
 import { BillingSummary } from './BillingSummary';
 import { Steps, type PrepareStep } from './Steps';
 import { WorkStep } from './WorkStep';
+
+/** A line of the chosen work as a row of the grid: what it bills is typed as its net. */
+function workRow(line: PreviewLine): GridLineValues {
+  return {
+    key: line.key,
+    wip: true,
+    description: line.text,
+    quantity: '',
+    unit_amount: '',
+    net_amount: line.billed === null ? '' : penceToPoundsInput(line.billed),
+    vat_rate_id: line.vatRateId ?? '',
+    service_id: '',
+  };
+}
+
+function workMeta(line: PreviewLine): LineGridMeta {
+  const kind = WIP_KIND_LABELS[line.kind];
+  const time = line.kind === 'time';
+  return {
+    label: { text: kind.label, tone: kind.tone },
+    quantity: time && line.quantity !== null ? formatQuantity(line.quantity) : null,
+    unitAmount: time ? line.unitAmount : null,
+    wip: line.wip,
+    net: line.net,
+    serviceVatRateId: line.serviceVatRateId,
+  };
+}
+
+/** What the rows of work say, as the edits `overridesOf` sends only where they differ. */
+function editsOf(lines: ReadonlyArray<GridLineValues>): LineEdits {
+  const edits: Record<string, LineEdit> = {};
+  for (const line of lines) {
+    if (!line.wip) continue;
+    const net = line.net_amount.trim() === '' ? null : parsePounds(line.net_amount);
+    edits[line.key] = {
+      ...(net === null ? {} : { net }),
+      description: line.description.trim(),
+      ...(line.vat_rate_id ? { vatRateId: line.vat_rate_id } : {}),
+    };
+  }
+  return edits;
+}
+
+/** The rows typed in, as the API's `manual_lines`; fees in advance when the box is ticked. */
+function manualLinesOf({ advance, lines }: PrepareLinesValues): InvoiceLineCreate[] {
+  return lines.flatMap((line) => {
+    const quantity = parseQuantity(line.quantity);
+    const unit = parsePounds(line.unit_amount);
+    if (line.wip || quantity === null || unit === null) return [];
+    return [
+      {
+        description: line.description.trim(),
+        quantity: formatQuantity(quantity),
+        unit_amount: unit,
+        ...(line.vat_rate_id ? { vat_rate_id: line.vat_rate_id } : {}),
+        ...(line.service_id ? { service_id: line.service_id } : {}),
+        ...(advance ? { is_advance: true } : {}),
+      },
+    ];
+  });
+}
 
 /** Preparing one client's invoice: choose the work, review the lines, set the dates, make the draft. */
 export function PrepareFlow({
@@ -41,13 +121,17 @@ export function PrepareFlow({
   const billing = useClientBilling(clientId);
   const summary = useClientBillingSummary(clientId);
   const vat = useVatOptions();
+  const services = useServiceOptions();
   const [step, setStep] = useState<PrepareStep>('work');
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [groupBy, setGroupBy] = useState<GroupBy>('job');
   const [basis, setBasis] = useState<BillingBasis>('contract');
-  const [edits, setEdits] = useState<LineEdits>({});
-  const [editing, setEditing] = useState<PreviewLine | null>(null);
-  const [advancing, setAdvancing] = useState(false);
+  const form = useForm<PrepareLinesValues>({
+    resolver: zodResolver(prepareLinesSchema),
+    defaultValues: { advance: true, lines: [] },
+  });
+  // "Fees in advance" ticked or unticked by the person stays; else it follows the work chosen.
+  const advanceChosen = useRef(false);
   const currency = organization.currency;
 
   // Time picked on another page is chosen once, when the work first arrives.
@@ -64,6 +148,33 @@ export function PrepareFlow({
     );
   }, [wip.data, preselect]);
 
+  const ready = wip.data !== undefined && !vat.isPending && !billing.isPending;
+  const { rows, blocked } = workRowsOf(wip.data?.items ?? []);
+  const items = chosenItems(wip.data?.items ?? [], rows, selected);
+  const planned = planLines(items, groupBy, fixedFeesOf(rows, selected));
+  const vatDefaults: VatDefaults = {
+    options: vat.options,
+    clientId: billing.data?.default_vat_rate_id ?? null,
+    practiceId: vat.options.find((option) => option.is_default)?.id ?? null,
+  };
+  // The lines of the work as the chosen basis bills them, before the person changes any.
+  const lines = previewLines(planned, basisEdits(basis, planned, summary.data), vatDefaults);
+  const drafted = new Map(lines.map((line) => [line.key, workRow(line)]));
+  const metas = new Map(lines.map((line) => [line.key, workMeta(line)]));
+  const signature = ready ? JSON.stringify([...drafted.values()]) : null;
+
+  // Other work, grouping or basis makes other lines of work: what was typed on the old ones no
+  // longer applies. The lines typed in stay.
+  useEffect(() => {
+    if (signature === null) return;
+    const work = JSON.parse(signature) as GridLineValues[];
+    const { advance, lines: current } = form.getValues();
+    form.reset({
+      advance: advanceChosen.current ? advance : work.length === 0,
+      lines: [...work, ...current.filter((line) => !line.wip)],
+    });
+  }, [signature, form]);
+
   if (wip.isError) {
     return (
       <LoadError
@@ -74,7 +185,7 @@ export function PrepareFlow({
       />
     );
   }
-  if (!wip.data || vat.isPending || billing.isPending) {
+  if (!wip.data || !ready) {
     return (
       <div className="flex flex-col gap-3" role="status" aria-label="Loading the work in progress">
         <Skeleton className="h-6 w-1/2" />
@@ -83,35 +194,25 @@ export function PrepareFlow({
     );
   }
 
-  const { rows, blocked } = workRowsOf(wip.data.items);
-  const items = chosenItems(wip.data.items, rows, selected);
-  const planned = planLines(items, groupBy, fixedFeesOf(rows, selected));
-  // What the chosen basis bills; the person's own edits of a line win over it.
-  const allEdits: LineEdits = { ...basisEdits(basis, planned, summary.data), ...edits };
-  const vatDefaults: VatDefaults = {
-    options: vat.options,
-    clientId: billing.data?.default_vat_rate_id ?? null,
-    practiceId: vat.options.find((option) => option.is_default)?.id ?? null,
-  };
-  const lines = previewLines(planned, allEdits, vatDefaults);
-  const totals = previewTotals(lines);
   const groupable = items.some(
     (item) => item.kind === 'time' && item.job?.billing_basis !== 'fixed',
   );
+  const typedIn = form.getValues('lines').some((line) => !line.wip);
 
-  const choose = (next: ReadonlySet<string>) => {
-    setSelected(next);
-    // Another choice makes other lines: what was edited no longer applies.
-    setEdits({});
-  };
   const chooseBasis = (next: BillingBasis) => {
     setBasis(next);
     // The job's value is set per job: lines grouped by job are the ones it applies to.
     if (next === 'job') setGroupBy('job');
-    setEdits({});
   };
-  const edit = (key: string, change: LineEdit | undefined) =>
-    setEdits((current) => ({ ...current, [key]: change }));
+  // Fees billed in advance: a line typed in, to which time is assigned once the invoice is issued.
+  const billInAdvance = () => {
+    if (!typedIn) {
+      form.setValue('lines', [...form.getValues('lines'), newGridLine(FIRST_DESCRIPTION)]);
+    }
+    form.setValue('advance', true);
+    advanceChosen.current = true;
+    setStep('review');
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -127,45 +228,29 @@ export function PrepareFlow({
           rows={rows}
           blocked={blocked}
           selected={selected}
-          onSelectedChange={choose}
+          onSelectedChange={setSelected}
+          hasLines={typedIn}
           onContinue={() => setStep('review')}
-          onAdvance={() => setAdvancing(true)}
+          onAdvance={billInAdvance}
         />
       ) : null}
-      <AdvanceInvoicePanel
-        open={advancing}
-        onClose={() => setAdvancing(false)}
-        clientId={clientId}
-        clientName={wip.data.client.name}
-        vatDefaults={vatDefaults}
-      />
 
       {step === 'review' ? (
-        <>
-          <ReviewStep
-            lines={lines}
-            totals={totals}
-            edits={allEdits}
-            currency={currency}
-            groupBy={groupBy}
-            onGroupByChange={(next) => {
-              setGroupBy(next);
-              setEdits({});
-            }}
-            groupable={groupable}
-            onEdit={setEditing}
-            onReset={(key) => edit(key, undefined)}
-            onBack={() => setStep('work')}
-            onContinue={() => setStep('details')}
-          />
-          <LineEditDialog
-            line={editing}
-            vatOptions={vat.options}
-            currency={currency}
-            onClose={() => setEditing(null)}
-            onSave={edit}
-          />
-        </>
+        <ReviewStep
+          form={form}
+          metas={metas}
+          drafted={drafted}
+          vat={vatDefaults}
+          currency={currency}
+          groupBy={groupBy}
+          onGroupByChange={setGroupBy}
+          groupable={groupable}
+          onAdvanceChosen={() => {
+            advanceChosen.current = true;
+          }}
+          onBack={() => setStep('work')}
+          onContinue={() => setStep('details')}
+        />
       ) : null}
 
       {step === 'details' ? (
@@ -173,16 +258,21 @@ export function PrepareFlow({
           clientName={wip.data.client.name}
           invoiceEmail={billing.data?.invoice_email ?? ''}
           termsDays={billing.data?.payment_terms_days ?? organization.payment_terms_days}
-          itemCount={items.length}
-          totals={totals}
-          buildRequest={(header) => ({
-            client_id: clientId,
-            ...selectionOf(items),
-            group_by: groupBy,
-            overrides: overridesOf(planned, allEdits),
-            valuation_basis: basis,
-            ...header,
-          })}
+          lineCount={form.getValues('lines').length}
+          totals={gridTotals(form.getValues('lines'), metas, vatDefaults, services)}
+          buildRequest={(header) => {
+            const values = form.getValues();
+            const manual = manualLinesOf(values);
+            return {
+              client_id: clientId,
+              ...selectionOf(items),
+              group_by: groupBy,
+              overrides: overridesOf(planned, editsOf(values.lines)),
+              valuation_basis: basis,
+              ...(manual.length > 0 ? { manual_lines: manual } : {}),
+              ...header,
+            };
+          }}
           onBack={() => setStep('review')}
         />
       ) : null}

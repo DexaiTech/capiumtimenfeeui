@@ -241,6 +241,8 @@ export interface InvoiceCreate {
   advance_lines?: Array<
     Pick<LineInput, 'description' | 'quantity' | 'unit_amount' | 'vat_rate_id' | 'service_id'>
   >;
+  /** Lines that bill no work, after the work's, each as `POST /invoices/{id}/lines` adds one. */
+  manual_lines?: InvoiceLineCreate[];
 }
 
 /** PATCH of the header: a draft takes all four, an issued invoice is not editable. */

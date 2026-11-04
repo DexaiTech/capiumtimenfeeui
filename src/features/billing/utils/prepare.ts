@@ -7,13 +7,7 @@
 import type { BasisPoints, Pence } from '@/types/api';
 
 import type { GroupBy, InvoiceCreate, LineOverride, VatOption, WipItem } from '../types';
-import {
-  averageRate,
-  hoursHundredths,
-  totalsOf,
-  type InvoiceTotals,
-  type PricedLine,
-} from './lineMaths';
+import { averageRate, hoursHundredths, type InvoiceTotals } from './lineMaths';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MAX_DESCRIPTION = 1000;
@@ -259,13 +253,6 @@ export function previewLines(
 export interface PreviewTotals extends InvoiceTotals {
   /** Lines whose amount only the server knows (a fixed fee not priced here). */
   unpriced: number;
-}
-
-export function previewTotals(lines: ReadonlyArray<PreviewLine>): PreviewTotals {
-  const priced: PricedLine[] = lines
-    .filter((line): line is PreviewLine & { billed: Pence } => line.billed !== null)
-    .map((line) => ({ net: line.billed, vatBp: line.vatBp, wip: line.wip }));
-  return { ...totalsOf(priced), unpriced: lines.length - priced.length };
 }
 
 /** The WIP ids the draft request carries. */

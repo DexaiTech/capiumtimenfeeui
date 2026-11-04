@@ -154,6 +154,21 @@ function checkGridLines(
   });
 }
 
+/** The lines of the invoice being created: the work's, and rows typed in (fees in advance or not). */
+export const prepareLinesSchema = z
+  .object({
+    /** The rows typed in are fees in advance: time is assigned to them once issued. */
+    advance: z.boolean(),
+    lines: z
+      .array(gridLineSchema)
+      .min(1, 'Add a line, or go back and choose work to bill')
+      .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
+  })
+  .superRefine((values, ctx) =>
+    checkGridLines(values.lines, ctx, { advance: () => values.advance, blankNet: true }),
+  );
+export type PrepareLinesValues = z.infer<typeof prepareLinesSchema>;
+
 /** The lines of a draft, edited in place; `advance` makes the rows added fees in advance. */
 export const draftLinesSchema = z
   .object({
@@ -169,25 +184,6 @@ export const draftLinesSchema = z
     }),
   );
 export type DraftLinesValues = z.infer<typeof draftLinesSchema>;
-
-/** Fees billed in advance, one or more lines: wording, quantity, unit price before VAT, VAT code. */
-export const advanceSchema = z.object({
-  lines: z
-    .array(
-      z.object({
-        description,
-        quantity: z
-          .string()
-          .refine((value) => parseQuantity(value) !== null, 'Enter a quantity such as 1 or 2.5'),
-        unit_amount: positiveMoneyText('Enter the price before VAT, such as 6000.00'),
-        vat_rate_id: z.string(),
-        service_id: z.string(),
-      }),
-    )
-    .min(1, 'Add at least one line')
-    .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
-});
-export type AdvanceValues = z.infer<typeof advanceSchema>;
 
 /** Issue date, and a due date that may be left empty (the client's terms then apply). */
 export const issueSchema = z
@@ -214,18 +210,6 @@ export const paymentSchema = z.object({
   allocation: z.enum(['auto', 'manual', 'none']),
 });
 export type PaymentValues = z.infer<typeof paymentSchema>;
-
-/** One line of the draft being prepared: its wording, what to bill (empty keeps the WIP value) and VAT code. */
-export const prepareLineSchema = z.object({
-  description,
-  net: z.string().refine((value) => {
-    if (value.trim() === '') return true;
-    const pence = parsePounds(value);
-    return pence !== null && pence >= 0 && pence <= MAX_PENCE;
-  }, 'Enter the amount to bill, such as 120.00 (0 or more)'),
-  vat_rate_id: z.string(),
-});
-export type PrepareLineValues = z.infer<typeof prepareLineSchema>;
 
 /** The header of the draft being prepared; the due date may be left empty (the client's terms apply). */
 export const prepareDetailsSchema = z
