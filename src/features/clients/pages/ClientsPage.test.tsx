@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 describe('ClientsPage list', () => {
-  it('renders the rows with every column of the design', async () => {
+  it('renders the rows with the columns of APT76', async () => {
     server.use(...clientsHandlers());
     renderInOrg(<ClientsPage />);
 
@@ -37,18 +37,9 @@ describe('ClientsPage list', () => {
     const headers = within(table())
       .getAllByRole('columnheader')
       .map((header) => header.textContent);
-    expect(headers).toEqual([
-      '',
-      'Client',
-      'Reg No',
-      'Segment',
-      'Contact',
-      'Contact Email',
-      'Deadlines',
-      'Activity',
-      'Services',
-      'Action',
-    ]);
+    // Client, Client Type, Registration, Services, then the actions. Contact details are on the
+    // client's own page, deadlines in Practice Manager, and Central is gone (APT76).
+    expect(headers).toEqual(['', 'Client', 'Client Type', 'Registration', 'Services', 'Action']);
 
     const cells = within(row);
     expect(cells.getByText('Techwave Innovations Ltd')).toHaveAttribute(
@@ -59,27 +50,26 @@ describe('ClientsPage list', () => {
     expect(cells.getByText('Limited')).toBeInTheDocument();
     expect(cells.getByText('xero')).toBeInTheDocument();
     expect(cells.getByText('678654QJ')).toBeInTheDocument();
-    expect(cells.getByText('Bronze')).toBeInTheDocument();
+    // Segment and Activity are shown from Show/Hide Columns.
+    expect(cells.queryByText('Bronze')).not.toBeInTheDocument();
     // The health score is not a grid column (APT73).
     expect(cells.queryByRole('meter', { name: 'Health score' })).not.toBeInTheDocument();
     expect(row).not.toHaveTextContent('83/100');
-    expect(cells.getByText('Ramya Menon')).toBeInTheDocument();
-    expect(cells.getByText('ramya@techwave.example')).toBeInTheDocument();
-    expect(cells.getByText('1 Overdue by 1d')).toBeInTheDocument();
-    // 20:23 UTC is 21:23 in London (BST).
-    expect(cells.getByText('20/05/2026 - 09:23PM')).toBeInTheDocument();
+    expect(cells.queryByText('Ramya Menon')).not.toBeInTheDocument();
+    expect(cells.queryByText('ramya@techwave.example')).not.toBeInTheDocument();
+    expect(cells.queryByText('1 Overdue by 1d')).not.toBeInTheDocument();
+    expect(cells.queryByText('20/05/2026 - 09:23PM')).not.toBeInTheDocument();
     expect(cells.getByText('Accounts')).toBeInTheDocument();
     expect(cells.getByRole('button', { name: 'Show all 2 services' })).toHaveTextContent('+1');
-    // The Central column is hidden by default (APT74).
     expect(cells.queryByText('Local')).not.toBeInTheDocument();
     expect(cells.getByRole('checkbox', { name: `Select ${techwave.name}` })).toBeInTheDocument();
 
     const second = await clientRow(mutual.name);
     expect(within(second).getByText('Sole Trader')).toBeInTheDocument();
-    expect(within(second).getByText('2 Due today')).toBeInTheDocument();
+    expect(within(second).queryByText('2 Due today')).not.toBeInTheDocument();
     expect(
-      within(second).getByRole('button', { name: `Add contact for ${mutual.name}` }),
-    ).toHaveTextContent('Add');
+      within(second).queryByRole('button', { name: `Add contact for ${mutual.name}` }),
+    ).not.toBeInTheDocument();
 
     // The client count comes from the summary; there is no Users tab.
     expect(await screen.findByText('12', { selector: '.cc-count' })).toBeInTheDocument();
@@ -103,6 +93,8 @@ describe('ClientsPage list', () => {
   });
 
   it('toggles the sort and order of a header and reports aria-sort', async () => {
+    // Segment is shown from Show/Hide Columns.
+    useClientsPrefs.setState({ hiddenColumns: [] });
     const sorts: string[] = [];
     server.use(
       ...clientsHandlers({
@@ -135,17 +127,17 @@ describe('ClientsPage list', () => {
 
     await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
     const panel = await screen.findByRole('dialog', { name: 'Show or hide columns' });
-    await user.click(within(panel).getByRole('checkbox', { name: 'Reg No' }));
+    await user.click(within(panel).getByRole('checkbox', { name: 'Registration' }));
 
-    expect(screen.queryByRole('columnheader', { name: 'Reg No' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Registration' })).toBeNull();
     expect(screen.queryByText('678654QJ')).toBeNull();
     expect(window.localStorage.getItem(CLIENTS_PREFS_KEY)).toContain('reg_no');
 
     view.unmount();
     renderInOrg(<ClientsPage />);
     await clientRow(techwave.name);
-    expect(screen.queryByRole('columnheader', { name: 'Reg No' })).toBeNull();
-    expect(screen.getByRole('columnheader', { name: 'Segment' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Registration' })).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Services' })).toBeInTheDocument();
   });
 
   it('builds the list query from the filters and the Drafts button', async () => {
@@ -225,8 +217,14 @@ describe('ClientsPage list', () => {
 
     await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
     const columns = await screen.findByRole('dialog', { name: 'Show or hide columns' });
-    expect(within(columns).getByRole('checkbox', { name: 'Reg No' })).toBeInTheDocument();
+    expect(within(columns).getByRole('checkbox', { name: 'Registration' })).toBeInTheDocument();
     expect(within(columns).queryByRole('checkbox', { name: 'Segment' })).toBeNull();
+    // Segment (and Branch, off here too) stay hidden but are not listed: once Activity is shown,
+    // every listed column shows and "Show all columns" has nothing left to do.
+    const showAll = within(columns).getByRole('button', { name: 'Show all columns' });
+    expect(showAll).toBeEnabled();
+    await user.click(within(columns).getByRole('checkbox', { name: 'Activity' }));
+    expect(showAll).toBeDisabled();
     await user.keyboard('{Escape}');
 
     await user.click(screen.getByRole('button', { name: /^Filter$/ }));
@@ -238,6 +236,8 @@ describe('ClientsPage list', () => {
     await user.click(screen.getByRole('button', { name: 'Analytics' }));
     const analytics = await screen.findByRole('dialog', { name: 'Client analytics' });
     expect(await within(analytics).findByText('By status')).toBeInTheDocument();
+    // No deadlines on the client list (APT76).
+    expect(within(analytics).queryByText(/deadlines/)).not.toBeInTheDocument();
     expect(within(analytics).queryByText('By segment')).toBeNull();
   });
 
@@ -516,38 +516,6 @@ describe('ClientsPage actions', () => {
     );
   });
 
-  it('adds the primary contact from the "+ Add" pill', async () => {
-    let body: Record<string, unknown> | undefined;
-    let posted = '';
-    server.use(
-      ...clientsHandlers(),
-      http.post(orgApiPath('/clients/:clientId/contacts'), async ({ request, params }) => {
-        posted = String(params.clientId);
-        body = (await request.json()) as Record<string, unknown>;
-        return ok({ ...techwaveDetail.contacts[0], name: 'Jane Doe' }, { status: 201 });
-      }),
-    );
-    const user = userEvent.setup();
-    renderInOrg(<ClientsPage />);
-    await user.click(await screen.findByRole('button', { name: `Add contact for ${mutual.name}` }));
-    const dialog = await screen.findByRole('region', { name: 'Add contact' });
-    expect(within(dialog).getByText(mutual.name)).toBeInTheDocument();
-    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Jane Doe');
-    await user.type(within(dialog).getByRole('textbox', { name: 'Email' }), 'jane@mutual.example');
-    await user.click(within(dialog).getByRole('button', { name: 'Add contact' }));
-
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'Add contact' })).toBeNull());
-    expect(posted).toBe(mutual.id);
-    expect(body).toEqual({
-      name: 'Jane Doe',
-      position: null,
-      email: 'jane@mutual.example',
-      phone: null,
-      is_primary: true,
-      is_billing: false,
-    });
-  });
-
   it('shows the dry-run errors of an import and imports a clean file', async () => {
     const runs: string[] = [];
     let clean = false;
@@ -721,8 +689,12 @@ describe('ClientsPage actions', () => {
     await user.click(screen.getByRole('button', { name: 'Grid view' }));
     const cards = await screen.findByRole('list', { name: 'Clients' });
     const card = within(cards).getByRole('listitem', { name: techwave.name });
-    expect(within(card).getByText('1 Overdue by 1d')).toBeInTheDocument();
+    expect(within(card).getByText('Registration')).toBeInTheDocument();
     expect(within(card).getByText('678654QJ')).toBeInTheDocument();
+    // No contact, deadlines or Central on a card either (APT76).
+    expect(within(card).queryByText('Ramya Menon')).not.toBeInTheDocument();
+    expect(within(card).queryByText('1 Overdue by 1d')).not.toBeInTheDocument();
+    expect(within(card).queryByText('Local')).not.toBeInTheDocument();
     expect(useClientsPrefs.getState().view).toBe('grid');
   });
 });

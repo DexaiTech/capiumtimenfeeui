@@ -11,12 +11,12 @@ import {
 
 import { useCentralEnabled } from '../central/useCentralEnabled';
 import {
+  branchFilterOptions,
   CENTRAL_FILTER_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   CLIENT_TYPE_OPTIONS,
   countFilters,
   EMPTY_FILTERS,
-  NO_BRANCH,
   parseCentralFilter,
   SOFTWARE_OPTIONS,
 } from '../constants';
@@ -99,13 +99,7 @@ export function FilterPanel({
   const branchesOn = useBranchesEnabled();
   const branches = useBranches(branchesOn);
   const centralOn = useCentralEnabled();
-  const branchFilterOptions = [
-    ...(branches.data ?? []).map((branch) => ({
-      value: branch.id,
-      label: branch.is_active ? branch.name : `${branch.name} (inactive)`,
-    })),
-    { value: NO_BRANCH, label: 'No branch' },
-  ];
+  const branchFilters = branchFilterOptions(branches.data ?? []);
 
   return (
     <>
@@ -153,7 +147,7 @@ export function FilterPanel({
             {branchesOn ? (
               <CheckGroup
                 legend="Branch"
-                options={branchFilterOptions}
+                options={branchFilters}
                 values={filters.branch}
                 onToggle={(value, on) => setList('branch', value, on)}
               />

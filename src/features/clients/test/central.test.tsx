@@ -119,15 +119,26 @@ beforeEach(() => {
   useClientsPrefs.setState(INITIAL_CLIENTS_PREFS);
 });
 
-describe('the Central column', () => {
-  it('shows where each client stands with the central service', async () => {
-    // Hidden by default (APT74): shown here as from Show/Hide Columns.
-    useClientsPrefs.setState({ hiddenColumns: [] });
+describe('no Central column (APT76)', () => {
+  it('is neither a column of the list, nor on the cards, nor in the Columns menu', async () => {
+    const user = userEvent.setup();
     renderList();
-    expect(within(await row(techwave.name)).getByText('Local')).toBeInTheDocument();
-    expect(within(await row(linked.name)).getByText('Synced 12/05/2026')).toBeInTheDocument();
-    expect(within(await row(stale.name)).getByText('Stale')).toBeInTheDocument();
-    expect(within(await row(lost.name)).getByText('Not found centrally')).toBeInTheDocument();
+    await row(techwave.name);
+    expect(screen.queryByRole('columnheader', { name: 'Central' })).toBeNull();
+    expect(screen.queryByText('Synced 12/05/2026')).toBeNull();
+    expect(screen.queryByText('Local')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
+    const panel = await screen.findByRole('dialog', { name: 'Show or hide columns' });
+    expect(within(panel).queryByRole('checkbox', { name: 'Central' })).toBeNull();
+    await user.click(within(panel).getByRole('button', { name: 'Show all columns' }));
+    expect(screen.queryByRole('columnheader', { name: 'Central' })).toBeNull();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Grid view' }));
+    expect(await screen.findAllByRole('listitem')).not.toHaveLength(0);
+    expect(screen.queryByText('Synced 12/05/2026')).toBeNull();
+    expect(screen.queryByText('Local')).toBeNull();
   });
 
   it('says where a merged-away client went and links to it', async () => {
@@ -138,38 +149,18 @@ describe('the Central column', () => {
     expect(note).toHaveAttribute('href', `/acme/clients/${techwave.id}/overview`);
   });
 
-  it('is hidden by default and can be shown from the Columns menu', async () => {
-    const user = userEvent.setup();
-    renderList();
-    await row(techwave.name);
-    expect(screen.queryByRole('columnheader', { name: 'Central' })).toBeNull();
-    expect(screen.queryByText('Synced 12/05/2026')).toBeNull();
-
-    await user.click(screen.getByRole('button', { name: /Show\/Hide Columns/ }));
-    const panel = await screen.findByRole('dialog', { name: 'Show or hide columns' });
-    await user.click(within(panel).getByRole('checkbox', { name: 'Central' }));
-    expect(screen.getByRole('columnheader', { name: 'Central' })).toBeInTheDocument();
-  });
-
-  it('is hidden for people whose columns were saved before', async () => {
+  it('starts saved column choices again from the new layout', async () => {
     window.localStorage.setItem(
       CLIENTS_PREFS_KEY,
       JSON.stringify({
-        state: { hiddenColumns: ['reg_no'], view: 'list', presets: {} },
-        version: 1,
+        state: { hiddenColumns: ['reg_no', 'central', 'contact'], view: 'grid', presets: {} },
+        version: 2,
       }),
     );
     await useClientsPrefs.persist.rehydrate();
-    expect(useClientsPrefs.getState().hiddenColumns).toEqual(['reg_no', 'central']);
-  });
-
-  it('shows the central chip on the cards of the grid view', async () => {
-    const user = userEvent.setup();
-    renderList();
-    await row(techwave.name);
-    await user.click(screen.getByRole('button', { name: 'Grid view' }));
-    expect(await screen.findAllByText('Synced 12/05/2026')).not.toHaveLength(0);
-    expect(screen.getAllByText('Local')).not.toHaveLength(0);
+    expect(useClientsPrefs.getState().hiddenColumns).toEqual(['segment', 'branch', 'activity']);
+    // The rest of what was saved is kept.
+    expect(useClientsPrefs.getState().view).toBe('grid');
   });
 });
 

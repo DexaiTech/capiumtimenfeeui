@@ -1,16 +1,12 @@
-import { Plus } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 import { RowActions } from '@/components/ui';
 import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
-import { useCentralEnabled } from '../central/useCentralEnabled';
-import { formatActivity, initialsOf } from '../format';
-import type { ToggleableColumnId } from '../constants';
+import { formatActivity } from '../format';
+import { TOGGLEABLE_COLUMNS, type ToggleableColumnId } from '../constants';
 import type { ClientListItem, ClientSort, SortOrder } from '../types';
 import { type MenuAction } from './ActionMenu';
 import {
-  CentralCell,
-  DeadlineCell,
   Initials,
   MergedNote,
   SegmentPill,
@@ -29,11 +25,8 @@ export interface ClientsTableProps {
   onToggle: (clientId: string, checked: boolean) => void;
   onTogglePage: (checked: boolean) => void;
   onOpen: (client: ClientListItem) => void;
-  /** Null when the caller may not add contacts: the cell then shows a dash. */
-  onAddContact: ((client: ClientListItem) => void) | null;
   actionsFor: (client: ClientListItem) => MenuAction[];
   timeZone: string;
-  today: string;
   /** First page loading: skeleton rows. */
   loading: boolean;
   hasMore: boolean;
@@ -86,10 +79,8 @@ export function ClientsTable({
   onToggle,
   onTogglePage,
   onOpen,
-  onAddContact,
   actionsFor,
   timeZone,
-  today,
   loading,
   hasMore,
   loadingMore,
@@ -101,12 +92,10 @@ export function ClientsTable({
   const headerCheckRef = useRef<HTMLInputElement>(null);
   const segmentsOn = useSegmentsEnabled();
   const branchesOn = useBranchesEnabled();
-  const centralOn = useCentralEnabled();
   const show = (column: ToggleableColumnId) =>
     !hidden.has(column) &&
     (segmentsOn || column !== 'segment') &&
-    (branchesOn || column !== 'branch') &&
-    (centralOn || column !== 'central');
+    (branchesOn || column !== 'branch');
 
   const pageIds = rows.map((row) => row.id);
   const selectedOnPage = pageIds.filter((id) => selected.has(id)).length;
@@ -168,9 +157,19 @@ export function ClientsTable({
                 order={order}
                 onSort={onSort}
               />
+              {show('client_type') ? (
+                <th scope="col" className="cc-col-client_type">
+                  Client Type
+                </th>
+              ) : null}
               {show('reg_no') ? (
                 <th scope="col" className="cc-col-reg_no">
-                  Reg No
+                  Registration
+                </th>
+              ) : null}
+              {show('services') ? (
+                <th scope="col" className="cc-col-services">
+                  Services
                 </th>
               ) : null}
               {show('segment') ? (
@@ -188,35 +187,9 @@ export function ClientsTable({
                   Branch
                 </th>
               ) : null}
-              {show('contact') ? (
-                <th scope="col" className="cc-col-contact">
-                  Contact
-                </th>
-              ) : null}
-              {/* The API has no contact-email sort key, so this header is not sortable. */}
-              {show('contact_email') ? (
-                <th scope="col" className="cc-col-contact_email">
-                  Contact Email
-                </th>
-              ) : null}
-              {show('deadlines') ? (
-                <th scope="col" className="cc-col-deadlines">
-                  Deadlines
-                </th>
-              ) : null}
               {show('activity') ? (
                 <th scope="col" className="cc-col-activity">
                   Activity
-                </th>
-              ) : null}
-              {show('services') ? (
-                <th scope="col" className="cc-col-services">
-                  Services
-                </th>
-              ) : null}
-              {show('central') ? (
-                <th scope="col" className="cc-col-central">
-                  Central
                 </th>
               ) : null}
               {show('action') ? (
@@ -286,7 +259,6 @@ export function ClientsTable({
                           </span>
                           <span className="cc-client-meta">
                             <span>{client.code}</span>
-                            <TypeBadge type={client.client_type} />
                             <SoftwareBadge software={client.accounting_software} />
                           </span>
                           {client.merged_into_client_id ? (
@@ -297,36 +269,25 @@ export function ClientsTable({
                         </span>
                       </span>
                     </td>
+                    {show('client_type') ? (
+                      <td>
+                        <TypeBadge type={client.client_type} />
+                      </td>
+                    ) : null}
                     {show('reg_no') ? <td>{client.company_number ?? ''}</td> : null}
+                    {show('services') ? (
+                      <td>
+                        <ServicesCell services={client.services} />
+                      </td>
+                    ) : null}
                     {show('segment') ? (
                       <td>
                         <SegmentPill segment={client.segment} />
                       </td>
                     ) : null}
                     {show('branch') ? <td>{client.branch?.name ?? ''}</td> : null}
-                    {show('contact') ? (
-                      <td>
-                        <ContactCell client={client} onAddContact={onAddContact} />
-                      </td>
-                    ) : null}
-                    {show('contact_email') ? <td>{client.contact_email ?? ''}</td> : null}
-                    {show('deadlines') ? (
-                      <td>
-                        <DeadlineCell deadlines={client.deadlines} today={today} />
-                      </td>
-                    ) : null}
                     {show('activity') ? (
                       <td>{formatActivity(client.last_activity_at, timeZone)}</td>
-                    ) : null}
-                    {show('services') ? (
-                      <td>
-                        <ServicesCell services={client.services} />
-                      </td>
-                    ) : null}
-                    {show('central') ? (
-                      <td>
-                        <CentralCell client={client} timeZone={timeZone} />
-                      </td>
                     ) : null}
                     {show('action') ? (
                       <td>
@@ -357,49 +318,4 @@ export function ClientsTable({
 }
 
 /** The toggleable columns in table order. */
-const TOGGLE_ORDER: ToggleableColumnId[] = [
-  'reg_no',
-  'segment',
-  'branch',
-  'contact',
-  'contact_email',
-  'deadlines',
-  'activity',
-  'services',
-  'central',
-  'action',
-];
-
-function ContactCell({
-  client,
-  onAddContact,
-}: {
-  client: ClientListItem;
-  onAddContact: ((client: ClientListItem) => void) | null;
-}) {
-  const name = client.contact_name ?? client.primary_contact?.name ?? null;
-  if (name) {
-    return (
-      <span className="cc-contact" title={name}>
-        <Initials name={name} initials={initialsOf(name)} size="sm" />
-        <span>{name}</span>
-      </span>
-    );
-  }
-  if (!onAddContact) return <span className="cc-muted">—</span>;
-  return (
-    <button
-      type="button"
-      className="cc-add-pill"
-      aria-label={`Add contact for ${client.name}`}
-      onClick={(event) => {
-        event.stopPropagation();
-        onAddContact(client);
-      }}
-      onKeyDown={(event) => event.stopPropagation()}
-    >
-      <Plus aria-hidden="true" />
-      Add
-    </button>
-  );
-}
+const TOGGLE_ORDER: ToggleableColumnId[] = TOGGLEABLE_COLUMNS.map((column) => column.id);

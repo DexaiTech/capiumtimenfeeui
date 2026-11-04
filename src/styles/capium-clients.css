@@ -503,6 +503,11 @@
   border-radius: var(--cc-radius-control);
 }
 
+/* The Branch select next to the quick search (APT76). */
+.cc-branch-filter {
+  width: 170px;
+}
+
 .cc-select:focus,
 .cc-input:focus {
   outline: none;
@@ -637,6 +642,10 @@
   width: 197px;
 }
 
+.cc-col-client_type {
+  width: 120px;
+}
+
 .cc-col-reg_no {
   width: 96px;
 }
@@ -649,27 +658,11 @@
   width: 105px;
 }
 
-.cc-col-contact {
-  width: 118px;
-}
-
-.cc-col-contact_email {
-  width: 147px;
-}
-
-.cc-col-deadlines {
-  width: 123px;
-}
-
 .cc-col-activity {
   width: 154px;
 }
 
 .cc-col-services {
-  width: 150px;
-}
-
-.cc-col-central {
   width: 150px;
 }
 
@@ -983,51 +976,6 @@
   min-width: 26px;
   justify-content: center;
   cursor: default;
-}
-
-.cc-contact {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  min-width: 0;
-  vertical-align: middle;
-}
-
-.cc-contact > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.cc-add-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: 50px;
-  height: 22px;
-  padding: 0;
-  font: inherit;
-  font-size: 10px;
-  line-height: 12px;
-  font-weight: 500;
-  color: var(--cc-primary);
-  background: var(--cc-surface);
-  border: 1px solid var(--cc-primary-soft);
-  border-radius: var(--cc-radius-pill);
-  cursor: pointer;
-}
-
-.cc-add-pill svg {
-  width: 10px;
-  height: 10px;
-}
-
-.cc-add-pill:hover {
-  background: var(--cc-primary-10);
-  border-color: var(--cc-primary);
 }
 
 .cc-muted {

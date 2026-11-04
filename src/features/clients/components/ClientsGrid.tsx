@@ -1,16 +1,12 @@
-import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { RowActions } from '@/components/ui';
 import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
 
-import { useCentralEnabled } from '../central/useCentralEnabled';
-import { formatActivity, initialsOf } from '../format';
+import { formatActivity } from '../format';
 import type { ClientListItem } from '../types';
 import { type MenuAction } from './ActionMenu';
 import {
-  CentralCell,
-  DeadlineCell,
   Initials,
   MergedNote,
   SegmentPill,
@@ -24,10 +20,8 @@ export interface ClientsGridProps {
   selected: ReadonlySet<string>;
   onToggle: (clientId: string, checked: boolean) => void;
   onOpen: (client: ClientListItem) => void;
-  onAddContact: ((client: ClientListItem) => void) | null;
   actionsFor: (client: ClientListItem) => MenuAction[];
   timeZone: string;
-  today: string;
   loading: boolean;
   hasMore: boolean;
   loadingMore: boolean;
@@ -35,16 +29,15 @@ export interface ClientsGridProps {
   placeholder?: ReactNode;
 }
 
-/** The grid view: one card per client with the same data as the table row. */
+/** The grid view: one card per client with the same data as the table row (APT76: no contact,
+ * deadlines or Central). */
 export function ClientsGrid({
   rows,
   selected,
   onToggle,
   onOpen,
-  onAddContact,
   actionsFor,
   timeZone,
-  today,
   loading,
   hasMore,
   loadingMore,
@@ -53,7 +46,6 @@ export function ClientsGrid({
 }: ClientsGridProps) {
   const segmentsOn = useSegmentsEnabled();
   const branchesOn = useBranchesEnabled();
-  const centralOn = useCentralEnabled();
   if (placeholder) return <div className="cc-table-card">{placeholder}</div>;
   if (loading && rows.length === 0) {
     return (
@@ -80,7 +72,6 @@ export function ClientsGrid({
       >
         {rows.map((client) => {
           const isSelected = selected.has(client.id);
-          const contact = client.contact_name ?? client.primary_contact?.name ?? null;
           return (
             <li
               key={client.id}
@@ -128,7 +119,7 @@ export function ClientsGrid({
                 />
               </div>
               <dl>
-                <dt>Reg No</dt>
+                <dt>Registration</dt>
                 <dd>{client.company_number ?? '—'}</dd>
                 {segmentsOn ? (
                   <>
@@ -144,50 +135,12 @@ export function ClientsGrid({
                     <dd>{client.branch?.name ?? '—'}</dd>
                   </>
                 ) : null}
-                <dt>Contact</dt>
-                <dd>
-                  {contact ? (
-                    <span className="cc-contact">
-                      <Initials name={contact} initials={initialsOf(contact)} size="sm" />
-                      <span>{contact}</span>
-                    </span>
-                  ) : onAddContact ? (
-                    <button
-                      type="button"
-                      className="cc-add-pill"
-                      aria-label={`Add contact for ${client.name}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onAddContact(client);
-                      }}
-                    >
-                      <Plus aria-hidden="true" />
-                      Add
-                    </button>
-                  ) : (
-                    '—'
-                  )}
-                </dd>
-                <dt>Email</dt>
-                <dd title={client.contact_email ?? undefined}>{client.contact_email ?? '—'}</dd>
-                <dt>Deadlines</dt>
-                <dd>
-                  <DeadlineCell deadlines={client.deadlines} today={today} />
-                </dd>
                 <dt>Activity</dt>
                 <dd>{formatActivity(client.last_activity_at, timeZone)}</dd>
                 <dt>Services</dt>
                 <dd>
                   <ServicesCell services={client.services} />
                 </dd>
-                {centralOn ? (
-                  <>
-                    <dt>Central</dt>
-                    <dd>
-                      <CentralCell client={client} timeZone={timeZone} />
-                    </dd>
-                  </>
-                ) : null}
               </dl>
             </li>
           );
