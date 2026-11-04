@@ -43,7 +43,7 @@ import {
   type TemporaryPassword,
 } from '../components/staff/TemporaryPasswordDialog';
 import { STAFF_STATUS_LABEL } from '../constants';
-import { useStaffActions } from '../hooks/useStaffActions';
+import { STAFF_ACTION_SLOTS, useStaffActions } from '../hooks/useStaffActions';
 import { useUrlSearch } from '../hooks/useUrlSearch';
 import type { StaffBulkRequest, StaffFilters, StaffMember, StaffSort, StaffStatus } from '../types';
 import { formatRate } from '../utils/format';
@@ -525,7 +525,11 @@ function StaffList({
             ? (member) => {
                 const items = actionsFor(member);
                 return items.length > 0 ? (
-                  <RowActions label={`Actions for ${member.full_name}`} items={items} />
+                  <RowActions
+                    label={`Actions for ${member.full_name}`}
+                    items={items}
+                    slots={STAFF_ACTION_SLOTS}
+                  />
                 ) : null;
               }
             : undefined

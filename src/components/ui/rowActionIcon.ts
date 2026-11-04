@@ -16,7 +16,9 @@ import {
   FileMinus2,
   History,
   KeyRound,
+  Link,
   Mail,
+  MailPlus,
   Paperclip,
   Pencil,
   PencilLine,
@@ -24,9 +26,11 @@ import {
   RotateCcw,
   Send,
   Settings2,
+  ShieldCheck,
   Star,
   Trash2,
   Undo2,
+  Unlink,
   UserCheck,
   UserPlus,
   UserX,
@@ -37,6 +41,12 @@ import {
 /** What an action is called -> its icon. The first rule whose pattern matches the id or the label
  * wins, so the specific ones come first. */
 const RULES: ReadonlyArray<readonly [RegExp, LucideIcon]> = [
+  // The sign-in actions of a staff member, each its own icon (APT77): not the pencil of Edit, the
+  // "open" arrow of a link, or the person icons of Reactivate and Deactivate.
+  [/\bunlink\b/, Unlink],
+  [/\blink login\b/, Link],
+  [/invit/, MailPlus],
+  [/\brole\b/, ShieldCheck],
   [/credit ?note/, FileMinus2],
   [/record payment|^pay\b|payment/, Banknote],
   [/history|audit|timeline/, History],
@@ -99,6 +109,10 @@ const COLORS = new Map<LucideIcon, RowActionColor>([
   [PencilLine, 'violet'],
   [Settings2, 'violet'],
   [KeyRound, 'violet'],
+  [ShieldCheck, 'violet'],
+  [Link, 'blue'],
+  [MailPlus, 'blue'],
+  [Unlink, 'orange'],
   [UserPlus, 'violet'],
   [Banknote, 'green'],
   [CircleCheck, 'green'],

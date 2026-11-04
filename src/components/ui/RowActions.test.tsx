@@ -100,6 +100,76 @@ describe('RowActions', () => {
   });
 });
 
+describe('RowActions tooltips (APT78)', () => {
+  it('drops the ellipsis of a menu label from the tooltip and the accessible name', () => {
+    render(
+      <RowActions
+        label="Actions for INV001"
+        items={[
+          { id: 'send', label: 'Send email…', onSelect: vi.fn() },
+          { id: 'payment', label: 'Record payment...', onSelect: vi.fn() },
+          { id: 'open', label: 'Open', onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    const buttons = within(screen.getByRole('group')).getAllByRole('button');
+    expect(buttons.map((button) => button.getAttribute('title'))).toEqual([
+      'Send email',
+      'Record payment',
+      'Open',
+    ]);
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Send email',
+      'Record payment',
+      'Open',
+    ]);
+  });
+});
+
+describe('RowActions slots (APT77)', () => {
+  const action = (id: string, label: string) => ({ id, label, onSelect: vi.fn() });
+  const slots = ['open', ['issue', 'send'], 'payment', 'delete'];
+  /** Each place of the group: the button's name, or '-' for an empty place. */
+  const places = () =>
+    Array.from(screen.getByRole('group').children).map(
+      (child) => child.getAttribute('aria-label') ?? '-',
+    );
+
+  it('keeps every action in its place, leaving an empty place for one that is missing', () => {
+    const { rerender } = render(
+      <RowActions
+        label="Actions"
+        slots={slots}
+        items={[action('delete', 'Delete'), action('open', 'Open'), action('issue', 'Issue')]}
+      />,
+    );
+    expect(places()).toEqual(['Open', 'Issue', '-', 'Delete']);
+    // An empty place is not a button: nothing to click or tab to.
+    expect(within(screen.getByRole('group')).getAllByRole('button')).toHaveLength(3);
+
+    rerender(
+      <RowActions
+        label="Actions"
+        slots={slots}
+        items={[action('send', 'Send'), action('payment', 'Pay'), action('open', 'Open')]}
+      />,
+    );
+    // Send shares its place with Issue: they never show together.
+    expect(places()).toEqual(['Open', 'Send', 'Pay', '-']);
+  });
+
+  it('puts an action without a place at the end', () => {
+    render(
+      <RowActions
+        label="Actions"
+        slots={['open']}
+        items={[action('extra', 'Extra'), action('open', 'Open')]}
+      />,
+    );
+    expect(places()).toEqual(['Open', 'Extra']);
+  });
+});
+
 describe('rowActionIcon', () => {
   it('gives each kind of action its own icon, and the same one for the same words', () => {
     const edit = rowActionIcon('edit', 'Edit');
@@ -109,6 +179,25 @@ describe('rowActionIcon', () => {
     expect(new Set([edit, remove, history, endDate]).size).toBe(4);
     expect(rowActionIcon('x', 'Edit rate')).toBe(edit);
     expect(rowActionIcon('x', 'Delete invoice')).toBe(remove);
+  });
+
+  it('tells the staff actions apart (APT77)', () => {
+    const icons = [
+      rowActionIcon('edit', 'Edit'),
+      rowActionIcon('role', 'Change role'),
+      rowActionIcon('invite', 'Invite to sign in'),
+      rowActionIcon('link', 'Link login'),
+      rowActionIcon('unlink', 'Unlink login'),
+      rowActionIcon('reset', 'Reset password'),
+      rowActionIcon('reactivate', 'Reactivate'),
+      rowActionIcon('deactivate', 'Deactivate'),
+      rowActionIcon('delete', 'Delete'),
+    ];
+    expect(new Set(icons).size).toBe(icons.length);
+    // Resending an invitation is the same action as inviting.
+    expect(rowActionIcon('invite', 'Resend invitation')).toBe(icons[2]);
+    // Other links keep their icons.
+    expect(rowActionIcon('copy', 'Copy link')).toBe(rowActionIcon('copy', 'Copy'));
   });
 
   it('falls back to a generic icon for a name it does not know', () => {

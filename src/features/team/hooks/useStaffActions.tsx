@@ -36,6 +36,21 @@ export interface UseStaffActionsOptions {
   onDeleted?: (member: StaffMember) => void;
 }
 
+/**
+ * Where each action sits in the staff grid, so it is in the same place on every row (APT77):
+ * the record, sign-in, then status, and Delete last. Link and Unlink never show together.
+ */
+export const STAFF_ACTION_SLOTS: ReadonlyArray<string | ReadonlyArray<string>> = [
+  'edit',
+  'role',
+  'invite',
+  ['link', 'unlink'],
+  'reset',
+  'reactivate',
+  'deactivate',
+  'delete',
+];
+
 export interface StaffActions {
   /** The menu of one person: what the caller may do with them, by permission and state. */
   actionsFor: (member: StaffMember) => DropdownItem[];
