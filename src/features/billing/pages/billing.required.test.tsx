@@ -15,7 +15,6 @@ import { SendInvoiceDialog } from '../components/SendInvoiceDialog';
 import { StartCreditNoteDialog } from '../components/creditNotes/CreditNoteLauncher';
 import { EstimateFormPanel } from '../components/estimates/EstimateFormPanel';
 import { DraftLinesGrid } from '../components/invoice/DraftLinesGrid';
-import { LineEditDialog } from '../components/prepare/LineEditDialog';
 import { DetailsStep } from '../components/prepare/DetailsStep';
 import { ScheduleFormPanel } from '../components/recurring/ScheduleFormPanel';
 import { SendStatementDialog } from '../components/statements/SendStatementDialog';
@@ -206,32 +205,6 @@ describe('the billing dialogs mark their mandatory fields', () => {
     });
   });
 
-  it('edit a line of the draft being prepared: the wording, not the amount or VAT code', async () => {
-    renderBillingPage(
-      <LineEditDialog
-        line={
-          {
-            key: 'k1',
-            text: 'Bookkeeping',
-            description: 'Bookkeeping',
-            billed: null,
-            net: null,
-            wip: 5000,
-            vatRateId: null,
-          } as never
-        }
-        vatOptions={[]}
-        currency="GBP"
-        onClose={noop}
-        onSave={noop}
-      />,
-    );
-    expectRequiredFields(await dialog(), {
-      required: ['Description'],
-      optional: [/^Amount to bill/, 'VAT code'],
-    });
-  });
-
   it('prepare an invoice: the client, then the issue date of the draft', async () => {
     const view = renderBillingPage(<PrepareInvoicePage />);
     expectPickerRequired(document.body, 'Client');
@@ -240,7 +213,7 @@ describe('the billing dialogs mark their mandatory fields', () => {
       <DetailsStep
         clientName="Harbour & Co"
         termsDays={30}
-        itemCount={1}
+        lineCount={1}
         totals={{ net: 100, vat: 20, gross: 120 } as never}
         buildRequest={() => ({ client_id: 'c-1' }) as never}
         onBack={noop}

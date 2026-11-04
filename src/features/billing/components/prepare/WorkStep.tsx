@@ -27,8 +27,10 @@ export interface WorkStepProps {
   blocked: BlockedItem[];
   selected: ReadonlySet<string>;
   onSelectedChange: (selected: ReadonlySet<string>) => void;
+  /** Lines that bill no work are typed in already: the review can go on without work. */
+  hasLines?: boolean;
   onContinue: () => void;
-  /** Bills fees in advance instead: time is assigned to that invoice later. */
+  /** Adds lines that bill no work, fees in advance by default: time is assigned to them later. */
   onAdvance?: () => void;
 }
 
@@ -39,6 +41,7 @@ export function WorkStep({
   blocked,
   selected,
   onSelectedChange,
+  hasLines = false,
   onContinue,
   onAdvance,
 }: WorkStepProps) {
@@ -83,7 +86,7 @@ export function WorkStep({
         {/* With nothing to bill, the empty list offers it instead. */}
         {onAdvance && rows.length > 0 ? (
           <Button size="sm" onClick={onAdvance}>
-            Bill fees in advance…
+            Bill fees in advance
           </Button>
         ) : null}
       </div>
@@ -138,13 +141,13 @@ export function WorkStep({
               title="Nothing to bill"
               description={
                 onAdvance
-                  ? 'This client has no unbilled time, disbursements or fixed fees. You can still bill fees in advance and assign time to that invoice later.'
+                  ? 'This client has no unbilled time, disbursements or fixed fees. You can still add line items, such as fees billed in advance, and assign time to them later.'
                   : 'This client has no unbilled time, disbursements or fixed fees that can be invoiced.'
               }
               action={
                 onAdvance ? (
                   <Button variant="primary" onClick={onAdvance}>
-                    Bill fees in advance…
+                    Add line items
                   </Button>
                 ) : undefined
               }
@@ -199,7 +202,7 @@ export function WorkStep({
               size="sm"
               variant="primary"
               leftIcon={<ListChecks aria-hidden="true" className="size-4" />}
-              disabled={chosen.length === 0}
+              disabled={chosen.length === 0 && !hasLines}
               onClick={onContinue}
             >
               Review the lines

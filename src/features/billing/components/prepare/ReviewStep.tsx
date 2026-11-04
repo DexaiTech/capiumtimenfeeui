@@ -1,158 +1,92 @@
-import { ArrowLeft, ArrowRight, Pencil, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
 
-import {
-  Badge,
-  Button,
-  Card,
-  DataTable,
-  Select,
-  type DataTableColumn,
-  RowActions,
-} from '@/components/ui';
-import { formatBasisPoints, formatMoney } from '@/utils/money';
+import { Button, Checkbox, Select } from '@/components/ui';
+import { formatMoney } from '@/utils/money';
 
-import { GROUP_BY_OPTIONS, WIP_KIND_LABELS } from '../../constants';
+import { GROUP_BY_OPTIONS } from '../../constants';
+import type { GridLineValues, PrepareLinesValues } from '../../schemas/forms';
 import type { GroupBy } from '../../types';
-import { formatQuantity } from '../../utils/lineMaths';
-import type { LineEdits, PreviewLine, PreviewTotals } from '../../utils/prepare';
 import { plural } from '../../utils/format';
+import type { LineGridMetas } from '../../utils/lineGrid';
+import type { VatDefaults } from '../../utils/prepare';
+import { LineGrid } from '../LineGrid';
 
-function lineColumns(currency: string): DataTableColumn<PreviewLine>[] {
-  const money = (pence: number) => (
-    <span className="tabular-nums text-text">{formatMoney(pence, currency)}</span>
-  );
-  return [
-    {
-      id: 'description',
-      header: 'Description',
-      hideable: false,
-      className: 'min-w-64 max-w-[28rem]',
-      cell: (line) => (
-        <div className="flex min-w-0 items-start gap-2">
-          <Badge tone={WIP_KIND_LABELS[line.kind].tone} size="sm">
-            {WIP_KIND_LABELS[line.kind].label}
-          </Badge>
-          <span className="min-w-0 text-text">{line.text}</span>
-        </div>
-      ),
-    },
-    {
-      id: 'quantity',
-      header: 'Hours',
-      align: 'end',
-      className: 'whitespace-nowrap',
-      cell: (line) =>
-        line.kind === 'time' && line.quantity !== null ? (
-          <span className="tabular-nums text-text">{formatQuantity(line.quantity)}</span>
-        ) : (
-          <span className="text-text-subtle">—</span>
-        ),
-    },
-    {
-      id: 'wip',
-      header: 'Work in progress',
-      align: 'end',
-      className: 'whitespace-nowrap',
-      cell: (line) => money(line.wip),
-    },
-    {
-      id: 'billed',
-      header: 'To bill',
-      align: 'end',
-      className: 'whitespace-nowrap',
-      cell: (line) =>
-        line.billed === null ? (
-          <span className="text-xs text-text-muted">Set when the draft is made</span>
-        ) : (
-          <span className="font-medium tabular-nums text-text">
-            {formatMoney(line.billed, currency)}
-          </span>
-        ),
-    },
-    {
-      id: 'adjustment',
-      header: 'Write-on / off',
-      align: 'end',
-      className: 'whitespace-nowrap',
-      cell: (line) =>
-        line.adjustment === null || line.adjustment === 0 ? (
-          <span className="text-text-subtle">—</span>
-        ) : (
-          <span
-            className={
-              line.adjustment < 0 ? 'tabular-nums text-danger' : 'tabular-nums text-success'
-            }
-          >
-            {formatMoney(line.adjustment, currency)}
-          </span>
-        ),
-    },
-    {
-      id: 'vat',
-      header: 'VAT',
-      align: 'end',
-      className: 'whitespace-nowrap',
-      cell: (line) => (
-        <span className="tabular-nums text-text">{formatBasisPoints(line.vatBp)}</span>
-      ),
-    },
-  ];
-}
-
-function Figure({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Figure({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <dt className="text-xs text-text-muted">{label}</dt>
-      <dd
-        className={
-          strong
-            ? 'text-base font-semibold tabular-nums text-text'
-            : 'text-sm font-semibold tabular-nums text-text'
-        }
-      >
-        {value}
-      </dd>
+    <div className="flex justify-between gap-6">
+      <dt className="text-text-muted">{label}</dt>
+      <dd className="tabular-nums">{value}</dd>
     </div>
   );
 }
 
+const sameLine = (a: GridLineValues, b: GridLineValues) =>
+  a.description === b.description &&
+  a.net_amount === b.net_amount &&
+  a.vat_rate_id === b.vat_rate_id;
+
 export interface ReviewStepProps {
-  lines: PreviewLine[];
-  totals: PreviewTotals;
-  edits: LineEdits;
+  form: UseFormReturn<PrepareLinesValues>;
+  /** What the grid shows of the rows of work. */
+  metas: LineGridMetas;
+  /** The rows of work as they would be drafted, to undo a change. */
+  drafted: ReadonlyMap<string, GridLineValues>;
+  vat: VatDefaults;
   currency: string;
   groupBy: GroupBy;
   onGroupByChange: (groupBy: GroupBy) => void;
   /** Hourly time is chosen: how it is grouped matters. */
   groupable: boolean;
-  onEdit: (line: PreviewLine) => void;
-  onReset: (key: string) => void;
+  /** The person ticked or unticked "Fees in advance": their choice stays. */
+  onAdvanceChosen: () => void;
   onBack: () => void;
   onContinue: () => void;
 }
 
-/** Step two: the lines the draft will have, the amounts they bill and what that writes on or off. */
+/**
+ * Step two: the lines the draft will have, in the line grid. A line of the chosen work bills
+ * what is typed as its net (more writes the work on, less writes it off); "+ Row" adds lines
+ * that bill no work, as fees in advance or not.
+ */
 export function ReviewStep({
-  lines,
-  totals,
-  edits,
+  form,
+  metas,
+  drafted,
+  vat,
   currency,
   groupBy,
   onGroupByChange,
   groupable,
-  onEdit,
-  onReset,
+  onAdvanceChosen,
   onBack,
   onContinue,
 }: ReviewStepProps) {
-  const columns = lineColumns(currency);
+  // Only what changes as rows come and go: typing in the grid does not redraw the step.
+  const [lineCount, typedIn, unpriced] = useWatch({
+    control: form.control,
+    name: 'lines',
+    compute: (lines) =>
+      [
+        lines.length,
+        lines.filter((line) => !line.wip).length,
+        // A fixed fee only the API can price yet.
+        lines.some((line) => line.wip && metas.get(line.key)?.net === null),
+      ] as const,
+  });
+  const money = (pence: number) => formatMoney(pence, currency);
 
   return (
-    <div className="flex flex-col gap-4">
+    <form
+      noValidate
+      aria-label="Lines to draft"
+      onSubmit={(event) => void form.handleSubmit(onContinue)(event)}
+      className="flex flex-col gap-4"
+    >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <p className="text-sm text-text-muted">
-          {plural(lines.length, 'line', 'lines')} will be drafted. Edit a line to change its
-          wording, the amount it bills or its VAT code.
+          {plural(lineCount, 'line', 'lines')} will be drafted. Change the wording, the amount or
+          the VAT code of a line in the grid; + Row adds a line that bills no work.
         </p>
         {groupable ? (
           <div className="w-60 max-w-full">
@@ -169,78 +103,77 @@ export function ReviewStep({
         ) : null}
       </div>
 
-      <DataTable
+      <LineGrid
+        form={form}
         caption="Lines of the invoice"
-        columns={columns}
-        rows={lines}
-        rowKey={(line) => line.key}
-        rowActions={(line) => (
-          <RowActions
-            label={`Actions for ${line.text}`}
-            items={[
-              {
-                id: 'edit',
-                label: 'Edit the line',
-                icon: <Pencil aria-hidden="true" className="size-4" />,
-                onSelect: () => onEdit(line),
-              },
-              ...(edits[line.key]
-                ? [
-                    {
-                      id: 'reset',
-                      label: 'Undo the changes',
-                      icon: <RotateCcw aria-hidden="true" className="size-4" />,
-                      onSelect: () => onReset(line.key),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-        )}
-        onRowClick={onEdit}
+        currency={currency}
+        vat={vat}
+        metas={metas}
+        // A line of work leaves the invoice by going back and unticking the work.
+        canRemove={(line) => !line.wip}
+        rowActions={(index, line) => {
+          const original = drafted.get(line.key);
+          if (!line.wip || !original || sameLine(line, original)) return null;
+          return (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Undo the changes of line ${index + 1}`}
+              onClick={() => form.setValue(`lines.${index}`, original, { shouldDirty: true })}
+            >
+              <RotateCcw aria-hidden="true" className="size-4" />
+            </Button>
+          );
+        }}
+        summary={(totals) =>
+          totals.wip > 0 || totals.adjustment !== 0 ? (
+            <dl aria-label="Work in progress" className="flex min-w-56 flex-col gap-1.5 text-sm">
+              <Figure label="Work in progress cleared" value={money(totals.wip)} />
+              <Figure
+                label={
+                  totals.adjustment < 0
+                    ? 'Written off'
+                    : totals.adjustment > 0
+                      ? 'Written on'
+                      : 'Written on or off'
+                }
+                value={money(Math.abs(totals.adjustment))}
+              />
+            </dl>
+          ) : null
+        }
       />
 
-      <Card padding="sm" className="flex flex-col gap-3">
-        <dl aria-label="Invoice totals" className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
-          <Figure label="Net" value={formatMoney(totals.net, currency)} />
-          <Figure label="VAT (estimate)" value={formatMoney(totals.vat, currency)} />
-          <Figure label="Total" value={formatMoney(totals.gross, currency)} strong />
-          <Figure label="Work in progress cleared" value={formatMoney(totals.wip, currency)} />
-          <Figure
-            label={
-              totals.adjustment < 0
-                ? 'Written off'
-                : totals.adjustment > 0
-                  ? 'Written on'
-                  : 'Written on or off'
-            }
-            value={formatMoney(Math.abs(totals.adjustment), currency)}
-          />
-        </dl>
-        {totals.unpriced > 0 ? (
-          <p className="text-xs text-text-muted">
-            {plural(totals.unpriced, 'line is', 'lines are')} priced when the draft is made: a fixed
-            fee bills the fee less what is already billed of it, and is left out of these totals.
-          </p>
-        ) : null}
+      {typedIn > 0 ? (
+        <Checkbox
+          label="Fees in advance"
+          description="Time is assigned to the lines added here once the invoice is issued, and leaves WIP then. Untick it for an ordinary fee, a discount or a correction."
+          {...form.register('advance', { onChange: onAdvanceChosen })}
+        />
+      ) : null}
+      {unpriced ? (
         <p className="text-xs text-text-muted">
-          VAT follows each line's code, else the client's own code, else its service's;
-          disbursements keep their own code, so the draft may differ slightly.
+          A fixed fee left empty is priced when the draft is made: it bills the fee less what is
+          already billed of it, and is left out of these totals.
         </p>
-      </Card>
+      ) : null}
+      <p className="text-xs text-text-muted">
+        VAT follows each line's code, else the client's own code, else its service's; disbursements
+        keep their own code, so the draft may differ slightly.
+      </p>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
         <Button leftIcon={<ArrowLeft aria-hidden="true" className="size-4" />} onClick={onBack}>
           Back to the work
         </Button>
         <Button
+          type="submit"
           variant="primary"
           rightIcon={<ArrowRight aria-hidden="true" className="size-4" />}
-          onClick={onContinue}
         >
           Dates and notes
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

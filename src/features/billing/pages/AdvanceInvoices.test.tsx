@@ -120,27 +120,34 @@ function openInvoice(invoice: InvoiceDetail): Posted[] {
   return posted;
 }
 
-/** The preparation of Harbour's invoice with the "Bill fees in advance" panel open. */
-async function openAdvancePanel(backend: PrepareBackend): Promise<HTMLElement> {
+/** The preparation of Harbour's invoice at its lines, after "Bill fees in advance". */
+async function openAdvanceGrid(backend: PrepareBackend): Promise<HTMLElement> {
   const user = userEvent.setup();
   server.use(...prepareHandlers(backend));
   renderBillingPage(<PrepareInvoicePage />, {
     route: `${BILLING}/prepare?client=${harbour.id}`,
     path: `${BILLING}/prepare`,
   });
-  await user.click(await screen.findByRole('button', { name: 'Bill fees in advance…' }));
-  return screen.findByRole('region', { name: 'Bill fees in advance' });
+  await user.click(await screen.findByRole('button', { name: 'Bill fees in advance' }));
+  return screen.findByRole('form', { name: 'Lines to draft' });
+}
+
+/** From the lines to the draft: "Dates and notes", then "Save as draft". */
+async function saveDraft(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Dates and notes' }));
+  await user.click(await screen.findByRole('button', { name: 'Save as draft' }));
 }
 
 describe('billing fees in advance', () => {
   it('drafts an advance invoice on several lines from the preparation', async () => {
     const user = userEvent.setup();
     const backend = createPrepareBackend();
-    const panel = await openAdvancePanel(backend);
+    const panel = await openAdvanceGrid(backend);
     const field = (name: string) => within(panel).getByRole('textbox', { name: new RegExp(name) });
     const totals = within(panel).getByLabelText('Totals');
-    // One line to start with, which cannot be removed.
-    expect(within(panel).queryByRole('button', { name: /Remove line/ })).toBeNull();
+    // Nothing chosen to bill: the lines typed in are fees in advance.
+    expect(within(panel).getByRole('checkbox', { name: /Fees in advance/ })).toBeChecked();
+    expect(field('Description of line 1')).toHaveValue('Fees in advance');
 
     await user.clear(field('Description of line 1'));
     await user.type(field('Description of line 1'), 'Accounts 2026/27');
@@ -164,16 +171,17 @@ describe('billing fees in advance', () => {
     );
 
     const rows = within(panel).getAllByRole('row');
-    expect(rows[2]).toHaveTextContent('£300.00£1,500.00');
+    expect(rows[2]).toHaveTextContent('£300.00');
+    expect(rows[2]).toHaveTextContent('£1,500.00');
     // 2.5 x £33.33 = £83.325, rounded as the API does.
-    expect(rows[3]).toHaveTextContent('£0.00£83.33');
+    expect(rows[3]).toHaveTextContent('£83.33');
     expect(totals).toHaveTextContent('Net£4,583.33VAT£900.00Total£5,483.33');
 
     await user.click(within(panel).getByRole('button', { name: 'Remove line 3' }));
     expect(within(panel).queryByRole('textbox', { name: /line 3/ })).toBeNull();
     expect(totals).toHaveTextContent('Net£4,500.00VAT£900.00Total£5,400.00');
 
-    await user.click(within(panel).getByRole('button', { name: 'Draft advance invoice' }));
+    await saveDraft(user);
     await waitFor(() => expect(postsOf(backend, '/invoices')).toHaveLength(1));
     const body = postsOf(backend, '/invoices')[0]?.body;
     expect(body).toEqual(
@@ -181,20 +189,32 @@ describe('billing fees in advance', () => {
         client_id: harbour.id,
         time_entry_ids: [],
         disbursement_ids: [],
-        advance_lines: [
-          { description: 'Accounts 2026/27', quantity: '1.00', unit_amount: 300000 },
-          { description: 'Payroll 2026/27', quantity: '12.00', unit_amount: 12500 },
+        overrides: [],
+        manual_lines: [
+          {
+            description: 'Accounts 2026/27',
+            quantity: '1.00',
+            unit_amount: 300000,
+            is_advance: true,
+          },
+          {
+            description: 'Payroll 2026/27',
+            quantity: '12.00',
+            unit_amount: 12500,
+            is_advance: true,
+          },
         ],
       }),
     );
     expect(body).not.toHaveProperty('advance');
+    expect(body).not.toHaveProperty('advance_lines');
     expect(await screen.findByTestId('location')).toHaveTextContent(`${INVOICES}/inv-new-1`);
   });
 
   it('fills an advance line from the service chosen for it', async () => {
     const user = userEvent.setup();
     const backend = createPrepareBackend();
-    const panel = await openAdvancePanel(backend);
+    const panel = await openAdvanceGrid(backend);
     const field = (name: string) => within(panel).getByRole('textbox', { name: new RegExp(name) });
     const service = (line: number) =>
       within(panel).getByRole('combobox', { name: new RegExp(`Service of line ${line}`) });
@@ -232,22 +252,24 @@ describe('billing fees in advance', () => {
     expect(field('Description of line 1')).toHaveValue('Books 2026/27');
     await user.selectOptions(service(1), 'svc-books');
 
-    await user.click(within(panel).getByRole('button', { name: 'Draft advance invoice' }));
+    await saveDraft(user);
     await waitFor(() => expect(postsOf(backend, '/invoices')).toHaveLength(1));
     expect(postsOf(backend, '/invoices')[0]?.body).toEqual(
       expect.objectContaining({
-        advance_lines: [
+        manual_lines: [
           {
             description: 'Books 2026/27',
             quantity: '1.00',
             unit_amount: 120000,
             service_id: 'svc-books',
+            is_advance: true,
           },
           {
             description: 'Tax advice',
             quantity: '1.00',
             unit_amount: 50000,
             service_id: 'svc-advice',
+            is_advance: true,
           },
         ],
       }),
@@ -257,24 +279,32 @@ describe('billing fees in advance', () => {
   it('asks for a description, a quantity and a price on every advance line', async () => {
     const user = userEvent.setup();
     const backend = createPrepareBackend();
-    const panel = await openAdvancePanel(backend);
+    const panel = await openAdvanceGrid(backend);
 
     await user.clear(within(panel).getByRole('textbox', { name: /Description of line 1/ }));
     await user.clear(within(panel).getByRole('textbox', { name: /Quantity of line 1/ }));
     await user.type(within(panel).getByRole('textbox', { name: /Quantity of line 1/ }), '0');
     await user.type(within(panel).getByRole('textbox', { name: /Unit price of line 1/ }), '0');
     await user.click(within(panel).getByRole('button', { name: 'Add row' }));
-    await user.click(within(panel).getByRole('button', { name: 'Draft advance invoice' }));
+    await user.click(within(panel).getByRole('button', { name: 'Dates and notes' }));
 
     expect(await within(panel).findAllByText('Enter a description')).toHaveLength(2);
     expect(within(panel).getByText('Enter a quantity such as 1 or 2.5')).toBeInTheDocument();
     expect(within(panel).getAllByText('Enter the price before VAT, such as 6000.00')).toHaveLength(
       2,
     );
+    // Unticked, the lines are ordinary fees: a discount may be negative, a price nothing.
+    await user.click(within(panel).getByRole('checkbox', { name: /Fees in advance/ }));
+    await user.type(within(panel).getByRole('textbox', { name: /Unit price of line 2/ }), '-50');
+    await user.click(within(panel).getByRole('button', { name: 'Dates and notes' }));
+    await waitFor(() =>
+      expect(within(panel).queryByText('Enter the price before VAT, such as 6000.00')).toBeNull(),
+    );
+    expect(within(panel).getAllByText('Enter a description')).toHaveLength(2);
     expect(postsOf(backend, '/invoices')).toHaveLength(0);
   });
 
-  it('offers fees in advance for a client with nothing to bill', async () => {
+  it('shows the line grid for a client with nothing to bill', async () => {
     const user = userEvent.setup();
     const backend = createPrepareBackend({ wip: { [harbour.id]: wipOf([]) } });
     server.use(...prepareHandlers(backend));
@@ -284,9 +314,14 @@ describe('billing fees in advance', () => {
     });
 
     expect(await screen.findByText('Nothing to bill')).toBeInTheDocument();
-    expect(screen.getByText(/You can still bill fees in advance/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Bill fees in advance…' }));
-    expect(await screen.findByRole('region', { name: 'Bill fees in advance' })).toBeInTheDocument();
+    expect(screen.getByText(/You can still add line items/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add line items' }));
+    const panel = await screen.findByRole('form', { name: 'Lines to draft' });
+    expect(within(panel).getByRole('table', { name: 'Lines of the invoice' })).toBeInTheDocument();
+    expect(within(panel).getByRole('textbox', { name: /Description of line 1/ })).toHaveValue(
+      'Fees in advance',
+    );
+    expect(within(panel).getByRole('checkbox', { name: /Fees in advance/ })).toBeChecked();
   });
 
   it('marks a line added to a draft as fees in advance', async () => {
