@@ -20,9 +20,15 @@ export const centralApi = {
       query: { q: q || undefined, limit: 20 },
       signal,
     }),
-  /** `client.create`: 201 `created`, 200 `linked_existing` / `already_enabled`. */
-  enable: (organizationId: string, centralId: string) =>
-    api.post<CentralEnabled>(`${org(organizationId)}/central-clients/${seg(centralId)}/enable`),
+  /**
+   * `client.create`: 201 `created`, 200 `linked_existing` / `already_enabled`. While the practice
+   * uses branches, a created client needs `branchId` (422 `BRANCH_REQUIRED`).
+   */
+  enable: (organizationId: string, centralId: string, branchId?: string) =>
+    api.post<CentralEnabled>(
+      `${org(organizationId)}/central-clients/${seg(centralId)}/enable`,
+      branchId ? { branch_id: branchId } : undefined,
+    ),
   link: (organizationId: string, clientId: string, centralId: string) =>
     api.post<ClientDetail>(`${org(organizationId)}/clients/${seg(clientId)}/central-link`, {
       central_id: centralId,
@@ -55,7 +61,8 @@ export function useEnableCentralClient() {
   const { organization } = useOrg();
   const invalidate = useInvalidateClients();
   return useMutation({
-    mutationFn: (centralId: string) => centralApi.enable(organization.id, centralId),
+    mutationFn: ({ centralId, branchId }: { centralId: string; branchId?: string }) =>
+      centralApi.enable(organization.id, centralId, branchId),
     onSuccess: invalidate,
   });
 }

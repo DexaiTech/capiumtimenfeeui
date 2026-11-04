@@ -4,6 +4,7 @@ import { http, type HttpHandler } from 'msw';
 import { Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { branchHandlers, london } from '@/test/branches';
 import { contextWith, OWNER_PERMISSIONS, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { findRowAction, rowActionNames } from '@/test/rowActions';
@@ -59,6 +60,8 @@ interface RenderOptions {
   summary?: ClientSummary;
   /** Whether the practice has Capium Central on (APT74); on by default. */
   centralOn?: boolean;
+  /** Whether the practice uses branches (APT74); off by default. */
+  branchesOn?: boolean;
   /** Handlers that win over the list ones, for one test's scenario. */
   handlers?: HttpHandler[];
   onList?: (params: URLSearchParams) => void;
@@ -67,6 +70,7 @@ interface RenderOptions {
 function renderList({
   permissions = OWNER_PERMISSIONS,
   centralOn = true,
+  branchesOn = false,
   clients = withCentral,
   summary,
   handlers = [],
@@ -85,7 +89,11 @@ function renderList({
     </Routes>,
     {
       route: '/acme/clients',
-      context: { ...contextWith(permissions), central_client_enabled: centralOn },
+      context: {
+        ...contextWith(permissions),
+        organization: { ...contextWith(permissions).organization, branches_enabled: branchesOn },
+        central_client_enabled: centralOn,
+      },
     },
   );
 }
@@ -642,6 +650,40 @@ describe('CentralClientsDialog', () => {
       });
       expect(await within(dialog).findByText('Archived centrally')).toBeInTheDocument();
       expect(within(dialog).getByRole('button', { name: 'Enable Old Ltd' })).toBeDisabled();
+    });
+
+    it('needs the branch of the new client while the practice uses branches', async () => {
+      const bodies: unknown[] = [];
+      const user = userEvent.setup();
+      const dialog = await open(user, {
+        branchesOn: true,
+        handlers: [
+          search(),
+          ...branchHandlers(),
+          http.post(orgApiPath('/central-clients/:centralId/enable'), async ({ request }) => {
+            bodies.push(await request.json());
+            return ok(
+              { result: 'created', from_cache: false, client: detail(northwind.name, 'APX200') },
+              { status: 201 },
+            );
+          }),
+        ],
+      });
+
+      const enableNorthwind = await within(dialog).findByRole('button', {
+        name: `Enable ${northwind.name}`,
+      });
+      expect(enableNorthwind).toBeDisabled();
+      // Enabling Initech links the matching client: no client is created, no branch is needed.
+      expect(within(dialog).getByRole('button', { name: `Enable ${initech.name}` })).toBeEnabled();
+
+      await user.selectOptions(
+        within(dialog).getByRole('combobox', { name: /Branch/ }),
+        await within(dialog).findByRole('option', { name: 'London' }),
+      );
+      await user.click(enableNorthwind);
+      expect(await notifications().findByText('Client created')).toBeInTheDocument();
+      expect(bodies).toEqual([{ branch_id: london.id }]);
     });
 
     it('opens an enabled client from the list', async () => {

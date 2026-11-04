@@ -2,12 +2,14 @@ import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { Badge, Button, Modal, useToast } from '@/components/ui';
+import { Badge, Button, Modal, Select, useToast } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
+import { useBranches, useBranchesEnabled } from '@/features/settings';
 import { isApiError } from '@/services/api';
 
 import { useEnableCentralClient } from '../api';
+import { branchOptions } from '../constants';
 import { CentralSearch } from './CentralSearch';
 import { describeEnabled } from './format';
 import type { CentralClient } from './types';
@@ -23,6 +25,13 @@ function CentralClientsContent({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
   const enable = useEnableCentralClient();
   const [enabling, setEnabling] = useState<string | null>(null);
+  // While the practice uses branches (APT74), a client that enabling creates needs one; a matching
+  // client that is linked instead keeps its own.
+  const branchesOn = useBranchesEnabled();
+  const branches = useBranches(branchesOn);
+  const [branchId, setBranchId] = useState('');
+  const needsBranch = (client: CentralClient) =>
+    branchesOn && branchId === '' && !client.matching_client;
 
   const openClient = (clientId: string) => {
     onClose();
@@ -32,7 +41,10 @@ function CentralClientsContent({ onClose }: { onClose: () => void }) {
   const onEnable = async (client: CentralClient) => {
     setEnabling(client.central_id);
     try {
-      const enabled = await enable.mutateAsync(client.central_id);
+      const enabled = await enable.mutateAsync({
+        centralId: client.central_id,
+        branchId: branchesOn && branchId ? branchId : undefined,
+      });
       toast({
         ...describeEnabled(enabled),
         action: { label: 'Open client', onClick: () => openClient(enabled.client.id) },
@@ -49,7 +61,7 @@ function CentralClientsContent({ onClose }: { onClose: () => void }) {
     }
   };
 
-  return (
+  const search = (
     <CentralSearch
       renderNote={(client) =>
         client.matching_client && !client.enabled ? (
@@ -86,7 +98,9 @@ function CentralClientsContent({ onClose }: { onClose: () => void }) {
             }
             loading={enabling === client.central_id}
             disabled={
-              client.status === 'archived' || (enable.isPending && enabling !== client.central_id)
+              client.status === 'archived' ||
+              needsBranch(client) ||
+              (enable.isPending && enabling !== client.central_id)
             }
             onClick={() => void onEnable(client)}
           >
@@ -95,6 +109,23 @@ function CentralClientsContent({ onClose }: { onClose: () => void }) {
         )
       }
     />
+  );
+  if (!branchesOn) return search;
+  return (
+    <div className="flex flex-col gap-4">
+      <Select
+        label="Branch"
+        required
+        options={[
+          { value: '', label: 'Choose a branch' },
+          ...branchOptions(branches.data ?? [], null),
+        ]}
+        hint="The branch of each client that enabling creates."
+        value={branchId}
+        onChange={(event) => setBranchId(event.target.value)}
+      />
+      {search}
+    </div>
   );
 }
 
