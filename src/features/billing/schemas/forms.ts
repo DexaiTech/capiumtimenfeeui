@@ -112,6 +112,8 @@ export const gridLineSchema = z.object({
   net_amount: z.string(),
   vat_rate_id: z.string(),
   service_id: z.string(),
+  /** A row typed in billed as fees in advance: time is assigned to it once issued (APT69). */
+  advance: z.boolean(),
 });
 export type GridLineValues = z.infer<typeof gridLineSchema>;
 
@@ -124,7 +126,7 @@ export type GridLineValues = z.infer<typeof gridLineSchema>;
 function checkGridLines(
   lines: ReadonlyArray<GridLineValues>,
   ctx: z.RefinementCtx,
-  { advance, blankNet }: { advance: (line: GridLineValues) => boolean; blankNet: boolean },
+  { blankNet }: { blankNet: boolean },
 ) {
   lines.forEach((line, index) => {
     const issue = (field: keyof GridLineValues, message: string) =>
@@ -144,9 +146,11 @@ function checkGridLines(
       issue('quantity', 'Enter a quantity such as 1 or 2.5');
     }
     const unit = parsePounds(line.unit_amount);
-    if (advance(line)) {
-      if (unit === null || unit <= 0 || unit > MAX_PENCE) {
+    if (line.advance) {
+      if (unit === null || unit > MAX_PENCE) {
         issue('unit_amount', 'Enter the price before VAT, such as 6000.00');
+      } else if (unit <= 0) {
+        issue('unit_amount', 'Fees in advance must be more than zero: untick it for a discount');
       }
     } else if (unit === null || Math.abs(unit) > MAX_PENCE) {
       issue('unit_amount', 'Enter an amount such as 120.00 (negative for a discount)');
@@ -157,32 +161,22 @@ function checkGridLines(
 /** The lines of the invoice being created: the work's, and rows typed in (fees in advance or not). */
 export const prepareLinesSchema = z
   .object({
-    /** The rows typed in are fees in advance: time is assigned to them once issued. */
-    advance: z.boolean(),
     lines: z
       .array(gridLineSchema)
       .min(1, 'Add a line, or go back and choose work to bill')
       .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
   })
-  .superRefine((values, ctx) =>
-    checkGridLines(values.lines, ctx, { advance: () => values.advance, blankNet: true }),
-  );
+  .superRefine((values, ctx) => checkGridLines(values.lines, ctx, { blankNet: true }));
 export type PrepareLinesValues = z.infer<typeof prepareLinesSchema>;
 
-/** The lines of a draft, edited in place; `advance` makes the rows added fees in advance. */
+/** The lines of a draft, edited in place. */
 export const draftLinesSchema = z
   .object({
-    advance: z.boolean(),
     lines: z
       .array(gridLineSchema)
       .max(MAX_DOCUMENT_LINES, `Use at most ${MAX_DOCUMENT_LINES} lines`),
   })
-  .superRefine((values, ctx) =>
-    checkGridLines(values.lines, ctx, {
-      advance: (line) => values.advance && line.key === '',
-      blankNet: false,
-    }),
-  );
+  .superRefine((values, ctx) => checkGridLines(values.lines, ctx, { blankNet: false }));
 export type DraftLinesValues = z.infer<typeof draftLinesSchema>;
 
 /** Issue date, and a due date that may be left empty (the client's terms then apply). */

@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Checkbox, useToast } from '@/components/ui';
+import { Button, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { parsePounds, penceToPoundsInput } from '@/utils/money';
 
@@ -36,11 +36,11 @@ function rowOf(line: InvoiceLine): GridLineValues {
     net_amount: penceToPoundsInput(line.net_amount),
     vat_rate_id: line.vat_rate_id ?? '',
     service_id: line.service_id ?? '',
+    advance: line.is_advance ?? false,
   };
 }
 
 const valuesOf = (lines: ReadonlyArray<InvoiceLine>): DraftLinesValues => ({
-  advance: false,
   lines: lines.map(rowOf),
 });
 
@@ -65,7 +65,7 @@ function metaOf(line: InvoiceLine, services: ReadonlyArray<ServiceOption>): Line
 
 /**
  * What changed on a saved line: a line of work changes its wording, the amount it bills and its
- * VAT code; a line typed in also its quantity and unit price.
+ * VAT code; a line typed in also its quantity, unit price and whether it is fees in advance.
  */
 function changesOf(line: InvoiceLine, row: GridLineValues): InvoiceLineUpdate {
   const changes: InvoiceLineUpdate = {};
@@ -81,6 +81,7 @@ function changesOf(line: InvoiceLine, row: GridLineValues): InvoiceLineUpdate {
       changes.quantity = formatQuantity(quantity);
     }
     if (unit !== null && unit !== line.unit_amount) changes.unit_amount = unit;
+    if (row.advance !== (line.is_advance ?? false)) changes.is_advance = row.advance;
   }
   if (row.vat_rate_id !== (line.vat_rate_id ?? '')) changes.vat_rate_id = row.vat_rate_id || null;
   return changes;
@@ -113,7 +114,6 @@ export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) 
   } = form;
   const { submitError, retryIn, handleSubmitError, clearSubmitError } =
     useSubmitError<DraftLinesValues>({ setError: form.setError, fields: ['lines'] });
-  const added = useWatch({ control: form.control, name: 'lines' }).some((row) => row.key === '');
 
   useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
   // Lines saved elsewhere (another tab, a refresh) show at once while nothing is being changed.
@@ -130,7 +130,7 @@ export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) 
   };
   const metas = new Map(invoice.lines.map((line) => [line.id, metaOf(line, services)]));
 
-  const save = form.handleSubmit(async ({ advance, lines }) => {
+  const save = form.handleSubmit(async ({ lines }) => {
     clearSubmitError();
     const kept: InvoiceLinesSave['lines'] = [];
     const added: InvoiceLineCreate[] = [];
@@ -149,7 +149,7 @@ export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) 
         unit_amount: unit,
         ...(row.vat_rate_id ? { vat_rate_id: row.vat_rate_id } : {}),
         ...(row.service_id ? { service_id: row.service_id } : {}),
-        ...(advance ? { is_advance: true } : {}),
+        ...(row.advance ? { is_advance: true } : {}),
       });
     }
     let latest: InvoiceDetail;
@@ -182,13 +182,6 @@ export function DraftLinesGrid({ invoice, onDirtyChange }: DraftLinesGridProps) 
         metas={metas}
         amountRequired
       />
-      {added ? (
-        <Checkbox
-          label="Fees in advance"
-          description="Time is assigned to the lines added here once the invoice is issued, and leaves WIP then."
-          {...form.register('advance')}
-        />
-      ) : null}
       {submitError ? (
         <FormAlert message={submitError.message} requestId={submitError.requestId} />
       ) : null}

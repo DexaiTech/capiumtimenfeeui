@@ -145,8 +145,10 @@ describe('billing fees in advance', () => {
     const panel = await openAdvanceGrid(backend);
     const field = (name: string) => within(panel).getByRole('textbox', { name: new RegExp(name) });
     const totals = within(panel).getByLabelText('Totals');
-    // Nothing chosen to bill: the lines typed in are fees in advance.
-    expect(within(panel).getByRole('checkbox', { name: /Fees in advance/ })).toBeChecked();
+    const advance = (line: number) =>
+      within(panel).getByRole('checkbox', { name: `Fees in advance on line ${line}` });
+    // "Bill fees in advance" adds a line of fees in advance.
+    expect(advance(1)).toBeChecked();
     expect(field('Description of line 1')).toHaveValue('Fees in advance');
 
     await user.clear(field('Description of line 1'));
@@ -160,6 +162,9 @@ describe('billing fees in advance', () => {
     await user.clear(field('Quantity of line 2'));
     await user.type(field('Quantity of line 2'), '12');
     await user.type(field('Unit price of line 2'), '125');
+    // Each line is chosen on its own: a row added is an ordinary fee until ticked.
+    expect(advance(2)).not.toBeChecked();
+    await user.click(advance(2));
     await user.click(within(panel).getByRole('button', { name: 'Add row' }));
     await user.type(field('Description of line 3'), 'Filing fees');
     await user.clear(field('Quantity of line 3'));
@@ -269,7 +274,6 @@ describe('billing fees in advance', () => {
             quantity: '1.00',
             unit_amount: 50000,
             service_id: 'svc-advice',
-            is_advance: true,
           },
         ],
       }),
@@ -398,15 +402,30 @@ describe('billing fees in advance', () => {
 
     expect(await within(panel).findAllByText('Enter a description')).toHaveLength(2);
     expect(within(panel).getByText('Enter a quantity such as 1 or 2.5')).toBeInTheDocument();
-    expect(within(panel).getAllByText('Enter the price before VAT, such as 6000.00')).toHaveLength(
-      2,
-    );
-    // Unticked, the lines are ordinary fees: a discount may be negative, a price nothing.
-    await user.click(within(panel).getByRole('checkbox', { name: /Fees in advance/ }));
+    // Fees in advance are more than zero; the row added is an ordinary fee.
+    expect(
+      within(panel).getByText('Fees in advance must be more than zero: untick it for a discount'),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText('Enter an amount such as 120.00 (negative for a discount)'),
+    ).toBeInTheDocument();
+    // Unticked, the line is an ordinary fee: a price may be nothing.
+    const advance = (line: number) =>
+      within(panel).getByRole('checkbox', { name: `Fees in advance on line ${line}` });
+    await user.click(advance(1));
+    // A discount cannot be fees in advance, and says why.
     await user.type(within(panel).getByRole('textbox', { name: /Unit price of line 2/ }), '-50');
+    expect(advance(2)).toBeDisabled();
+    expect(advance(2)).toHaveAccessibleDescription(
+      'Only a line of more than zero can be fees in advance',
+    );
     await user.click(within(panel).getByRole('button', { name: 'Dates and notes' }));
     await waitFor(() =>
-      expect(within(panel).queryByText('Enter the price before VAT, such as 6000.00')).toBeNull(),
+      expect(
+        within(panel).queryByText(
+          'Fees in advance must be more than zero: untick it for a discount',
+        ),
+      ).toBeNull(),
     );
     expect(within(panel).getAllByText('Enter a description')).toHaveLength(2);
     expect(postsOf(backend, '/invoices')).toHaveLength(0);
@@ -426,10 +445,11 @@ describe('billing fees in advance', () => {
     await user.click(screen.getByRole('button', { name: 'Add line items' }));
     const panel = await screen.findByRole('form', { name: 'Lines to draft' });
     expect(within(panel).getByRole('table', { name: 'Lines of the invoice' })).toBeInTheDocument();
-    expect(within(panel).getByRole('textbox', { name: /Description of line 1/ })).toHaveValue(
-      'Fees in advance',
-    );
-    expect(within(panel).getByRole('checkbox', { name: /Fees in advance/ })).toBeChecked();
+    // An ordinary line until the person ticks it as fees in advance (APT69).
+    expect(within(panel).getByRole('textbox', { name: /Description of line 1/ })).toHaveValue('');
+    expect(
+      within(panel).getByRole('checkbox', { name: 'Fees in advance on line 1' }),
+    ).not.toBeChecked();
   });
 
   it('marks a line added to a draft as fees in advance', async () => {
@@ -457,7 +477,10 @@ describe('billing fees in advance', () => {
       'Fees in advance',
     );
     await user.type(within(grid).getByRole('textbox', { name: /Unit price of line 1/ }), '6000');
-    await user.click(within(grid).getByRole('checkbox', { name: /Fees in advance/ }));
+    // Unticked by default; ticked for this line.
+    const advance = within(grid).getByRole('checkbox', { name: 'Fees in advance on line 1' });
+    expect(advance).not.toBeChecked();
+    await user.click(advance);
     await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
 
     await waitFor(() => expect(posted).toHaveLength(1));

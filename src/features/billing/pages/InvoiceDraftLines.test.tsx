@@ -252,6 +252,34 @@ describe('the lines of a draft invoice', () => {
     });
   });
 
+  it('makes a saved line typed in fees in advance, line by line', async () => {
+    const user = userEvent.setup();
+    const calls = openInvoice(draft(lines()));
+    const grid = await screen.findByRole('form', { name: 'Lines of the draft' });
+    const advance = (line: number) =>
+      within(grid).queryByRole('checkbox', { name: `Fees in advance on line ${line}` });
+
+    // A line of work is never fees in advance; a discount cannot be, and says why.
+    expect(advance(1)).toBeNull();
+    expect(advance(2)).not.toBeChecked();
+    expect(advance(3)).toBeDisabled();
+    expect(advance(3)).toHaveAccessibleDescription(
+      'Only a line of more than zero can be fees in advance',
+    );
+    await user.click(within(grid).getByRole('button', { name: 'Add row' }));
+    await user.type(textbox(grid, 'Description of line 4'), 'Filing fee');
+    await user.type(textbox(grid, 'Unit price of line 4'), '34');
+    expect(advance(4)).not.toBeChecked();
+
+    await user.click(advance(2) as HTMLElement);
+    await user.click(within(grid).getByRole('button', { name: 'Save lines' }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.body).toEqual({
+      lines: [{ id: 'l-1' }, { id: 'l-2', is_advance: true }, { id: 'l-3' }],
+      new_lines: [{ description: 'Filing fee', quantity: '1.00', unit_amount: 3400 }],
+    });
+  });
+
   it('keeps every change in the grid when the save is refused', async () => {
     const user = userEvent.setup();
     const calls = openInvoice(draft(lines()), () =>
