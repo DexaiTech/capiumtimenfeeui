@@ -46,6 +46,7 @@ export {
 } from './DateField';
 export { Dropdown, type DropdownItem, type DropdownProps } from './Dropdown';
 export { RowActions, type RowActionsProps } from './RowActions';
+export { slotsInUse, type RowActionSlots } from './rowActionSlots';
 export { rowActionIcon } from './rowActionIcon';
 export { DurationInput, type DurationInputProps } from './DurationInput';
 export { EmptyState, type EmptyStateProps } from './EmptyState';

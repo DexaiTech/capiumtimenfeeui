@@ -38,14 +38,14 @@ export interface UseStaffActionsOptions {
 
 /**
  * Where each action sits in the staff grid, so it is in the same place on every row (APT77):
- * the record, sign-in, then status, and Delete last. Link and Unlink never show together.
+ * the record, sign-in, then status, and Delete last. Invite (no login yet, or an invitation not
+ * accepted) and Reset password (an active login) never show together, nor do Link and Unlink.
  */
 export const STAFF_ACTION_SLOTS: ReadonlyArray<string | ReadonlyArray<string>> = [
   'edit',
   'role',
-  'invite',
+  ['invite', 'reset'],
   ['link', 'unlink'],
-  'reset',
   'reactivate',
   'deactivate',
   'delete',

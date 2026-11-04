@@ -18,6 +18,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
   RowActions,
+  slotsInUse,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
@@ -334,6 +335,7 @@ function StaffList({
   const sort: DataTableSort = { columnId: sortKey, direction: order };
   const loaded = flattenPages(staff.data);
   const showActions = canUpdate || canRemove || canInvite;
+  const actionSlots = slotsInUse(STAFF_ACTION_SLOTS, loaded.map(actionsFor));
   const count = staff.data && !staff.hasNextPage ? loaded.length : null;
   const gradeFilterOptions = [
     { value: '', label: 'Any grade' },
@@ -528,7 +530,7 @@ function StaffList({
                   <RowActions
                     label={`Actions for ${member.full_name}`}
                     items={items}
-                    slots={STAFF_ACTION_SLOTS}
+                    slots={actionSlots}
                   />
                 ) : null;
               }
