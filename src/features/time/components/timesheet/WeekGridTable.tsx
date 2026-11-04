@@ -151,9 +151,13 @@ export function WeekGridTable({
                   const entries = cellEntries.get(key) ?? [];
                   const minutes = row.minutes[dayIndex] ?? 0;
                   const entry = entries.length === 1 ? entries[0] : undefined;
+                  // Older time without a client or job is kept as it is; its hours change only
+                  // through the entry form, which makes the person choose them (APT64).
                   const cellEditable =
                     editable &&
                     !closed &&
+                    row.client_id !== null &&
+                    row.job_id !== null &&
                     entries.length <= 1 &&
                     (entry === undefined || !isEntryLocked(entry)) &&
                     autosave !== undefined;

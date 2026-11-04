@@ -123,9 +123,15 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
         } else if (first) {
           await timeApi.updateEntry(organization.id, first.id, { minutes });
         } else if (row) {
-          const body: TimeEntryCreate = { entry_date: date, minutes, is_billable: row.is_billable };
+          // A row without a job is older time: its cells are read-only (see WeekGridTable).
+          if (!row.job_id) throw new Error('Choose a client and a job for this time.');
+          const body: TimeEntryCreate = {
+            entry_date: date,
+            minutes,
+            job_id: row.job_id,
+            is_billable: row.is_billable,
+          };
           if (row.client_id) body.client_id = row.client_id;
-          if (row.job_id) body.job_id = row.job_id;
           if (row.activity_code_id) body.activity_code_id = row.activity_code_id;
           await timeApi.createEntry(organization.id, body);
         }

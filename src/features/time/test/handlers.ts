@@ -389,7 +389,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
     return null;
   };
 
-  const newEntry = (body: TimeEntryCreate, userId: string, createdBy: string): TimeEntry => {
+  /** Copies and timers of older time may carry no job; the routes that need one check it. */
+  type NewEntryBody = Omit<TimeEntryCreate, 'job_id'> & { job_id?: string | null };
+  const newEntry = (body: NewEntryBody, userId: string, createdBy: string): TimeEntry => {
     backend.nextId += 1;
     const job = JOBS.find((candidate) => candidate.id === body.job_id);
     const client = CLIENTS.find((candidate) => candidate.id === (body.client_id ?? job?.client_id));
@@ -616,6 +618,22 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
     }),
     http.post(orgApiPath('/time-entries'), async ({ request }) => {
       const body = (await record(request)) as TimeEntryCreate;
+      if (!body.job_id) {
+        return fail(422, 'VALIDATION_ERROR', 'Some fields are invalid.', {
+          details: [
+            ...(body.client_id
+              ? []
+              : [
+                  {
+                    field: 'client_id',
+                    code: 'required',
+                    message: 'Time must be recorded against a client.',
+                  },
+                ]),
+            { field: 'job_id', code: 'required', message: 'Time must be recorded against a job.' },
+          ],
+        });
+      }
       const userId = body.user_id ?? backend.userId;
       const refusal = refuse(userId, body.entry_date, body.job_id, round(body.minutes));
       if (refusal) return refusal;
