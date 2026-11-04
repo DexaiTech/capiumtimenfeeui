@@ -72,7 +72,7 @@ function toUpdate(values: RateSettingsValues, organization: Organization): Organ
 }
 
 /**
- * `rate_mode`: whether a person's own charge-out rate comes before their grade's; the overtime
+ * `rate_mode`: staff rate first, grade rates only or staff rates only; the overtime
  * switch with the multiplier overtime time is priced at; and the recovery analysis: the order its
  * recovery rate is looked for in (client job-specific, task, staff charge-out rate) and the
  * cost-plus mark-up of the practice (a client or a job can have its own).

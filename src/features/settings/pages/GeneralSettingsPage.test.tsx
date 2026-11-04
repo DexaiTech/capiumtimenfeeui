@@ -282,6 +282,26 @@ describe('GeneralSettingsPage', () => {
     expect(bodies).toEqual([{ rate_mode: 'grade_only' }]);
   });
 
+  it('offers staff rates only, explains it and saves it (APT79)', async () => {
+    const bodies = capturePatch();
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />);
+    await openTab(user, 'Rates');
+
+    const mode = within(card('Rates')).getByRole('combobox', { name: 'Rate mode' });
+    expect(
+      within(mode)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Staff rate first, then grade rates', 'Grade rates only', 'Staff rates only']);
+    await user.selectOptions(mode, 'staff_only');
+    expect(screen.getByText(/Grade rates are skipped/)).toHaveTextContent('practice default rate');
+    await user.click(save('Rates', 'Save rate settings'));
+
+    expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
+    expect(bodies).toEqual([{ rate_mode: 'staff_only' }]);
+  });
+
   it('converts the expense settings: mileage in pence, the mark-up in basis points', async () => {
     const bodies = capturePatch();
     const user = userEvent.setup();
