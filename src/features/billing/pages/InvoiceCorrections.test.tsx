@@ -76,28 +76,28 @@ describe('correcting an issued invoice from the list', () => {
   it('offers a credit note while something is owed, and a void only before any payment', async () => {
     setupList();
     const first = await menuOf('INV-0001');
-    expect(first).toEqual(expect.arrayContaining(['Open', 'Raise credit note…', 'Void invoice…']));
+    expect(first).toEqual(expect.arrayContaining(['Open', 'Raise credit note', 'Void invoice']));
     // Part paid: still owed, so a credit note; but a payment was recorded, so no void.
     const second = await menuOf('INV-0002');
-    expect(second).toContain('Raise credit note…');
-    expect(second).not.toContain('Void invoice…');
+    expect(second).toContain('Raise credit note');
+    expect(second).not.toContain('Void invoice');
     // Paid in full: nothing to credit and nothing to void.
     const third = await menuOf('INV-0003');
-    expect(third).not.toContain('Raise credit note…');
-    expect(third).not.toContain('Void invoice…');
+    expect(third).not.toContain('Raise credit note');
+    expect(third).not.toContain('Void invoice');
   });
 
   it('offers to record a payment while something is owed', async () => {
     setupList();
-    expect(await menuOf('INV-0001')).toContain('Record payment…');
-    expect(await menuOf('INV-0002')).toContain('Record payment…');
-    expect(await menuOf('INV-0003')).not.toContain('Record payment…');
+    expect(await menuOf('INV-0001')).toContain('Record payment');
+    expect(await menuOf('INV-0002')).toContain('Record payment');
+    expect(await menuOf('INV-0003')).not.toContain('Record payment');
   });
 
   it('opens the invoice with the payment form ready', async () => {
     const user = userEvent.setup();
     setupList();
-    await user.click(await findRowAction(/Actions for INV-0001/, 'Record payment…'));
+    await user.click(await findRowAction(/Actions for INV-0001/, 'Record payment'));
     expect(await screen.findByTestId('location')).toHaveTextContent(
       `${INVOICES}/i-1?action=payment`,
     );
@@ -106,15 +106,32 @@ describe('correcting an issued invoice from the list', () => {
   it('opens the invoice with the chosen correction ready', async () => {
     const user = userEvent.setup();
     setupList();
-    await user.click(await findRowAction(/Actions for INV-0001/, 'Void invoice…'));
+    await user.click(await findRowAction(/Actions for INV-0001/, 'Void invoice'));
     expect(await screen.findByTestId('location')).toHaveTextContent(`${INVOICES}/i-1?action=void`);
+  });
+
+  it('keeps each action in the same place on every row, without the menu ellipsis', async () => {
+    setupList();
+    const places = async (number: string) => {
+      const group = await screen.findByRole('group', { name: new RegExp(`Actions for ${number}`) });
+      return Array.from(group.children).map((child) => child.getAttribute('aria-label') ?? '-');
+    };
+    const unpaid = await places('INV-0001');
+    const paid = await places('INV-0003');
+    // The same places on both rows: Open and PDF first, Void last; a paid invoice leaves the
+    // places of what it cannot do empty (nothing to click), so nothing shifts (APT77, APT78).
+    expect(paid).toHaveLength(unpaid.length);
+    expect(unpaid.slice(0, 2)).toEqual(['Open', 'Download PDF']);
+    expect(paid.slice(0, 2)).toEqual(['Open', 'Download PDF']);
+    expect(unpaid.slice(-3)).toEqual(['Record payment', 'Raise credit note', 'Void invoice']);
+    expect(paid.slice(-3)).toEqual(['-', '-', '-']);
   });
 
   it('leaves out what the role may not do', async () => {
     setupList(['organization.read', 'client.read', 'invoice.read']);
     const items = await menuOf('INV-0001');
-    expect(items).not.toContain('Raise credit note…');
-    expect(items).not.toContain('Void invoice…');
+    expect(items).not.toContain('Raise credit note');
+    expect(items).not.toContain('Void invoice');
   });
 });
 

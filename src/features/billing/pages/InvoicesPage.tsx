@@ -71,6 +71,20 @@ const TABS: ReadonlyArray<{ value: InvoiceTab; label: string }> = [
   })),
 ];
 
+/**
+ * Where each action sits in the invoices grid, so it is in the same place on every row whatever
+ * the status: Open and PDF first, then the next step (Issue or Submit on a draft, Send on an issued
+ * invoice), payment, credit note, and Void or Delete last. Ids in one place never show together.
+ */
+const INVOICE_ACTION_SLOTS: ReadonlyArray<string | ReadonlyArray<string>> = [
+  'open',
+  'pdf',
+  ['issue', 'submit', 'send'],
+  'payment',
+  'credit',
+  ['void', 'delete'],
+];
+
 type DialogState =
   | { type: 'issue'; invoice: InvoiceSummary }
   | { type: 'submit'; invoice: InvoiceSummary }
@@ -524,6 +538,7 @@ function InvoiceList() {
           <RowActions
             label={`Actions for ${invoiceLabel(invoice)} of ${invoice.client?.name ?? 'client'}`}
             items={actionsFor(invoice)}
+            slots={INVOICE_ACTION_SLOTS}
             status={
               busy === invoice.id ? (
                 <span className="text-xs text-text-muted">Downloading…</span>
