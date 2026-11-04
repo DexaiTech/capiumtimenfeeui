@@ -613,6 +613,7 @@ function List() {
                       label="Client"
                       value={clientId || null}
                       placeholder="Any client"
+                      includeInternal
                       onChange={(id) => setParam({ client: id, job: null })}
                     />
                   ) : null}

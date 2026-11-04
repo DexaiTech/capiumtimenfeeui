@@ -360,10 +360,11 @@ function EntryForm({
             The time belongs to {onBehalfOf.name}; your name is kept as the person who entered it.
           </Notice>
         ) : null}
-        {!readOnly && (!canPickClient || !canPickJob) ? (
+        {/* A job brings its client, so only a role that cannot choose a job is stuck. */}
+        {!readOnly && !canPickJob ? (
           <Notice tone="warning" title="Time needs a client and a job">
-            Your role cannot see clients or jobs, so it cannot choose them. Ask an administrator for
-            access, or to record this time for you.
+            Your role cannot see jobs, so it cannot choose one. Ask an administrator for access, or
+            to record this time for you.
           </Notice>
         ) : null}
         {correction ? (
@@ -412,6 +413,7 @@ function EntryForm({
                 required
                 value={field.value || null}
                 valueLabel={clientLabel}
+                includeInternal
                 disabled={readOnly}
                 error={errors.client_id?.message}
                 onChange={(id, item) => {
@@ -439,7 +441,9 @@ function EntryForm({
                 value={field.value || null}
                 valueJob={job ?? undefined}
                 clientId={clientId || null}
-                hint={readOnly ? undefined : 'Internal time goes on an internal client and job.'}
+                hint={
+                  readOnly ? undefined : 'Internal time goes on the Internal client and its jobs.'
+                }
                 disabled={readOnly}
                 error={errors.job_id?.message}
                 onChange={(picked) => {

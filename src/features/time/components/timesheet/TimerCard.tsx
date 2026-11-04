@@ -125,6 +125,7 @@ function StartTimerForm({ onClose }: { onClose: () => void }) {
             required
             value={clientId}
             valueLabel={client?.label ?? job?.client_name}
+            includeInternal
             onChange={(id, item) => {
               setClient(item ? { id: item.id, label: item.label } : null);
               if (job && job.client_id !== id) setJob(null);
@@ -138,7 +139,7 @@ function StartTimerForm({ onClose }: { onClose: () => void }) {
             value={job?.id ?? null}
             valueJob={job ?? undefined}
             clientId={clientId}
-            hint="Internal time goes on an internal client and job."
+            hint="Internal time goes on the Internal client and its jobs."
             onChange={(picked) => {
               setJob(picked);
               if (picked) {

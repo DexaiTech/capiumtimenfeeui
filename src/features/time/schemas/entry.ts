@@ -17,8 +17,9 @@ export const durationText = z
 const note = (what: string) =>
   z.string().trim().max(2000, `${what} can be at most 2000 characters`);
 
-/** Every time entry is on a client and one of its jobs, billable or not (internal time goes on an
- * internal client and job). An older entry without them must get them when it is edited. */
+/** Every time entry is on a client and one of its jobs, billable or not (internal time goes on the
+ * built-in Internal client and its jobs). An older entry without them must get them when it is
+ * edited. */
 const clientId = z.string().min(1, 'Choose a client');
 const jobId = z.string().min(1, 'Choose a job');
 

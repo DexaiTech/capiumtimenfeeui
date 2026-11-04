@@ -24,9 +24,11 @@ import { dailyTargets } from '../utils/targets';
 import { monthLabel, weekDates, weekStartOf } from '../utils/weeks';
 import {
   ACTIVITIES,
+  ADMIN_JOB,
   CHARGE_RATE,
   CLIENTS,
   COST_RATE,
+  INTERNAL,
   JOBS,
   PEOPLE,
   TODAY,
@@ -1072,26 +1074,30 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       return ok(rows, { meta: END });
     }),
     http.get(orgApiPath('/clients/:clientId'), ({ params }) => {
-      const found = CLIENTS.find((client) => client.id === params.clientId);
+      const found = [...CLIENTS, INTERNAL].find((client) => client.id === params.clientId);
       return found ? ok(found) : notFound();
     }),
     http.get(orgApiPath('/clients'), ({ request }) => {
       const params = new URL(request.url).searchParams;
       const q = params.get('q')?.toLowerCase();
+      // Like the API: the Internal client only when asked for (the time pickers).
+      const listed = params.get('include_internal') === 'true' ? [...CLIENTS, INTERNAL] : CLIENTS;
       return ok(
-        CLIENTS.filter((client) => !q || client.name.toLowerCase().includes(q)),
+        listed.filter((client) => !q || client.name.toLowerCase().includes(q)),
         { meta: END },
       );
     }),
     http.get(orgApiPath('/jobs/:jobId'), ({ params }) => {
-      const found = JOBS.find((job) => job.id === params.jobId);
+      const found = [...JOBS, ADMIN_JOB].find((job) => job.id === params.jobId);
       return found ? ok(found) : notFound();
     }),
     http.get(orgApiPath('/jobs'), ({ request }) => {
       const params = new URL(request.url).searchParams;
       const q = params.get('q')?.toLowerCase();
+      // Like the API: the Internal client's jobs only when the list is filtered to it.
+      const listed = params.get('client_id') === INTERNAL.id ? [ADMIN_JOB] : JOBS;
       return ok(
-        JOBS.filter(
+        listed.filter(
           (job) =>
             (!q || job.name.toLowerCase().includes(q) || job.number.toLowerCase().includes(q)) &&
             (!params.get('client_id') || job.client_id === params.get('client_id')),
