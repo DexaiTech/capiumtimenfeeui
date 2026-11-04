@@ -332,14 +332,18 @@ function BranchesSwitch() {
   const { organization, can } = useOrg();
   const { toast } = useToast();
   const update = useUpdateOrganization(organization.id);
+  const branches = useBranches();
   const enabled = organization.branches_enabled;
+  // On, every new client needs a branch, so there must be an active one to give it.
+  const noActiveBranch =
+    !enabled && branches.data !== undefined && !branches.data.some((branch) => branch.is_active);
   return (
     <Card padding="sm">
       <Switch
         label="Use branches"
-        description="On, each client needs a branch: the client form asks for one, and the client list shows a Branch column and filter. Off hides branches everywhere. Nothing is deleted either way."
+        description={`On, each client needs a branch: the client form asks for one, and the client list shows a Branch column and filter. Off hides branches everywhere. Nothing is deleted either way.${noActiveBranch ? ' Add an active branch before switching branches on.' : ''}`}
         checked={enabled}
-        disabled={!can(PERMISSIONS.organizationUpdate) || update.isPending}
+        disabled={!can(PERMISSIONS.organizationUpdate) || update.isPending || noActiveBranch}
         onChange={(checked) =>
           update.mutate(
             { branches_enabled: checked },
