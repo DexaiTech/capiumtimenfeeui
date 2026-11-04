@@ -89,7 +89,7 @@ export function branchHandlers(
       calls.deletes.push(id);
       const current = branches.find((entry) => entry.id === id);
       if (!current) return fail(404, 'NOT_FOUND', 'Branch not found.');
-      if (current.client_count > 0) {
+      if (current.client_count) {
         branches = branches.map((entry) =>
           entry.id === id ? { ...entry, is_active: false } : entry,
         );

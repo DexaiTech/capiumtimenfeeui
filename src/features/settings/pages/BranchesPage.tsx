@@ -41,6 +41,8 @@ const TABS: ReadonlyArray<{ value: BranchTab; label: string }> = [
   { value: 'inactive', label: 'Inactive' },
 ];
 const SORTS = ['name', 'clients', 'status'] as const;
+// The client counts are only for members who may read clients.
+const WITHOUT_CLIENTS: ReadonlySet<string> = new Set(['clients']);
 
 type DialogState =
   { type: 'form'; branch: Branch | null } | { type: 'delete'; branchId: string } | null;
@@ -137,7 +139,7 @@ function BranchList() {
       align: 'end',
       className: 'w-28 whitespace-nowrap',
       cell: (branch) =>
-        branch.client_count > 0 ? (
+        branch.client_count ? (
           <Link
             to={`${routes.org.clients(organization.slug)}?branch=${encodeURIComponent(branch.id)}`}
             aria-label={`${branch.client_count} ${branch.client_count === 1 ? 'client' : 'clients'} in ${branch.name}`}
@@ -201,6 +203,7 @@ function BranchList() {
         columns={columns}
         rows={rows}
         rowKey={(branch) => branch.id}
+        hiddenColumns={can(PERMISSIONS.clientRead) ? undefined : WITHOUT_CLIENTS}
         sort={sort}
         onSortChange={(next) => setParam({ sort: next.columnId, order: next.direction })}
         loading={branches.isPending}

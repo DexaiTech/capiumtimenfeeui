@@ -97,6 +97,17 @@ describe('BranchesPage: the list (APT74)', () => {
   });
 });
 
+describe('BranchesPage: the client counts (APT74)', () => {
+  it('leaves out the Clients column for a member who may not read clients', async () => {
+    setup(testBranches.map((entry) => ({ ...entry, client_count: null })));
+    renderInOrg(<BranchesPage />, { context: contextWith(['organization.read']) });
+
+    expect(await row(/^London/)).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /Clients/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /clients in London/ })).toBeNull();
+  });
+});
+
 describe('BranchesPage: the "Use branches" switch (APT74)', () => {
   it('is off by default and switching it on saves the practice setting', async () => {
     const bodies: unknown[] = [];
