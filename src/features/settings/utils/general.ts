@@ -41,6 +41,7 @@ export const WIP_MODE_OPTIONS: ReadonlyArray<SelectOption<FixedFeeWipMode>> = [
 export const RATE_MODE_LABEL: Record<RateMode, string> = {
   staff_first: 'Staff rate first, then grade rates',
   grade_only: 'Grade rates only',
+  staff_only: 'Staff rates only',
 };
 
 export const RATE_MODE_HELP: Record<RateMode, string> = {
@@ -48,11 +49,14 @@ export const RATE_MODE_HELP: Record<RateMode, string> = {
     "A person's own charge-out rate prices their time; where they have none, their grade rate does.",
   grade_only:
     'Staff-level rates are skipped, so every person is priced at their grade rate. The staff rates are kept and apply again if you switch back. Cost rates are not affected.',
+  staff_only:
+    'Grade rates are skipped, so every person is priced at their staff rate; anyone without a staff rate is charged the practice default rate. The grade rates are kept and apply again if you switch back. Cost rates are not affected.',
 };
 
 export const RATE_MODE_OPTIONS: ReadonlyArray<SelectOption<RateMode>> = [
   { value: 'staff_first', label: RATE_MODE_LABEL.staff_first },
   { value: 'grade_only', label: RATE_MODE_LABEL.grade_only },
+  { value: 'staff_only', label: RATE_MODE_LABEL.staff_only },
 ];
 
 /** Said when an approval switch that is saved on is turned off in the form (ticket APT53). */

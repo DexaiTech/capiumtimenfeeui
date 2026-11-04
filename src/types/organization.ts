@@ -13,8 +13,11 @@ export type TimeIncrement = (typeof TIME_INCREMENTS)[number];
 export const FIXED_FEE_WIP_MODES = ['on_completion', 'by_budget_progress'] as const;
 export type FixedFeeWipMode = (typeof FIXED_FEE_WIP_MODES)[number];
 
-/** Whether a person's own charge-out rate prices time (`staff_first`) or only their grade's. */
-export const RATE_MODES = ['staff_first', 'grade_only'] as const;
+/**
+ * Which charge-out rates price time: a person's own before their grade's (`staff_first`), only
+ * the grade rates (`grade_only`) or only the staff rates (`staff_only`, ticket APT79).
+ */
+export const RATE_MODES = ['staff_first', 'grade_only', 'staff_only'] as const;
 export type RateMode = (typeof RATE_MODES)[number];
 
 export interface Organization {
