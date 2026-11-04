@@ -24,7 +24,6 @@ import { formatMoney } from '@/utils/money';
 import {
   billingApi,
   useDeleteInvoice,
-  useDeleteInvoiceLine,
   useInvoice,
   useRemoveAllocation,
   useVoidInvoice,
@@ -44,7 +43,6 @@ import { InvoiceLinesCard } from '../components/invoice/InvoiceLinesCard';
 import { InvoiceSummaryStrip } from '../components/invoice/InvoiceSummaryStrip';
 import { InvoiceTimeline } from '../components/invoice/InvoiceTimeline';
 import { IssueDialog } from '../components/IssueDialog';
-import { LinePanel } from '../components/LinePanel';
 import { LoadError, NoAccess, PageShell } from '../components/PageShell';
 import { PaymentDetailDialog } from '../components/payments/PaymentDetailDialog';
 import { ReasonDialog } from '../components/ReasonDialog';
@@ -60,8 +58,6 @@ type DialogState =
   | { type: 'issue' }
   | { type: 'send' }
   | { type: 'details' }
-  | { type: 'line'; line: InvoiceLine | null }
-  | { type: 'remove-line'; line: InvoiceLine }
   | { type: 'void' }
   | { type: 'delete' }
   | { type: 'credit' }
@@ -109,10 +105,11 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const { busy, download } = useFileDownload();
   const voidInvoice = useVoidInvoice();
   const removeInvoice = useDeleteInvoice();
-  const removeLine = useDeleteInvoiceLine(invoice.id);
   const unmatch = useRemoveAllocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
+  // The draft is issued as saved: not while its lines have changes not saved yet.
+  const [linesDirty, setLinesDirty] = useState(false);
 
   const slug = organization.slug;
   const today = todayInZone(organization.timezone);
@@ -210,7 +207,12 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const actions = (
     <>
       {canIssue ? (
-        <Button variant="primary" onClick={() => setDialog({ type: 'issue' })}>
+        <Button
+          variant="primary"
+          disabled={linesDirty}
+          title={linesDirty ? 'Save or discard the changes to the lines first' : undefined}
+          onClick={() => setDialog({ type: 'issue' })}
+        >
           Issue invoice
         </Button>
       ) : null}
@@ -285,26 +287,9 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
     );
   };
 
-  const confirmRemoveLine = () => {
-    if (dialog?.type !== 'remove-line') return;
-    removeLine.mutate(dialog.line.id, {
-      onSuccess: () => {
-        toast({ tone: 'success', title: 'Line removed' });
-        close();
-      },
-      onError: (error) => setRefusal(dialogError(error)),
-    });
-  };
-
   return (
     <div className="flex flex-col gap-3">
       <InvoiceHeaderPanel open={dialog?.type === 'details'} invoice={invoice} onClose={close} />
-      <LinePanel
-        open={dialog?.type === 'line'}
-        invoiceId={invoice.id}
-        line={dialog?.type === 'line' ? dialog.line : null}
-        onClose={close}
-      />
       <CreditNotePanel open={dialog?.type === 'credit'} invoice={invoice} onClose={close} />
       <RecordPaymentPanel open={dialog?.type === 'payment'} invoice={invoice} onClose={close} />
       <PaymentDetailDialog
@@ -352,16 +337,7 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
         <InvoiceSummaryStrip invoice={invoice} />
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="flex min-w-0 flex-col gap-4">
-            <InvoiceLinesCard
-              invoice={invoice}
-              editable={canEdit}
-              onAdd={() => setDialog({ type: 'line', line: null })}
-              onEdit={(line) => setDialog({ type: 'line', line })}
-              onRemove={(line) => {
-                setRefusal(null);
-                setDialog({ type: 'remove-line', line });
-              }}
-            />
+            <InvoiceLinesCard invoice={invoice} editable={canEdit} onDirtyChange={setLinesDirty} />
             <InvoiceAdvanceCard
               invoice={invoice}
               onAssign={
@@ -479,22 +455,6 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
             : ''}{' '}
           is taken off {title}. The invoice owes that money again, and the payment stays on the
           client&apos;s account so it can be matched to the right invoice.
-        </p>
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={dialog?.type === 'remove-line'}
-        onClose={close}
-        onConfirm={confirmRemoveLine}
-        title="Remove line?"
-        confirmLabel="Remove line"
-        loading={removeLine.isPending}
-        error={refusal}
-      >
-        <p>
-          <strong className="font-medium text-text">
-            {dialog?.type === 'remove-line' ? dialog.line.description : ''}
-          </strong>{' '}
-          is removed from the draft; any work on it goes back to unbilled WIP.
         </p>
       </ConfirmDialog>
     </div>

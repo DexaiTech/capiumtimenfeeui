@@ -264,6 +264,7 @@ export interface InvoiceLineCreate {
   unit_amount: Pence;
   net_amount?: Pence;
   vat_rate_id?: string | null;
+  service_id?: string | null;
   /** Fees billed in advance: time is assigned to the line once the invoice is issued. */
   is_advance?: boolean;
 }
