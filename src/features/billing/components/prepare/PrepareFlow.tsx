@@ -166,16 +166,21 @@ export function PrepareFlow({
   const lines = previewLines(planned, basisEdits(basis, planned, summary.data), vatDefaults);
   const drafted = new Map(lines.map((line) => [line.key, workRow(line)]));
   const metas = new Map(lines.map((line) => [line.key, workMeta(line)]));
-  const signature = ready ? JSON.stringify([...drafted.values()]) : null;
+  const work = JSON.stringify([...drafted.values()]);
+  // What makes other lines of work: the work chosen, its grouping and the basis. The same work
+  // read again (a refetch) keeps what was typed on its lines.
+  const choice = ready ? JSON.stringify([[...selected].sort(), groupBy, basis]) : null;
+  const madeFor = useRef<string | null>(null);
 
   // Other work, grouping or basis makes other lines of work: what was typed on the old ones no
   // longer applies. The lines typed in stay.
   useEffect(() => {
-    if (signature === null) return;
-    const work = JSON.parse(signature) as GridLineValues[];
+    if (choice === null || choice === madeFor.current) return;
+    madeFor.current = choice;
+    const lines = JSON.parse(work) as GridLineValues[];
     const current = form.getValues('lines');
-    form.reset({ lines: [...work, ...current.filter((line) => !line.wip)] });
-  }, [signature, form]);
+    form.reset({ lines: [...lines, ...current.filter((line) => !line.wip)] });
+  }, [choice, work, form]);
 
   if (wip.isError) {
     return (
