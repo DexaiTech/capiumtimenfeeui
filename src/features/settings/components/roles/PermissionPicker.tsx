@@ -54,10 +54,8 @@ function PermissionRow({ permission, checked, locked, readOnly, onToggle }: Perm
         onChange={(event) => onToggle(event.target.checked)}
         className={cn(checkboxClasses, 'mt-0.5')}
       />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm text-text">{permission.description}</span>
-        <code className="font-mono text-xs break-all text-text-muted">{permission.code}</code>
-      </span>
+      {/* The label only: the permission code is not shown (APT80). */}
+      <span className="min-w-0 text-sm text-text">{permission.description}</span>
       {locked ? (
         <>
           <Lock aria-hidden="true" className="mt-0.5 ml-auto size-4 shrink-0 text-text-subtle" />

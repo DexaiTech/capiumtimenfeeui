@@ -53,8 +53,8 @@ describe('RolesSettingsPage', () => {
     expect(screen.getByText(/cannot be renamed, changed or deleted/)).toBeInTheDocument();
     // The catalogue is grouped by category, with the role's permissions ticked.
     const members = screen.getByRole('group', { name: 'Staff' });
-    expect(within(members).getByRole('checkbox', { name: /member\.read/ })).toBeChecked();
-    expect(within(members).getByRole('checkbox', { name: /member\.invite/ })).not.toBeChecked();
+    expect(within(members).getByRole('checkbox', { name: 'View the staff list' })).toBeChecked();
+    expect(within(members).getByRole('checkbox', { name: 'Add staff accounts' })).not.toBeChecked();
     for (const checkbox of screen.getAllByRole('checkbox')) expect(checkbox).toBeDisabled();
     expect(screen.queryByRole('checkbox', { name: /Select all/ })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
@@ -90,8 +90,8 @@ describe('RolesSettingsPage', () => {
     await user.type(screen.getByLabelText('Description'), 'Reads the log.');
     // "Start from" copies an existing role's permissions.
     await user.selectOptions(screen.getByLabelText('Start from'), 'Reviewer');
-    expect(screen.getByRole('checkbox', { name: /member\.invite/ })).toBeChecked();
-    await user.click(screen.getByRole('checkbox', { name: /audit_log\.read/ }));
+    expect(screen.getByRole('checkbox', { name: 'Add staff accounts' })).toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'View the audit log' }));
     expect(screen.getByText(`3 of ${testPermissions.length} selected`)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create role' }));
 
@@ -115,6 +115,11 @@ describe('RolesSettingsPage', () => {
     for (const checkbox of within(members).getAllByRole('checkbox')) expect(checkbox).toBeChecked();
     expect(screen.getByText(`4 of ${testPermissions.length} selected`)).toBeInTheDocument();
 
+    // Each permission shows its label only: the code under it is gone (APT80).
+    expect(within(members).getByText('View the staff list')).toBeInTheDocument();
+    expect(screen.queryByText('member.read')).not.toBeInTheDocument();
+    expect(screen.queryByText('invoice.read')).not.toBeInTheDocument();
+
     await user.type(screen.getByRole('searchbox', { name: 'Search permissions' }), 'audit');
     expect(screen.getByRole('group', { name: 'Audit' })).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Staff' })).not.toBeInTheDocument();
@@ -125,10 +130,12 @@ describe('RolesSettingsPage', () => {
     renderSettings(<RolesSettingsPage />, asAdmin);
     await user.click(await screen.findByRole('button', { name: 'New role' }));
 
-    const locked = await screen.findByRole('checkbox', { name: /organization\.delete/ });
+    const locked = await screen.findByRole('checkbox', { name: /^Delete the practice/ });
     expect(locked).toBeDisabled();
     expect(locked).toHaveAccessibleDescription(/You don't hold this permission yourself/);
-    expect(screen.getByRole('checkbox', { name: /organization\.update/ })).toBeEnabled();
+    expect(
+      screen.getByRole('checkbox', { name: 'Change practice settings and numbering' }),
+    ).toBeEnabled();
     expect(
       screen.getByText(/1 permission is locked because you do not hold it/),
     ).toBeInTheDocument();
@@ -136,7 +143,7 @@ describe('RolesSettingsPage', () => {
     // "Select all" leaves the locked permission out.
     await user.click(screen.getByRole('checkbox', { name: 'Select all in Practice' }));
     expect(locked).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: /organization\.read/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'View practice details' })).toBeChecked();
 
     // Hovering explains why.
     await user.hover(screen.getByText('Delete the practice'));
@@ -167,7 +174,7 @@ describe('RolesSettingsPage', () => {
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
     await user.clear(name);
     await user.type(name, 'Talent');
-    await user.click(screen.getByRole('checkbox', { name: /member\.invite/ }));
+    await user.click(screen.getByRole('checkbox', { name: 'Add staff accounts' }));
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(await screen.findByText('Role saved')).toBeInTheDocument();
