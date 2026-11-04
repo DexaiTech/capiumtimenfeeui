@@ -15,6 +15,7 @@ import { ApiError, isApiError } from '@/services/api';
 
 import { useCreateClient, useStaffDirectory, useUpdateClient } from '../api';
 import { isLinked, MANAGED_MESSAGE, managedFields } from '../central/format';
+import { useCentralEnabled } from '../central/useCentralEnabled';
 import {
   branchOptions,
   CLIENT_STATUS_OPTIONS,
@@ -67,8 +68,10 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
   const branches = useBranches(branchesOn);
   const canPickPeople = can('member.read');
   const canArchive = can('client.delete');
-  // A client linked to the central service takes its name and address from there.
-  const linked = client !== null && isLinked(client);
+  // A client linked to the central service takes its name and address from there, while the
+  // practice has Capium Central on; off, they are editable (the link is kept).
+  const centralOn = useCentralEnabled();
+  const linked = centralOn && client !== null && isLinked(client);
   const addressHintId = `${formId}-address-managed`;
   const managed = linked
     ? { disabled: true, 'aria-describedby': addressHintId }
