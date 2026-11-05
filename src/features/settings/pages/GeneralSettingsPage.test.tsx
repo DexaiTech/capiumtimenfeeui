@@ -7,7 +7,7 @@ import type { Organization } from '@/features/organizations';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
 
-import { orgContext, staffRole, testOrganization } from '../test/fixtures';
+import { ALL_PERMISSIONS, orgContext, staffRole, testOrganization } from '../test/fixtures';
 import { orgPath } from '../test/handlers';
 import { renderSettings } from '../test/render';
 import GeneralSettingsPage from './GeneralSettingsPage';
@@ -143,6 +143,47 @@ describe('GeneralSettingsPage', () => {
       },
     ]);
     await waitFor(() => expect(save('Time recording', 'Save time settings')).toBeDisabled());
+  });
+
+  it('names the staff with no rate of their own under staff rates only (APT79)', async () => {
+    const asked: string[] = [];
+    server.use(
+      http.get(orgPath('/staff'), ({ request }) => {
+        asked.push(new URL(request.url).searchParams.getAll('status').join(','));
+        return ok(
+          [
+            { id: 'u-1', full_name: 'Ada Lovelace' },
+            { id: 'u-2', full_name: 'Grace Hopper' },
+            { id: 'u-3', full_name: 'Alan Turing' },
+          ],
+          { meta: { next_cursor: null, has_more: false } },
+        );
+      }),
+      http.get(orgPath('/rates'), () =>
+        ok([{ id: 'r-1', staff: { id: 'u-1', full_name: 'Ada Lovelace' } }], {
+          meta: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderSettings(<GeneralSettingsPage />, {
+      context: orgContext({ permissions: [...ALL_PERMISSIONS, 'rate.read'] }),
+    });
+
+    await openTab(user, 'Rates');
+    const select = within(card('Rates')).getByRole('combobox', { name: 'Rate mode' });
+    // Nothing is asked while another mode is chosen.
+    expect(asked).toEqual([]);
+    await user.selectOptions(select, 'staff_only');
+    const note = await within(card('Rates')).findByRole('note');
+    expect(note).toHaveTextContent(
+      '2 people have no charge-out rate of their own and would be priced at the practice default rate: Grace Hopper, Alan Turing.',
+    );
+    expect(note).not.toHaveTextContent('Ada Lovelace');
+    expect(asked).toEqual(['active']);
+
+    await user.selectOptions(select, 'staff_first');
+    expect(within(card('Rates')).queryByRole('note')).not.toBeInTheDocument();
   });
 
   it('keeps the unsaved changes of a tab when another tab is saved', async () => {

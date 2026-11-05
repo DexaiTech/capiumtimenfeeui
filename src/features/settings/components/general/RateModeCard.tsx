@@ -1,3 +1,4 @@
+import { TriangleAlert } from 'lucide-react';
 import { Controller, useWatch } from 'react-hook-form';
 
 import { Input, Select, Switch } from '@/components/ui';
@@ -11,6 +12,7 @@ import {
   rateOrderText,
 } from '@/utils/recovery';
 
+import { useStaffWithoutOwnRate } from '../../api/rateModeHooks';
 import { useOrganizationForm } from '../../hooks/useOrganizationForm';
 import { rateSettingsSchema, type RateSettingsValues } from '../../schemas/general';
 import { parseMarkupToBp, RATE_MODE_HELP, RATE_MODE_OPTIONS } from '../../utils/general';
@@ -71,6 +73,35 @@ function toUpdate(values: RateSettingsValues, organization: Organization): Organ
   return body;
 }
 
+/** How many names the staff-rates-only warning lists before "and N more". */
+const NAMES_SHOWN = 5;
+
+/**
+ * Under "Staff rates only" a person's grade rate is not used (APT79): names the active staff who
+ * have no charge-out rate of their own, so nobody is priced at the practice default unnoticed.
+ */
+function StaffWithoutOwnRate() {
+  const missing = useStaffWithoutOwnRate(true);
+  const people = missing.data ?? [];
+  if (people.length === 0) return null;
+  const names = people.slice(0, NAMES_SHOWN).map((person) => person.full_name);
+  const more = people.length - names.length;
+  return (
+    <p
+      role="note"
+      className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-text sm:max-w-md"
+    >
+      <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+      <span>
+        {people.length === 1 ? '1 person has' : `${people.length} people have`} no charge-out rate
+        of their own and would be priced at the practice default rate: {names.join(', ')}
+        {more > 0 ? ` and ${more} more` : ''}. Add their rates in Team &amp; Rates, Charge-out
+        Rates.
+      </span>
+    </p>
+  );
+}
+
 /**
  * `rate_mode`: staff rate first, grade rates only or staff rates only; the overtime
  * switch with the multiplier overtime time is priced at; and the recovery analysis: the order its
@@ -121,6 +152,7 @@ export function RateModeCard({ organization, editable }: GeneralCardProps) {
         error={errors.rate_mode?.message}
         {...register('rate_mode')}
       />
+      {mode === 'staff_only' ? <StaffWithoutOwnRate /> : null}
       <Controller
         control={control}
         name="overtime_enabled"
