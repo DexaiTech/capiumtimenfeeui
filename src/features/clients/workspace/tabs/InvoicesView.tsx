@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import {
-  buttonClasses,
+  Button,
   ConfirmDialog,
   PageToolbar,
   RowActions,
@@ -14,7 +14,8 @@ import {
   type DataTableColumn,
 } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
-import { modulePath, ORG_SEGMENTS, routes } from '@/constants/routes';
+import { routes } from '@/constants/routes';
+import { PrepareInvoicePanel } from '@/features/billing';
 import { useOrg } from '@/features/organizations';
 import { useUrlParams } from '@/hooks';
 import { cn } from '@/utils/cn';
@@ -45,9 +46,10 @@ export interface InvoicesViewProps {
 
 /**
  * The client's invoices (`GET /invoices?client_id=`, `invoice.read`): status, issue dates, number.
- * With `invoice.create`, as in Billing: "New invoice" opens the invoice preparation for this client,
- * and a draft is edited on its own page or deleted here. Issued invoices are locked: they are
- * corrected (credit note, void) from the invoice's page.
+ * With `invoice.create`, as in Billing: "New invoice" opens the invoice preparation for this client
+ * here, above the list, and the person stays on the client once it is made (APT61); a draft is
+ * edited on its own page or deleted here. Issued invoices are locked: they are corrected (credit
+ * note, void) from the invoice's page.
  */
 export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
   const { organization, can } = useOrg();
@@ -69,6 +71,7 @@ export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
   const remove = useDeleteDraftInvoice();
   const [deleting, setDeleting] = useState<InvoiceRow | null>(null);
   const [refusal, setRefusal] = useState<Failure | null>(null);
+  const [creating, setCreating] = useState(false);
   const canChange = can(P.invoiceCreate);
 
   const confirmDelete = () => {
@@ -167,6 +170,14 @@ export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
   const filtered = Boolean(searched || status || from || to);
   return (
     <>
+      {creating ? (
+        // Like "Add expense": the invoice is made here, and the person stays on the client.
+        <PrepareInvoicePanel
+          clientId={clientId}
+          onClose={() => setCreating(false)}
+          onCreated={() => setCreating(false)}
+        />
+      ) : null}
       <RecordTable
         caption={`Invoices of ${clientName}`}
         columns={columns}
@@ -237,13 +248,15 @@ export function InvoicesView({ clientId, clientName }: InvoicesViewProps) {
             }
             primaryAction={
               canChange ? (
-                <Link
-                  to={`${modulePath(slug, ORG_SEGMENTS.billing, 'prepare')}?client=${clientId}`}
-                  className={buttonClasses({ variant: 'primary', size: 'sm' })}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<FilePlus2 aria-hidden="true" className="size-4" />}
+                  onClick={() => setCreating(true)}
+                  disabled={creating}
                 >
-                  <FilePlus2 aria-hidden="true" className="size-4" />
                   New invoice
-                </Link>
+                </Button>
               ) : undefined
             }
           />

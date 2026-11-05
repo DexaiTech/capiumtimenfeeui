@@ -35,6 +35,8 @@ export interface DetailsStepProps {
     header: Pick<InvoiceCreate, 'issue_date' | 'due_date' | 'reference' | 'notes'>,
   ) => InvoiceCreate;
   onBack: () => void;
+  /** When given, called with the invoice once it is made, instead of opening the invoice's page. */
+  onCreated?: (invoice: InvoiceDetail) => void;
 }
 
 /** Step three: the dates, the reference and the notes, then the draft is made (and issued or sent). */
@@ -46,6 +48,7 @@ export function DetailsStep({
   totals,
   buildRequest,
   onBack,
+  onCreated,
 }: DetailsStepProps) {
   const { organization, can } = useOrg();
   const { toast } = useToast();
@@ -84,8 +87,10 @@ export function DetailsStep({
       fields: ['issue_date', 'due_date', 'reference', 'notes'],
     });
 
-  const open = (invoice: InvoiceDetail) =>
-    void navigate(routes.org.invoice(organization.slug, invoice.id));
+  const open = (invoice: InvoiceDetail) => {
+    if (onCreated) onCreated(invoice);
+    else void navigate(routes.org.invoice(organization.slug, invoice.id));
+  };
 
   const finish = (how: Finish) =>
     handleSubmit(async (values) => {
