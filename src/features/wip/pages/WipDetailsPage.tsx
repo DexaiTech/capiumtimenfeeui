@@ -253,7 +253,7 @@ export default function WipDetailsPage() {
       search={
         <SearchField
           label="Search WIP items"
-          placeholder={byJob ? 'Client or job' : 'Description, client or job'}
+          placeholder={byJob ? 'Client or job' : 'Client, job, item or person'}
           value={searchText}
           onChange={setSearchText}
         />
