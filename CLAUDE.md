@@ -91,6 +91,33 @@ docs/             project documentation (index below)
 | `docs/implementation-plans/<TICKET_ID>.md`                         | One plan per ticket, written in step 4 of the workflow below                                                                                        |
 | `../capiumtimenfeeapi/docs/modules/*.md`                           | API endpoints per module (the server-side contract)                                                                                                 |
 
+## Before any code change (mandatory)
+
+Applies to every ticket, feature, bug fix, refactor or other code change, however small.
+Follow it in order; never start coding just because a ticket was given.
+
+1. Read this file completely, then the docs relevant to the change (index above,
+   `docs/ui-standards.md`, `docs/module-map.md`, `docs/system-overview.md`, the design notes)
+   and any `docs/implementation-plans/*.md` on the same area. Don't treat a doc as outdated
+   without checking it against the code.
+2. Inspect the graphify knowledge graph of both repositories if one is available
+   (`graphify-out/`, built with the graphify skill): related modules, shared components, the
+   UI → API links, impact areas. It never replaces reading the source: verify findings in code.
+   If it is missing, outdated or incomplete, say so and use the code and docs. Don't regenerate,
+   overwrite or modify graphify outputs without approval.
+3. Review the CEO / project lead's instructions and earlier agreed decisions; don't switch
+   approach without explaining why and getting approval; ask when something is unclear.
+4. Investigate the source: for each file to change, know why it changes, how it connects to
+   the request, whether a shared component exists, who depends on it, which screens and
+   workflows it affects, and what the docs say about it. Don't touch unrelated files; don't
+   delete, rename, restructure or overwrite without a requirement and approval; never overwrite
+   uncommitted changes.
+5. Trace dependencies and workflows, then find the root cause.
+6. Post a **pre-coding checkpoint report**: docs reviewed, graphify information reviewed,
+   instructions reviewed, architecture understood, affected modules and dependencies, existing
+   implementation, impact and regression risks, proposed approach, files expected to change.
+7. Write the implementation plan (below) and **wait for approval. Only then modify code.**
+
 ## Engineering workflow (every ticket)
 
 1. **Understand.** Read the whole ticket, including screenshots and comments, and restate it in
