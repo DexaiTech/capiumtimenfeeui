@@ -19,7 +19,7 @@ import {
   type GridLineValues,
   type PrepareLinesValues,
 } from '../../schemas/forms';
-import type { BillingBasis, GroupBy, InvoiceLineCreate } from '../../types';
+import type { BillingBasis, GroupBy, InvoiceDetail, InvoiceLineCreate } from '../../types';
 import { basisEdits } from '../../utils/basis';
 import {
   FIRST_DESCRIPTION,
@@ -112,10 +112,13 @@ function manualLinesOf({ lines }: PrepareLinesValues): InvoiceLineCreate[] {
 export function PrepareFlow({
   clientId,
   preselect = [],
+  onCreated,
 }: {
   clientId: string;
   /** Time entries to have chosen when the work is listed (time picked on the Time Entries page). */
   preselect?: ReadonlyArray<string>;
+  /** When given, called with the invoice once it is made, instead of opening the invoice's page. */
+  onCreated?: (invoice: InvoiceDetail) => void;
 }) {
   const { organization } = useOrg();
   const wip = useClientWip(clientId, null);
@@ -280,6 +283,7 @@ export function PrepareFlow({
             };
           }}
           onBack={() => setStep('review')}
+          onCreated={onCreated}
         />
       ) : null}
     </div>

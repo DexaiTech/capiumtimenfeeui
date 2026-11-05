@@ -18,6 +18,8 @@ const NAME = 'Techwave Innovations Ltd';
 const END = { next_cursor: null, has_more: false };
 const DRAFT = invoices.find((invoice) => invoice.display_status === 'draft');
 if (!DRAFT) throw new Error('The fixtures need a draft invoice');
+/** The draft "New invoice" makes in these tests. */
+const NEW_DRAFT = { ...DRAFT, id: 'inv-new', gross_total: 12_000 };
 
 /** Where the router is, with the query, so a test can say what a button opened. */
 function Location() {
@@ -28,8 +30,23 @@ function Location() {
 function setup(permissions: string[] = OWNER_PERMISSIONS) {
   let rows = [...invoices];
   const deleted: string[] = [];
+  const created: unknown[] = [];
+  const lists = { count: 0 };
   server.use(
-    http.get(orgApiPath('/invoices'), () => ok(rows, { meta: END })),
+    http.get(orgApiPath('/invoices'), () => {
+      lists.count += 1;
+      return ok(rows, { meta: END });
+    }),
+    http.post(orgApiPath('/invoices'), async ({ request }) => {
+      created.push(await request.json());
+      rows = [NEW_DRAFT, ...rows];
+      const detail = { ...NEW_DRAFT, client: { id: techwave.id, name: NAME }, currency: 'GBP' };
+      return ok(detail, { status: 201 });
+    }),
+    // The preparation reads the client's billing summary; none here (the panel copes).
+    http.get(orgApiPath('/clients/:clientId/billing-summary'), () =>
+      fail(404, 'RESOURCE_NOT_FOUND', 'Not found.'),
+    ),
     http.delete(orgApiPath('/invoices/:invoiceId'), ({ params }) => {
       deleted.push(String(params.invoiceId));
       rows = rows.filter((row) => row.id !== params.invoiceId);
@@ -54,18 +71,54 @@ function setup(permissions: string[] = OWNER_PERMISSIONS) {
     </Routes>,
     { route: `/acme/clients/${techwave.id}/invoices`, context: contextWith(permissions) },
   );
-  return { deleted };
+  return { deleted, created, lists };
 }
 
 describe('InvoicesTab: add, edit and delete invoices', () => {
-  it('opens the invoice preparation for this client from "New invoice"', async () => {
+  it('opens the invoice preparation for this client here, and closes it again', async () => {
     const user = userEvent.setup();
     setup();
 
-    await user.click(await screen.findByRole('link', { name: 'New invoice' }));
-    expect(await screen.findByTestId('location')).toHaveTextContent(
-      `/acme/billing/prepare?client=${techwave.id}`,
+    await user.click(await screen.findByRole('button', { name: 'New invoice' }));
+    const panel = screen.getByRole('region', { name: 'Create invoice' });
+    // APT61: the client is this one (no picker), and the person stays on the client.
+    expect(
+      await within(panel).findByRole('table', { name: `Work in progress of ${NAME}` }),
+    ).toBeInTheDocument();
+    expect(within(panel).queryByRole('combobox', { name: 'Client' })).toBeNull();
+    expect(screen.queryByTestId('location')).toBeNull();
+    expect(screen.getByRole('table', { name: `Invoices of ${NAME}` })).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('button', { name: 'Close' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Create invoice' })).toBeNull(),
     );
+  });
+
+  it('saves the new invoice for this client and stays on the client, with the list read again', async () => {
+    const user = userEvent.setup();
+    const { created, lists } = setup();
+
+    await user.click(await screen.findByRole('button', { name: 'New invoice' }));
+    const panel = screen.getByRole('region', { name: 'Create invoice' });
+    const work = await within(panel).findByRole('table', { name: `Work in progress of ${NAME}` });
+    await waitFor(() => expect(work).not.toHaveAttribute('aria-busy', 'true'));
+    const row = within(work).getByRole('row', { name: /Prepared the trial balance/ });
+    await user.click(within(row).getByRole('checkbox'));
+    await user.click(within(panel).getByRole('button', { name: 'Review the lines' }));
+    await within(panel).findByRole('table', { name: 'Lines of the invoice' });
+    await user.click(within(panel).getByRole('button', { name: 'Dates and notes' }));
+    const before = lists.count;
+    await user.click(await within(panel).findByRole('button', { name: 'Save as draft' }));
+
+    expect(await screen.findByText('Draft invoice saved')).toBeInTheDocument();
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({ client_id: techwave.id });
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Create invoice' })).toBeNull(),
+    );
+    expect(screen.queryByTestId('location')).toBeNull();
+    await waitFor(() => expect(lists.count).toBeGreaterThan(before));
   });
 
   it('opens a draft in its editor', async () => {
@@ -127,7 +180,7 @@ describe('InvoicesTab: add, edit and delete invoices', () => {
   it('offers no new invoice, edit or delete without invoice.create', async () => {
     setup(OWNER_PERMISSIONS.filter((permission) => permission !== 'invoice.create'));
     await screen.findByRole('row', { name: /INV-0004/ });
-    expect(screen.queryByRole('link', { name: 'New invoice' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'New invoice' })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Actions for Draft' })).toBeNull();
   });
 });
