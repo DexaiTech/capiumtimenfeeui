@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router';
 
 import { buttonClasses, ErrorState } from '@/components/ui';
 import { routes } from '@/constants/routes';
 import { isApiError } from '@/services/api';
 import { cn } from '@/utils/cn';
+import { reloadForNewVersion } from '@/utils/reloadForNewVersion';
 
 import { NotFoundPage } from './NotFoundPage';
 
@@ -24,6 +26,9 @@ function isChunkLoadError(error: unknown): boolean {
 /** Route-level error boundary. Inside the shell, the chrome stays and only the content shows the error. */
 export function RouteErrorPage({ fullPage = false }: RouteErrorPageProps) {
   const error = useRouteError();
+  // A page file of an older release is gone (APT82): load the new version once instead of
+  // showing the error. Decided once per error screen, so a render never reloads twice.
+  const [reloading] = useState(() => isChunkLoadError(error) && reloadForNewVersion());
 
   if (isRouteErrorResponse(error) && error.status === 404) {
     return (
@@ -34,6 +39,7 @@ export function RouteErrorPage({ fullPage = false }: RouteErrorPageProps) {
   }
 
   const chunkFailed = isChunkLoadError(error);
+  if (reloading) return null;
   if (!chunkFailed) console.error('Route error', error);
 
   return (
