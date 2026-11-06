@@ -29,6 +29,7 @@ import {
   useApprovals,
   useApproveTimesheet,
   useBulkApprove,
+  useOvertime,
   useReturnTimesheet,
 } from '../api';
 import { SheetEntries } from '../components/approvals/SheetEntries';
@@ -64,6 +65,11 @@ function Page() {
   const approve = useApproveTimesheet();
   const giveBack = useReturnTimesheet();
   const bulk = useBulkApprove();
+  // Overtime waiting for a decision, marked on each sheet it falls in (APT81).
+  const pendingOvertime = useOvertime(
+    { status: 'pending' },
+    { enabled: organization.overtime_enabled },
+  );
 
   const rows = flattenPages(queue.data);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
@@ -79,6 +85,14 @@ function Page() {
   const selectable = rows.filter((sheet) => !own(sheet));
   const chosen = selectable.filter((sheet) => selected.has(sheet.id));
   const allChosen = selectable.length > 0 && chosen.length === selectable.length;
+
+  const overtimePending = (sheet: Timesheet) =>
+    (pendingOvertime.data ?? []).filter(
+      (item) =>
+        item.user.id === sheet.user_id &&
+        item.entry_date >= sheet.week_start &&
+        item.entry_date <= sheet.week_end,
+    ).length;
 
   const toggle = (id: string, checked: boolean) =>
     setSelected((current) => {
@@ -123,6 +137,11 @@ function Page() {
           {sheet.zero_rate_minutes > 0 ? (
             <Badge size="sm" tone="warning">
               No rate
+            </Badge>
+          ) : null}
+          {overtimePending(sheet) > 0 ? (
+            <Badge size="sm" tone="warning">
+              {overtimePending(sheet)} overtime pending
             </Badge>
           ) : null}
         </span>
@@ -255,7 +274,20 @@ function Page() {
           label: (sheet) =>
             `Entries of ${sheet.user_name ?? 'this person'}, week of ${formatUkDate(sheet.week_start)}`,
           render: (sheet) => (
-            <SheetEntries timesheetId={sheet.id} person={sheet.user_name ?? 'this person'} />
+            <SheetEntries
+              timesheetId={sheet.id}
+              person={sheet.user_name ?? 'this person'}
+              overtime={
+                organization.overtime_enabled
+                  ? {
+                      userId: sheet.user_id,
+                      from: sheet.week_start,
+                      to: sheet.week_end,
+                      canDecide: !own(sheet),
+                    }
+                  : undefined
+              }
+            />
           ),
         }}
         empty={

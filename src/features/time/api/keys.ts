@@ -2,6 +2,7 @@ import { queryKeys } from '@/constants/queryKeys';
 
 import type {
   MissingFilters,
+  OvertimeFilters,
   TimeEntryFilters,
   TimesheetFilters,
   TimeSummaryFilters,
@@ -35,6 +36,9 @@ export const timeKeys = {
     [...queryKeys.org.timesheets(organizationId), 'list', filters] as const,
   approvals: (organizationId: string) =>
     [...queryKeys.org.timesheets(organizationId), 'approvals'] as const,
+  /** Overtime sits with the timesheets: recording time and deciding sheets both refresh it. */
+  overtime: (organizationId: string, filters: OvertimeFilters) =>
+    [...queryKeys.org.timesheets(organizationId), 'overtime', filters] as const,
   missing: (organizationId: string, filters: MissingFilters) =>
     [...queryKeys.org.timesheets(organizationId), 'missing', filters] as const,
 

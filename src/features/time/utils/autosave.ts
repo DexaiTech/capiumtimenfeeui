@@ -33,8 +33,11 @@ export interface AutosaveHandlers {
   isUnchanged: (key: string, minutes: number | null) => boolean;
   /** Asked when a filled cell was emptied (that deletes time); false drops the change. */
   confirmClear: (key: string) => Promise<boolean>;
-  /** Writes the value and answers once the grid shows it; throws what the API refused. */
-  save: (key: string, minutes: number | null) => Promise<void>;
+  /**
+   * Writes the value and answers once the grid shows it; throws what the API refused. Answers
+   * false when the person cancelled a confirmation on the way (overtime): the change is dropped.
+   */
+  save: (key: string, minutes: number | null) => Promise<boolean>;
   /** The words for a refusal. */
   describe: (error: unknown) => string;
 }
@@ -156,7 +159,10 @@ export class CellAutosave {
         return;
       }
       this.set(key, { text, status: 'saving' });
-      await handlers.save(key, minutes);
+      if (!(await handlers.save(key, minutes))) {
+        if (unchangedSince()) this.set(key, null);
+        return;
+      }
       this.savedTotal += 1;
       if (unchangedSince()) this.set(key, { status: 'saved' });
     } catch (error) {

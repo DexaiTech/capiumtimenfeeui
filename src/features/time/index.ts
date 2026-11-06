@@ -3,6 +3,7 @@
  * `pages/`; other modules take the status badge and the types below instead of reaching into this
  * folder.
  */
+export { PendingOvertimeNotice } from './components/approvals/PendingOvertimeNotice';
 export { ZeroRateWarning } from './components/approvals/ZeroRateWarning';
 export { SheetStatusBadge } from './components/badges';
 export { useEntryActions, type EntryActions } from './components/EntryActions';

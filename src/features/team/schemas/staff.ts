@@ -1,7 +1,6 @@
 import * as z from 'zod';
 
 import { parseMinutes } from '@/utils/minutes';
-import { parseMultiplierToBp } from '@/utils/multiplier';
 
 import { percentToBp } from '../utils/format';
 import {
@@ -51,14 +50,6 @@ const shape = {
   charge_rate: optionalRateText('Enter the charge-out rate in pounds per hour, for example 95.00'),
   /** Add only: when those rates start; empty means the start date. */
   rate_effective_from: z.string(),
-  /** Edit only, with overtime on: their own multiple of the normal rate ("1.5"); empty: the practice's. */
-  overtime_multiplier: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value === '' || parseMultiplierToBp(value) !== null,
-      'Enter a multiple of the normal rate from 1 to 10, for example 1.5, or leave it empty',
-    ),
 };
 
 const LEAVING_BEFORE_START = "The leaving date can't be before the start date";

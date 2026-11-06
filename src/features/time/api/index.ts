@@ -4,6 +4,7 @@ export { fetchEverything, flattenPages, nextCursor, type ListPage } from './page
 export { timeApi } from './timeApi';
 export * from './entries';
 export * from './lookups';
+export * from './overtime';
 export * from './reports';
 export * from './timer';
 export * from './timesheets';

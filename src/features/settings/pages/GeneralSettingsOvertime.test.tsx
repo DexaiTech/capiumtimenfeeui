@@ -32,62 +32,54 @@ async function openRates(organization: Partial<Organization> = {}) {
   return { user, rates: within(screen.getByRole('form', { name: 'Rates' })) };
 }
 
+// APT81 retired the multiplier: overtime is a cost only, priced by Team & Rates → Overtime Rates.
 describe('General settings: overtime', () => {
-  it('is off by default, at one and a half times, with the multiplier waiting', async () => {
+  it('is off by default and says overtime is a cost that never changes what clients pay', async () => {
     const { rates } = await openRates();
 
-    expect(rates.getByRole('switch', { name: 'Overtime' })).not.toBeChecked();
-    const multiplier = rates.getByRole('textbox', {
-      name: 'Overtime rate (times the normal rate)',
-    });
-    expect(multiplier).toHaveValue('1.5');
-    expect(multiplier).toBeDisabled();
+    const overtime = rates.getByRole('switch', { name: 'Overtime' });
+    expect(overtime).not.toBeChecked();
+    expect(
+      rates.getByText(
+        "On: hours beyond a person's standard hours are overtime: staff confirm them when recording, approvers approve them, and their cost is shown on the Staff Cost report. Overtime never changes what clients are charged.",
+      ),
+    ).toBeInTheDocument();
+    expect(rates.queryByText(/charged and costed/)).not.toBeInTheDocument();
     expect(rates.getByRole('button', { name: 'Save rate settings' })).toBeDisabled();
   });
 
-  it('switches overtime on and sends only that', async () => {
+  it('has no multiplier field any more, and points to the Overtime Rates page', async () => {
+    const { rates } = await openRates({ overtime_enabled: true, overtime_multiplier_bp: 20000 });
+
+    expect(
+      rates.queryByRole('textbox', { name: 'Overtime rate (times the normal rate)' }),
+    ).not.toBeInTheDocument();
+    expect(rates.queryByText(/times the normal rate/)).not.toBeInTheDocument();
+    expect(rates.getByRole('link', { name: 'Team & Rates → Overtime Rates' })).toHaveAttribute(
+      'href',
+      `/${testOrganization.slug}/team/overtime-rates`,
+    );
+  });
+
+  it('switches overtime on and sends only that, never a multiplier', async () => {
     const bodies = capturePatch();
     const { user, rates } = await openRates();
 
     await user.click(rates.getByRole('switch', { name: 'Overtime' }));
-    expect(
-      rates.getByRole('textbox', { name: 'Overtime rate (times the normal rate)' }),
-    ).toBeEnabled();
     await user.click(rates.getByRole('button', { name: 'Save rate settings' }));
 
     expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
     expect(bodies).toEqual([{ overtime_enabled: true }]);
   });
 
-  it('sets the multiplier in basis points', async () => {
+  it('switches overtime off again', async () => {
     const bodies = capturePatch();
     const { user, rates } = await openRates({ overtime_enabled: true });
 
-    const multiplier = rates.getByRole('textbox', {
-      name: 'Overtime rate (times the normal rate)',
-    });
-    await user.clear(multiplier);
-    await user.type(multiplier, '2');
+    await user.click(rates.getByRole('switch', { name: 'Overtime' }));
     await user.click(rates.getByRole('button', { name: 'Save rate settings' }));
 
     expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
-    expect(bodies).toEqual([{ overtime_multiplier_bp: 20000 }]);
-  });
-
-  it('refuses a multiplier that is not from 1 to 10, without asking the API', async () => {
-    const bodies = capturePatch();
-    const { user, rates } = await openRates({ overtime_enabled: true });
-
-    const multiplier = rates.getByRole('textbox', {
-      name: 'Overtime rate (times the normal rate)',
-    });
-    await user.clear(multiplier);
-    await user.type(multiplier, '0.5');
-    await user.click(rates.getByRole('button', { name: 'Save rate settings' }));
-
-    expect(
-      await rates.findByText('Enter a multiple of the normal rate from 1 to 10, for example 1.5'),
-    ).toBeInTheDocument();
-    expect(bodies).toEqual([]);
+    expect(bodies).toEqual([{ overtime_enabled: false }]);
   });
 });

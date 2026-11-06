@@ -3,10 +3,12 @@ import { Badge } from '@/components/ui';
 import {
   BILLING_STATUS_LABEL,
   BILLING_STATUS_TONE,
+  OVERTIME_STATUS_LABEL,
+  OVERTIME_STATUS_TONE,
   SHEET_STATUS_LABEL,
   SHEET_STATUS_TONE,
 } from '../constants';
-import type { BillingStatus, MissingStatus, TimesheetStatus } from '../types';
+import type { BillingStatus, MissingStatus, OvertimeStatus, TimesheetStatus } from '../types';
 
 /** The status of a timesheet as a pill; the text always says it ("rejected" reads "Returned"). */
 export function SheetStatusBadge({ status }: { status: TimesheetStatus | MissingStatus }) {
@@ -21,6 +23,14 @@ export function BillingStatusBadge({ status }: { status: BillingStatus }) {
   return (
     <Badge tone={BILLING_STATUS_TONE[status]} size="sm">
       {BILLING_STATUS_LABEL[status]}
+    </Badge>
+  );
+}
+
+export function OvertimeStatusBadge({ status }: { status: OvertimeStatus }) {
+  return (
+    <Badge tone={OVERTIME_STATUS_TONE[status]} size="sm" dot>
+      {OVERTIME_STATUS_LABEL[status]}
     </Badge>
   );
 }

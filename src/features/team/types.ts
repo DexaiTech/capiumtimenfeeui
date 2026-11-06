@@ -66,7 +66,7 @@ export interface StaffMember {
   working_days: number[];
   weekly_capacity_minutes: number;
   chargeable_target_bp: BasisPoints;
-  /** Their own overtime multiplier (15000 = 1.5x); null or absent: the practice's. */
+  /** Retired by APT81 (overtime rates replace it): no longer shown or sent. */
   overtime_multiplier_bp?: BasisPoints | null;
   start_date: IsoDate | null;
   leaving_date: IsoDate | null;
@@ -158,7 +158,7 @@ export interface StaffUpdate {
   working_minutes_per_day?: number;
   working_days?: number[];
   chargeable_target_bp?: BasisPoints;
-  /** Their own overtime multiplier; null clears it, so the practice's applies. */
+  /** Retired by APT81 (overtime rates replace it): no longer sent. */
   overtime_multiplier_bp?: BasisPoints | null;
   start_date?: IsoDate | null;
   leaving_date?: IsoDate | null;

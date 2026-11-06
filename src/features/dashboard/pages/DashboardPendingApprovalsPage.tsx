@@ -13,7 +13,7 @@ import {
   type TableColumn,
 } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
-import { ZeroRateWarning } from '@/features/time';
+import { PendingOvertimeNotice, ZeroRateWarning } from '@/features/time';
 import { useDocumentTitle } from '@/hooks';
 import { formatUkDateTime } from '@/utils/dates';
 
@@ -108,6 +108,7 @@ export default function DashboardPendingApprovalsPage() {
         description="Timesheets and expense claims waiting for your approval, the oldest first."
         className="mb-1"
       />
+      <PendingOvertimeNotice />
       <Widget
         title="Waiting for you"
         query={query}

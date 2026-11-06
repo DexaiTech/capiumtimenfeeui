@@ -19,7 +19,7 @@ function setup(overrides: Partial<AutosaveHandlers> = {}) {
     confirmClear: () => Promise.resolve(true),
     save: (key, minutes) => {
       saved.push([key, minutes]);
-      return Promise.resolve();
+      return Promise.resolve(true);
     },
     describe: (error) => (error instanceof Error ? error.message : 'failed'),
     ...overrides,
@@ -67,7 +67,7 @@ describe('CellAutosave', () => {
     let refuse: (reason: Error) => void = () => undefined;
     const { engine } = setup({
       save: () =>
-        new Promise<void>((_resolve, reject) => {
+        new Promise<boolean>((_resolve, reject) => {
           refuse = reject;
         }),
     });
@@ -91,7 +91,7 @@ describe('CellAutosave', () => {
     const { engine } = setup({
       save: () => {
         attempts += 1;
-        return attempts === 1 ? Promise.reject(new Error('Offline')) : Promise.resolve();
+        return attempts === 1 ? Promise.reject(new Error('Offline')) : Promise.resolve(true);
       },
     });
     engine.edit('a', '30');
@@ -149,14 +149,23 @@ describe('CellAutosave', () => {
     expect(saved).toEqual([['a', null]]);
   });
 
+  it('drops a change whose save the person cancelled on the way (overtime not confirmed)', async () => {
+    const { engine } = setup({ save: () => Promise.resolve(false) });
+    engine.edit('a', '30');
+    engine.commit('a');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(engine.getSnapshot().cells.a).toBeUndefined();
+    expect(engine.getSnapshot()).toMatchObject({ saved: 0, failed: 0, saving: 0, dirty: 0 });
+  });
+
   it('keeps typing that arrives while a save runs and saves it next', async () => {
     let finish: () => void = () => undefined;
     const saved: number[] = [];
     const { engine } = setup({
       save: (_key, minutes) =>
-        new Promise<void>((resolve) => {
+        new Promise<boolean>((resolve) => {
           saved.push(minutes ?? 0);
-          finish = resolve;
+          finish = () => resolve(true);
         }),
     });
     engine.edit('a', '30');
