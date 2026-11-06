@@ -145,6 +145,11 @@ Follow it in order; never start coding just because a ticket was given.
    and the relevant full suites.
    - Never weaken or remove a test.
    - Classify each failure as **pre-existing** (it fails on `main` too) or **new**.
+   - Run the **full** UI suite before asking to merge, not only the touched files. A change to
+     a shared component or to `navigation.ts` reaches screens the touched tests don't cover. On
+     6 Nov 2026 a reorder of the Settings menu sent some roles to a "No access" page, and only
+     the full suite caught it.
+   - Look for React warnings in the test output (`same key`, `act(...)`): treat each as a bug.
 8. **Manual verification** locally where it applies. Say clearly what was verified locally and
    what was verified in production.
 9. **Final report** as a table with these columns: Ticket ID, Root cause, Implementation,
@@ -162,6 +167,12 @@ Follow it in order; never start coding just because a ticket was given.
 
 - One branch per ticket batch, with one PR per repo, merged by rebase.
 - The API PR deploys before the UI PR.
+- **After every merge, check the live site** before calling the work done:
+  - the live site serves the new bundle;
+  - `/api/v1/system` answers 200;
+  - the changed screens open and look right, with nothing repeated or missing.
+
+  If the site is down or broken, tell the lead at once, with what you know so far.
 
 ## Guard rails worth remembering
 
@@ -178,3 +189,12 @@ Follow it in order; never start coding just because a ticket was given.
 - **Colours.** Use tokens only (`bg-brand`, `text-text-muted`, `bg-badge-red-soft`, …), never
   raw hex in TSX.
 - **Copy.** UI copy uses UK English and sentence case. Icon-button tooltips have no trailing "…".
+- **List keys** must be unique among siblings and stable.
+  - Key by an id. Never key by a label, a group or status name, or a date alone: those can
+    repeat.
+  - When nothing unique exists, combine the name with its place (`` `${index}:${name}` ``).
+  - On 6 Nov 2026 the Settings left menu repeated its "Practice" pages four times. Two menu
+    groups were both named "Practice" and `Sidebar.tsx` keyed them by name alone, so React left
+    copies behind as the menu re-rendered.
+  - A group name in `navigation.ts` may head two separate runs of pages. Every menu that groups
+    pages (`Sidebar`, `ModuleSidebar`, `OverflowNav`) must cope with that.
