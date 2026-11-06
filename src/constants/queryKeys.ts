@@ -43,6 +43,7 @@ export const queryKeys = {
     rateRules: (organizationId: string) => ['org', organizationId, 'rate-rules'] as const,
     rateHistory: (organizationId: string) => ['org', organizationId, 'rate-history'] as const,
     rateReruns: (organizationId: string) => ['org', organizationId, 'rate-reruns'] as const,
+    overtimeRates: (organizationId: string) => ['org', organizationId, 'overtime-rates'] as const,
     services: (organizationId: string) => ['org', organizationId, 'services'] as const,
     activityCodes: (organizationId: string) => ['org', organizationId, 'activity-codes'] as const,
     vatRates: (organizationId: string) => ['org', organizationId, 'vat-rates'] as const,

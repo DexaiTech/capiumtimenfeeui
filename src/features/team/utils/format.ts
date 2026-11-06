@@ -1,7 +1,8 @@
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
+import { formatMultiplier } from '@/utils/multiplier';
 
-import type { RateRule } from '../types';
+import type { OvertimeRate, RateRule } from '../types';
 
 /** The largest money amount the API accepts (`Money`: 0 to 10^12 pence). */
 export const MAX_PENCE = 1_000_000_000_000;
@@ -43,6 +44,23 @@ export function scopeNames(
     rule.staff?.full_name,
     rule.grade ? `${rule.grade.name} grade` : undefined,
   ].filter((name): name is string => Boolean(name));
+}
+
+/** Who an overtime rate applies to: "Senior grade" or "Sam Staff". */
+export function overtimeSubject(rate: Pick<OvertimeRate, 'grade' | 'staff'>): string {
+  return rate.staff?.full_name ?? (rate.grade ? `${rate.grade.name} grade` : '—');
+}
+
+/** An overtime rate as "1.5× the cost rate" or "£45.00/h fixed". */
+export function formatOvertimeRate(
+  rate: Pick<OvertimeRate, 'mode' | 'multiplier_bp' | 'rate'>,
+): string {
+  if (rate.mode === 'multiplier') {
+    return rate.multiplier_bp === null
+      ? '—'
+      : `${formatMultiplier(rate.multiplier_bp)} the cost rate`;
+  }
+  return rate.rate === null ? '—' : `${formatRate(rate.rate)} fixed`;
 }
 
 /** Text for a plain count: "1 entry", "3 entries". */

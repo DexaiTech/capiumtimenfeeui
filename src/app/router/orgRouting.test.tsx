@@ -252,6 +252,31 @@ describe('practice route (/:orgSlug)', () => {
     expect(links).not.toContain('Practice Settings');
   });
 
+  it('offers Overtime Rates in Team & Rates right after Charge-out Rates (APT81)', async () => {
+    mockOrganizations([ownerContext]);
+    const { router } = renderApp('/acme/team/staff');
+    const user = userEvent.setup();
+    const team = await screen.findByRole('navigation', { name: 'Team & Rates pages' });
+    const links = within(team)
+      .getAllByRole('link')
+      .map((link) => link.textContent);
+    expect(links.indexOf('Overtime Rates')).toBe(links.indexOf('Charge-out Rates') + 1);
+
+    await user.click(within(team).getByRole('link', { name: 'Overtime Rates' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/acme/team/overtime-rates'));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Overtime Rates' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps Overtime Rates from a role without rate.read', async () => {
+    mockOrganizations([contextWith(['member.read'])]);
+    renderApp('/acme/team/overtime-rates');
+    expect(
+      await screen.findByRole('heading', { name: 'Your role does not include this page' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows the reports of the caller in a grouped sidebar instead of the secondary bar', async () => {
     mockOrganizations([contextWith(['report.read'])]);
     const { router } = renderApp('/acme/reports');

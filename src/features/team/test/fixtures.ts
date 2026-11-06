@@ -8,6 +8,7 @@ import type {
   Grade,
   JobOption,
   LadderStep,
+  OvertimeRate,
   RateChange,
   RateImpact,
   RateResolution,
@@ -19,6 +20,7 @@ import type {
   Service,
   TaskTemplate,
   StaffDetail,
+  StaffHours,
   StaffMember,
   VatCode,
 } from '../types';
@@ -319,6 +321,45 @@ export const seniorCostRule = rule('rule-senior-cost', 'grade', {
   can_delete: false,
 });
 export const testCostRules: RateRule[] = [samCostRule, seniorCostRule];
+
+/* --------------------------- Working hours and overtime ----------------------- */
+
+/** A person's standard hours as the API seeds them: one open-ended weekly period. */
+export const hoursOf = (member: StaffMember, overrides: Partial<StaffHours> = {}): StaffHours => ({
+  id: `hours-${member.id}`,
+  basis: 'weekly',
+  standard_minutes: member.weekly_capacity_minutes,
+  effective_from: member.start_date ?? '2026-01-01',
+  effective_to: null,
+  ...overrides,
+});
+
+export const overtimeRate = (id: string, overrides: Partial<OvertimeRate> = {}): OvertimeRate => ({
+  id,
+  level: 'grade',
+  grade: gradeRef(seniorGrade),
+  staff: null,
+  mode: 'multiplier',
+  multiplier_bp: 15000,
+  rate: null,
+  effective_from: '2026-01-01',
+  effective_to: null,
+  status: 'current',
+  ...overrides,
+});
+/** Senior grade: 1.5 times the cost rate. */
+export const seniorOvertime = overtimeRate('ot-senior');
+/** Sam's own rate: £45.00 an hour, which replaces the Senior grade's. */
+export const samOvertime = overtimeRate('ot-sam', {
+  level: 'staff',
+  grade: null,
+  staff: { id: samRef.id, full_name: samRef.full_name },
+  mode: 'fixed',
+  multiplier_bp: null,
+  rate: 4500,
+  effective_from: '2026-03-01',
+});
+export const testOvertimeRates: OvertimeRate[] = [seniorOvertime, samOvertime];
 
 /* ----------------------------- History and re-rating -------------------------- */
 

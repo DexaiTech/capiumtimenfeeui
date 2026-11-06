@@ -66,5 +66,8 @@ export function useTeamInvalidation() {
         queryKeys.org.clients(id),
         audit,
       ),
+    /** A person's working hours: their page (under `staff`) and the audit trail. */
+    hours: () => refresh(queryKeys.org.staff(id), audit),
+    overtimeRates: () => refresh(queryKeys.org.overtimeRates(id), audit),
   };
 }

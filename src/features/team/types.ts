@@ -399,6 +399,64 @@ export interface ResolveQuery {
   service_id?: string;
 }
 
+/* ------------------------- Working hours and overtime (APT81) ----------------- */
+
+/** The period standard hours are counted over; hours beyond them in the period are overtime. */
+export type HoursBasis = 'weekly' | 'monthly';
+
+/** One dated period of a person's standard hours (`GET /staff/{user_id}/hours`, current first). */
+export interface StaffHours {
+  id: string;
+  basis: HoursBasis;
+  standard_minutes: number;
+  effective_from: IsoDate;
+  effective_to: IsoDate | null;
+}
+
+/** New standard hours; the API ends the open-ended period the day before. */
+export interface StaffHoursCreate {
+  basis: HoursBasis;
+  standard_minutes: number;
+  effective_from: IsoDate;
+}
+
+export type OvertimeLevel = 'grade' | 'staff';
+/** A multiple of the cost rate (`multiplier_bp`) or a fixed amount per hour (`rate`, pence). */
+export type OvertimeMode = 'multiplier' | 'fixed';
+
+/** A dated overtime rate of a grade or a staff member: an internal cost, never charged out. */
+export interface OvertimeRate {
+  id: string;
+  level: OvertimeLevel;
+  grade: RefRead | null;
+  staff: Pick<StaffRef, 'id' | 'full_name'> | null;
+  mode: OvertimeMode;
+  multiplier_bp: BasisPoints | null;
+  rate: Pence | null;
+  effective_from: IsoDate;
+  effective_to: IsoDate | null;
+  status: RuleStatus;
+}
+
+export interface OvertimeRateFilters {
+  level?: OvertimeLevel;
+  user_id?: string;
+  grade_id?: string;
+  status?: RuleStatus;
+}
+
+/** `grade_id` or `user_id` by level; `multiplier_bp` or `rate` by mode. */
+export interface OvertimeRateCreate {
+  level: OvertimeLevel;
+  grade_id?: string;
+  user_id?: string;
+  mode: OvertimeMode;
+  multiplier_bp?: BasisPoints;
+  rate?: Pence;
+  effective_from: IsoDate;
+  effective_to?: IsoDate;
+}
+
 /* ------------------------------- Rate history -------------------------------- */
 
 export type ChangeAction = 'created' | 'updated' | 'end_dated' | 'deleted';

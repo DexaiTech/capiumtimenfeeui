@@ -14,6 +14,9 @@ import type {
   GradeUpdate,
   JobOption,
   MemberRoleChange,
+  OvertimeRate,
+  OvertimeRateCreate,
+  OvertimeRateFilters,
   RateChange,
   RateHistoryFilters,
   RateImpact,
@@ -40,6 +43,8 @@ import type {
   StaffDeactivate,
   StaffDetail,
   StaffFilters,
+  StaffHours,
+  StaffHoursCreate,
   StaffInvite,
   StaffInvited,
   StaffLinkLogin,
@@ -166,6 +171,31 @@ export const teamApi = {
       query: { outcome, limit: page.limit ?? PAGE_SIZE, cursor: page.cursor },
       signal: page.signal,
     }),
+
+  /* ------------------------ Working hours and overtime ----------------------- */
+  // A person's dated standard hours (`member.read`; written with `member.update`).
+  listStaffHours: (organizationId: string, staffId: string, signal?: AbortSignal) =>
+    api.get<StaffHours[]>(`${org(organizationId)}/staff/${seg(staffId)}/hours`, { signal }),
+  addStaffHours: (organizationId: string, staffId: string, body: StaffHoursCreate) =>
+    api.post<StaffHours>(`${org(organizationId)}/staff/${seg(staffId)}/hours`, body),
+  // Overtime rates of grades and staff (`rate.read`; written with `rate.manage`).
+  listOvertimeRates: (
+    organizationId: string,
+    filters: OvertimeRateFilters,
+    page: PageRequest = {},
+  ) =>
+    api.list<OvertimeRate>(`${org(organizationId)}/overtime-rates`, {
+      query: { ...filters, limit: page.limit ?? PAGE_SIZE, cursor: page.cursor },
+      signal: page.signal,
+    }),
+  createOvertimeRate: (organizationId: string, body: OvertimeRateCreate) =>
+    api.post<OvertimeRate>(`${org(organizationId)}/overtime-rates`, body),
+  endOvertimeRate: (organizationId: string, rateId: string, effectiveTo: string) =>
+    api.patch<OvertimeRate>(`${org(organizationId)}/overtime-rates/${seg(rateId)}`, {
+      effective_to: effectiveTo,
+    }),
+  deleteOvertimeRate: (organizationId: string, rateId: string) =>
+    api.delete<null>(`${org(organizationId)}/overtime-rates/${seg(rateId)}`),
 
   /* ------------------------- Services and activity types --------------------- */
   // Both lists are bounded: the API returns every record at once.

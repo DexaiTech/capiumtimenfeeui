@@ -10,12 +10,14 @@ import type {
   ClientOption,
   Grade,
   JobOption,
+  OvertimeRate,
   RateChange,
   RateRule,
   RateRuleCreate,
   Rerun,
   RerunItem,
   Service,
+  StaffHours,
   StaffMember,
   TaskTemplate,
   VatCode,
@@ -25,6 +27,8 @@ import {
   accountsTemplates,
   noImpact,
   detailOf,
+  hoursOf,
+  testOvertimeRates,
   testActivities,
   testChanges,
   testChargeRules,
@@ -58,7 +62,11 @@ export interface TeamData {
   vatCodes?: VatCode[];
   clients?: ClientOption[];
   jobs?: JobOption[];
+  /** Everyone's working hours; by default one weekly period from their weekly capacity. */
+  hours?: StaffHours[];
+  overtimeRates?: OvertimeRate[];
   /** Receive the query string of every request of that list. */
+  onOvertimeList?: (params: URLSearchParams) => void;
   onStaffList?: (params: URLSearchParams) => void;
   onGradeList?: (params: URLSearchParams) => void;
   onRuleList?: (params: URLSearchParams) => void;
@@ -131,6 +139,22 @@ export function teamHandlers(data: TeamData = {}): HttpHandler[] {
     http.get(orgApiPath('/staff/:staffId'), ({ params }) => {
       const found = staff.find((member) => member.id === params.staffId);
       return found ? ok(detailOf(found)) : fail(404, 'RESOURCE_NOT_FOUND', 'Not found.');
+    }),
+    http.get(orgApiPath('/staff/:staffId/hours'), ({ params }) => {
+      const found = staff.find((member) => member.id === params.staffId);
+      return ok(data.hours ?? (found ? [hoursOf(found)] : []));
+    }),
+    http.get(orgApiPath('/overtime-rates'), ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      data.onOvertimeList?.(params);
+      const rows = (data.overtimeRates ?? testOvertimeRates).filter(
+        (item) =>
+          (!params.get('level') || item.level === params.get('level')) &&
+          (!params.get('status') || item.status === params.get('status')) &&
+          (!params.get('user_id') || item.staff?.id === params.get('user_id')) &&
+          (!params.get('grade_id') || item.grade?.id === params.get('grade_id')),
+      );
+      return ok(rows, { meta: END });
     }),
     http.get(orgApiPath('/roles'), () => ok(data.roles ?? testRoles)),
 

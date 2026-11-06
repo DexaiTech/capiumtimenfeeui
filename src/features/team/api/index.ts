@@ -5,5 +5,6 @@ export { teamApi } from './teamApi';
 export * from './catalogue';
 export * from './grades';
 export * from './lookups';
+export * from './overtime';
 export * from './rates';
 export * from './staff';
