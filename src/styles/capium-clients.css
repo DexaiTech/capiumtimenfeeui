@@ -671,6 +671,11 @@
   width: 140px;
 }
 
+/* The icons sit at the right of their cell (RowActions), so the heading does too (APT83). */
+.cc-table th.cc-col-action {
+  text-align: right;
+}
+
 .cc-table th,
 .cc-table td {
   padding: 0 8px 0 0;
