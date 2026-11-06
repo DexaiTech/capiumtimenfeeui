@@ -61,6 +61,15 @@ For UI patterns, see [ui-standards.md](ui-standards.md).
   - Keys come from the feature's `keys.ts`, extending `queryKeys.org.*`.
   - Mutations call the feature's invalidation helper in `onSettled`, for example `useCreateJob`
     in `features/jobs/api/hooks.ts`.
+- **Rendering lists:** every `key` is unique among its siblings and stable across renders.
+  - Use the item's id.
+  - Never use a label, a group or status name, or a date alone: those repeat.
+  - When nothing unique exists, add the place: `` key={`${index}:${group.name}`} ``, as
+    `Sidebar.tsx` and `ModuleSidebar.tsx` do.
+  - A duplicate key makes React repeat or drop rows when the list re-renders. On 6 Nov 2026 it
+    made the Settings menu repeat its Practice pages. `Sidebar.test.tsx` shows the regression
+    test: move between pages and assert that every link appears once and that React logged no
+    `same key` warning.
 - **List state** lives in the URL: `useUrlParams` (`src/hooks/useUrlParams.ts`) and the feature
   `useUrlSearch`.
 - **zustand** is only for preferences and shell state. Server data always goes through
