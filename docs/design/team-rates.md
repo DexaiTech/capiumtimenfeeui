@@ -13,6 +13,7 @@ changes the API.
 | `grades`           | Grades           | `member.read` | `rate.manage`                                     |
 | `cost-rates`       | Cost Rates       | `rate.read`   | `rate.manage`                                     |
 | `charge-out-rates` | Charge-out Rates | `rate.read`   | `rate.manage`                                     |
+| `overtime-rates`   | Overtime Rates   | `rate.read`   | `rate.manage`                                     |
 | `services`         | Services         | any member    | `settings.manage`                                 |
 | `activity-types`   | Activity Types   | any member    | `settings.manage`                                 |
 | `rate-history`     | Rate History     | `rate.read`   | none                                              |
@@ -53,6 +54,14 @@ The staff list moved here from Settings (`settings/staff` redirects to `team/sta
   recorded under (`is_used`) can be end-dated and its amount changed, never deleted or moved.
   `RATE_OVERLAP` lists the rates in the way on the form. "View history" opens Rate History
   narrowed to the rate's scope (`kind`, `staff`, `grade`, `client`, `service`).
+- **Overtime rates and working hours (APT81, phase A: set-up only)** — `GET/POST /overtime-rates`,
+  `PATCH` (end-date) and `DELETE /overtime-rates/{id}`: one dated rate per grade or staff member,
+  a multiple of the cost rate (`multiplier_bp`) or a fixed rate per hour. An internal cost only:
+  it never changes charge-out, and a staff rate replaces the grade rate. Filters (level, staff,
+  grade) and tabs (status) live in the URL. The staff page has a **Working hours** card
+  (`GET/POST /staff/{id}/hours`, `member.read` / `member.update`): weekly or monthly standard
+  hours, dated; a change ends the open-ended period the day before. Nothing is priced from
+  these yet.
 - **Services and activity types** — bounded lists, so search, tabs and sorting happen on the
   client. A service saves in two calls (the service, then its activity types); if only the
   second fails the person is told the service was saved.

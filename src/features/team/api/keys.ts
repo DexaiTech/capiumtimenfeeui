@@ -2,6 +2,7 @@ import { queryKeys } from '@/constants/queryKeys';
 
 import type {
   GradeFilters,
+  OvertimeRateFilters,
   RateHistoryFilters,
   RateRuleFilters,
   ResolveQuery,
@@ -24,6 +25,10 @@ export const teamKeys = {
     [...queryKeys.org.staff(organizationId), 'permissions', staffId] as const,
   staffLookup: (organizationId: string, filters: StaffFilters) =>
     [...queryKeys.org.staff(organizationId), 'lookup', filters] as const,
+  staffHours: (organizationId: string, staffId: string) =>
+    [...queryKeys.org.staff(organizationId), 'hours', staffId] as const,
+  overtimeRateList: (organizationId: string, filters: OvertimeRateFilters) =>
+    [...queryKeys.org.overtimeRates(organizationId), 'list', filters] as const,
 
   gradeList: (organizationId: string, filters: GradeFilters) =>
     [...queryKeys.org.grades(organizationId), 'list', filters] as const,

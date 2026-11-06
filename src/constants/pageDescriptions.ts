@@ -72,6 +72,7 @@ export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'team/grades': 'Levels of staff, each with default cost and charge-out rates.',
   'team/cost-rates': 'What an hour of each person or grade costs the practice.',
   'team/charge-out-rates': 'What you bill for an hour, by person, grade, client or service.',
+  'team/overtime-rates': 'What an hour of overtime costs the practice. Never charged to clients.',
   'team/rate-history': 'Every change of a rate, with its dates.',
   'team/rate-preview': 'Check which rate applies to a person, client and day.',
   'team/re-rate': 'Re-price time that is not billed yet with today’s rates.',

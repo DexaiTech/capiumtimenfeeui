@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlarmClockPlus,
   ArrowLeftRight,
   ArrowUpDown,
   Award,
@@ -698,6 +699,13 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         id: 'charge-out-rates',
         label: 'Charge-out Rates',
         icon: PoundSterling,
+        anyOf: [P.rateRead],
+        group: 'Rates',
+      },
+      {
+        id: 'overtime-rates',
+        label: 'Overtime Rates',
+        icon: AlarmClockPlus,
         anyOf: [P.rateRead],
         group: 'Rates',
       },

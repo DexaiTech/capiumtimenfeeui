@@ -35,6 +35,7 @@ import {
   TemporaryPasswordDialog,
   type TemporaryPassword,
 } from '../components/staff/TemporaryPasswordDialog';
+import { WorkingHoursCard } from '../components/staff/WorkingHoursCard';
 import { RATE_KIND_LABEL } from '../constants';
 import { useStaffActions } from '../hooks/useStaffActions';
 import type { RateKind, StaffDetail } from '../types';
@@ -401,6 +402,7 @@ function StaffDetailView({ staffId }: { staffId: string }) {
         canEdit={canUpdate && member.status !== 'deleted'}
         onEdit={() => edit(member)}
       />
+      <WorkingHoursCard staff={member} canEdit={canUpdate && member.status !== 'deleted'} />
       {can(PERMISSIONS.rateRead) ? <RatesCard staff={member} /> : null}
       {segmentsOn ? <StaffSegmentsCard staff={member} /> : null}
       {can(PERMISSIONS.roleRead) ? <StaffPermissionsCard staff={member} /> : null}
