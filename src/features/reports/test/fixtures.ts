@@ -846,8 +846,12 @@ export const missingTotals = (): MissingTimesheetTotals => ({
 // his standard hours only.
 export const staffCostRows = (): StaffCostRow[] => [
   {
-    user: { id: IDS.ada, full_name: 'Ada Lovelace' },
-    grade: { id: 'g-1', name: 'Senior' },
+    user_id: IDS.ada,
+    name: 'Ada Lovelace',
+    staff_code: null,
+    grade_name: 'Senior',
+    basis: 'weekly',
+    standard_hours_minutes: 2250,
     period_start: '2026-10-05',
     period_end: '2026-10-11',
     standard_minutes: 2250,
@@ -860,8 +864,12 @@ export const staffCostRows = (): StaffCostRow[] => [
     pending_overtime_cost: 13500,
   },
   {
-    user: { id: IDS.ben, full_name: 'Ben Carter' },
-    grade: null,
+    user_id: IDS.ben,
+    name: 'Ben Carter',
+    staff_code: null,
+    grade_name: null,
+    basis: 'weekly',
+    standard_hours_minutes: 2250,
     period_start: '2026-10-05',
     period_end: '2026-10-11',
     standard_minutes: 2250,
@@ -890,6 +898,7 @@ export const staffCostJobRows = (): StaffCostJobRow[] => [
   {
     job: { id: 'j-1', number: 'J00001', name: 'Year-end accounts' },
     client: { id: IDS.acme, name: 'Acme Ltd' },
+    allocated: true,
     overtime_minutes: 180,
     overtime_rate: 3000,
     overtime_cost: 9000,
@@ -898,6 +907,7 @@ export const staffCostJobRows = (): StaffCostJobRow[] => [
   {
     job: { id: 'j-9', number: 'J00009', name: 'Practice admin' },
     client: { id: 'c-internal', name: 'Internal' },
+    allocated: false,
     overtime_minutes: 90,
     overtime_rate: 3000,
     overtime_cost: 4500,

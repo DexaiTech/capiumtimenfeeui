@@ -79,17 +79,17 @@ export const staffCostReport: ReportConfig<StaffCostRow, StaffCostTotals> = {
   period: 'range',
   filters: ['user', 'grade', 'job', 'client', 'approval', 'overtime'],
   personLabel: 'Staff member',
-  rowKey: (row) => `${row.user.id}-${row.period_start}`,
-  rowLabel: (row) => `${row.user.full_name}, ${periodOf(row)}`,
+  rowKey: (row) => `${row.user_id}-${row.period_start}`,
+  rowLabel: (row) => `${row.name}, ${periodOf(row)}`,
   columns: ({ currency }) => [
     {
       id: 'name',
       header: 'Staff member',
       hideable: false,
       sortable: true,
-      sortValue: (row) => row.user.full_name,
+      sortValue: (row) => row.name,
       className: 'min-w-48 max-w-80',
-      cell: (row) => named(row.user.full_name, row.grade?.name),
+      cell: (row) => named(row.name, row.grade_name ?? undefined),
     },
     {
       id: 'period',
@@ -171,7 +171,7 @@ export const staffCostReport: ReportConfig<StaffCostRow, StaffCostTotals> = {
           label: 'See the overtime jobs',
           to: linkTo(routes.org.module(slug, 'reports', 'staff-cost'), {
             group: 'job',
-            user: row.user.id,
+            user: row.user_id,
             // The row's period, within the dates on screen.
             from: period.from > row.period_start ? period.from : row.period_start,
             to: period.to && period.to < row.period_end ? period.to : row.period_end,
@@ -202,19 +202,19 @@ export const staffCostJobsReport: ReportConfig<StaffCostJobRow, unknown> = {
   period: 'range',
   filters: ['user', 'grade', 'job', 'client', 'approval', 'overtime'],
   personLabel: 'Staff member',
-  rowKey: (row) => `${row.job.id}-${row.status}`,
-  rowLabel: (row) => `${row.job.number} ${row.job.name}`,
+  rowKey: (row) => `${row.job?.id ?? 'none'}-${row.status}`,
+  rowLabel: (row) => (row.job ? `${row.job.number} ${row.job.name}` : 'No job'),
   columns: ({ currency }) => [
     {
       id: 'job',
       header: 'Job',
       hideable: false,
       sortable: true,
-      sortValue: (row) => row.job.number,
+      sortValue: (row) => row.job?.number ?? '',
       className: 'min-w-48 max-w-80',
       cell: (row) => (
         <div className="flex min-w-0 items-start gap-2">
-          {named(`${row.job.number} ${row.job.name}`, row.client.name)}
+          {named(row.job ? `${row.job.number} ${row.job.name}` : 'No job', row.client?.name)}
           <Badge tone="violet" size="sm">
             Overtime
           </Badge>
