@@ -125,7 +125,10 @@ export function OverflowNav({ label, items, activeId, variant, className }: Over
   let lastGroup: string | undefined;
   for (const item of hidden) {
     if (item.group !== lastGroup) {
-      if (item.group) moreItems.push({ id: `group-${item.group}`, heading: item.group });
+      // The place keeps the id unique should a name head two runs of items.
+      if (item.group) {
+        moreItems.push({ id: `group-${moreItems.length}-${item.group}`, heading: item.group });
+      }
       lastGroup = item.group;
     }
     const Icon = item.icon;
