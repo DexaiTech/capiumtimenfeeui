@@ -7,7 +7,18 @@ import type { ExportFormat, ReportFilters } from './types';
 
 /** The filters a report offers; each maps to the endpoint's parameter of the same meaning. */
 export type FilterKey =
-  'client' | 'job' | 'user' | 'partner' | 'manager' | 'service' | 'activity' | 'method' | 'status';
+  | 'client'
+  | 'job'
+  | 'user'
+  | 'partner'
+  | 'manager'
+  | 'service'
+  | 'activity'
+  | 'method'
+  | 'status'
+  | 'grade'
+  | 'approval'
+  | 'overtime';
 
 /** The search param of a filter and the query parameter of the endpoint it becomes. */
 export const FILTER_PARAMS: Record<FilterKey, { param: string; query: string }> = {
@@ -20,6 +31,10 @@ export const FILTER_PARAMS: Record<FilterKey, { param: string; query: string }> 
   activity: { param: 'activity', query: 'activity_code_id' },
   method: { param: 'method', query: 'method' },
   status: { param: 'status', query: 'status' },
+  grade: { param: 'grade', query: 'grade_id' },
+  /** The approval status of overtime (`status` of the Staff Cost report). */
+  approval: { param: 'approval', query: 'status' },
+  overtime: { param: 'overtime', query: 'overtime_type' },
 };
 
 /** How the period of a report is chosen. */
@@ -43,6 +58,8 @@ export interface ReportContext<TTotals> {
   totals: TTotals | undefined;
   /** The filters the report was worked out with, as the API echoes them (once it answered). */
   filters?: ReportFilters;
+  /** The filters on screen ('' when not set), for a drill that keeps them. */
+  values: Readonly<Record<FilterKey, string>>;
 }
 
 /** The period on show, for the links that open the records behind a row. */

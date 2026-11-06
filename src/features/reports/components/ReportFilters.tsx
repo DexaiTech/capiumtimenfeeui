@@ -4,6 +4,7 @@ import {
   JobPicker,
   StaffPicker,
   useActivityTypes,
+  useGradeOptions,
   useServices,
 } from '@/features/team';
 import { PERMISSIONS as P } from '@/constants/permissions';
@@ -27,6 +28,34 @@ const STATUSES = [
   { value: 'open', label: 'Open, not submitted' },
   { value: 'rejected', label: 'Returned' },
 ];
+
+const APPROVALS = [
+  { value: '', label: 'Any status' },
+  { value: 'pending', label: 'Pending (unapproved)' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
+const OVERTIME_TYPES = [
+  { value: '', label: 'Any overtime' },
+  { value: 'allocated', label: 'Allocated (on a client’s job)' },
+  { value: 'unallocated', label: 'Unallocated (internal work)' },
+];
+
+function GradeFilter({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const grades = useGradeOptions();
+  return (
+    <Select
+      label="Grade"
+      options={[
+        { value: '', label: 'Any grade' },
+        ...(grades.data ?? []).map((grade) => ({ value: grade.id, label: grade.name })),
+      ]}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
+}
 
 function ServiceFilter({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const services = useServices();
@@ -103,6 +132,9 @@ export function ReportFilters({ filters, personLabel, values, onChange }: Report
           onChange={(id) => onChange({ manager: id })}
         />
       ) : null}
+      {has('grade') && canPickPeople ? (
+        <GradeFilter value={values.grade} onChange={(id) => onChange({ grade: id })} />
+      ) : null}
       {has('client') && can(P.clientRead) ? (
         <ClientPicker
           label="Client"
@@ -140,6 +172,22 @@ export function ReportFilters({ filters, personLabel, values, onChange }: Report
           options={STATUSES}
           value={values.status}
           onChange={(event) => onChange({ status: event.target.value })}
+        />
+      ) : null}
+      {has('approval') ? (
+        <Select
+          label="Approval status"
+          options={APPROVALS}
+          value={values.approval}
+          onChange={(event) => onChange({ approval: event.target.value })}
+        />
+      ) : null}
+      {has('overtime') ? (
+        <Select
+          label="Overtime type"
+          options={OVERTIME_TYPES}
+          value={values.overtime}
+          onChange={(event) => onChange({ overtime: event.target.value })}
         />
       ) : null}
     </>

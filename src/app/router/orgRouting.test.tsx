@@ -296,6 +296,38 @@ describe('practice route (/:orgSlug)', () => {
     expect(screen.getAllByRole('navigation', { name: 'Reports pages' })).toHaveLength(1);
   });
 
+  it('keeps Staff Cost from a role without report.staff_cost, even with the financial reports', async () => {
+    mockOrganizations([contextWith(['report.financial', 'rate.read'])]);
+    renderApp('/acme/reports/cost-to-business');
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Reports pages' });
+    expect(within(sidebar).getByRole('link', { name: 'Cost to Business' })).toBeInTheDocument();
+    expect(within(sidebar).queryByRole('link', { name: 'Staff Cost' })).not.toBeInTheDocument();
+  });
+
+  it('refuses the Staff Cost page to a role without report.staff_cost', async () => {
+    mockOrganizations([contextWith(['report.financial', 'rate.read'])]);
+    renderApp('/acme/reports/staff-cost');
+    expect(
+      await screen.findByRole('heading', { name: 'Your role does not include this page' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers Reports and Staff Cost to a role with report.staff_cost alone', async () => {
+    mockOrganizations([contextWith(['report.staff_cost'])]);
+    const { router } = renderApp('/acme/reports');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/acme/reports/staff-cost'));
+
+    const sidebar = await screen.findByRole('navigation', { name: 'Reports pages' });
+    expect(within(sidebar).getByRole('link', { name: 'Staff Cost' })).toHaveAttribute(
+      'href',
+      '/acme/reports/staff-cost',
+    );
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Staff Cost' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows the billing pages of the caller in a grouped sidebar', async () => {
     mockOrganizations([contextWith(['invoice.read'])]);
     const { router } = renderApp('/acme/billing');

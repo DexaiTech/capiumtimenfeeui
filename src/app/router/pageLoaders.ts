@@ -77,6 +77,7 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
     recovery: () => import('@/features/reports/pages/RecoveryReportPage'),
     'recovery-analysis': () => import('@/features/reports/pages/RecoveryAnalysisReportPage'),
     'cost-to-business': () => import('@/features/reports/pages/CostToBusinessReportPage'),
+    'staff-cost': () => import('@/features/reports/pages/StaffCostReportPage'),
     billing: () => import('@/features/reports/pages/BillingReportPage'),
     expenses: () => import('@/features/reports/pages/ExpensesReportPage'),
     'aged-debtors': () => import('@/features/reports/pages/AgedDebtorsReportPage'),

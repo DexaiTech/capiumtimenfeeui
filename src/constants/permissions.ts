@@ -50,6 +50,8 @@ export const PERMISSIONS = {
   // Reports
   reportRead: 'report.read',
   reportFinancial: 'report.financial',
+  /** The Staff Cost report, the only place overtime cost shows (APT81). */
+  reportStaffCost: 'report.staff_cost',
   // Tickets (Application Testing)
   ticketRead: 'ticket.read',
   ticketCreate: 'ticket.create',
