@@ -8,5 +8,5 @@ export { SheetStatusBadge } from './components/badges';
 export { useEntryActions, type EntryActions } from './components/EntryActions';
 export { EntryPanel, type EntryDefaults } from './components/EntryPanel';
 export { JobTimeCard } from './components/JobTimeCard';
-export { SHEET_STATUS_LABEL } from './constants';
+export { RATE_SOURCE_LABEL, SHEET_STATUS_LABEL } from './constants';
 export type { MissingTimesheet, TimeEntry, Timesheet, TimesheetStatus, WeekGrid } from './types';

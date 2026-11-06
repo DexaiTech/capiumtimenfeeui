@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -88,9 +88,7 @@ describe('GeneralSettingsPage', () => {
     expect(save('WIP and billing', 'Save billing settings')).toBeDisabled();
 
     await openTab(user, 'Rates');
-    expect(within(card('Rates')).getByRole('combobox', { name: 'Rate mode' })).toHaveValue(
-      'staff_first',
-    );
+    expect(within(card('Rates')).getByRole('switch', { name: 'Overtime' })).not.toBeChecked();
     expect(save('Rates', 'Save rate settings')).toBeDisabled();
 
     await openTab(user, 'Expenses');
@@ -145,25 +143,13 @@ describe('GeneralSettingsPage', () => {
     await waitFor(() => expect(save('Time recording', 'Save time settings')).toBeDisabled());
   });
 
-  it('names the staff with no rate of their own under staff rates only (APT79)', async () => {
+  it('no longer offers the rate mode: WIP valuation replaced it (APT84)', async () => {
     const asked: string[] = [];
     server.use(
       http.get(orgPath('/staff'), ({ request }) => {
-        asked.push(new URL(request.url).searchParams.getAll('status').join(','));
-        return ok(
-          [
-            { id: 'u-1', full_name: 'Ada Lovelace' },
-            { id: 'u-2', full_name: 'Grace Hopper' },
-            { id: 'u-3', full_name: 'Alan Turing' },
-          ],
-          { meta: { next_cursor: null, has_more: false } },
-        );
+        asked.push(request.url);
+        return ok([], { meta: { next_cursor: null, has_more: false } });
       }),
-      http.get(orgPath('/rates'), () =>
-        ok([{ id: 'r-1', staff: { id: 'u-1', full_name: 'Ada Lovelace' } }], {
-          meta: { next_cursor: null, has_more: false },
-        }),
-      ),
     );
     const user = userEvent.setup();
     renderSettings(<GeneralSettingsPage />, {
@@ -171,19 +157,15 @@ describe('GeneralSettingsPage', () => {
     });
 
     await openTab(user, 'Rates');
-    const select = within(card('Rates')).getByRole('combobox', { name: 'Rate mode' });
-    // Nothing is asked while another mode is chosen.
+    const rates = within(card('Rates'));
+    expect(rates.queryByRole('combobox', { name: 'Rate mode' })).not.toBeInTheDocument();
+    expect(rates.queryByRole('note')).not.toBeInTheDocument();
+    expect(card('Rates')).toHaveTextContent('is set under WIP valuation on the WIP & billing tab');
+    // The rest of the card stays.
+    expect(rates.getByRole('switch', { name: 'Overtime' })).toBeInTheDocument();
+    expect(rates.getByRole('textbox', { name: 'Cost-plus mark-up (%)' })).toBeInTheDocument();
+    expect(rates.getByRole('group', { name: 'Recovery rate priority' })).toBeInTheDocument();
     expect(asked).toEqual([]);
-    await user.selectOptions(select, 'staff_only');
-    const note = await within(card('Rates')).findByRole('note');
-    expect(note).toHaveTextContent(
-      '2 people have no charge-out rate of their own and would be priced at the practice default rate: Grace Hopper, Alan Turing.',
-    );
-    expect(note).not.toHaveTextContent('Ada Lovelace');
-    expect(asked).toEqual(['active']);
-
-    await user.selectOptions(select, 'staff_first');
-    expect(within(card('Rates')).queryByRole('note')).not.toBeInTheDocument();
   });
 
   it('keeps the unsaved changes of a tab when another tab is saved', async () => {
@@ -196,13 +178,10 @@ describe('GeneralSettingsPage', () => {
     await user.type(box('Expenses', 'Mileage rate (£ per mile)'), '0.55');
 
     await openTab(user, 'Rates');
-    await user.selectOptions(
-      within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }),
-      'grade_only',
-    );
+    await user.click(within(card('Rates')).getByRole('switch', { name: 'Overtime' }));
     await user.click(save('Rates', 'Save rate settings'));
     expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
-    expect(bodies).toEqual([{ rate_mode: 'grade_only' }]);
+    expect(bodies).toEqual([{ overtime_enabled: true }]);
 
     await openTab(user, 'Expenses');
     expect(box('Expenses', 'Mileage rate (£ per mile)')).toHaveValue('0.55');
@@ -301,46 +280,6 @@ describe('GeneralSettingsPage', () => {
     await user.click(billing.getByRole('switch', { name: 'Automatic payment reminders' }));
     expect(threshold).toBeEnabled();
     expect(addReminder).toBeEnabled();
-  });
-
-  it('explains the rate mode and saves it', async () => {
-    const bodies = capturePatch();
-    const user = userEvent.setup();
-    renderSettings(<GeneralSettingsPage />);
-    await openTab(user, 'Rates');
-
-    expect(
-      screen.getByText(/A person's own charge-out rate prices their time/),
-    ).toBeInTheDocument();
-    await user.selectOptions(
-      within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }),
-      'grade_only',
-    );
-    expect(screen.getByText(/Staff-level rates are skipped/)).toBeInTheDocument();
-    await user.click(save('Rates', 'Save rate settings'));
-
-    expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
-    expect(bodies).toEqual([{ rate_mode: 'grade_only' }]);
-  });
-
-  it('offers staff rates only, explains it and saves it (APT79)', async () => {
-    const bodies = capturePatch();
-    const user = userEvent.setup();
-    renderSettings(<GeneralSettingsPage />);
-    await openTab(user, 'Rates');
-
-    const mode = within(card('Rates')).getByRole('combobox', { name: 'Rate mode' });
-    expect(
-      within(mode)
-        .getAllByRole('option')
-        .map((option) => option.textContent),
-    ).toEqual(['Staff rate first, then grade rates', 'Grade rates only', 'Staff rates only']);
-    await user.selectOptions(mode, 'staff_only');
-    expect(screen.getByText(/Grade rates are skipped/)).toHaveTextContent('practice default rate');
-    await user.click(save('Rates', 'Save rate settings'));
-
-    expect(await screen.findByText('Rate settings saved')).toBeInTheDocument();
-    expect(bodies).toEqual([{ rate_mode: 'staff_only' }]);
   });
 
   it('converts the expense settings: mileage in pence, the mark-up in basis points', async () => {
@@ -498,10 +437,7 @@ describe('GeneralSettingsPage', () => {
     };
     expect(closing()).toBe(false);
 
-    await user.click(within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }));
-    fireEvent.change(within(card('Rates')).getByRole('combobox', { name: 'Rate mode' }), {
-      target: { value: 'grade_only' },
-    });
+    await user.click(within(card('Rates')).getByRole('switch', { name: 'Overtime' }));
     await waitFor(() => expect(closing()).toBe(true));
 
     await user.click(within(card('Rates')).getByRole('button', { name: 'Discard changes' }));

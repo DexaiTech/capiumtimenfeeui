@@ -16,9 +16,14 @@ export type FixedFeeWipMode = (typeof FIXED_FEE_WIP_MODES)[number];
 /**
  * Which charge-out rates price time: a person's own before their grade's (`staff_first`), only
  * the grade rates (`grade_only`) or only the staff rates (`staff_only`, ticket APT79).
+ * Deprecated (APT84): derived by the API from `wip_valuation_sources`, which replaces it.
  */
 export const RATE_MODES = ['staff_first', 'grade_only', 'staff_only'] as const;
 export type RateMode = (typeof RATE_MODES)[number];
+
+/** The rate sources that can value work in progress (APT84), in the default order. */
+export const WIP_VALUATION_SOURCES = ['client', 'service', 'grade', 'staff'] as const;
+export type WipValuationSource = (typeof WIP_VALUATION_SOURCES)[number];
 
 export interface Organization {
   id: string;
@@ -71,7 +76,10 @@ export interface Organization {
   mileage_rate: number;
   /** Basis points added when an expense is recharged to the client (1000 = 10%). */
   expense_markup_bp: number;
+  /** Deprecated (APT84): derived from `wip_valuation_sources`; shown and edited nowhere. */
   rate_mode: RateMode;
+  /** The rate sources that value time, enabled ones only, in the order they are tried (APT84). */
+  wip_valuation_sources: WipValuationSource[];
   /** Whether time can be marked as overtime, which is priced at the normal rates times the multiplier. */
   overtime_enabled: boolean;
   /** Basis points of the normal rate that overtime is paid and charged at (15000 = 1.5x). */
@@ -144,7 +152,6 @@ export type OrganizationUpdate = Partial<
     | 'payment_reminder_schedule'
     | 'mileage_rate'
     | 'expense_markup_bp'
-    | 'rate_mode'
     | 'overtime_enabled'
     | 'overtime_multiplier_bp'
     | 'cost_plus_markup_bp'
@@ -162,3 +169,15 @@ export type OrganizationUpdate = Partial<
     | 'invoice_footer'
   >
 > & { time_increment_minutes?: TimeIncrement };
+
+/** `POST /organizations/{id}/wip-valuation/preview`: what saving an order would change (pence). */
+export interface WipValuationPreview {
+  /** Unbilled time entries whose value or rate source would change. */
+  entries_changed: number;
+  wip_before: number;
+  wip_after: number;
+  /** Entries left as they are: billed, in a draft invoice, in a locked period, written off. */
+  skipped: { billed: number; in_draft: number; locked: number; written_off: number };
+  /** More entries than can be re-valued at once (the re-rate cap). */
+  too_many: boolean;
+}

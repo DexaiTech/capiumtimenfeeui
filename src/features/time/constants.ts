@@ -84,6 +84,7 @@ export const RATE_SOURCE_LABEL: Record<string, string> = {
   staff: 'Staff rate',
   grade: 'Grade rate',
   default: 'Practice default rate',
+  none: 'No rate',
 };
 
 export const GROUP_BY_OPTIONS: ReadonlyArray<{ value: TimeGroupBy; label: string }> = [

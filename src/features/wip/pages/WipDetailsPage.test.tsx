@@ -316,6 +316,27 @@ describe('the WIP items', () => {
     expect(screen.getByText('Showing 5 items · End of the list')).toBeInTheDocument();
   });
 
+  it('shows the rate of each time entry and where it came from, and flags No rate (APT84)', async () => {
+    setup({
+      items: [
+        item({ id: 't-1', rate: 12000, rate_source: 'grade' }),
+        item({ id: 't-2', rate: 0, value: 0, charge_value: 0, rate_source: 'none' }),
+      ],
+    });
+    const list = await table();
+    // The Rate column is shown by default now.
+    const rate = within(list)
+      .getAllByRole('columnheader')
+      .findIndex((header) => header.textContent === 'Rate');
+    expect(rate).toBeGreaterThan(-1);
+    const [priced, unpriced] = rowsOf(list).map(
+      (row) => within(row).getAllByRole('cell')[rate],
+    ) as [HTMLElement, HTMLElement];
+    expect(priced).toHaveTextContent('£120.00Grade rate');
+    expect(within(priced).queryByText('No rate')).not.toBeInTheDocument();
+    expect(unpriced).toHaveTextContent(/^No rate$/);
+  });
+
   it('shows what time on a fixed fee job is worth when the fee has replaced it', async () => {
     setup({ items: [item({ value: 0, charge_value: 18000, component: 'fixed_fee' })] });
     const rows = rowsOf(await table());

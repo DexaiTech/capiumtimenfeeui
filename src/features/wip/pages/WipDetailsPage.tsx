@@ -136,7 +136,7 @@ export default function WipDetailsPage() {
 
   const canWriteOff = can(PERMISSIONS.wipWriteOff);
   const canTransfer = can(PERMISSIONS.wipTransfer);
-  const [hidden, setHidden] = usePersistentColumns('wip-details', ['rate']);
+  const [hidden, setHidden] = usePersistentColumns('wip-details', []);
   const [hiddenJobColumns, setHiddenJobColumns] = usePersistentColumns('wip-details-jobs', []);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [writingOff, setWritingOff] = useState(false);

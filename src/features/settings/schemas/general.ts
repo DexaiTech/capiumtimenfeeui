@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import { FIXED_FEE_WIP_MODES, RATE_MODES, TIME_INCREMENTS } from '@/types/organization';
+import { FIXED_FEE_WIP_MODES, TIME_INCREMENTS } from '@/types/organization';
 import { parseMultiplierToBp } from '@/utils/multiplier';
 import { hoursToMinutes } from '@/utils/minutes';
 import { parsePounds } from '@/utils/money';
@@ -67,7 +67,6 @@ export type BillingSettingsValues = z.infer<typeof billingSettingsSchema>;
 
 export const rateSettingsSchema = z
   .object({
-    rate_mode: z.enum(RATE_MODES, 'Choose how rates are applied'),
     overtime_enabled: z.boolean(),
     /** Typed as a multiple of the normal rate ("1.5"); the API stores basis points. */
     overtime_multiplier: z

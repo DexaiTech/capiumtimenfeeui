@@ -145,6 +145,8 @@ export interface WipItem {
   minutes: number | null;
   hours: string | null;
   rate: Pence | null;
+  /** Time only: the ladder level that priced the entry (`none`: no rate applied, APT84). */
+  rate_source?: string | null;
   /** What counts in the totals. */
   value: Pence;
   client?: ClientRef | null;
