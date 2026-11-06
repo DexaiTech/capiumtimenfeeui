@@ -2,8 +2,8 @@ import type { SelectOption } from '@/components/ui';
 import {
   TIME_INCREMENTS,
   type FixedFeeWipMode,
-  type RateMode,
   type TimeIncrement,
+  type WipValuationSource,
 } from '@/types/organization';
 
 const INCREMENT_LABELS: Record<TimeIncrement, string> = {
@@ -38,26 +38,19 @@ export const WIP_MODE_OPTIONS: ReadonlyArray<SelectOption<FixedFeeWipMode>> = [
   { value: 'by_budget_progress', label: WIP_MODE_LABEL.by_budget_progress },
 ];
 
-export const RATE_MODE_LABEL: Record<RateMode, string> = {
-  staff_first: 'Staff rate first, then grade rates',
-  grade_only: 'Grade rates only',
-  staff_only: 'Staff rates only',
+/** The four rates of the WIP valuation card (APT84): name and what each one is. */
+export const WIP_VALUATION_SOURCE_META: Record<
+  WipValuationSource,
+  { label: string; description: string }
+> = {
+  client: { label: 'Client agreed rate', description: 'The rate agreed with the client' },
+  service: { label: 'Service specific rate', description: "The rate set for the job's service" },
+  grade: {
+    label: 'Grade specific rate',
+    description: 'The rate set for the grade of the person who recorded the time',
+  },
+  staff: { label: 'Staff specific rate', description: 'The rate set for that person' },
 };
-
-export const RATE_MODE_HELP: Record<RateMode, string> = {
-  staff_first:
-    "A person's own charge-out rate prices their time; where they have none, their grade rate does.",
-  grade_only:
-    'Staff-level rates are skipped, so every person is priced at their grade rate. The staff rates are kept and apply again if you switch back. Cost rates are not affected.',
-  staff_only:
-    'Grade rates are skipped, so every person is priced at their staff rate; anyone without a staff rate is charged the practice default rate. The grade rates are kept and apply again if you switch back. Cost rates are not affected.',
-};
-
-export const RATE_MODE_OPTIONS: ReadonlyArray<SelectOption<RateMode>> = [
-  { value: 'staff_first', label: RATE_MODE_LABEL.staff_first },
-  { value: 'grade_only', label: RATE_MODE_LABEL.grade_only },
-  { value: 'staff_only', label: RATE_MODE_LABEL.staff_only },
-];
 
 /** Said when an approval switch that is saved on is turned off in the form (ticket APT53). */
 export const APPROVAL_SETTLE_HELP =

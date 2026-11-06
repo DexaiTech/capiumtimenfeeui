@@ -13,6 +13,7 @@ import { ExpenseSettingsCard } from '../components/general/ExpenseSettingsCard';
 import { LocaleSettingsCard } from '../components/general/LocaleSettingsCard';
 import { RateModeCard } from '../components/general/RateModeCard';
 import { TimeSettingsCard } from '../components/general/TimeSettingsCard';
+import { WipValuationCard } from '../components/general/WipValuationCard';
 import { SettingsSection } from '../components/SettingsSection';
 
 type GeneralTab = 'time' | 'billing' | 'rates' | 'expenses' | 'locale';
@@ -29,8 +30,9 @@ const TABS: ReadonlyArray<{ value: GeneralTab; label: string }> = [
  * `/:orgSlug/settings/general`: how time, WIP, billing, rates and expenses behave across the
  * practice, one tab each so that reaching any of them never needs scrolling past another.
  * Companion to Practice Settings (name, address, VAT and bank details), which edits the same
- * practice through the same endpoint. Each tab is still its own independent form with its own
- * save, exactly as before; only the five cards are now shown one at a time instead of stacked.
+ * practice through the same endpoint. Each card is still its own independent form with its own
+ * save; the cards are shown one tab at a time (WIP & billing holds two: WIP and billing, and the
+ * WIP valuation of APT84).
  */
 export default function GeneralSettingsPage() {
   const { organization, can } = useOrg();
@@ -82,9 +84,10 @@ export default function GeneralSettingsPage() {
         role="tabpanel"
         id="general-settings-panel-billing"
         aria-labelledby="general-settings-tab-billing"
-        className={cn(tab !== 'billing' && 'hidden')}
+        className={cn('flex flex-col gap-4', tab !== 'billing' && 'hidden')}
       >
         <BillingSettingsCard organization={organization} editable={editable} />
+        <WipValuationCard organization={organization} editable={editable} />
       </div>
       <div
         role="tabpanel"

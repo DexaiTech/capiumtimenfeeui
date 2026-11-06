@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 
 import { Badge, type DataTableColumn, ClientName } from '@/components/ui';
 import { routes } from '@/constants/routes';
+import { RATE_SOURCE_LABEL } from '@/features/time';
 import { formatUkDate } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
@@ -119,12 +120,27 @@ export function itemColumns({
       header: 'Rate',
       align: 'end',
       className: 'whitespace-nowrap',
-      cell: (item) =>
-        item.rate === null ? (
-          <span className="text-text-muted">—</span>
-        ) : (
-          <span className="text-text tabular-nums">{formatMoney(item.rate, currency)}</span>
-        ),
+      cell: (item) => {
+        // No enabled WIP valuation rate applied (APT84): flagged, never shown as a £0 rate.
+        if (item.rate_source === 'none') {
+          return (
+            <Badge tone="amber" size="sm">
+              {RATE_SOURCE_LABEL.none}
+            </Badge>
+          );
+        }
+        if (item.rate === null) return <span className="text-text-muted">—</span>;
+        return (
+          <div className="flex flex-col items-end">
+            <span className="text-text tabular-nums">{formatMoney(item.rate, currency)}</span>
+            {item.rate_source ? (
+              <span className="text-xs text-text-muted">
+                {RATE_SOURCE_LABEL[item.rate_source] ?? item.rate_source}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       id: 'value',

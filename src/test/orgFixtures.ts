@@ -35,6 +35,7 @@ export const testOrganization: Organization = {
   mileage_rate: 45,
   expense_markup_bp: 0,
   rate_mode: 'staff_first',
+  wip_valuation_sources: ['client', 'service', 'staff', 'grade'],
   overtime_enabled: false,
   overtime_multiplier_bp: 15000,
   cost_plus_markup_bp: 5000,
