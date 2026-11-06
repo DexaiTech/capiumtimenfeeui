@@ -80,9 +80,9 @@ export interface Organization {
   rate_mode: RateMode;
   /** The rate sources that value time, enabled ones only, in the order they are tried (APT84). */
   wip_valuation_sources: WipValuationSource[];
-  /** Whether time can be marked as overtime, which is priced at the normal rates times the multiplier. */
+  /** Overtime on (APT81): hours beyond a person's standard hours are confirmed, approved and costed. */
   overtime_enabled: boolean;
-  /** Basis points of the normal rate that overtime is paid and charged at (15000 = 1.5x). */
+  /** Retired by APT81 (overtime rates replace it): no longer shown or sent. */
   overtime_multiplier_bp: number;
   /** Basis points added to the cost of the work for the cost-plus value of the recovery analysis
    * (5000 = 50%: time that cost £50.00 is worth £75.00). */

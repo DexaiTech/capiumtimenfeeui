@@ -11,6 +11,8 @@ import type {
   JobRef,
   MissingFilters,
   MissingTimesheet,
+  OvertimeFilters,
+  OvertimeItem,
   RemindersResult,
   StaffPerson,
   TimeCalendar,
@@ -23,6 +25,7 @@ import type {
   TimeEntryUpdate,
   Timer,
   TimerStart,
+  TimerStop,
   Timesheet,
   TimesheetDetail,
   TimesheetFilters,
@@ -126,11 +129,8 @@ export const timeApi = {
   pauseTimer: (organizationId: string) => api.post<Timer>(`${org(organizationId)}/timer/pause`),
   resumeTimer: (organizationId: string) => api.post<Timer>(`${org(organizationId)}/timer/resume`),
   /** Writes the entry and removes the timer; the description replaces the timer's. */
-  stopTimer: (organizationId: string, description?: string | null) =>
-    api.post<TimeEntry>(
-      `${org(organizationId)}/timer/stop`,
-      description === undefined ? undefined : { description },
-    ),
+  stopTimer: (organizationId: string, body?: TimerStop) =>
+    api.post<TimeEntry>(`${org(organizationId)}/timer/stop`, body),
   discardTimer: (organizationId: string) => api.delete<null>(`${org(organizationId)}/timer`),
 
   /* -------------------------------- Timesheets ---------------------------------- */
@@ -165,6 +165,17 @@ export const timeApi = {
       query: { limit: page.limit ?? PAGE_SIZE, cursor: page.cursor },
       signal: page.signal,
     }),
+  /* --------------------------------- Overtime ---------------------------------- */
+  // The overtime portions of entries (APT81), decided by the person's approver or `time.manage_all`.
+  listOvertime: (organizationId: string, filters: OvertimeFilters, page: PageRequest = {}) =>
+    api.list<OvertimeItem>(`${org(organizationId)}/overtime`, {
+      query: { ...filters, limit: page.limit ?? WEEK_ENTRIES_PAGE, cursor: page.cursor },
+      signal: page.signal,
+    }),
+  approveOvertime: (organizationId: string, overtimeId: string) =>
+    api.post<OvertimeItem>(`${org(organizationId)}/overtime/${seg(overtimeId)}/approve`),
+  rejectOvertime: (organizationId: string, overtimeId: string, note: string) =>
+    api.post<OvertimeItem>(`${org(organizationId)}/overtime/${seg(overtimeId)}/reject`, { note }),
   bulkApprove: (organizationId: string, timesheetIds: string[]) =>
     api.post<Timesheet[]>(`${org(organizationId)}/approvals/bulk-approve`, {
       timesheet_ids: timesheetIds,

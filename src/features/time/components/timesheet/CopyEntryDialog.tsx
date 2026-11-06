@@ -6,7 +6,8 @@ import { addDays, formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 
 import { useCopyEntry } from '../../api';
-import type { TimeEntry } from '../../types';
+import { useOvertimeConfirm } from '../../hooks/useOvertimeConfirm';
+import type { CopyEntryRequest, TimeEntry } from '../../types';
 import { dialogError } from '../../utils/errors';
 import { DialogActions } from '../DialogActions';
 
@@ -18,6 +19,7 @@ export interface CopyEntryDialogProps {
 
 function CopyEntryForm({ entry, onClose }: { entry: TimeEntry; onClose: () => void }) {
   const copy = useCopyEntry();
+  const overtime = useOvertimeConfirm();
   const { toast } = useToast();
   const formId = useId();
   const [date, setDate] = useState<string | null>(addDays(entry.entry_date, 1));
@@ -32,10 +34,17 @@ function CopyEntryForm({ entry, onClose }: { entry: TimeEntry; onClose: () => vo
       return;
     }
     setDateError(undefined);
-    copy.mutate(
-      { entryId: entry.id, body: { date, ...(includeNotes ? { include_notes: true } : {}) } },
-      {
-        onSuccess: (created) => {
+    const body: CopyEntryRequest = { date, ...(includeNotes ? { include_notes: true } : {}) };
+    void overtime
+      .run((confirm) =>
+        copy.mutateAsync({
+          entryId: entry.id,
+          body: confirm ? { ...body, confirm_overtime: true } : body,
+        }),
+      )
+      .then(
+        (created) => {
+          if (!created) return;
           toast({
             tone: 'success',
             title: 'Time copied',
@@ -43,9 +52,8 @@ function CopyEntryForm({ entry, onClose }: { entry: TimeEntry; onClose: () => vo
           });
           onClose();
         },
-        onError: (failure) => setError(dialogError(failure)),
-      },
-    );
+        (failure: unknown) => setError(dialogError(failure)),
+      );
   };
 
   return (
@@ -72,6 +80,7 @@ function CopyEntryForm({ entry, onClose }: { entry: TimeEntry; onClose: () => vo
         />
         {error ? <FormAlert message={error.message} requestId={error.requestId} /> : null}
       </form>
+      {overtime.dialog}
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button type="submit" form={formId} variant="primary" loading={copy.isPending}>

@@ -2,6 +2,8 @@ import { ApiError, isApiError } from '@/services/api';
 import type { FieldErrorDetail } from '@/types/api';
 import { formatWait } from '@/utils/format';
 
+import type { OvertimeConfirmationDetails } from '../types';
+
 export interface ErrorNotice {
   title: string;
   description?: string;
@@ -30,6 +32,21 @@ export function detailsObject(error: unknown): Record<string, unknown> | null {
 
 export function errorCode(error: unknown): string | undefined {
   return isApiError(error) ? error.code : undefined;
+}
+
+/**
+ * The overtime a write would add, when the API refused it until the person confirms it (409
+ * `OVERTIME_CONFIRMATION_REQUIRED`); null for any other error.
+ */
+export function overtimeToConfirm(error: unknown): OvertimeConfirmationDetails | null {
+  if (errorCode(error) !== 'OVERTIME_CONFIRMATION_REQUIRED') return null;
+  const details = detailsObject(error);
+  return {
+    overtime_minutes: Number(details?.overtime_minutes ?? 0),
+    standard_minutes: Number(details?.standard_minutes ?? 0),
+    period_start: typeof details?.period_start === 'string' ? details.period_start : '',
+    period_end: typeof details?.period_end === 'string' ? details.period_end : '',
+  };
 }
 
 /**

@@ -10,6 +10,7 @@ import { formatMinutes, parseMinutes, roundUpToIncrement } from '@/utils/minutes
 import { timeApi, useJobRefs, useTimeInvalidation } from '../../api';
 import { CLOSED_JOB_STATUSES, EDITABLE_SHEET_STATUSES, MAX_DAY_MINUTES } from '../../constants';
 import { useGridAutosave } from '../../hooks/useGridAutosave';
+import { useOvertimeConfirm } from '../../hooks/useOvertimeConfirm';
 import type { TimeEntry, TimeEntryCreate, WeekGrid } from '../../types';
 import type { AutosaveHandlers } from '../../utils/autosave';
 import { dialogError, errorCode } from '../../utils/errors';
@@ -69,6 +70,7 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
   const [addOpen, setAddOpen] = useState(false);
   const [openCell, setOpenCell] = useState<{ key: string; label: string } | null>(null);
   const entryActions = useEntryActions();
+  const overtime = useOvertimeConfirm();
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [closedByError, setClosedByError] = useState<ReadonlySet<string>>(() => new Set());
   const [clearing, setClearing] = useState<string | null>(null);
@@ -117,11 +119,13 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
       const row = rows.find((candidate) => candidate.key === rowKeyText);
       const existing = cellEntries.get(key) ?? [];
       const first = existing[0];
-      try {
+      /** `confirm`: the person said yes to the overtime the API found in this change. */
+      const write = async (confirm: boolean) => {
+        const sure = confirm ? { confirm_overtime: true } : {};
         if (minutes === null) {
           for (const entry of existing) await timeApi.deleteEntry(organization.id, entry.id);
         } else if (first) {
-          await timeApi.updateEntry(organization.id, first.id, { minutes });
+          await timeApi.updateEntry(organization.id, first.id, { minutes, ...sure });
         } else if (row) {
           // A row without a job is older time: its cells are read-only (see WeekGridTable).
           if (!row.job_id) throw new Error('Choose a client and a job for this time.');
@@ -130,11 +134,17 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
             minutes,
             job_id: row.job_id,
             is_billable: row.is_billable,
+            ...sure,
           };
           if (row.client_id) body.client_id = row.client_id;
           if (row.activity_code_id) body.activity_code_id = row.activity_code_id;
           await timeApi.createEntry(organization.id, body);
         }
+        return true;
+      };
+      try {
+        // Cancelled: nothing was saved, and the cell goes back to what it holds.
+        if ((await overtime.run(write)) === null) return false;
       } catch (error) {
         const code = errorCode(error);
         setRefusal({ code });
@@ -144,6 +154,7 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
       }
       setRefusal(null);
       await invalidate.entries();
+      return true;
     },
     describe: (error) => dialogError(error).message,
   };
@@ -201,6 +212,7 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
         }}
       />
       {entryActions.dialogs}
+      {overtime.dialog}
       <CellEntriesPanel
         open={openCell !== null}
         onClose={() => setOpenCell(null)}

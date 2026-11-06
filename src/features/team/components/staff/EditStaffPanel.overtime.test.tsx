@@ -29,79 +29,40 @@ beforeEach(() => {
   server.use(...teamHandlers());
 });
 
+// APT81 retired the per-staff multiplier: overtime rates (Team & Rates → Overtime Rates) and
+// working hours (the staff page) replace it.
 describe('EditStaffPanel: overtime', () => {
-  it('has no overtime field while the practice has overtime off', async () => {
-    const dialog = await openPanel({ ...sam, overtime_multiplier_bp: 20000 });
+  it('has no overtime multiplier field, with overtime off or on', async () => {
+    const off = await openPanel({ ...sam, overtime_multiplier_bp: 20000 });
+    expect(within(off).queryByRole('textbox', { name: LABEL })).not.toBeInTheDocument();
+    expect(within(off).getByRole('textbox', { name: 'Chargeable target (%)' })).toBeVisible();
+  });
+
+  it('has no overtime multiplier field while the practice has overtime on', async () => {
+    const dialog = await openPanel({ ...sam, overtime_multiplier_bp: 20000 }, withOvertime);
 
     expect(within(dialog).queryByRole('textbox', { name: LABEL })).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/times the normal rate/)).not.toBeInTheDocument();
     expect(within(dialog).getByRole('textbox', { name: 'Chargeable target (%)' })).toBeVisible();
   });
 
-  it('offers the practice rate until the person has their own', async () => {
-    const dialog = await openPanel(sam, withOvertime);
-
-    const field = within(dialog).getByRole('textbox', { name: LABEL });
-    expect(field).toHaveValue('');
-    expect(field).toHaveAttribute('placeholder', 'Practice rate, 1.5×');
-  });
-
-  it('sets their own multiplier in basis points', async () => {
+  it('never sends the retired multiplier, even for a person who has one stored', async () => {
     let body: unknown;
     server.use(
       http.patch(orgApiPath(`/staff/${sam.id}`), async ({ request }) => {
         body = await request.json();
-        return ok(detailOf({ ...sam, overtime_multiplier_bp: 20000 }));
-      }),
-    );
-    const user = userEvent.setup();
-    const dialog = await openPanel(sam, withOvertime);
-
-    await user.type(within(dialog).getByRole('textbox', { name: LABEL }), '2');
-    await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
-
-    expect(await screen.findByText('Details of Sam Staff saved')).toBeInTheDocument();
-    expect(body).toEqual({ overtime_multiplier_bp: 20000 });
-  });
-
-  it('clears it, so the practice rate applies again', async () => {
-    let body: unknown;
-    server.use(
-      http.patch(orgApiPath(`/staff/${sam.id}`), async ({ request }) => {
-        body = await request.json();
-        return ok(detailOf({ ...sam, overtime_multiplier_bp: null }));
+        return ok(detailOf({ ...sam, chargeable_target_bp: 7500 }));
       }),
     );
     const user = userEvent.setup();
     const dialog = await openPanel({ ...sam, overtime_multiplier_bp: 18000 }, withOvertime);
 
-    const field = within(dialog).getByRole('textbox', { name: LABEL });
-    expect(field).toHaveValue('1.8');
-    await user.clear(field);
+    const target = within(dialog).getByRole('textbox', { name: 'Chargeable target (%)' });
+    await user.clear(target);
+    await user.type(target, '75');
     await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
 
-    await screen.findByText('Details of Sam Staff saved');
-    expect(body).toEqual({ overtime_multiplier_bp: null });
-  });
-
-  it('refuses a multiplier that is not from 1 to 10, without asking the API', async () => {
-    let asked = false;
-    server.use(
-      http.patch(orgApiPath(`/staff/${sam.id}`), () => {
-        asked = true;
-        return ok(detailOf(sam));
-      }),
-    );
-    const user = userEvent.setup();
-    const dialog = await openPanel(sam, withOvertime);
-
-    await user.type(within(dialog).getByRole('textbox', { name: LABEL }), '0.5');
-    await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
-
-    expect(
-      await within(dialog).findByText(
-        'Enter a multiple of the normal rate from 1 to 10, for example 1.5, or leave it empty',
-      ),
-    ).toBeInTheDocument();
-    expect(asked).toBe(false);
+    expect(await screen.findByText('Details of Sam Staff saved')).toBeInTheDocument();
+    expect(body).toEqual({ chargeable_target_bp: 7500 });
   });
 });

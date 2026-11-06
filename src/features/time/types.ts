@@ -34,7 +34,7 @@ export interface TimeEntry {
   description: string | null;
   internal_note: string | null;
   is_billable: boolean;
-  /** Overtime: `charge_rate` and `cost_rate` already include the multiplier. Absent: not overtime. */
+  /** Has an overtime portion: hours beyond the person's standard hours (APT81). Absent: not overtime. */
   is_overtime?: boolean;
   charge_rate: Pence;
   charge_value: Pence;
@@ -69,8 +69,8 @@ export interface TimeEntryCreate {
   description?: string | null;
   internal_note?: string | null;
   is_billable?: boolean;
-  /** Needs overtime switched on for the practice. */
-  is_overtime?: boolean;
+  /** The person confirmed the overtime this adds (else 409 `OVERTIME_CONFIRMATION_REQUIRED`). */
+  confirm_overtime?: boolean;
 }
 
 /** Body of `PATCH /time-entries/{id}`: only what changes. */
@@ -83,8 +83,7 @@ export interface TimeEntryUpdate {
   description?: string | null;
   internal_note?: string | null;
   is_billable?: boolean | null;
-  /** Needs overtime switched on for the practice. */
-  is_overtime?: boolean;
+  confirm_overtime?: boolean;
 }
 
 /** Body of `POST /time-entries/{id}/correct`. */
@@ -98,6 +97,7 @@ export interface TimeCorrection {
   description?: string | null;
   internal_note?: string | null;
   billable?: boolean;
+  confirm_overtime?: boolean;
 }
 
 /** Query of `GET /time-entries` (`user_id` is `me`, an id or `all`). */
@@ -222,6 +222,7 @@ export interface CopyWeekRequest {
   user_id?: string;
   entry_ids?: string[];
   include_notes?: boolean;
+  confirm_overtime?: boolean;
 }
 
 export interface CopySkipped {
@@ -241,6 +242,7 @@ export interface CopyWeekResult {
 export interface CopyEntryRequest {
   date: IsoDate;
   include_notes?: boolean;
+  confirm_overtime?: boolean;
 }
 
 /* ------------------------------------ Timer ----------------------------------- */
@@ -269,6 +271,13 @@ export interface TimerStart {
   description?: string | null;
   is_billable?: boolean;
   replace?: boolean;
+}
+
+/** Body of `POST /timer/stop`. */
+export interface TimerStop {
+  /** Replaces the timer's description on the entry. */
+  description?: string;
+  confirm_overtime?: boolean;
 }
 
 /* ---------------------------------- Timesheets -------------------------------- */
@@ -305,6 +314,53 @@ export interface DayTotal {
 export interface TimesheetDetail extends Timesheet {
   entries: TimeEntry[];
   day_totals: DayTotal[];
+}
+
+/* ---------------------------------- Overtime ---------------------------------- */
+
+/**
+ * `details` of 409 `OVERTIME_CONFIRMATION_REQUIRED`: the write adds overtime to the person's
+ * period (a week or a calendar month), so it waits for `confirm_overtime: true`.
+ */
+export interface OvertimeConfirmationDetails {
+  /** The overtime this write adds. */
+  overtime_minutes: Minutes;
+  /** The person's standard hours of the period. */
+  standard_minutes: Minutes;
+  period_start: IsoDate;
+  period_end: IsoDate;
+}
+
+export type OvertimeStatus = 'pending' | 'approved' | 'rejected';
+
+/** One overtime portion of an entry (`GET /overtime`): an internal cost, never charged out. */
+export interface OvertimeItem {
+  id: string;
+  time_entry_id: string;
+  user: { id: string; full_name: string };
+  entry_date: IsoDate;
+  overtime_minutes: Minutes;
+  /** On a client's job; false: on an Internal job. */
+  allocated: boolean;
+  job: { id: string; number: string; name: string } | null;
+  client: { id: string; name: string } | null;
+  overtime_rate: Pence | null;
+  overtime_cost: Pence | null;
+  premium_cost: Pence | null;
+  status: OvertimeStatus;
+  confirmed_by: string | null;
+  confirmed_at: IsoDateTime | null;
+  decided_by: string | null;
+  decided_at: IsoDateTime | null;
+  decision_note: string | null;
+}
+
+export interface OvertimeFilters {
+  user_id?: string;
+  status?: OvertimeStatus;
+  from?: IsoDate;
+  to?: IsoDate;
+  allocated?: boolean;
 }
 
 export interface TimesheetFilters {

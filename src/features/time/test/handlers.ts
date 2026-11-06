@@ -7,6 +7,7 @@ import { addDays, formatUkDate } from '@/utils/dates';
 import type {
   CalendarDay,
   CopySkipped,
+  OvertimeItem,
   RemindersResult,
   TimeEntry,
   TimeEntryCreate,
@@ -74,6 +75,14 @@ export interface TimeBackend {
   skipCopy: Record<string, CopySkipped>;
   /** Whether the caller sees cost figures (`rate.read`). */
   seesCost: boolean;
+  /**
+   * Everyone's standard minutes per week (Monday to Sunday): a write that adds minutes beyond
+   * them is refused with 409 `OVERTIME_CONFIRMATION_REQUIRED` unless it carries
+   * `confirm_overtime: true`. Null: no overtime (the practice has it off).
+   */
+  standardMinutes: number | null;
+  /** The overtime portions `GET /overtime` lists and the approvals decide. */
+  overtime: OvertimeItem[];
   increment: number;
   /** People who were reminded about the week, by user id. */
   reminded: Record<string, string>;
@@ -118,6 +127,8 @@ export function createBackend(overrides: Partial<TimeBackend> = {}): TimeBackend
     closedJobs: new Set(),
     skipCopy: {},
     seesCost: true,
+    standardMinutes: null,
+    overtime: [],
     increment: 6,
     reminded: {},
     reminders: {
@@ -391,6 +402,39 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
     return null;
   };
 
+  /**
+   * 409 `OVERTIME_CONFIRMATION_REQUIRED` when the write takes the person's week further past
+   * their standard minutes and was not confirmed: `minutes` replace those of `skipId` (an edit).
+   */
+  const overtimeRefusal = (
+    userId: string,
+    date: string,
+    minutes: number,
+    confirmed: boolean | undefined,
+    skipId?: string,
+  ) => {
+    const standard = backend.standardMinutes;
+    if (standard === null || confirmed === true) return null;
+    const start = weekStartOf(date, 1);
+    const end = addDays(start, 6);
+    const week = backend.entries.filter(
+      (item) => item.user_id === userId && item.entry_date >= start && item.entry_date <= end,
+    );
+    const before = sum(week.map((item) => item.minutes));
+    const after =
+      sum(week.filter((item) => item.id !== skipId).map((item) => item.minutes)) + minutes;
+    const added = Math.max(0, after - standard) - Math.max(0, before - standard);
+    if (added <= 0) return null;
+    return fail(409, 'OVERTIME_CONFIRMATION_REQUIRED', 'This adds overtime hours: confirm them.', {
+      details: {
+        overtime_minutes: added,
+        standard_minutes: standard,
+        period_start: start,
+        period_end: end,
+      },
+    });
+  };
+
   /** Copies and timers of older time may carry no job; the routes that need one check it. */
   type NewEntryBody = Omit<TimeEntryCreate, 'job_id'> & { job_id?: string | null };
   const newEntry = (body: NewEntryBody, userId: string, createdBy: string): TimeEntry => {
@@ -535,6 +579,7 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         from_week_start: string;
         to_week_start: string;
         include_notes?: boolean;
+        confirm_overtime?: boolean;
       };
       const from = weekStartOf(body.from_week_start, 1);
       const to = weekStartOf(body.to_week_start, 1);
@@ -547,6 +592,13 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         );
       }
       const offset = (Date.parse(to) - Date.parse(from)) / 86_400_000;
+      const copied = sum(
+        owned(backend.userId, from, addDays(from, 6))
+          .filter((source) => !backend.skipCopy[source.id])
+          .map((source) => source.minutes),
+      );
+      const overtime = overtimeRefusal(backend.userId, to, copied, body.confirm_overtime);
+      if (overtime) return overtime;
       const created: TimeEntry[] = [];
       const skipped: CopySkipped[] = [];
       for (const source of owned(backend.userId, from, addDays(from, 6))) {
@@ -637,7 +689,9 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         });
       }
       const userId = body.user_id ?? backend.userId;
-      const refusal = refuse(userId, body.entry_date, body.job_id, round(body.minutes));
+      const refusal =
+        refuse(userId, body.entry_date, body.job_id, round(body.minutes)) ??
+        overtimeRefusal(userId, body.entry_date, round(body.minutes), body.confirm_overtime);
       if (refusal) return refusal;
       const created = newEntry(body, userId, backend.userId);
       backend.entries.push(created);
@@ -650,10 +704,16 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       return ok(page.rows, { meta: page.meta });
     }),
     http.post(orgApiPath('/time-entries/:entryId/copy'), async ({ request, params }) => {
-      const body = (await record(request)) as { date: string; include_notes?: boolean };
+      const body = (await record(request)) as {
+        date: string;
+        include_notes?: boolean;
+        confirm_overtime?: boolean;
+      };
       const source = backend.entries.find((item) => item.id === params.entryId);
       if (!source) return notFound();
-      const refusal = refuse(source.user_id, body.date, source.job_id, source.minutes);
+      const refusal =
+        refuse(source.user_id, body.date, source.job_id, source.minutes) ??
+        overtimeRefusal(source.user_id, body.date, source.minutes, body.confirm_overtime);
       if (refusal) return refusal;
       const copy = newEntry(
         {
@@ -692,6 +752,14 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       const date = typeof body.date === 'string' ? body.date : found.entry_date;
       const refusal = refuse(found.user_id, date, found.job_id, minutes, found.id);
       if (refusal && backend.lockedThrough && date <= backend.lockedThrough) return refusal;
+      const overtime = overtimeRefusal(
+        found.user_id,
+        date,
+        minutes,
+        body.confirm_overtime === true,
+        found.id,
+      );
+      if (overtime) return overtime;
       found.minutes = minutes;
       found.entry_date = date;
       if (typeof body.description === 'string' || body.description === null) {
@@ -739,13 +807,14 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       if (shown.is_locked) return fail(409, 'TIME_LOCKED', 'This time is locked.');
       const date = body.entry_date ?? found.entry_date;
       const minutes = body.minutes === undefined ? found.minutes : round(body.minutes);
-      const refusal = refuse(
-        found.user_id,
-        date,
-        body.job_id === undefined ? found.job_id : body.job_id,
-        minutes,
-        found.id,
-      );
+      const refusal =
+        refuse(
+          found.user_id,
+          date,
+          body.job_id === undefined ? found.job_id : body.job_id,
+          minutes,
+          found.id,
+        ) ?? overtimeRefusal(found.user_id, date, minutes, body.confirm_overtime, found.id);
       if (refusal) return refusal;
       found.entry_date = date;
       found.minutes = minutes;
@@ -830,15 +899,14 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       return ok(backend.timer);
     }),
     http.post(orgApiPath('/timer/stop'), async ({ request }) => {
-      const body = (await record(request)) as { description?: string } | undefined;
+      const body = (await record(request)) as
+        { description?: string; confirm_overtime?: boolean } | undefined;
       const timer = backend.timer;
       if (!timer) return fail(404, 'TIMER_NOT_FOUND', 'There is no timer.');
-      const refusal = refuse(
-        backend.userId,
-        timer.started_on,
-        timer.job_id,
-        round(Math.ceil(timer.elapsed_seconds / 60)),
-      );
+      const stopped = round(Math.ceil(timer.elapsed_seconds / 60));
+      const refusal =
+        refuse(backend.userId, timer.started_on, timer.job_id, stopped) ??
+        overtimeRefusal(backend.userId, timer.started_on, stopped, body?.confirm_overtime);
       if (refusal) return refusal;
       const created = newEntry(
         {
@@ -1055,6 +1123,49 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         }
       }
       return ok(chosen.flatMap((sheet) => (sheet ? [sheetRead(sheet)] : [])));
+    }),
+
+    /* ---------------------------------- Overtime ------------------------------ */
+    http.get(orgApiPath('/overtime'), async ({ request }) => {
+      await record(request);
+      const params = new URL(request.url).searchParams;
+      const list = backend.overtime.filter(
+        (item) =>
+          (!params.get('user_id') || item.user.id === params.get('user_id')) &&
+          (!params.get('status') || item.status === params.get('status')) &&
+          (!params.get('from') || item.entry_date >= (params.get('from') ?? '')) &&
+          (!params.get('to') || item.entry_date <= (params.get('to') ?? '')) &&
+          (params.get('allocated') === null || String(item.allocated) === params.get('allocated')),
+      );
+      const page = paged(list, params);
+      return ok(page.rows, { meta: page.meta });
+    }),
+    http.post(orgApiPath('/overtime/:overtimeId/approve'), async ({ request, params }) => {
+      await record(request);
+      const found = backend.overtime.find((item) => item.id === params.overtimeId);
+      if (!found) return notFound();
+      if (found.status !== 'pending') {
+        return fail(409, 'INVALID_STATUS_TRANSITION', 'This overtime is already decided.');
+      }
+      Object.assign(found, { status: 'approved', decided_by: backend.userId, decided_at: NOW });
+      return ok(found);
+    }),
+    http.post(orgApiPath('/overtime/:overtimeId/reject'), async ({ request, params }) => {
+      const body = (await record(request)) as { note?: string } | undefined;
+      const found = backend.overtime.find((item) => item.id === params.overtimeId);
+      if (!found) return notFound();
+      if (!body?.note?.trim()) {
+        return fail(422, 'VALIDATION_ERROR', 'Say why the overtime is rejected.', {
+          details: [{ field: 'note', code: 'required', message: 'Say why it is rejected.' }],
+        });
+      }
+      Object.assign(found, {
+        status: 'rejected',
+        decided_by: backend.userId,
+        decided_at: NOW,
+        decision_note: body.note,
+      });
+      return ok(found);
     }),
 
     /* ----------------------------------- Lookups ------------------------------ */

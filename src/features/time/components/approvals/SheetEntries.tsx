@@ -1,19 +1,116 @@
-import { Skeleton } from '@/components/ui';
+import { useState } from 'react';
+
+import { Badge, Button, Skeleton, useToast } from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 import { formatMoney } from '@/utils/money';
 
-import { useTimesheet } from '../../api';
+import { useApproveOvertime, useOvertime, useRejectOvertime, useTimesheet } from '../../api';
+import type { OvertimeItem, TimeEntry } from '../../types';
+import { describeFailure } from '../../utils/errors';
 import { refLabel } from '../../utils/format';
-import { BillableBadge } from '../badges';
+import { BillableBadge, OvertimeStatusBadge } from '../badges';
 import { LoadError } from '../PageShell';
+import { ReasonDialog } from '../ReasonDialog';
 
-/** The entries of one submitted timesheet, for the approver to look through before deciding. */
-export function SheetEntries({ timesheetId, person }: { timesheetId: string; person: string }) {
+/** The overtime of the sheet's person and week, shown when the practice has overtime on. */
+export interface SheetOvertime {
+  userId: string;
+  from: string;
+  to: string;
+  /** The approver may approve or reject it (nobody decides on their own time). */
+  canDecide: boolean;
+}
+
+export interface SheetEntriesProps {
+  timesheetId: string;
+  person: string;
+  overtime?: SheetOvertime;
+}
+
+/** The overtime cell of an entry: the mark, its hours and status, and the decision. */
+function OvertimeCell({
+  entry,
+  item,
+  canDecide,
+  onReject,
+}: {
+  entry: TimeEntry;
+  item: OvertimeItem | undefined;
+  canDecide: boolean;
+  onReject: (item: OvertimeItem) => void;
+}) {
+  const { toast } = useToast();
+  const approve = useApproveOvertime();
+  if (!item && !entry.is_overtime) return <>—</>;
+  const mark = (
+    <Badge tone="warning" size="sm">
+      Overtime
+    </Badge>
+  );
+  if (!item) return mark;
+  const what = `the overtime of ${formatMinutes(item.overtime_minutes)} on ${formatUkDate(item.entry_date)}`;
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span className="flex flex-wrap items-center gap-1.5">
+        {mark}
+        <span className="font-semibold tabular-nums">{formatMinutes(item.overtime_minutes)}</span>
+        <OvertimeStatusBadge status={item.status} />
+      </span>
+      {item.status === 'rejected' && item.decision_note ? (
+        <span className="text-text-muted">{item.decision_note}</span>
+      ) : null}
+      {item.status === 'pending' && canDecide ? (
+        <span className="flex gap-1.5">
+          <Button
+            size="sm"
+            variant="brand-outline"
+            loading={approve.isPending}
+            aria-label={`Approve ${what}`}
+            onClick={() =>
+              approve.mutate(item.id, {
+                onSuccess: () =>
+                  toast({
+                    tone: 'success',
+                    title: 'Overtime approved',
+                    description: `${item.user.full_name}, ${formatMinutes(item.overtime_minutes)} on ${formatUkDate(item.entry_date)}`,
+                  }),
+                onError: (error) => {
+                  const notice = describeFailure(error, 'Could not approve the overtime');
+                  toast({ tone: 'error', title: notice.title, description: notice.description });
+                },
+              })
+            }
+          >
+            Approve
+          </Button>
+          <Button size="sm" aria-label={`Reject ${what}`} onClick={() => onReject(item)}>
+            Reject
+          </Button>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The entries of one submitted timesheet, for the approver to look through before deciding. With
+ * overtime on, entries with an overtime portion are marked and pending overtime is approved or
+ * rejected here, one entry at a time.
+ */
+export function SheetEntries({ timesheetId, person, overtime }: SheetEntriesProps) {
   const { organization } = useOrg();
+  const { toast } = useToast();
   const currency = organization.currency;
   const sheet = useTimesheet(timesheetId);
+  const overtimeItems = useOvertime(
+    { user_id: overtime?.userId, from: overtime?.from, to: overtime?.to },
+    { enabled: overtime !== undefined },
+  );
+  const reject = useRejectOvertime();
+  const [rejecting, setRejecting] = useState<OvertimeItem | null>(null);
+  const byEntry = new Map((overtimeItems.data ?? []).map((item) => [item.time_entry_id, item]));
 
   if (sheet.isError) {
     return (
@@ -67,6 +164,11 @@ export function SheetEntries({ timesheetId, person }: { timesheetId: string; per
             <th scope="col" className="pb-1.5 text-right font-medium">
               Value
             </th>
+            {overtime ? (
+              <th scope="col" className="pb-1.5 pl-3 font-medium">
+                Overtime
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -92,10 +194,44 @@ export function SheetEntries({ timesheetId, person }: { timesheetId: string; per
               <td className="py-1.5 text-right tabular-nums">
                 {formatMoney(entry.charge_value, currency)}
               </td>
+              {overtime ? (
+                <td className="py-1.5 pl-3">
+                  <OvertimeCell
+                    entry={entry}
+                    item={byEntry.get(entry.id)}
+                    canDecide={overtime.canDecide}
+                    onReject={setRejecting}
+                  />
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>
       </table>
+      <ReasonDialog
+        open={rejecting !== null}
+        onClose={() => setRejecting(null)}
+        title="Reject this overtime"
+        description={
+          rejecting
+            ? `${rejecting.user.full_name}, ${formatMinutes(rejecting.overtime_minutes)} on ${formatUkDate(rejecting.entry_date)}`
+            : undefined
+        }
+        label="Note"
+        hint="Required. The hours stay on the timesheet at the standard cost; only the overtime premium is removed."
+        requiredMessage="Enter a note for rejecting the overtime"
+        submitLabel="Reject overtime"
+        onSubmit={async (note) => {
+          if (!rejecting) return;
+          const item = rejecting;
+          await reject.mutateAsync({ overtimeId: item.id, note });
+          toast({
+            tone: 'success',
+            title: 'Overtime rejected',
+            description: `${item.user.full_name}, ${formatMinutes(item.overtime_minutes)} on ${formatUkDate(item.entry_date)}`,
+          });
+        }}
+      />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { http } from 'msw';
 import { Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { contextWith } from '@/test/orgFixtures';
+import { contextWith, ownerContext } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { fail, ok, server } from '@/test/server';
@@ -197,5 +197,25 @@ describe('StaffDetailPage working hours', () => {
     expect(
       await within(await card()).findByRole('button', { name: 'Change working hours' }),
     ).toBeInTheDocument();
+  });
+
+  it('shows no overtime multiplier in the profile any more (APT81 retired it)', async () => {
+    const withOvertime = {
+      ...ownerContext,
+      organization: { ...ownerContext.organization, overtime_enabled: true },
+    };
+    renderInOrg(
+      <Routes>
+        <Route path={`${STAFF}/:staffId`} element={<StaffDetailPage />} />
+      </Routes>,
+      {
+        context: contextWith(['member.read'], withOvertime),
+        route: `${STAFF}/${sam.id}`,
+      },
+    );
+    const profile = await screen.findByRole('region', { name: 'Profile' });
+    expect(within(profile).getByText('S002')).toBeInTheDocument();
+    expect(within(profile).queryByText('Overtime rate')).not.toBeInTheDocument();
+    expect(within(profile).queryByText(/practice rate/)).not.toBeInTheDocument();
   });
 });

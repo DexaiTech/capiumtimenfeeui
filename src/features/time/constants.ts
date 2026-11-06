@@ -4,6 +4,7 @@ import type {
   BillingStatus,
   JobStatus,
   MissingStatus,
+  OvertimeStatus,
   TimeGroupBy,
   TimesheetStatus,
 } from './types';
@@ -62,6 +63,19 @@ export const BILLING_STATUS_TONE: Record<BillingStatus, BadgeTone> = {
   in_draft: 'blue',
   billed: 'green',
   written_off: 'grey',
+};
+
+/** The decision on an overtime portion (APT81); rejected keeps the hours at the standard cost. */
+export const OVERTIME_STATUS_LABEL: Record<OvertimeStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+export const OVERTIME_STATUS_TONE: Record<OvertimeStatus, BadgeTone> = {
+  pending: 'amber',
+  approved: 'green',
+  rejected: 'red',
 };
 
 export const BILLING_STATUSES: ReadonlyArray<BillingStatus> = [

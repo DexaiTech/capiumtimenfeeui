@@ -1,9 +1,10 @@
 import { Controller, useWatch } from 'react-hook-form';
+import { Link } from 'react-router';
 
 import { Input, Select, Switch } from '@/components/ui';
+import { routes } from '@/constants/routes';
 import type { RecoveryRate } from '@/types';
 import type { Organization, OrganizationUpdate } from '@/types/organization';
-import { bpToMultiplierInput, parseMultiplierToBp } from '@/utils/multiplier';
 import {
   RECOVERY_RATE_HINTS,
   RECOVERY_RATE_LABELS,
@@ -20,7 +21,6 @@ import type { GeneralCardProps } from './types';
 
 const FIELDS = [
   'overtime_enabled',
-  'overtime_multiplier',
   'cost_plus_markup',
   'rate_order_1',
   'rate_order_2',
@@ -42,7 +42,6 @@ function orderOf(organization: Organization): [RecoveryRate, RecoveryRate, Recov
 
 const toValues = (organization: Organization): RateSettingsValues => ({
   overtime_enabled: organization.overtime_enabled,
-  overtime_multiplier: bpToMultiplierInput(organization.overtime_multiplier_bp),
   cost_plus_markup: bpToPercentInput(organization.cost_plus_markup_bp),
   ...(() => {
     const [first, second, third] = orderOf(organization);
@@ -55,10 +54,6 @@ function toUpdate(values: RateSettingsValues, organization: Organization): Organ
   if (values.overtime_enabled !== organization.overtime_enabled) {
     body.overtime_enabled = values.overtime_enabled;
   }
-  const multiplier = parseMultiplierToBp(values.overtime_multiplier);
-  if (multiplier !== null && multiplier !== organization.overtime_multiplier_bp) {
-    body.overtime_multiplier_bp = multiplier;
-  }
   const markup = parseMarkupToBp(values.cost_plus_markup);
   if (markup !== null && markup !== organization.cost_plus_markup_bp) {
     body.cost_plus_markup_bp = markup;
@@ -69,7 +64,8 @@ function toUpdate(values: RateSettingsValues, organization: Organization): Organ
 }
 
 /**
- * The overtime switch with the multiplier overtime time is priced at; and the recovery analysis:
+ * The overtime switch (APT81: overtime is a cost only, priced by the Overtime Rates of Team &
+ * Rates, which replaced the multiplier); and the recovery analysis:
  * the order its recovery rate is looked for in (client job-specific, task, staff charge-out rate)
  * and the cost-plus mark-up of the practice (a client or a job can have its own). Which rates
  * price time is the WIP valuation card's (APT84), which replaced the rate mode here.
@@ -82,7 +78,6 @@ export function RateModeCard({ organization, editable }: GeneralCardProps) {
     toUpdate,
     fields: FIELDS,
     fieldNames: {
-      overtime_multiplier_bp: 'overtime_multiplier',
       cost_plus_markup_bp: 'cost_plus_markup',
       recovery_rate_order: 'rate_order_1',
     },
@@ -93,13 +88,12 @@ export function RateModeCard({ organization, editable }: GeneralCardProps) {
     control,
     formState: { errors },
   } = form;
-  const overtime = useWatch({ control, name: 'overtime_enabled' });
   const order = useWatch({ control, name: ['rate_order_1', 'rate_order_2', 'rate_order_3'] });
 
   return (
     <SettingsCard
       title="Rates"
-      description="Whether overtime is paid at a premium, and how the recovery analysis values the work. Which rates price recorded time, and in what order, is set under WIP valuation on the WIP & billing tab. Changing a rate setting never touches time that is already recorded: entries follow it when they are edited or re-rated."
+      description="Whether overtime is tracked, and how the recovery analysis values the work. Which rates price recorded time, and in what order, is set under WIP valuation on the WIP & billing tab. Changing a rate setting never touches time that is already recorded: entries follow it when they are edited or re-rated."
       saveLabel="Save rate settings"
       editable={editable}
       dirty={card.isDirty}
@@ -119,26 +113,21 @@ export function RateModeCard({ organization, editable }: GeneralCardProps) {
             onChange={field.onChange}
             disabled={!editable}
             label="Overtime"
-            description="On: time can be marked as overtime when it is recorded, and is charged and costed at the normal rate times the multiplier. Off: overtime is hidden everywhere."
+            description="On: hours beyond a person's standard hours are overtime: staff confirm them when recording, approvers approve them, and their cost is shown on the Staff Cost report. Overtime never changes what clients are charged."
             className="rounded-md border border-border px-3 py-2"
           />
         )}
       />
-      <Input
-        label="Overtime rate (times the normal rate)"
-        required={overtime}
-        inputMode="decimal"
-        autoComplete="off"
-        className="sm:max-w-sm"
-        disabled={!overtime}
-        hint={
-          overtime
-            ? 'For everyone, for example 1.5 for time and a half. A staff member can have their own on their staff page.'
-            : 'Turn overtime on to set it.'
-        }
-        error={errors.overtime_multiplier?.message}
-        {...register('overtime_multiplier')}
-      />
+      <p className="text-xs text-text-muted">
+        What an hour of overtime costs is set per grade or per person in{' '}
+        <Link
+          to={routes.org.module(organization.slug, 'team', 'overtime-rates')}
+          className="font-medium text-brand-text underline-offset-2 hover:underline"
+        >
+          Team &amp; Rates → Overtime Rates
+        </Link>
+        . Each person's standard hours are on their staff page.
+      </p>
       <Input
         label="Cost-plus mark-up (%)"
         required

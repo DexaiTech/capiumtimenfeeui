@@ -1,7 +1,15 @@
 import { testUser } from '@/test/fixtures';
 import { addDays } from '@/utils/dates';
 
-import type { JobRef, StaffPerson, TimeEntry, Timer, Timesheet, TimesheetStatus } from '../types';
+import type {
+  JobRef,
+  OvertimeItem,
+  StaffPerson,
+  TimeEntry,
+  Timer,
+  Timesheet,
+  TimesheetStatus,
+} from '../types';
 
 /** The practice's "now" in every test: a Wednesday, 11:00 in London (BST). */
 export const NOW_ISO = '2026-10-14T10:00:00Z';
@@ -215,6 +223,37 @@ export function entry(input: EntryInput): TimeEntry {
     created_by: input.created_by === undefined ? userId : input.created_by,
     created_at: `2026-10-13T09:00:0${counter % 10}Z`,
     updated_at: '2026-10-13T09:00:00Z',
+  };
+}
+
+/** The overtime portion of an entry (`GET /overtime`), pending unless told otherwise. */
+export function overtimeOf(
+  source: TimeEntry,
+  overtimeMinutes: number,
+  overrides: Partial<OvertimeItem> = {},
+): OvertimeItem {
+  const person = PEOPLE.find((candidate) => candidate.id === source.user_id);
+  return {
+    id: `ot-${source.id}`,
+    time_entry_id: source.id,
+    user: { id: source.user_id, full_name: person?.full_name ?? 'Someone' },
+    entry_date: source.entry_date,
+    overtime_minutes: overtimeMinutes,
+    allocated: true,
+    job: source.job_id
+      ? { id: source.job_id, number: source.job_number ?? '', name: source.job_name ?? '' }
+      : null,
+    client: source.client_id ? { id: source.client_id, name: source.client_name ?? '' } : null,
+    overtime_rate: 6000,
+    overtime_cost: poundsFor(overtimeMinutes, 6000),
+    premium_cost: poundsFor(overtimeMinutes, 6000 - COST_RATE),
+    status: 'pending',
+    confirmed_by: source.user_id,
+    confirmed_at: '2026-10-13T09:00:00Z',
+    decided_by: null,
+    decided_at: null,
+    decision_note: null,
+    ...overrides,
   };
 }
 

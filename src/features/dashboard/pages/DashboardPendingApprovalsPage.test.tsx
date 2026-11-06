@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
+import { ownerContext } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { ok, server } from '@/test/server';
 
@@ -77,5 +78,61 @@ describe('DashboardPendingApprovalsPage: time with no charge-out rate (APT17)', 
     await user.click(await screen.findByRole('button', { name: 'Approve timesheet of Sam Staff' }));
     await waitFor(() => expect(approved).toEqual(['ts-sam']));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('DashboardPendingApprovalsPage: overtime (APT81)', () => {
+  const withOvertime = {
+    ...ownerContext,
+    organization: { ...ownerContext.organization, overtime_enabled: true },
+  };
+  const pending = (id: string) => ({ id, status: 'pending', entry_date: '2026-10-13' });
+
+  function render(context = withOvertime) {
+    const asked: string[] = [];
+    server.use(
+      http.get(orgApiPath('/dashboard/pending-approvals'), () =>
+        ok({
+          visible: true,
+          as_at: '2026-10-17',
+          generated_at: '2026-10-17T09:00:00Z',
+          total: 1,
+          kinds: [
+            { kind: 'timesheet', count: 1, oldest_date: '2026-10-12', link: '/time/approvals' },
+          ],
+          items: [sheet('ts-sam', 'Sam Staff', 0)],
+        }),
+      ),
+      http.get(orgApiPath('/overtime'), ({ request }) => {
+        asked.push(new URL(request.url).searchParams.get('status') ?? '');
+        return ok([pending('ot-1'), pending('ot-2')], {
+          meta: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    renderInOrg(<DashboardPendingApprovalsPage />, {
+      route: '/acme/dashboard/pending-approvals',
+      context,
+    });
+    return asked;
+  }
+
+  it('says how much overtime waits for a decision, and where to decide it', async () => {
+    const asked = render();
+    expect(
+      await screen.findByText('2 overtime entries are waiting for a decision'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review overtime' })).toHaveAttribute(
+      'href',
+      '/acme/time/approvals',
+    );
+    expect(asked).toEqual(['pending']);
+  });
+
+  it('says nothing and asks nothing while the practice has overtime off', async () => {
+    const asked = render(ownerContext);
+    expect(await screen.findByText('Sam Staff')).toBeInTheDocument();
+    expect(screen.queryByText(/waiting for a decision/)).not.toBeInTheDocument();
+    expect(asked).toEqual([]);
   });
 });

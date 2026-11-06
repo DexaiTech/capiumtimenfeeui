@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { useOrg } from '@/features/organizations';
 
-import type { TimerStart } from '../types';
+import type { TimerStart, TimerStop } from '../types';
 import { useTimeInvalidation } from './invalidation';
 import { timeKeys } from './keys';
 import { timeApi } from './timeApi';
@@ -36,7 +36,7 @@ export function useTimerActions() {
     onSettled: invalidate.timer,
   });
   const stop = useMutation({
-    mutationFn: (description?: string | null) => timeApi.stopTimer(id, description),
+    mutationFn: (body?: TimerStop) => timeApi.stopTimer(id, body),
     onSettled: async () => {
       await Promise.all([invalidate.timer(), invalidate.entries()]);
     },

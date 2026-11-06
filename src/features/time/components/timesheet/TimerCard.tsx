@@ -21,7 +21,8 @@ import { formatUkDate } from '@/utils/dates';
 import { formatMinutes, roundUpToIncrement } from '@/utils/minutes';
 
 import { useClientRef, useJobRefs, useTimer, useTimerActions } from '../../api';
-import type { Timer } from '../../types';
+import { useOvertimeConfirm } from '../../hooks/useOvertimeConfirm';
+import type { Timer, TimerStop } from '../../types';
 import { activityOptions } from '../../utils/activities';
 import { describeFailure, dialogError } from '../../utils/errors';
 import { formatClock, refLabel } from '../../utils/format';
@@ -195,6 +196,7 @@ function StartTimerForm({ onClose }: { onClose: () => void }) {
 function StopTimerForm({ timer, onClose }: { timer: Timer; onClose: () => void }) {
   const { organization } = useOrg();
   const { stop } = useTimerActions();
+  const overtime = useOvertimeConfirm();
   const { toast } = useToast();
   const formId = useId();
   const [description, setDescription] = useState(timer.description ?? '');
@@ -210,17 +212,22 @@ function StopTimerForm({ timer, onClose }: { timer: Timer; onClose: () => void }
     const text = description.trim();
     // The timer's own description is kept unless it was changed here.
     const changed = text !== (timer.description ?? '');
-    stop.mutate(changed ? text : undefined, {
-      onSuccess: (entry) => {
-        toast({
-          tone: 'success',
-          title: 'Timer stopped',
-          description: `${formatMinutes(entry.minutes)} was saved to ${formatUkDate(entry.entry_date)}.`,
-        });
-        onClose();
-      },
-      onError: (error) => setRefusal(dialogError(error)),
-    });
+    const body: TimerStop | undefined = changed ? { description: text } : undefined;
+    void overtime
+      .run((confirm) => stop.mutateAsync(confirm ? { ...body, confirm_overtime: true } : body))
+      .then(
+        (entry) => {
+          // Cancelled: the timer is kept as it is and nothing is saved.
+          if (!entry) return;
+          toast({
+            tone: 'success',
+            title: 'Timer stopped',
+            description: `${formatMinutes(entry.minutes)} was saved to ${formatUkDate(entry.entry_date)}.`,
+          });
+          onClose();
+        },
+        (error: unknown) => setRefusal(dialogError(error)),
+      );
   };
 
   return (
@@ -249,6 +256,7 @@ function StopTimerForm({ timer, onClose }: { timer: Timer; onClose: () => void }
         />
         {refusal ? <FormAlert message={refusal.message} requestId={refusal.requestId} /> : null}
       </form>
+      {overtime.dialog}
       <DialogActions>
         <Button onClick={onClose}>Keep running</Button>
         <Button type="submit" form={formId} variant="primary" loading={stop.isPending}>

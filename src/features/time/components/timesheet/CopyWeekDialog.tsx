@@ -6,7 +6,8 @@ import { addDays, formatUkDate } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
 
 import { useCopyWeek, useRangeEntries } from '../../api';
-import type { CopyWeekResult, TimeEntry } from '../../types';
+import { useOvertimeConfirm } from '../../hooks/useOvertimeConfirm';
+import type { CopyWeekRequest, CopyWeekResult, TimeEntry } from '../../types';
 import { dialogError } from '../../utils/errors';
 import { refLabel } from '../../utils/format';
 import { DialogActions } from '../DialogActions';
@@ -104,6 +105,7 @@ function SkippedReport({
 
 function CopyWeekForm({ fromWeekStart, toWeekStart, onClose }: Omit<CopyWeekDialogProps, 'open'>) {
   const copy = useCopyWeek();
+  const overtime = useOvertimeConfirm();
   const { toast } = useToast();
   const formId = useId();
   const [includeNotes, setIncludeNotes] = useState(false);
@@ -118,14 +120,16 @@ function CopyWeekForm({ fromWeekStart, toWeekStart, onClose }: Omit<CopyWeekDial
 
   const submit = () => {
     setError(null);
-    copy.mutate(
-      {
-        from_week_start: fromWeekStart,
-        to_week_start: toWeekStart,
-        ...(includeNotes ? { include_notes: true } : {}),
-      },
-      {
-        onSuccess: (done) => {
+    const body: CopyWeekRequest = {
+      from_week_start: fromWeekStart,
+      to_week_start: toWeekStart,
+      ...(includeNotes ? { include_notes: true } : {}),
+    };
+    void overtime
+      .run((confirm) => copy.mutateAsync(confirm ? { ...body, confirm_overtime: true } : body))
+      .then(
+        (done) => {
+          if (!done) return;
           if (done.skipped.length > 0) {
             setResult(done);
             return;
@@ -137,9 +141,8 @@ function CopyWeekForm({ fromWeekStart, toWeekStart, onClose }: Omit<CopyWeekDial
           });
           onClose();
         },
-        onError: (failure) => setError(dialogError(failure)),
-      },
-    );
+        (failure: unknown) => setError(dialogError(failure)),
+      );
   };
 
   return (
@@ -176,6 +179,7 @@ function CopyWeekForm({ fromWeekStart, toWeekStart, onClose }: Omit<CopyWeekDial
         />
         {error ? <FormAlert message={error.message} requestId={error.requestId} /> : null}
       </form>
+      {overtime.dialog}
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button

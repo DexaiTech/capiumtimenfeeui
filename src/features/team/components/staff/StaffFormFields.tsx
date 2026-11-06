@@ -1,8 +1,6 @@
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
 import { FormSection, Input, Select } from '@/components/ui';
-import { useOrg } from '@/features/organizations';
-import { formatMultiplier } from '@/utils/multiplier';
 
 import { STAFF_STATUS_LABEL } from '../../constants';
 import type { Grade, RefRead } from '../../types';
@@ -41,7 +39,6 @@ export function StaffFormFields({
     control,
     formState: { errors },
   } = form;
-  const { organization } = useOrg();
 
   const gradeOptions = grades
     .filter((grade) => grade.is_active || grade.id === currentGrade?.id)
@@ -173,17 +170,6 @@ export function StaffFormFields({
               hint="Share of working time expected to be chargeable."
               error={errors.target_percent?.message}
               {...register('target_percent')}
-            />
-          ) : null}
-          {mode === 'edit' && organization.overtime_enabled ? (
-            <Input
-              label="Overtime rate (times the normal rate)"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder={`Practice rate, ${formatMultiplier(organization.overtime_multiplier_bp)}`}
-              hint="Their own multiple of the normal charge-out and cost rates for overtime. Leave it empty to use the practice's."
-              error={errors.overtime_multiplier?.message}
-              {...register('overtime_multiplier')}
             />
           ) : null}
         </div>
