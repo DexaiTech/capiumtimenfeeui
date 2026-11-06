@@ -63,6 +63,7 @@ export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'reports/recovery-analysis':
     'Invoice value against the recovery rate, staff rates and cost plus: revenue left on the table.',
   'reports/cost-to-business': 'What the work cost the practice at each person’s cost rate.',
+  'reports/staff-cost': 'Standard and overtime hours and cost of each staff member.',
   'reports/expenses': 'Expenses by type, client and person.',
   'reports/billing': 'Invoiced amounts over time.',
   'reports/payments': 'Money received over time.',

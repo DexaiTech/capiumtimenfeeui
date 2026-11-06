@@ -3,7 +3,7 @@ import { http, HttpResponse, type HttpHandler } from 'msw';
 import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
 
-import { clients, jobs, members, services } from './fixtures';
+import { clients, grades, jobs, members, services } from './fixtures';
 
 export { orgApiPath };
 
@@ -82,6 +82,7 @@ export function reportsHandlers(backend: ReportsBackend): HttpHandler[] {
       );
     }),
     http.get(orgApiPath('/services'), () => ok(services)),
+    http.get(orgApiPath('/grades'), () => ok(grades, { meta: END })),
     http.get(orgApiPath('/activity-codes'), () => ok([])),
     http.get(orgApiPath('/clients/:clientId'), ({ params }) => {
       const found = clients.find((entry) => entry.id === params.clientId);
@@ -105,8 +106,9 @@ export function reportsHandlers(backend: ReportsBackend): HttpHandler[] {
         { meta: END },
       );
     }),
-    http.get(orgApiPath('/reports/:endpoint'), ({ request, params }) => {
-      const endpoint = String(params.endpoint);
+    // `staff-cost/jobs` is a report below another one.
+    http.get(orgApiPath('/reports/:endpoint/:sub?'), ({ request, params }) => {
+      const endpoint = [params.endpoint, params.sub].filter(Boolean).join('/');
       const query = new URL(request.url).searchParams;
       backend.calls.push({ method: 'GET', path: `/reports/${endpoint}`, params: query });
       const format = query.get('format');

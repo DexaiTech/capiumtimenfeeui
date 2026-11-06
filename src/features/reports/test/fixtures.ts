@@ -19,6 +19,9 @@ import type {
   RecoveryAnalysisTotals,
   RecoveryRow,
   RecoveryTotals,
+  StaffCostJobRow,
+  StaffCostRow,
+  StaffCostTotals,
   UtilisationRow,
   UtilisationTotals,
   WipReportRow,
@@ -81,6 +84,11 @@ export const members = [
 export const services = [
   { id: 's-1', code: 'AUD', name: 'Audit', is_active: true },
   { id: 's-2', code: 'BK', name: 'Bookkeeping', is_active: true },
+];
+
+export const grades = [
+  { id: 'g-1', code: 'SEN', name: 'Senior' },
+  { id: 'g-2', code: 'MGR', name: 'Manager' },
 ];
 
 /* ------------------------------- Utilisation ------------------------------- */
@@ -830,3 +838,69 @@ export const missingTotals = (): MissingTimesheetTotals => ({
   shortfall_minutes: 2340,
   missing_day_count: 5,
 });
+
+/* --------------------------------- Staff Cost --------------------------------- */
+
+// APT81's example: Ada works 37.5 hours a week at £20 an hour, then 3 hours of overtime on the
+// year-end accounts and 1.5 hours on internal work at £30 an hour, not approved yet. Ben worked
+// his standard hours only.
+export const staffCostRows = (): StaffCostRow[] => [
+  {
+    user: { id: IDS.ada, full_name: 'Ada Lovelace' },
+    grade: { id: 'g-1', name: 'Senior' },
+    period_start: '2026-10-05',
+    period_end: '2026-10-11',
+    standard_minutes: 2250,
+    standard_cost: 75000,
+    overtime_minutes_allocated: 180,
+    overtime_cost_allocated: 9000,
+    overtime_minutes_unallocated: 90,
+    overtime_cost_unallocated: 4500,
+    total_cost: 88500,
+    pending_overtime_cost: 13500,
+  },
+  {
+    user: { id: IDS.ben, full_name: 'Ben Carter' },
+    grade: null,
+    period_start: '2026-10-05',
+    period_end: '2026-10-11',
+    standard_minutes: 2250,
+    standard_cost: 67500,
+    overtime_minutes_allocated: 0,
+    overtime_cost_allocated: 0,
+    overtime_minutes_unallocated: 0,
+    overtime_cost_unallocated: 0,
+    total_cost: 67500,
+    pending_overtime_cost: 0,
+  },
+];
+
+export const staffCostTotals = (): StaffCostTotals => ({
+  standard_minutes: 4500,
+  standard_cost: 142500,
+  overtime_minutes_allocated: 180,
+  overtime_cost_allocated: 9000,
+  overtime_minutes_unallocated: 90,
+  overtime_cost_unallocated: 4500,
+  total_cost: 156000,
+  pending_overtime_cost: 13500,
+});
+
+export const staffCostJobRows = (): StaffCostJobRow[] => [
+  {
+    job: { id: 'j-1', number: 'J00001', name: 'Year-end accounts' },
+    client: { id: IDS.acme, name: 'Acme Ltd' },
+    overtime_minutes: 180,
+    overtime_rate: 3000,
+    overtime_cost: 9000,
+    status: 'pending',
+  },
+  {
+    job: { id: 'j-9', number: 'J00009', name: 'Practice admin' },
+    client: { id: 'c-internal', name: 'Internal' },
+    overtime_minutes: 90,
+    overtime_rate: 3000,
+    overtime_cost: 4500,
+    status: 'approved',
+  },
+];

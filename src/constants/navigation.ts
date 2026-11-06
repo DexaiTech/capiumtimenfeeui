@@ -589,7 +589,7 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
     'Reports',
     ChartColumn,
     ORG_SEGMENTS.reports,
-    [P.reportRead, P.reportFinancial],
+    [P.reportRead, P.reportFinancial, P.reportStaffCost],
     [
       {
         id: 'time-analysis',
@@ -646,6 +646,13 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         icon: Coins,
         anyOf: [P.reportFinancial],
         allOf: [P.rateRead],
+        group: 'Jobs & WIP',
+      },
+      {
+        id: 'staff-cost',
+        label: 'Staff Cost',
+        icon: AlarmClockPlus,
+        anyOf: [P.reportStaffCost],
         group: 'Jobs & WIP',
       },
       {

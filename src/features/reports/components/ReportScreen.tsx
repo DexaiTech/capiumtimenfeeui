@@ -89,10 +89,12 @@ function Report<TRow, TTotals>({ config }: { config: ReportConfig<TRow, TTotals>
     group,
     totals,
     filters: data?.filters,
+    values,
   });
   const ctx = contextOf(data?.totals);
   const columns = config.columns(ctx);
   const rows = data ? sortRows(data.rows, columns, sort) : [];
+  const stats = data ? config.stats(data.totals, ctx) : [];
   const shown = {
     from: from || data?.filters.date_from || '',
     to: to || data?.filters.date_to || '',
@@ -253,9 +255,7 @@ function Report<TRow, TTotals>({ config }: { config: ReportConfig<TRow, TTotals>
         />
       ) : (
         <>
-          {data ? (
-            <StatCards label={`${config.title} figures`} stats={config.stats(data.totals, ctx)} />
-          ) : null}
+          {stats.length > 0 ? <StatCards label={`${config.title} figures`} stats={stats} /> : null}
           {data && data.rows.length > 0
             ? config.chart?.({ rows: data.rows, totals: data.totals }, ctx)
             : null}

@@ -318,3 +318,44 @@ export interface MissingTimesheetTotals {
   shortfall_minutes: number;
   missing_day_count: number;
 }
+
+/* -------------------------------- Staff Cost -------------------------------- */
+
+/** Where overtime is in its approval: pending is reported as unapproved. */
+export type OvertimeStatus = 'pending' | 'approved' | 'rejected';
+
+/** What a person's time cost: standard hours, and overtime on jobs or on internal work. */
+export interface StaffCostAmounts {
+  standard_minutes: number;
+  standard_cost: Pence;
+  /** Overtime on a client's job. */
+  overtime_minutes_allocated: number;
+  overtime_cost_allocated: Pence;
+  /** Overtime on the Internal client's jobs. */
+  overtime_minutes_unallocated: number;
+  overtime_cost_unallocated: Pence;
+  total_cost: Pence;
+  /** The overtime cost not approved yet. */
+  pending_overtime_cost: Pence;
+}
+
+/** A row of `/reports/staff-cost`: one person over one of their periods (week or month). */
+export interface StaffCostRow extends StaffCostAmounts {
+  user: { id: string; full_name: string };
+  grade: { id: string; name: string } | null;
+  period_start: IsoDate;
+  period_end: IsoDate;
+}
+
+export type StaffCostTotals = StaffCostAmounts;
+
+/** A row of `/reports/staff-cost/jobs`: a job a person worked overtime on. */
+export interface StaffCostJobRow {
+  job: { id: string; number: string; name: string };
+  client: { id: string; name: string };
+  overtime_minutes: number;
+  /** Pence an hour: the overtime rate applied. */
+  overtime_rate: Pence;
+  overtime_cost: Pence;
+  status: OvertimeStatus;
+}
