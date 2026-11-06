@@ -341,8 +341,14 @@ export interface StaffCostAmounts {
 
 /** A row of `/reports/staff-cost`: one person over one of their periods (week or month). */
 export interface StaffCostRow extends StaffCostAmounts {
-  user: { id: string; full_name: string };
-  grade: { id: string; name: string } | null;
+  user_id: string;
+  name: string;
+  staff_code: string | null;
+  /** Their current grade. */
+  grade_name: string | null;
+  /** The hours basis of the period; null when they have no standard hours. */
+  basis: 'weekly' | 'monthly' | null;
+  standard_hours_minutes: number | null;
   period_start: IsoDate;
   period_end: IsoDate;
 }
@@ -351,8 +357,10 @@ export type StaffCostTotals = StaffCostAmounts;
 
 /** A row of `/reports/staff-cost/jobs`: a job a person worked overtime on. */
 export interface StaffCostJobRow {
-  job: { id: string; number: string; name: string };
-  client: { id: string; name: string };
+  job: { id: string; number: string; name: string } | null;
+  client: { id: string; name: string } | null;
+  /** false: a job of the Internal client. */
+  allocated: boolean;
   overtime_minutes: number;
   /** Pence an hour: the overtime rate applied. */
   overtime_rate: Pence;
