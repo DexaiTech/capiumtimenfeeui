@@ -91,4 +91,27 @@ describe('Sidebar', () => {
     await user.click(within(sidebar()).getByRole('button', { name: 'Expand the sidebar' }));
     expect(useShellStore.getState().sidebarCollapsed).toBe(false);
   });
+
+  // Settings has two runs of pages headed "Practice": they once shared a key, and the menu
+  // repeated its first pages as it re-rendered.
+  it('lists each Settings page once while moving between pages', async () => {
+    const user = userEvent.setup();
+    const errors = vi.spyOn(console, 'error');
+    renderShell('/acme/settings/general');
+    const pages = () => within(sidebar()).getByRole('navigation', { name: 'Settings pages' });
+    const headings = within(pages()).getAllByText('Practice', { exact: true }).length;
+
+    for (const name of ['Branches', 'Roles & Permissions', 'Services', 'General Settings']) {
+      await user.click(within(pages()).getByRole('link', { name }));
+      const labels = within(pages())
+        .getAllByRole('link')
+        .map((link) => link.textContent);
+      expect(new Set(labels).size).toBe(labels.length);
+      expect(within(pages()).getAllByText('Practice', { exact: true })).toHaveLength(headings);
+    }
+    const keyWarnings = errors.mock.calls.filter((call) =>
+      call.some((part) => String(part).includes('same key')),
+    );
+    expect(keyWarnings).toEqual([]);
+  });
 });

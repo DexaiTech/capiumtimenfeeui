@@ -115,7 +115,8 @@ export function Sidebar() {
       <nav aria-label={`${title} pages`} className="flex-1 overflow-x-hidden overflow-y-auto p-3">
         <ul className="flex flex-col gap-1">
           {grouped(pages).map((group, index) => (
-            <li key={group.name ?? `ungrouped-${index}`}>
+            // A name could head two runs of pages: the key needs the place to stay unique.
+            <li key={`${index}:${group.name ?? ''}`}>
               {group.name && !collapsed ? (
                 <div className="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-topbar-subtle uppercase">
                   {group.name}
