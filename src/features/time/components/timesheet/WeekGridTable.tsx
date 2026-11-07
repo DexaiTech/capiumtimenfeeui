@@ -84,7 +84,8 @@ export function WeekGridTable({
                 key={date}
                 scope="col"
                 className={cn(
-                  'h-[37px] min-w-28 border-b border-row-border px-1 text-right font-medium',
+                  // 104px a day: the week fits a laptop screen with the sidebar open.
+                  'h-[37px] min-w-26 border-b border-row-border px-1 text-right font-medium',
                   date === today ? 'text-brand-text' : 'text-text-muted',
                 )}
               >
@@ -131,6 +132,7 @@ export function WeekGridTable({
                     <span className="text-text">
                       {[row.job_number, row.job_name].filter(Boolean).join(' ') || 'No job'}
                     </span>
+                    {row.task_name ? <span className="text-text">{row.task_name}</span> : null}
                     <span className="text-text-muted">
                       {row.activity_name ?? 'No activity'}
                       {row.service_name ? ` · ${row.service_name}` : ''}

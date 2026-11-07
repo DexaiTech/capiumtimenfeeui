@@ -215,3 +215,47 @@ describe('WeekView: a row needs a client and a job (APT64)', () => {
     expect(within(form).getByRole('combobox', { name: 'Job' })).toBeInTheDocument();
   });
 });
+
+describe('WeekView: rows that differ only by task (TIME-01)', () => {
+  it('shows the task as its own row and saves a cell to the entry of that row', async () => {
+    const backend = setup([
+      ...weekEntries(),
+      {
+        ...entry({ id: 'e-task', entry_date: '2026-10-12', minutes: 60 }),
+        task_id: 't-1',
+        task_name: 'Draft accounts',
+      },
+    ]);
+    const user = userEvent.setup();
+    const taskRow = 'Acme Ltd · J00001 Year-end accounts 2026 · Draft accounts · Preparation';
+
+    const monday = await screen.findByRole('textbox', { name: `${taskRow}, Monday 12/10/2026` });
+    expect(monday).toHaveValue('1:00');
+    expect(screen.getByRole('textbox', { name: MONDAY_CELL })).toHaveValue('4:00');
+
+    await user.clear(monday);
+    await user.type(monday, '2:00');
+    await user.tab();
+    await waitFor(
+      () =>
+        expect(callsTo(backend, 'PATCH', '/time-entries/e-task')[0]?.body).toMatchObject({
+          minutes: 120,
+        }),
+      { timeout: 3000 },
+    );
+    expect(callsTo(backend, 'PATCH', '/time-entries/e-mon-1')).toHaveLength(0);
+
+    const tuesday = screen.getByRole('textbox', { name: `${taskRow}, Tuesday 13/10/2026` });
+    await user.type(tuesday, '0:30');
+    await user.tab();
+    await waitFor(
+      () =>
+        expect(callsTo(backend, 'POST', '/time-entries')[0]?.body).toMatchObject({
+          entry_date: '2026-10-13',
+          minutes: 30,
+          task_id: 't-1',
+        }),
+      { timeout: 3000 },
+    );
+  });
+});

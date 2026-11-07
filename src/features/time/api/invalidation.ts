@@ -39,8 +39,9 @@ export function useTimeInvalidation() {
       alsoAudited();
       return refresh(queryKeys.org.time(id), queryKeys.org.timesheets(id));
     },
-    timer: () => refresh(timeKeys.timer(id)),
-    /** Reminders were sent: the missing list shows when. */
-    reminders: () => refresh(queryKeys.org.timesheets(id)),
+    /** The timer started, changed or stopped: the dashboard's My Timesheet shows it too. */
+    timer: () => refresh(timeKeys.timer(id), queryKeys.org.dashboard(id)),
+    /** Reminders were sent: the missing list (Team page and dashboard) shows when. */
+    reminders: () => refresh(queryKeys.org.timesheets(id), queryKeys.org.dashboard(id)),
   };
 }

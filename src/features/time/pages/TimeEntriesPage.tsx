@@ -163,10 +163,13 @@ function List() {
   const canEdit = (entry: TimeEntry) =>
     !isEntryLocked(entry) &&
     (entry.user_id === user?.id ? can(PERMISSIONS.timeLog) : can(PERMISSIONS.timeManageAll));
+  // Not one's own approved time without `organization.update`, nor time in a locked period.
   const canCorrect = (entry: TimeEntry) =>
     entry.timesheet_status === 'approved' &&
     entry.billing_status === 'unbilled' &&
-    (can(PERMISSIONS.timeManageAll) || can(PERMISSIONS.timesheetApprove));
+    !entry.period_locked_through &&
+    (can(PERMISSIONS.timeManageAll) || can(PERMISSIONS.timesheetApprove)) &&
+    (entry.user_id !== user?.id || can(PERMISSIONS.organizationUpdate));
 
   // Reopens the week (nobody decides on their own timesheet without `organization.update`).
   const canRevoke = (entry: TimeEntry) =>

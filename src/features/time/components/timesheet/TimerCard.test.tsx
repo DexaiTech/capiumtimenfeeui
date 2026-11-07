@@ -6,7 +6,7 @@ import { renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields, isMarkedRequired } from '@/test/requiredFields';
 import { server } from '@/test/server';
 
-import { ACCOUNTS_JOB, ACME } from '../../test/fixtures';
+import { ACCOUNTS_JOB, ACME, ME, NOW_ISO, TODAY } from '../../test/fixtures';
 import { callsTo, createBackend, timeHandlers } from '../../test/handlers';
 import { TimerCard } from './TimerCard';
 
@@ -42,5 +42,34 @@ describe('TimerCard: a timer needs a client and a job (APT64)', () => {
       client_id: ACME.id,
       job_id: ACCOUNTS_JOB.id,
     });
+  });
+});
+
+describe('TimerCard: stopping a timer left running (TIME-09)', () => {
+  it('estimates at most a day, as the API saves', async () => {
+    const user = userEvent.setup();
+    const backend = createBackend({
+      timer: {
+        id: 'timer-1',
+        user_id: ME,
+        client_id: ACME.id,
+        job_id: ACCOUNTS_JOB.id,
+        activity_code_id: null,
+        description: null,
+        is_billable: true,
+        is_running: false,
+        started_at: null,
+        accumulated_seconds: 30 * 3600,
+        elapsed_seconds: 30 * 3600,
+        started_on: TODAY,
+        created_at: NOW_ISO,
+      },
+    });
+    server.use(...timeHandlers(backend));
+    renderInOrg(<TimerCard />);
+
+    await user.click(await screen.findByRole('button', { name: 'Stop' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Stop the timer' });
+    expect(dialog).toHaveTextContent('a time entry of about 24:00');
   });
 });

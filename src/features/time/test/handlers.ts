@@ -57,6 +57,8 @@ export interface Sheet {
   submitted_at: string | null;
   decided_at: string | null;
   decision_note: string | null;
+  /** The week needs no approval: submitting approves it at once (`approval_exempt`). */
+  approval_exempt?: boolean;
 }
 
 /** The state the fake time API keeps, and the knobs a test turns. */
@@ -272,6 +274,7 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
           .filter((item) => item.is_billable && item.charge_rate === 0)
           .map((item) => item.minutes),
       ),
+      approval_exempt: sheet.approval_exempt ?? false,
       created_at: '2026-10-12T08:00:00Z',
       updated_at: NOW,
     };
@@ -298,6 +301,7 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
         (candidate) =>
           candidate.client_id === item.client_id &&
           candidate.job_id === item.job_id &&
+          (candidate.task_id ?? null) === (item.task_id ?? null) &&
           candidate.activity_code_id === item.activity_code_id &&
           candidate.is_billable === item.is_billable,
       );
@@ -309,6 +313,8 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
           job_id: item.job_id,
           job_number: item.job_number,
           job_name: item.job_name,
+          task_id: item.task_id ?? null,
+          task_name: item.task_name ?? null,
           activity_code_id: item.activity_code_id,
           activity_code: item.activity_code,
           activity_name: item.activity_name,
@@ -1026,9 +1032,16 @@ export function timeHandlers(backend: TimeBackend): HttpHandler[] {
       if (sheet.status !== 'open' && sheet.status !== 'rejected') {
         return fail(409, 'INVALID_STATUS_TRANSITION', 'That status change is not allowed.');
       }
-      sheet.status = 'submitted';
       sheet.submitted_at = NOW;
-      sheet.decision_note = null;
+      if (sheet.approval_exempt) {
+        // Like the API: a week that needs no approval is approved as it is submitted.
+        sheet.status = 'approved';
+        sheet.decided_at = NOW;
+        sheet.decision_note = 'Approval not required';
+      } else {
+        sheet.status = 'submitted';
+        sheet.decision_note = null;
+      }
       return ok(detail(sheet), { message: 'Timesheet submitted' });
     }),
     http.post(orgApiPath('/timesheets/:sheetId/recall'), async ({ request, params }) => {

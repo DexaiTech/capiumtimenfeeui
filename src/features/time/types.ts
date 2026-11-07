@@ -65,6 +65,8 @@ export interface TimeEntryCreate {
   minutes: Minutes;
   client_id?: string | null;
   job_id: string;
+  /** A task of the job (422 for another job's task). */
+  task_id?: string | null;
   activity_code_id?: string | null;
   description?: string | null;
   internal_note?: string | null;
@@ -137,6 +139,9 @@ export interface WeekGridRow {
   job_id: string | null;
   job_number: string | null;
   job_name: string | null;
+  /** The job task: rows that differ only by task are separate rows. */
+  task_id?: string | null;
+  task_name?: string | null;
   activity_code_id: string | null;
   activity_code: string | null;
   activity_name: string | null;
@@ -301,6 +306,11 @@ export interface Timesheet {
   billable_value: Pence;
   /** Billable minutes with no charge-out rate (charge rate 0): they go to WIP at £0. */
   zero_rate_minutes: Minutes;
+  /**
+   * The week needs no approval, so submitting it approves it at once: the practice approves no
+   * timesheets, or the owner holds `timesheet.exempt` while the practice auto-approves their time.
+   */
+  approval_exempt: boolean;
   created_at: IsoDateTime;
   updated_at: IsoDateTime;
 }

@@ -39,13 +39,18 @@ function grid(overrides: Partial<WeekGrid> = {}): WeekGrid {
 
 function setup(
   week: WeekGrid,
-  { approving = true, sheet }: { approving?: boolean; sheet?: TimesheetDetail } = {},
+  {
+    approving = true,
+    sheet,
+    exempt = false,
+  }: { approving?: boolean; sheet?: TimesheetDetail; exempt?: boolean } = {},
 ) {
   const calls: string[] = [];
   server.use(
     http.post(orgApiPath('/timesheets/:id/submit'), () => {
       calls.push('submit');
-      return ok({ id: 'ts-1', status: approving ? 'submitted' : 'approved' });
+      // A person exempt from approval has the week approved at submit, whatever the practice does.
+      return ok({ id: 'ts-1', status: approving && !exempt ? 'submitted' : 'approved' });
     }),
     http.post(orgApiPath('/timesheets/:id/recall'), () => {
       calls.push('recall');
@@ -125,6 +130,81 @@ describe('TimesheetStatusBar: a practice that does not approve timesheets', () =
     const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
     expect(within(dialog).getByText(/is approved at once/)).toBeInTheDocument();
     expect(within(dialog).queryByText(/goes to your manager/)).not.toBeInTheDocument();
+  });
+});
+
+describe('TimesheetStatusBar: a person exempt from approval (TIME-02)', () => {
+  it('says the week is approved and offers no Undo when the submit approves it', async () => {
+    const user = userEvent.setup();
+    const calls = setup(grid(), { exempt: true });
+    await user.click(screen.getByRole('button', { name: 'Submit for approval' }));
+    expect(
+      await screen.findByText(/the week is approved and its time is locked/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Your manager can now approve it.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+    expect(calls).toEqual(['submit']);
+  });
+
+  it('says the same after the question', async () => {
+    const user = userEvent.setup();
+    setup(grid({ missing_days: [FRIDAY] }), { exempt: true });
+    await user.click(screen.getByRole('button', { name: 'Submit for approval' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Submit timesheet' }));
+    expect(
+      await screen.findByText(/the week is approved and its time is locked/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('TimesheetStatusBar: the wording before an exempt person submits (TIME-02)', () => {
+  const sheetOf = (approvalExempt: boolean): TimesheetDetail => ({
+    ...timesheetOf('u-1', MONDAY, 'open', { id: 'ts-1', approval_exempt: approvalExempt }),
+    entries: [],
+    day_totals: [],
+  });
+
+  it('says the week is approved at once, before and after the question', async () => {
+    const user = userEvent.setup();
+    const calls = setup(grid({ missing_days: [FRIDAY] }), { exempt: true, sheet: sheetOf(true) });
+    expect(screen.queryByRole('button', { name: 'Submit for approval' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit week' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
+    expect(
+      within(dialog).getByText(/Your week is approved as soon as you submit it/),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/goes to your manager/)).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Submit timesheet' }));
+    expect(
+      await screen.findByText(/the week is approved and its time is locked/),
+    ).toBeInTheDocument();
+    expect(calls).toEqual(['submit']);
+  });
+
+  it('keeps the approval wording for a person whose week needs approval', async () => {
+    const user = userEvent.setup();
+    setup(grid({ missing_days: [FRIDAY] }), { sheet: sheetOf(false) });
+    expect(screen.queryByRole('button', { name: 'Submit week' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Submit for approval' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
+    expect(within(dialog).getByText(/goes to your manager/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/as soon as you submit it/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the practice wording when the practice approves no timesheets', async () => {
+    const user = userEvent.setup();
+    setup(grid({ missing_days: [FRIDAY] }), { approving: false, sheet: sheetOf(true) });
+    await user.click(screen.getByRole('button', { name: 'Submit timesheet' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Submit this timesheet?' });
+    expect(within(dialog).getByText(/timesheets need no\s+approval here/)).toBeInTheDocument();
+  });
+});
+
+describe('TimesheetStatusBar: while the sheet loads (TIME-08)', () => {
+  it('keeps Submit disabled until the time with no rate is known', () => {
+    renderInOrg(<TimesheetStatusBar grid={grid()} sheet={undefined} sheetLoading canRecord />);
+    expect(screen.getByRole('button', { name: 'Submit for approval' })).toBeDisabled();
   });
 });
 

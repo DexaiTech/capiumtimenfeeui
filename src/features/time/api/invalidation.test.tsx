@@ -67,3 +67,28 @@ describe('what a change to time refreshes', () => {
     for (const key of lookups) expect(stale(key)).toBe(false);
   });
 });
+
+describe('what the timer and reminders refresh (TIME-06, TIME-07)', () => {
+  it('marks the dashboard stale with the timer (its My Timesheet card shows the timer)', () => {
+    const { client, invalidate, stale } = setup();
+    const keys = [timeKeys.timer(ORG), [...queryKeys.org.dashboard(ORG), 'my-timesheet']];
+    for (const key of keys) client.setQueryData(key, {});
+
+    void invalidate.timer();
+
+    for (const key of keys) expect(stale(key), JSON.stringify(key)).toBe(true);
+  });
+
+  it("marks the Team page's and the dashboard's missing lists stale after reminders", () => {
+    const { client, invalidate, stale } = setup();
+    const keys = [
+      timeKeys.missing(ORG, { week_start: '2026-10-12' }),
+      [...queryKeys.org.dashboard(ORG), 'missing-timesheets'],
+    ];
+    for (const key of keys) client.setQueryData(key, {});
+
+    void invalidate.reminders();
+
+    for (const key of keys) expect(stale(key), JSON.stringify(key)).toBe(true);
+  });
+});
