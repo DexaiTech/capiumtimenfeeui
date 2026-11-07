@@ -16,6 +16,7 @@ import {
   RowActions,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
+import { useAuth } from '@/features/auth';
 import { ApprovalOffNotice, useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker } from '@/features/team';
 import { usePersistentColumns, useUrlParams } from '@/hooks';
@@ -128,8 +129,14 @@ export function AdjustmentsView({ onCreate }: AdjustmentsViewProps) {
   const [viewing, setViewing] = useState<Adjustment | null>(null);
   const [hidden, setHidden] = usePersistentColumns('wip-adjustments', ['requested']);
 
+  const { user } = useAuth();
   const canApprove = can(PERMISSIONS.wipApprove);
   const canAdjust = can(PERMISSIONS.wipAdjust);
+  // Nobody approves their own adjustment unless they may change the practice's settings (the API
+  // answers 403 `SELF_APPROVAL_FORBIDDEN`). Anyone who may approve may still reject it.
+  const mayApprove = (adjustment: Adjustment) =>
+    canApprove &&
+    (adjustment.requested_by.user_id !== user?.id || can(PERMISSIONS.organizationUpdate));
   const currency = organization.currency;
   const activeFilters =
     Number(clientId !== null) +
@@ -196,22 +203,22 @@ export function AdjustmentsView({ onCreate }: AdjustmentsViewProps) {
         onSelect: () => setViewing(adjustment),
       },
     ];
+    if (adjustment.status === 'pending' && mayApprove(adjustment)) {
+      items.push({
+        id: 'approve',
+        label: 'Approve',
+        icon: <Check aria-hidden="true" className="size-4" />,
+        onSelect: () => open(adjustment, 'approve'),
+      });
+    }
     if (adjustment.status === 'pending' && canApprove) {
-      items.push(
-        {
-          id: 'approve',
-          label: 'Approve',
-          icon: <Check aria-hidden="true" className="size-4" />,
-          onSelect: () => open(adjustment, 'approve'),
-        },
-        {
-          id: 'reject',
-          label: 'Reject',
-          tone: 'danger',
-          icon: <X aria-hidden="true" className="size-4" />,
-          onSelect: () => open(adjustment, 'reject'),
-        },
-      );
+      items.push({
+        id: 'reject',
+        label: 'Reject',
+        tone: 'danger',
+        icon: <X aria-hidden="true" className="size-4" />,
+        onSelect: () => open(adjustment, 'reject'),
+      });
     }
     if (adjustment.status === 'approved' && adjustment.in_force && canAdjust) {
       items.push(

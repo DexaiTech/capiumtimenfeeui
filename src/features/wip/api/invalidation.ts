@@ -8,7 +8,8 @@ import { wipKeys } from './keys';
 
 /**
  * What to refresh after a change to the WIP. Everything is only marked stale and refetched when
- * something shows it: the WIP views, the job figures, the client workspace and the dashboard.
+ * something shows it: the WIP views, the job figures, the client workspace, the dashboard, the
+ * reports, and the time screens (a write-off changes its entries' billing status, which locks them).
  */
 export function useWipInvalidation() {
   const queryClient = useQueryClient();
@@ -27,6 +28,8 @@ export function useWipInvalidation() {
           queryKeys.org.jobs(id),
           queryKeys.org.clients(id),
           queryKeys.org.dashboard(id),
+          queryKeys.org.reports(id),
+          queryKeys.org.time(id),
           queryKeys.org.auditLogs(id),
         ),
     };

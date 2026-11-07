@@ -31,17 +31,17 @@ export function historicColumns({
       id: 'name',
       header: HISTORIC_GROUP_META[group].column,
       hideable: false,
-      className: 'min-w-52 max-w-80',
+      className: 'min-w-44 max-w-80',
       cell: (row) => {
         const detail = secondary(row);
         const name =
           group === 'billing_type' ? (BILLING_TYPE_LABEL[row.key ?? ''] ?? row.name) : row.name;
         return (
           <div className="flex min-w-0 flex-col">
-            <span className="truncate font-semibold text-text" title={name}>
+            <span className="font-semibold break-words text-text" title={name}>
               {name}
             </span>
-            {detail ? <span className="truncate text-xs text-text-muted">{detail}</span> : null}
+            {detail ? <span className="text-xs break-words text-text-muted">{detail}</span> : null}
           </div>
         );
       },

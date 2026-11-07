@@ -254,6 +254,23 @@ describe('writing WIP on or off', () => {
     expect(callsOf(backend, 'POST')[0]?.body).not.toHaveProperty('job_id');
   });
 
+  it('says a write-off above the practice share of the WIP needs approval too', async () => {
+    const user = userEvent.setup();
+    setup();
+    await table();
+
+    await user.click(screen.getByRole('button', { name: 'Adjust WIP' }));
+    const dialog = await screen.findByRole('region', { name: 'Adjust WIP' });
+    // The test practice approves write-offs of more than 10% of the WIP available (1000 bp).
+    expect(dialog).toHaveTextContent(
+      'Above £500.00 needs approval, and so does a write-off of more than 10% of the WIP available',
+    );
+    // A write-on is judged by the amount alone.
+    await user.click(within(dialog).getByRole('button', { name: 'Write on' }));
+    expect(dialog).toHaveTextContent('Above £500.00 needs approval');
+    expect(dialog).not.toHaveTextContent('of the WIP available');
+  });
+
   it('adjusts at once when the amount is within the limit, for a job, as a write-on', async () => {
     const user = userEvent.setup();
     const backend = setup();
@@ -541,5 +558,25 @@ describe('the permissions', () => {
     const approved = within(await actionsOf('Fee agreed with the client'));
     expect(approved.getByRole('button', { name: 'Details' })).toBeInTheDocument();
     expect(approved.queryByRole('button', { name: 'Reverse' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer an approver the approval of their own adjustment, only the rejection', async () => {
+    // Ada is the signed-in person; the API refuses her own approval (403 SELF_APPROVAL_FORBIDDEN).
+    setup(
+      { adjustments: [adjustment({ requested_by: person(IDS.ada, 'Ada Lovelace') })] },
+      { permissions: [...READ_ONLY, 'wip.approve'] },
+    );
+    const own = within(await actionsOf('Client disputed the hours'));
+    expect(own.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
+    expect(own.getByRole('button', { name: 'Reject' })).toBeInTheDocument();
+  });
+
+  it('offers the approval of their own adjustment to someone who may change the practice', async () => {
+    setup(
+      { adjustments: [adjustment({ requested_by: person(IDS.ada, 'Ada Lovelace') })] },
+      { permissions: [...READ_ONLY, 'wip.approve', 'organization.update'] },
+    );
+    const own = within(await actionsOf('Client disputed the hours'));
+    expect(own.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
   });
 });
