@@ -16,7 +16,7 @@ import {
 import { useOrg } from '@/features/organizations';
 import { ClientPicker, JobPicker } from '@/features/team';
 import { todayInZone } from '@/utils/dates';
-import { formatMoney } from '@/utils/money';
+import { formatBasisPoints, formatMoney } from '@/utils/money';
 
 import { useCreateAdjustment } from '../api';
 import { COMPONENT_LABEL, REASON_MAX } from '../constants';
@@ -70,9 +70,15 @@ function AdjustmentForm({ onClose, formId }: { onClose: () => void; formId: stri
   const [clientId, jobId, kind] = useWatch({ control, name: ['client_id', 'job_id', 'kind'] });
   const today = todayInZone(organization.timezone);
   const limit = formatMoney(organization.wip_adjustment_approval_threshold, organization.currency);
-  // The practice may not approve adjustments at all (General Settings, ticket APT53).
+  // The practice may not approve adjustments at all (General Settings, ticket APT53). A write-off
+  // above the practice's share of the WIP available needs approval too, whatever its amount.
+  const percent = organization.wip_write_off_approval_threshold_percent;
   const amountHint = organization.wip_adjustment_approval_required
-    ? `Above ${limit} needs approval`
+    ? `Above ${limit} needs approval${
+        kind === 'write_off' && percent !== null
+          ? `, and so does a write-off of more than ${formatBasisPoints(percent)} of the WIP available`
+          : ''
+      }`
     : 'Takes effect at once: adjustments need no approval';
 
   const onSubmit = handleSubmit((values) => {
