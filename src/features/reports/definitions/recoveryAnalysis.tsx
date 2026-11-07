@@ -79,7 +79,6 @@ function basisColumn(
     align: 'end',
     sortable: true,
     sortValue: (row) => of(row)[1],
-    className: 'whitespace-nowrap',
     cell: (row) => potential(...of(row), currency, hint?.(row)),
   };
 }

@@ -211,6 +211,30 @@ export interface BillingRow extends BillingAmounts {
 
 export type BillingTotals = BillingAmounts;
 
+/* ------------------------------- VAT summary ------------------------------- */
+
+/** Output VAT on the invoice basis: invoices issued in the range less credit notes issued in it. */
+export interface VatAmounts {
+  invoiced_net: Pence;
+  invoiced_vat: Pence;
+  credited_net: Pence;
+  credited_vat: Pence;
+  /** Invoiced net less credited net. */
+  net: Pence;
+  /** Output VAT: invoiced VAT less credited VAT. */
+  vat: Pence;
+}
+
+/** A row of `/reports/vat-summary`: one VAT rate, as snapshotted on the lines. */
+export interface VatSummaryRow extends VatAmounts {
+  vat_rate_id: string | null;
+  name: string;
+  code: string | null;
+  rate_bp: BasisPoints;
+}
+
+export type VatSummaryTotals = VatAmounts;
+
 /* ------------------------------- Aged debtors ------------------------------- */
 
 export interface AgedAmounts {

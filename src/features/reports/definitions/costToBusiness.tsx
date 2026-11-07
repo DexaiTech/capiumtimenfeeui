@@ -24,7 +24,7 @@ function amountColumn(
     align: 'end',
     sortable: true,
     sortValue: of,
-    className: 'whitespace-nowrap',
+    className: '[td&]:whitespace-nowrap',
     cell: (row) => money(of(row), currency),
   };
 }
