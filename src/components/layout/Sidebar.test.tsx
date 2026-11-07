@@ -34,8 +34,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderShell(route = '/acme/dashboard/overview') {
-  const context = contextWith(ownerContext.permissions);
+function renderShell(route = '/acme/dashboard/overview', permissions = ownerContext.permissions) {
+  const context = contextWith(permissions);
   const shell = buildShellData({
     context,
     organizations: [context, memberContext],
@@ -78,6 +78,30 @@ describe('Sidebar', () => {
   it('has no sidebar for a module without pages to choose from', () => {
     renderShell('/acme/clients/list');
     expect(screen.queryByRole('complementary', { name: 'Sidebar' })).not.toBeInTheDocument();
+  });
+
+  it('has no sidebar for a module where the role may open one page only', () => {
+    // Disbursements is the one Expenses page someone who only reads WIP may open.
+    renderShell('/acme/expenses/disbursements', ['organization.read', 'wip.read']);
+    expect(screen.queryByRole('complementary', { name: 'Sidebar' })).not.toBeInTheDocument();
+  });
+
+  it('marks one page only on a page below a module index', () => {
+    // NavLink used to mark Expense Claims (the index, at /expenses) on every Expenses page too.
+    renderShell('/acme/expenses/approvals');
+    const marked = within(sidebar())
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('aria-current') === 'page');
+    expect(marked.map((link) => link.textContent)).toEqual(['Expense Approvals']);
+  });
+
+  it('keeps Expense Claims marked on a claim', () => {
+    renderShell('/acme/expenses/claims/claim-1');
+    const pages = within(sidebar()).getByRole('navigation', { name: 'Expenses pages' });
+    expect(within(pages).getByRole('link', { name: 'Expense Claims' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('collapses to icons, keeps every link named, and remembers the choice', async () => {

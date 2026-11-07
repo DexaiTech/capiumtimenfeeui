@@ -89,7 +89,9 @@ graph LR
 
 ### clients (see [design/client-360.md](design/client-360.md) and [design/clients-page.md](design/clients-page.md))
 
-- **Routes.** All need `client.read`.
+- **Routes.** All need `client.read`. Clients has no sidebar: the Client List and Leads both
+  carry the same Clients | Leads tabs (`components/ClientsLeadsSwitch`), so Leads never hides
+  Clients (7 Nov 2026).
   - `clients/` is the list (`ClientsPage`).
   - `clients/360` is the landing page (`Client360Page`).
   - `clients/leads` is `LeadsPage`.
@@ -249,7 +251,8 @@ graph LR
     `missing-timesheets` need `report.read`.
   - `expenses` needs `report.read` or `report.financial`.
   - `job-profitability`, `wip-ageing`, `recovery`, `recovery-analysis`, `cost-to-business`,
-    `billing`, `payments` and `aged-debtors` need `report.financial`.
+    `billing`, `payments`, `aged-debtors` and `vat-summary` need `report.financial`.
+  - `staff-cost` needs `report.staff_cost` (APT81). Downloads need `report.export`.
 - **Components.** `ReportScreen` (a generic screen driven by `definitions/*.tsx`), `ReportFilters`,
   `FilterPopover`, `ExportMenu`, `StatCards`.
 - **Endpoints.** `reports/{endpoint}`: JSON, and a blob for exports (`api/reportsApi.ts`).
@@ -262,6 +265,7 @@ graph LR
   - `team/staff` and `grades` need `member.read`.
   - `cost-rates`, `charge-out-rates`, `rate-history` and `rate-preview` need `rate.read`.
   - `re-rate` needs `rate.manage`.
+  - `overtime-rates` needs `rate.read`; changing them needs `rate.manage` (APT81).
   - `activity-types` has the module rule.
   - `staff/:staffId` is `StaffDetailPage`.
   - The old `team/services` path redirects to `settings/services`, which still loads

@@ -81,6 +81,7 @@ export const PAGE_LOADERS: Record<ModuleId, Record<string, Loader>> = {
     billing: () => import('@/features/reports/pages/BillingReportPage'),
     expenses: () => import('@/features/reports/pages/ExpensesReportPage'),
     'aged-debtors': () => import('@/features/reports/pages/AgedDebtorsReportPage'),
+    'vat-summary': () => import('@/features/reports/pages/VatSummaryReportPage'),
     payments: () => import('@/features/reports/pages/PaymentsReportPage'),
     'missing-timesheets': () => import('@/features/reports/pages/MissingTimesheetsReportPage'),
   },

@@ -191,11 +191,31 @@ describe('practice route (/:orgSlug)', () => {
   });
 
   it('leads a module index to the first page the role may open', async () => {
-    mockOrganizations([contextWith(['settings.manage', 'rate.read'])]);
+    // Lock Past Periods follows its page's own rule (`period_lock.read`), not settings.manage.
+    mockOrganizations([contextWith(['audit_log.read', 'period_lock.read'])]);
     const { router } = renderApp('/acme/settings');
     await waitFor(() => expect(router.state.location.pathname).toBe('/acme/settings/period-lock'));
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Lock Past Periods' }),
+    ).toBeInTheDocument();
+  });
+
+  // The menu once hid these pages from roles the pages themselves allow.
+  it('opens Lock Past Periods for a Manager, who may read the locks', async () => {
+    mockOrganizations([contextWith(['organization.read', 'period_lock.read'])]);
+    renderApp('/acme/settings/period-lock');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Lock Past Periods' }),
+    ).toBeInTheDocument();
+    const bar = screen.getByRole('navigation', { name: 'Settings pages' });
+    expect(within(bar).getByRole('link', { name: 'Lock Past Periods' })).toBeInTheDocument();
+  });
+
+  it('opens Import/Export for Billing, who imports opening balances', async () => {
+    mockOrganizations([contextWith(['organization.read', 'opening_balance.import'])]);
+    renderApp('/acme/settings/import-export');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Import/Export' }),
     ).toBeInTheDocument();
   });
 
