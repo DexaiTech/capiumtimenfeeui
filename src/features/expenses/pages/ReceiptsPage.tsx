@@ -155,7 +155,7 @@ export default function ReceiptsPage() {
     <div className="flex min-w-0 flex-col items-start gap-1">
       <Link
         to={claimLink(item.claim_id, item.user_id)}
-        className="max-w-full truncate font-medium text-text hover:text-brand-text hover:underline"
+        className="max-w-full font-medium break-words text-text hover:text-brand-text hover:underline"
       >
         {item.claim_title ?? 'Open the claim'}
       </Link>
@@ -168,7 +168,7 @@ export default function ReceiptsPage() {
       id: 'receipt',
       header: 'Receipt',
       hideable: false,
-      className: 'min-w-56 max-w-72',
+      className: 'min-w-40 max-w-72',
       cell: (item) => (
         <div className="flex min-w-0 items-center gap-3">
           <ReceiptThumb lineId={item.expense_id} receipt={item} />
@@ -189,9 +189,9 @@ export default function ReceiptsPage() {
     {
       id: 'expense',
       header: 'Expense',
-      className: 'min-w-48 max-w-64',
+      className: 'min-w-36 max-w-64',
       cell: (item) => (
-        <span className="block truncate text-text" title={item.description}>
+        <span className="block break-words text-text" title={item.description}>
           {item.description}
         </span>
       ),
@@ -203,17 +203,17 @@ export default function ReceiptsPage() {
       className: 'w-28 whitespace-nowrap',
       cell: (item) => formatUkDate(item.incurred_on),
     },
-    { id: 'claim', header: 'Claim', className: 'min-w-44', cell: claimCell },
+    { id: 'claim', header: 'Claim', className: 'min-w-36', cell: claimCell },
     {
       id: 'claimant',
       header: 'Claimant',
-      className: 'min-w-36',
+      className: 'min-w-32',
       cell: (item) => item.user_name ?? '—',
     },
     {
       id: 'client',
       header: 'Client',
-      className: 'min-w-36',
+      className: 'min-w-32',
       cell: (item) =>
         item.client ? item.client.name : <span className="text-text-muted">No client</span>,
     },
@@ -231,7 +231,7 @@ export default function ReceiptsPage() {
       id: 'uploaded',
       header: 'Uploaded',
       sortable: true,
-      className: 'min-w-36 whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (item) => (
         <div className="flex flex-col">
           <span>{formatUkDate(item.created_at)}</span>
@@ -246,10 +246,10 @@ export default function ReceiptsPage() {
       id: 'expense',
       header: 'Expense',
       hideable: false,
-      className: 'min-w-56 max-w-80',
+      className: 'min-w-40 max-w-80',
       cell: (line) => (
         <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-text" title={line.description}>
+          <span className="font-semibold break-words text-text" title={line.description}>
             {line.description}
           </span>
           <span className="text-xs text-text-muted">{line.expense_type.name}</span>
@@ -262,17 +262,17 @@ export default function ReceiptsPage() {
       className: 'w-28 whitespace-nowrap',
       cell: (line) => formatUkDate(line.incurred_on),
     },
-    { id: 'claim', header: 'Claim', className: 'min-w-44', cell: claimCell },
+    { id: 'claim', header: 'Claim', className: 'min-w-36', cell: claimCell },
     {
       id: 'claimant',
       header: 'Claimant',
-      className: 'min-w-36',
+      className: 'min-w-32',
       cell: (line) => line.user_name ?? '—',
     },
     {
       id: 'client',
       header: 'Client',
-      className: 'min-w-36',
+      className: 'min-w-32',
       cell: (line) =>
         line.client ? line.client.name : <span className="text-text-muted">No client</span>,
     },

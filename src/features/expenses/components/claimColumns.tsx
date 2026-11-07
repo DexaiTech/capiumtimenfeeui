@@ -64,11 +64,11 @@ export function claimColumns({
       id: 'claim',
       header: 'Claim',
       hideable: false,
-      className: 'min-w-56 max-w-80',
+      className: 'min-w-40 max-w-80',
       cell: (claim) => (
         <Link
           to={routes.org.expenseClaim(slug, claim.id, list)}
-          className="block min-w-0 truncate font-semibold text-text hover:text-brand-text hover:underline"
+          className="block min-w-0 font-semibold break-words text-text hover:text-brand-text hover:underline"
           title={claimLabel(claim)}
         >
           {claimLabel(claim)}
@@ -81,7 +81,7 @@ export function claimColumns({
       id: 'claimant',
       header: 'Claimant',
       sortable: true,
-      className: 'min-w-40',
+      className: 'min-w-32',
       cell: (claim) => <span className="text-text">{claim.user_name ?? '—'}</span>,
     });
   }
