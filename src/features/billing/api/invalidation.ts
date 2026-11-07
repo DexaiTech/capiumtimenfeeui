@@ -6,7 +6,9 @@ import { useOrg } from '@/features/organizations';
 /**
  * What to refresh after each kind of change. Everything is only marked stale and refetched when
  * something shows it, so listing the neighbours is cheap: an invoice change reaches the client
- * workspace, WIP, the dashboard, the reports and the debtors; a payment the same figures.
+ * workspace, WIP, the dashboard, the reports and the debtors; a payment the same figures. Issuing,
+ * voiding or crediting an invoice changes its entries' billing status, which locks or frees them
+ * on the time screens and changes the job figures, so those refresh too.
  */
 export function useBillingInvalidation() {
   const queryClient = useQueryClient();
@@ -17,11 +19,12 @@ export function useBillingInvalidation() {
   };
   const k = queryKeys.org;
   const money = [k.clients(id), k.dashboard(id), k.reports(id), k.debtors(id), k.statements(id)];
+  const work = [k.wip(id), k.time(id), k.jobs(id)];
 
   return {
-    invoices: () => refresh(k.invoices(id), k.wip(id), ...money, k.auditLogs(id)),
+    invoices: () => refresh(k.invoices(id), ...work, ...money, k.auditLogs(id)),
     creditNotes: () =>
-      refresh(k.creditNotes(id), k.invoices(id), k.wip(id), ...money, k.auditLogs(id)),
+      refresh(k.creditNotes(id), k.invoices(id), ...work, ...money, k.auditLogs(id)),
     payments: () => refresh(k.payments(id), k.invoices(id), ...money, k.auditLogs(id)),
     statements: () => refresh(k.statements(id), k.auditLogs(id)),
     estimates: () => refresh(k.estimates(id), k.auditLogs(id)),

@@ -693,7 +693,7 @@ describe('making the draft', () => {
   it('sends the draft for approval when the practice approves invoices first', async () => {
     const user = userEvent.setup();
     const backend = setup(
-      {},
+      { approvalRequired: true },
       { organization: { invoice_approval_required: true, invoice_approval_threshold: 0 } },
     );
     await toDetails(user, /Bank reconciliation/);
@@ -707,6 +707,37 @@ describe('making the draft', () => {
     expect(await screen.findByText('Draft sent for approval')).toBeInTheDocument();
     expect(postsOf(backend, '/invoices/inv-new-1/submit')).toHaveLength(1);
     expect(postsOf(backend, '/invoices/inv-new-1/issue')).toHaveLength(0);
+  });
+
+  // The step's total is an estimate (an unpriced fixed fee counts as nothing): the draft the API
+  // makes decides between issuing it and sending it for approval (BIL-05).
+  it('sends the draft for approval when the API says it needs it, though the estimate did not', async () => {
+    const user = userEvent.setup();
+    const backend = setup(
+      { approvalRequired: true },
+      { organization: { invoice_approval_required: true, invoice_approval_threshold: 100000000 } },
+    );
+    await toDetails(user, /Bank reconciliation/);
+    await user.click(screen.getByRole('button', { name: 'Save and issue' }));
+
+    expect(await screen.findByText('Draft sent for approval')).toBeInTheDocument();
+    expect(screen.getByText(/It needs approval before it is issued/)).toBeInTheDocument();
+    expect(postsOf(backend, '/invoices/inv-new-1/submit')).toHaveLength(1);
+    expect(postsOf(backend, '/invoices/inv-new-1/issue')).toHaveLength(0);
+  });
+
+  it('issues the draft when the API says it needs no approval, though the estimate did', async () => {
+    const user = userEvent.setup();
+    const backend = setup(
+      { approvalRequired: false },
+      { organization: { invoice_approval_required: true, invoice_approval_threshold: 0 } },
+    );
+    await toDetails(user, /Bank reconciliation/);
+    await user.click(screen.getByRole('button', { name: 'Save and send for approval' }));
+
+    expect(await screen.findByText('Invoice INV-00099 issued')).toBeInTheDocument();
+    expect(postsOf(backend, '/invoices/inv-new-1/issue')).toHaveLength(1);
+    expect(postsOf(backend, '/invoices/inv-new-1/submit')).toHaveLength(0);
   });
 
   it('offers only the draft to a person who cannot issue', async () => {

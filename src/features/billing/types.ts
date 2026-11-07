@@ -63,6 +63,8 @@ export interface InvoiceSummary {
   balance: Pence;
   /** Needs approval before it can be issued under the practice's current settings. */
   approval_required: boolean;
+  /** The caller may approve it right now (holds `invoice.approve`, and the self-approval rule allows it). */
+  can_approve: boolean;
   sent_at: IsoDateTime | null;
   created_at: IsoDateTime;
 }
@@ -192,8 +194,6 @@ export interface InvoiceDetail extends InvoiceSummary {
   email_recipients: string[];
   created_by: string | null;
   approvals: ApprovalEvent[];
-  /** The caller may approve it right now (holds `invoice.approve`, and the self-approval rule allows it). */
-  can_approve: boolean;
   lines: InvoiceLine[];
   vat_summary: VatSummaryRow[];
   wip: InvoiceWipTotals;

@@ -27,6 +27,7 @@ import {
   useDeleteInvoice,
   useInvoice,
   useRemoveAllocation,
+  useSubmitInvoice,
   useVoidInvoice,
 } from '../api';
 import { InvoiceStatusBadge } from '../components/badges';
@@ -39,6 +40,10 @@ import {
   InvoiceWipCard,
 } from '../components/invoice/InvoiceInfoCards';
 import { AssignTimeDialog } from '../components/invoice/AssignTimeDialog';
+import {
+  ApproveInvoiceDialog,
+  RejectInvoiceDialog,
+} from '../components/invoice/InvoiceDecisionDialogs';
 import { InvoiceAdvanceCard } from '../components/invoice/InvoiceAdvanceCard';
 import { InvoiceLinesCard } from '../components/invoice/InvoiceLinesCard';
 import { InvoiceSummaryStrip } from '../components/invoice/InvoiceSummaryStrip';
@@ -51,12 +56,14 @@ import { RecordPaymentPanel } from '../components/RecordPaymentPanel';
 import { SendInvoiceDialog } from '../components/SendInvoiceDialog';
 import { useFileDownload } from '../hooks/useFileDownload';
 import type { InvoiceDetail, InvoiceLine } from '../types';
-import { approvalPolicyOf, needsApproval } from '../utils/approval';
 import { dialogError } from '../utils/errors';
 import { dateCell } from '../utils/format';
 
 type DialogState =
   | { type: 'issue' }
+  | { type: 'submit' }
+  | { type: 'approve' }
+  | { type: 'reject' }
   | { type: 'send' }
   | { type: 'details' }
   | { type: 'void' }
@@ -107,6 +114,7 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
   const voidInvoice = useVoidInvoice();
   const removeInvoice = useDeleteInvoice();
   const unmatch = useRemoveAllocation();
+  const submit = useSubmitInvoice();
   const [searchParams, setSearchParams] = useSearchParams();
   const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   // The draft is issued as saved: not while its lines have changes not saved yet.
@@ -121,13 +129,21 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
 
   const slug = organization.slug;
   const today = todayInZone(organization.timezone);
-  const policy = approvalPolicyOf(organization);
   const isDraft = invoice.status === 'draft';
+  const isAwaiting = invoice.status === 'awaiting_approval';
+  const isApproved = invoice.status === 'approved';
   const isIssued = invoice.status === 'issued';
   const isVoid = invoice.status === 'void';
-  const approvalNeeded = needsApproval(policy, invoice.gross_total);
+  // The API says whether the draft needs approval under the practice's settings (its saved total).
+  const approvalNeeded = isDraft && invoice.approval_required;
   const canEdit = isDraft && can(P.invoiceCreate);
-  const canIssue = isDraft && can(P.invoiceIssue) && !approvalNeeded;
+  // A draft that needs no approval is issued as it is; one that needs it, once it is approved.
+  const canIssue = can(P.invoiceIssue) && ((isDraft && !approvalNeeded) || isApproved);
+  const canSubmit = approvalNeeded && can(P.invoiceCreate);
+  // The API decides who may approve: not whoever prepared or submitted it (unless the Owner).
+  const canApprove = isAwaiting && invoice.can_approve;
+  // Any approver may send it back to draft, the submitter too, until it is issued.
+  const canReject = (isAwaiting || isApproved) && can(P.invoiceApprove);
   const owed = isIssued && invoice.balance > 0;
   const canRecord = owed && can(P.paymentRecord);
   const canCredit = owed && can(P.creditNoteCreate);
@@ -224,6 +240,22 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
           Issue invoice
         </Button>
       ) : null}
+      {canSubmit ? (
+        <Button
+          variant="primary"
+          disabled={linesDirty}
+          title={linesDirty ? 'Save or discard the changes to the lines first' : undefined}
+          onClick={() => setDialog({ type: 'submit' })}
+        >
+          Submit for approval
+        </Button>
+      ) : null}
+      {canApprove ? (
+        <Button variant="primary" onClick={() => setDialog({ type: 'approve' })}>
+          Approve
+        </Button>
+      ) : null}
+      {canReject ? <Button onClick={() => setDialog({ type: 'reject' })}>Reject</Button> : null}
       {canRecord ? (
         <Button
           variant={canIssue ? 'outline' : 'primary'}
@@ -355,6 +387,18 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
           </Notice>
         ) : isDraft && approvalNeeded ? (
           <Notice tone="warning">This invoice needs approval before it can be issued.</Notice>
+        ) : isAwaiting ? (
+          <Notice tone="info">
+            This invoice is awaiting approval and is locked until it is approved or rejected.
+            {can(P.invoiceApprove) && !invoice.can_approve
+              ? ' You prepared or submitted it, so another approver must approve it.'
+              : ''}
+          </Notice>
+        ) : isApproved ? (
+          <Notice tone="info">
+            This invoice is approved and ready to issue.
+            {can(P.invoiceIssue) ? '' : ' Someone who may issue invoices can issue it.'}
+          </Notice>
         ) : null}
         <InvoiceSummaryStrip invoice={invoice} />
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -400,6 +444,22 @@ function InvoiceView({ invoice }: { invoice: InvoiceDetail }) {
       </PageShell>
 
       <IssueDialog open={dialog?.type === 'issue'} invoice={invoice} onClose={close} />
+      <ReasonDialog
+        open={dialog?.type === 'submit'}
+        onClose={close}
+        title="Submit for approval?"
+        description={`The draft for ${invoice.client?.name ?? 'the client'} is locked until it is approved or rejected.`}
+        label="Message for the approvers (optional)"
+        required={false}
+        tone="primary"
+        confirmLabel="Submit for approval"
+        onSubmit={async (note) => {
+          await submit.mutateAsync({ invoiceId: invoice.id, note: note || undefined });
+          toast({ tone: 'success', title: 'Sent for approval' });
+        }}
+      />
+      <ApproveInvoiceDialog open={dialog?.type === 'approve'} invoice={invoice} onClose={close} />
+      <RejectInvoiceDialog open={dialog?.type === 'reject'} invoice={invoice} onClose={close} />
       <SendInvoiceDialog open={dialog?.type === 'send'} invoice={invoice} onClose={close} />
       <AssignTimeDialog
         open={dialog?.type === 'assign'}
