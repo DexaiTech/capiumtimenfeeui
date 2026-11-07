@@ -140,6 +140,41 @@ describe('budget tracking', () => {
     expect(lists(backend).at(-1)?.params?.get('order')).toBe('asc');
   });
 
+  it('totals each budget over only the jobs that have that kind of budget (CLI-04)', async () => {
+    setup({
+      jobs: [
+        makeJob({
+          id: 'j-1',
+          number: 'J00001',
+          name: 'Hours budget job',
+          budget_minutes: 600,
+          logged_minutes: 300,
+          budget_minutes_used_bp: 5000,
+          time_value: 95000,
+        }),
+        makeJob({
+          id: 'j-2',
+          number: 'J00002',
+          name: 'Fee budget job',
+          budget_minutes: null,
+          budget_minutes_used_bp: null,
+          budget_fee: 100000,
+          logged_minutes: 1200,
+          time_value: 50000,
+          budget_fee_used_bp: 5000,
+        }),
+      ],
+    });
+    await table();
+
+    const totals = screen.getByLabelText('Totals of the budgets');
+    // Every job's time would read 25:00 of 10:00 and £1,450.00 against a 50% usage.
+    expect(totals).toHaveTextContent('Hours logged5:00 of 10:0050% of the hours budgeted');
+    expect(totals).toHaveTextContent('Time value£500.00 of £1,000.0050% of the fees budgeted');
+    expect(totals).not.toHaveTextContent('25:00');
+    expect(totals).not.toHaveTextContent('£1,450.00');
+  });
+
   it('says when no job has a budget', async () => {
     setup({ jobs: [jobs()[3] as ReturnType<typeof makeJob>] });
     expect(await screen.findByText('No jobs with a budget')).toBeInTheDocument();

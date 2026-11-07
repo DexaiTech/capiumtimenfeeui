@@ -255,12 +255,18 @@ export interface BudgetTotals {
   amber: number;
   red: number;
   budget_minutes: Minutes;
+  /** Time logged on every job in the list. */
   logged_minutes: Minutes;
   budget_minutes_used_bp: number | null;
+  /** Time logged on the jobs with an hours budget: what `budget_minutes_used_bp` is of. */
+  minutes_basis_logged: Minutes;
   budget_fee: Pence;
+  /** Time value of every job in the list. */
   time_value: Pence;
   wip_value: Pence;
   budget_fee_used_bp: number | null;
+  /** Time value of the jobs with a fee budget: what `budget_fee_used_bp` is of. */
+  fee_basis_value: Pence;
   cost_value: Pence | null;
   margin_value: Pence | null;
   margin_bp: number | null;
