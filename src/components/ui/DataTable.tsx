@@ -160,14 +160,17 @@ export function DataTable<TRow>({
     onSelectedChange?.(next);
   };
 
+  // Headings may wrap onto two lines ("Chargeable / target"): a long heading over short values
+  // would otherwise set its column's width and push the grid into a sideways scroll. Cells keep
+  // 12px a side (16px from 2xl up), so a wide grid fits a laptop screen with the sidebar open.
   const headerCell = cn(
-    'h-[37px] border-b border-row-border bg-surface px-4 text-xs font-medium whitespace-nowrap text-text-muted',
+    'h-[37px] border-b border-row-border bg-surface px-3 py-1.5 text-xs leading-tight font-medium text-text-muted 2xl:px-4',
     // Only from lg up, where the card is not a scroll container (below it the table scrolls
     // sideways inside the card and a sticky offset would push the header over the first rows).
     stickyHeader &&
       'lg:sticky lg:top-[var(--table-sticky-top,0px)] lg:z-10 first:rounded-tl-xl last:rounded-tr-xl',
   );
-  const bodyCell = 'h-[57px] border-b border-row-border px-4 py-2 align-middle';
+  const bodyCell = 'h-[57px] border-b border-row-border px-3 py-2 align-middle 2xl:px-4';
 
   // A click on a control inside the row (a link, a menu, a checkbox, a status picker) is that
   // control's own: only the bare row, or plain text in it, opens the record.
@@ -235,7 +238,14 @@ export function DataTable<TRow>({
                             : 'none'
                           : undefined
                       }
-                      className={cn(headerCell, alignClass(column.align), column.className)}
+                      // A column's `whitespace-nowrap` is for its values; its heading still wraps
+                      // (`!`: `cn` only joins classes, so a later one would not win by itself).
+                      className={cn(
+                        headerCell,
+                        alignClass(column.align),
+                        column.className,
+                        'whitespace-normal!',
+                      )}
                     >
                       {column.sortable && onSortChange ? (
                         <button

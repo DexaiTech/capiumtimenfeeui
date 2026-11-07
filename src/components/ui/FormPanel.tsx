@@ -77,7 +77,8 @@ function Panel({
           }
         }
       }}
-      className={cn('scroll-mt-4', className)}
+      /* Clears the sticky top bar (3.75rem) when the panel scrolls into view: its title shows. */
+      className={cn('scroll-mt-20', className)}
     >
       <Card padding="none" variant="raised">
         <header className="flex items-start justify-between gap-4 border-b border-row-border px-5 py-4">
