@@ -626,8 +626,10 @@
 }
 
 .cc-table {
+  /* No fixed minimum: with a fixed layout the table is as wide as its visible columns need
+     (the sum of their widths) and fills the card when there is room, so the default columns
+     fit without a sideways scroll. It still scrolls when many columns are switched on. */
   width: 100%;
-  min-width: 1280px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
