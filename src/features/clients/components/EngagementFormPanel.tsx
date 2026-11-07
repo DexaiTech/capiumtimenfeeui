@@ -11,6 +11,7 @@ import { currencySymbol, formatMoney, penceToPoundsInput } from '@/utils/money';
 
 import { useCreateEngagement, useServiceOptions, useUpdateEngagement } from '../api';
 import { FREQUENCY_OPTIONS } from '../constants';
+import { DialogActions } from './DialogActions';
 import {
   EMPTY_ENGAGEMENT_FORM,
   ENGAGEMENT_FORM_FIELDS,
@@ -214,7 +215,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
           ) : null}
         </div>
       </form>
-      <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
           type="submit"
@@ -225,7 +226,7 @@ function EngagementForm({ target, onClose }: { target: EngagementTarget; onClose
         >
           {editing ? 'Save service' : 'Add service'}
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }

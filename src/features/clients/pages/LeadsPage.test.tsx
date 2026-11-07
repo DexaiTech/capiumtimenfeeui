@@ -59,9 +59,15 @@ describe('LeadsPage: the list', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Leads' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Client List' })).toHaveAttribute(
+    // The Clients | Leads tabs of the Client List, Leads marked: Clients is one click away.
+    const tabs = screen.getByRole('navigation', { name: 'Clients and leads' });
+    expect(within(tabs).getByRole('link', { name: /^Clients/ })).toHaveAttribute(
       'href',
       '/acme/clients',
+    );
+    expect(within(tabs).getByText('Leads').closest('[aria-current]')).toHaveAttribute(
+      'aria-current',
+      'true',
     );
     const bright = within(await row(/^Brightside Bakery Ltd/));
     expect(bright.getByText('Bea Bright · bea@brightside.example')).toBeInTheDocument();

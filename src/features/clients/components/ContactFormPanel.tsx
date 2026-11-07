@@ -6,6 +6,7 @@ import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, Checkbox, Input, FormPanel, useToast } from '@/components/ui';
 
 import { useCreateContact, useUpdateContact } from '../api';
+import { DialogActions } from './DialogActions';
 import {
   CONTACT_FORM_FIELDS,
   contactFormSchema,
@@ -119,7 +120,7 @@ function ContactForm({ target, onClose }: { target: ContactTarget; onClose: () =
           {...register('is_billing')}
         />
       </form>
-      <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
           type="submit"
@@ -130,7 +131,7 @@ function ContactForm({ target, onClose }: { target: ContactTarget; onClose: () =
         >
           {target.contact ? 'Save contact' : 'Add contact'}
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }
