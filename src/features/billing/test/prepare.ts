@@ -395,6 +395,8 @@ export interface PrepareBackend {
   calls: Call[];
   /** Answers a route with an error: key `'POST /invoices'`. */
   refusals: Record<string, Refusal>;
+  /** What the API says of the draft it makes: it needs approval before it is issued. */
+  approvalRequired: boolean;
 }
 
 export function createPrepareBackend(initial: Partial<PrepareBackend> = {}): PrepareBackend {
@@ -407,6 +409,7 @@ export function createPrepareBackend(initial: Partial<PrepareBackend> = {}): Pre
     termsDays: 30,
     calls: [],
     refusals: {},
+    approvalRequired: false,
     ...initial,
   };
 }
@@ -432,6 +435,7 @@ export function prepareHandlers(backend: PrepareBackend): HttpHandler[] {
       client: harbour,
       currency: 'GBP',
       gross_total: 36000,
+      approval_required: backend.approvalRequired,
       request,
     }) as unknown as InvoiceDetail;
 

@@ -112,8 +112,19 @@ export function DetailsStep({
         return;
       }
 
+      // The totals on this step are an estimate (a fixed fee not priced yet counts as nothing):
+      // the draft the API made says whether it needs approval, and that picks the next step.
+      const next: Finish =
+        how === 'draft'
+          ? 'draft'
+          : draft.approval_required
+            ? 'approval'
+            : canIssue
+              ? 'issue'
+              : 'draft';
+
       try {
-        if (how === 'issue') {
+        if (next === 'issue') {
           const issued = await issue.mutateAsync({
             invoiceId: draft.id,
             body: {
@@ -126,7 +137,8 @@ export function DetailsStep({
             title: issued.number ? `Invoice ${issued.number} issued` : 'Invoice issued',
             description: `${formatMoney(issued.gross_total, issued.currency)} to ${clientName}`,
           });
-          if (sendAfter) {
+          // Only when the person chose to issue: the box is not shown with approval.
+          if (how === 'issue' && sendAfter) {
             // The invoice is issued either way: a refused email is reported, not undone.
             try {
               const sent = await send.mutateAsync({ invoiceId: issued.id });
@@ -147,12 +159,12 @@ export function DetailsStep({
             }
           }
           open(issued);
-        } else if (how === 'approval') {
+        } else if (next === 'approval') {
           const submitted = await submitForApproval.mutateAsync({ invoiceId: draft.id });
           toast({
             tone: 'success',
             title: 'Draft sent for approval',
-            description: `${formatMoney(submitted.gross_total, submitted.currency)} to ${clientName}`,
+            description: `${how === 'approval' ? '' : 'It needs approval before it is issued: '}${formatMoney(submitted.gross_total, submitted.currency)} to ${clientName}`,
           });
           open(submitted);
         } else {
@@ -169,7 +181,7 @@ export function DetailsStep({
           tone: 'warning',
           ...describeFailure(
             error,
-            how === 'issue'
+            next === 'issue'
               ? 'The draft was saved but not issued'
               : 'The draft was saved but not sent',
           ),

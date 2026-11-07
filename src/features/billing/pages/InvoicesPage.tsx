@@ -39,6 +39,10 @@ import {
   useSubmitInvoice,
 } from '../api';
 import { FilterPopover } from '../components/FilterPopover';
+import {
+  ApproveInvoiceDialog,
+  RejectInvoiceDialog,
+} from '../components/invoice/InvoiceDecisionDialogs';
 import { InvoiceFilterFields } from '../components/invoices/InvoiceFilterFields';
 import { invoiceColumns } from '../components/invoices/invoiceColumns';
 import { InvoiceSummaryCards } from '../components/invoices/InvoiceSummaryCards';
@@ -73,21 +77,24 @@ const TABS: ReadonlyArray<{ value: InvoiceTab; label: string }> = [
 
 /**
  * Where each action sits in the invoices grid, so it is in the same place on every row whatever
- * the status: Open and PDF first, then the next step (Issue or Submit on a draft, Send on an issued
- * invoice), payment, credit note, and Void or Delete last. Ids in one place never show together.
+ * the status: Open and PDF first, then the next step (Issue or Submit on a draft, Approve while it
+ * awaits approval, Issue once approved, Send on an issued invoice), payment, credit note, and Void,
+ * Delete or Reject last. Ids in one place never show together.
  */
 const INVOICE_ACTION_SLOTS: ReadonlyArray<string | ReadonlyArray<string>> = [
   'open',
   'pdf',
-  ['issue', 'submit', 'send'],
+  ['issue', 'submit', 'approve', 'send'],
   'payment',
   'credit',
-  ['void', 'delete'],
+  ['void', 'delete', 'reject'],
 ];
 
 type DialogState =
   | { type: 'issue'; invoice: InvoiceSummary }
   | { type: 'submit'; invoice: InvoiceSummary }
+  | { type: 'approve'; invoice: InvoiceSummary }
+  | { type: 'reject'; invoice: InvoiceSummary }
   | { type: 'send'; invoice: InvoiceSummary }
   | { type: 'delete'; invoice: InvoiceSummary }
   | { type: 'bulk-issue' }
@@ -167,6 +174,8 @@ function InvoiceList() {
   // A void invoice is deleted by whoever may void it: it leaves the lists, its number is kept.
   const canDeleteVoid = canDelete && canIssue;
   const canSubmit = can(P.invoiceCreate);
+  // Any approver may send an invoice back to draft (the submitter too) until it is issued.
+  const canReject = can(P.invoiceApprove);
   const deletable = chosen.filter(
     (row) => row.status === 'draft' || (row.status === 'void' && canDeleteVoid),
   );
@@ -206,6 +215,14 @@ function InvoiceList() {
         id: 'submit',
         label: 'Submit for approval…',
         onSelect: () => setDialog({ type: 'submit', invoice }),
+      });
+    }
+    // The API decides who may approve: not whoever prepared or submitted it (unless the Owner).
+    if (invoice.status === 'awaiting_approval' && invoice.can_approve) {
+      items.push({
+        id: 'approve',
+        label: 'Approve…',
+        onSelect: () => setDialog({ type: 'approve', invoice }),
       });
     }
     if (invoice.status === 'approved' && canIssue) {
@@ -251,6 +268,14 @@ function InvoiceList() {
         label: 'Void invoice…',
         tone: 'danger',
         onSelect: () => correct('void'),
+      });
+    }
+    if ((invoice.status === 'awaiting_approval' || invoice.status === 'approved') && canReject) {
+      items.push({
+        id: 'reject',
+        label: 'Reject…',
+        tone: 'danger',
+        onSelect: () => setDialog({ type: 'reject', invoice }),
       });
     }
     if ((invoice.status === 'draft' && canDelete) || (invoice.status === 'void' && canDeleteVoid)) {
@@ -588,6 +613,12 @@ function InvoiceList() {
       ) : null}
       {dialog?.type === 'send' ? (
         <SendInvoiceDialog open invoice={dialog.invoice} onClose={close} />
+      ) : null}
+      {dialog?.type === 'approve' ? (
+        <ApproveInvoiceDialog open invoice={dialog.invoice} onClose={close} />
+      ) : null}
+      {dialog?.type === 'reject' ? (
+        <RejectInvoiceDialog open invoice={dialog.invoice} onClose={close} />
       ) : null}
       {dialog?.type === 'submit' ? (
         <ReasonDialog

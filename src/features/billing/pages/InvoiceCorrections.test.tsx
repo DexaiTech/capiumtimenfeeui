@@ -35,6 +35,7 @@ function summary(overrides: Partial<InvoiceSummary>): InvoiceSummary {
     credited_total: 0,
     balance: 12000,
     approval_required: false,
+    can_approve: false,
     sent_at: null,
     created_at: '2026-10-01T09:00:00Z',
     ...overrides,

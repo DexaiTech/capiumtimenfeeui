@@ -48,7 +48,7 @@ export function debtorColumns({ currency }: DebtorColumnOptions): DataTableColum
       header: 'Client',
       sortable: true,
       hideable: false,
-      className: 'min-w-44 max-w-72',
+      className: 'min-w-32 max-w-72',
       cell: (row) => <ClientName name={row.client.name} code={row.client.code} />,
     },
     {
