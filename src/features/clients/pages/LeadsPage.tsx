@@ -1,4 +1,4 @@
-import { ArrowLeft, SearchX, Target, UserPlus } from 'lucide-react';
+import { SearchX, Target, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -6,7 +6,6 @@ import { PageHeader } from '@/components/layout';
 import {
   Badge,
   Button,
-  buttonClasses,
   Card,
   ConfirmDialog,
   CountTabs,
@@ -32,7 +31,17 @@ import { isApiError } from '@/services/api';
 import { formatDayMonthYear } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
-import { flattenPages, useArchiveLead, useConvertLead, useLeadList, useLeadSummary } from '../api';
+import '@/styles/capium-clients.css';
+
+import {
+  flattenPages,
+  useArchiveLead,
+  useClientSummary,
+  useConvertLead,
+  useLeadList,
+  useLeadSummary,
+} from '../api';
+import { ClientsLeadsSwitch } from '../components/ClientsLeadsSwitch';
 import { branchOptions, CLIENT_TYPE_LABELS } from '../constants';
 import { LeadFormPanel } from '../leads/LeadFormPanel';
 import { LEAD_STATUSES, type Lead, type LeadStatus } from '../leads/types';
@@ -452,22 +461,22 @@ function LeadList() {
  * archives and unarchives them.
  */
 export default function LeadsPage() {
-  const { organization } = useOrg();
   useDocumentTitle('Leads');
+  const clients = useClientSummary();
+  const leads = useLeadSummary();
   return (
     <section className="flex min-w-0 flex-col gap-4">
+      {/* The same Clients | Leads tabs as the Client List, so neither page hides the other. */}
+      <div className="capium-clients">
+        <ClientsLeadsSwitch
+          current="leads"
+          clientCount={clients.data?.total ?? null}
+          leadCount={leads.data?.open.count ?? null}
+        />
+      </div>
       <PageHeader
         title="Leads"
         description="Prospective clients and what winning them costs: acquisition and onboarding. Convert a lead into a client in one click once it is won, or archive it."
-        actions={
-          <Link
-            to={routes.org.clients(organization.slug)}
-            className={buttonClasses({ variant: 'secondary', size: 'sm' })}
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Client List
-          </Link>
-        }
         className="mb-1"
       />
       <LeadList />

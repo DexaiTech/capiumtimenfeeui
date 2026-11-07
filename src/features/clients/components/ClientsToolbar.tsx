@@ -7,11 +7,9 @@ import {
   List,
   RefreshCw,
   Search,
-  Target,
   UserPlus,
   Users,
 } from 'lucide-react';
-import { Link } from 'react-router';
 
 import type { ToggleableColumnId } from '../constants';
 import type { ClientsView, FilterPreset } from '../store';
@@ -19,6 +17,7 @@ import type { ClientFilters, ClientSummary, MemberRead, ServiceRead } from '../t
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { BranchFilter } from './BranchFilter';
 import { BulkActionsMenu } from './BulkActionsMenu';
+import { ClientsLeadsSwitch } from './ClientsLeadsSwitch';
 import { ColumnsMenu } from './ColumnsMenu';
 import { FilterPanel } from './FilterPanel';
 import { FilterSetMenu } from './FilterSetMenu';
@@ -71,19 +70,17 @@ export function ClientsToolbar(props: ClientsToolbarProps) {
   return (
     <div className="cc-toolbar" role="toolbar" aria-label="Clients toolbar">
       <div className="cc-toolbar-group">
-        <div className="cc-tabswitch">
-          <span className="cc-tab" aria-current="true">
-            <Users aria-hidden="true" />
-            Clients
-            <span className="cc-count">{props.clientCount ?? '–'}</span>
-          </span>
-          {props.leadsHref ? (
-            <Link className="cc-tab no-underline" to={props.leadsHref}>
-              <Target aria-hidden="true" />
-              Leads
-            </Link>
-          ) : null}
-        </div>
+        {props.leadsHref ? (
+          <ClientsLeadsSwitch current="clients" clientCount={props.clientCount ?? null} />
+        ) : (
+          <div className="cc-tabswitch">
+            <span className="cc-tab" aria-current="true">
+              <Users aria-hidden="true" />
+              Clients
+              <span className="cc-count">{props.clientCount ?? '–'}</span>
+            </span>
+          </div>
+        )}
         <div className="cc-search">
           <Search aria-hidden="true" />
           <input

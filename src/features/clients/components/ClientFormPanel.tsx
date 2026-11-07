@@ -36,6 +36,7 @@ import {
   type ClientFormValues,
 } from '../schemas';
 import type { ClientDetail, ClientRead, ClientUpdate } from '../types';
+import { DialogActions } from './DialogActions';
 
 export interface ClientFormPanelProps {
   open: boolean;
@@ -387,12 +388,12 @@ function ClientForm({ client, onClose, onSaved }: Omit<ClientFormPanelProps, 'op
           />
         </FormSection>
       </form>
-      <div className="sticky -bottom-5 z-10 -mx-5 rounded-b-xl mt-5 flex flex-col-reverse gap-2 border-t border-border bg-surface-raised px-5 pt-4 pb-5 sm:flex-row sm:justify-end md:-mx-6 md:px-6">
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button type="submit" form={formId} variant="primary" loading={busy} disabled={retryIn > 0}>
           {client ? 'Save changes' : 'Add Client'}
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }

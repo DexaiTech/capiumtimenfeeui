@@ -8,6 +8,7 @@ import { useOrg } from '@/features/organizations';
 import { currencySymbol, formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import { useCreateLead, useUpdateLead } from '../api';
+import { DialogActions } from '../components/DialogActions';
 import { CLIENT_TYPE_OPTIONS } from '../constants';
 import {
   EMPTY_LEAD_FORM,
@@ -183,7 +184,7 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
           {...register('notes')}
         />
       </form>
-      <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
           type="submit"
@@ -194,7 +195,7 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
         >
           {lead ? 'Save lead' : 'Add lead'}
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }

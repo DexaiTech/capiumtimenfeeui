@@ -15,6 +15,7 @@ import {
   useUpdateClientRate,
 } from '../../api';
 import type { ClientRateRead } from '../../types';
+import { DialogActions } from '../../components/DialogActions';
 import { rateAudience } from './rateStatus';
 import {
   CLIENT_RATE_FORM_FIELDS,
@@ -152,7 +153,7 @@ function ClientRateForm({ target, onClose }: { target: ClientRateTarget; onClose
           />
         </div>
       </form>
-      <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
           type="submit"
@@ -163,7 +164,7 @@ function ClientRateForm({ target, onClose }: { target: ClientRateTarget; onClose
         >
           {editing ? 'Save rate' : 'Add rate'}
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }
@@ -260,7 +261,7 @@ function RateEndForm({ target, onClose }: { target: RateEndTarget; onClose: () =
           {...register('effective_to')}
         />
       </form>
-      <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         {rate.effective_to !== null ? (
           <Button onClick={() => void save(null)} disabled={setEnd.isPending}>
@@ -276,7 +277,7 @@ function RateEndForm({ target, onClose }: { target: RateEndTarget; onClose: () =
         >
           Save end date
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }

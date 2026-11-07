@@ -10,6 +10,7 @@ import { cn } from '@/utils/cn';
 import { currencySymbol, formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
 
 import { useSetJobRate } from '../../api';
+import { DialogActions } from '../../components/DialogActions';
 import { rerateLink, taskRateText } from '../jobRates';
 import type { JobRate, JobRow } from '../types';
 
@@ -182,12 +183,12 @@ function JobRateForm({ target, onClose }: { target: JobRateTarget; onClose: () =
           )}
         </p>
       </form>
-      <div className="mt-5 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button type="submit" form={formId} variant="primary" loading={save.isPending}>
           Save rate
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }
