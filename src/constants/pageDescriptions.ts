@@ -68,6 +68,7 @@ export const PAGE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'reports/billing': 'Invoiced amounts over time.',
   'reports/payments': 'Money received over time.',
   'reports/aged-debtors': 'Unpaid invoices by how overdue they are.',
+  'reports/vat-summary': 'Output VAT by rate on the invoices and credit notes of a period.',
 
   'team/staff': 'The people you record time for: grade, approver, hours and sign-in.',
   'team/grades': 'Levels of staff, each with default cost and charge-out rates.',

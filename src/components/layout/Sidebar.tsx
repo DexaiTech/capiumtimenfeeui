@@ -1,5 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import { useShellStore } from '@/app/store';
 import { Tooltip } from '@/components/ui';
@@ -20,9 +20,10 @@ interface SidebarPage {
 
 const rowClasses = (active: boolean, collapsed: boolean) =>
   cn(
-    'group relative flex h-10 w-full items-center rounded-lg text-sm font-medium whitespace-nowrap',
+    'group relative flex min-h-10 w-full items-center rounded-lg text-sm font-medium',
     'transition-colors duration-fast ease-standard',
-    collapsed ? 'justify-center' : 'gap-3 px-3',
+    // Expanded, a long name ("Missing Timesheets Report") wraps onto a second line in full.
+    collapsed ? 'justify-center whitespace-nowrap' : 'gap-3 px-3 py-2',
     active
       ? 'bg-topbar-pill text-topbar-fg shadow-[inset_3px_0_0_0_var(--module-accent,var(--color-topbar-fg))]'
       : 'text-topbar-muted hover:bg-topbar-hover hover:text-topbar-fg',
@@ -128,8 +129,10 @@ export function Sidebar() {
                 {group.pages.map((page) => {
                   const Icon = page.icon;
                   const active = page.id === currentId;
+                  // A plain Link: NavLink would also mark a module's index page (Client List at
+                  // /clients) current on every page below it, Leads included.
                   const link = (
-                    <NavLink
+                    <Link
                       to={page.to}
                       title={collapsed ? undefined : page.description}
                       aria-label={collapsed ? page.label : undefined}
@@ -137,8 +140,10 @@ export function Sidebar() {
                       className={rowClasses(active, collapsed)}
                     >
                       <Icon aria-hidden="true" className="size-5 shrink-0" />
-                      {collapsed ? null : <span className="truncate">{page.label}</span>}
-                    </NavLink>
+                      {collapsed ? null : (
+                        <span className="min-w-0 leading-snug">{page.label}</span>
+                      )}
+                    </Link>
                   );
                   return (
                     <li key={page.id}>

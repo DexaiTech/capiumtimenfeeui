@@ -336,12 +336,21 @@ describe('TopBar', () => {
     it('finds a page by its name and opens it', async () => {
       const user = userEvent.setup();
       renderShell(ownerContext.permissions);
-      await user.type(await openSearch(user), 'vat');
+      // "vat" alone also finds the VAT Summary report.
+      await user.type(await openSearch(user), 'vat codes');
       const options = screen.getAllByRole('option');
       expect(options).toHaveLength(1);
       expect(options[0]).toHaveTextContent('VAT Codes');
       await user.keyboard('{Enter}');
       expect(location()).toBe('/acme/settings/vat-codes');
+    });
+
+    it('finds the VAT Summary report', async () => {
+      const user = userEvent.setup();
+      renderShell(ownerContext.permissions);
+      await user.type(await openSearch(user), 'vat summary');
+      await user.keyboard('{Enter}');
+      expect(location()).toBe('/acme/reports/vat-summary');
     });
 
     it('finds pages by their module too', async () => {

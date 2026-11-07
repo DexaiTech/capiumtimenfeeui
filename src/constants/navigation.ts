@@ -131,7 +131,10 @@ export interface NavModule extends AccessRule {
   pages: ReadonlyArray<SubPage>;
 }
 
-/** Modules that show no secondary bar: the module opens straight on its list (Clients). */
+/**
+ * Modules that show no secondary bar: the module opens straight on its list (Clients). Its
+ * pages switch with the Clients | Leads tabs at the top of each (`ClientsLeadsSwitch`).
+ */
 export const NO_SUBNAV_MODULES: ReadonlyArray<ModuleId> = ['clients'];
 
 /** Modules with their own grouped left sidebar instead of the shared secondary bar. */
@@ -427,6 +430,8 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         segment: '',
         anyOf: [P.expenseReadAll, P.expenseManage],
         group: 'Review',
+        // A claim opens at /expenses/claims/:id: the list stays marked there.
+        alsoActiveOn: ['claims'],
       },
       {
         id: 'approvals',
@@ -683,6 +688,13 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         anyOf: [P.reportFinancial],
         group: 'Billing & cash',
       },
+      {
+        id: 'vat-summary',
+        label: 'VAT Summary',
+        icon: Percent,
+        anyOf: [P.reportFinancial],
+        group: 'Billing & cash',
+      },
     ],
   ),
 
@@ -773,7 +785,8 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         id: 'period-lock',
         label: 'Lock Past Periods',
         icon: Lock,
-        anyOf: [P.settingsManage, P.organizationUpdate],
+        // The page's own rule: Manager and Billing read the locks, the manage holders change them.
+        anyOf: [P.periodLockRead, P.periodLockManage],
         group: 'Access control',
       },
       { id: 'branches', label: 'Branches', icon: Building2, group: 'Practice' },
@@ -819,7 +832,9 @@ export const NAV_MODULES: ReadonlyArray<NavModule> = [
         label: 'Import/Export',
         icon: ArrowUpDown,
         segment: 'import-export',
-        anyOf: [P.settingsManage, P.organizationUpdate],
+        // Whoever may bring data in (ImportExportPage shows each its own tabs): Billing for
+        // opening balances, Manager for clients. Read-only client export stays on the Clients page.
+        anyOf: [P.clientCreate, P.dataImportExport, P.openingBalanceImport],
         group: 'Data',
       },
       {
@@ -942,10 +957,11 @@ export function pageRule(moduleId: ModuleId, pageId: string): AccessRule {
 export function activePageId(module: Pick<NavModule, 'pages'>, pathname: string): string | null {
   const rest = pathname.split('/').slice(3).filter(Boolean);
   const [first] = rest;
-  const exact = module.pages.find((page) =>
-    page.segment === ''
-      ? rest.length === 0
-      : page.segment === first || (first !== undefined && page.alsoActiveOn?.includes(first)),
+  // `alsoActiveOn` counts for an index page too (Expense Claims at '' stays marked on a claim).
+  const exact = module.pages.find(
+    (page) =>
+      (page.segment === '' ? rest.length === 0 : page.segment === first) ||
+      (first !== undefined && page.alsoActiveOn?.includes(first) === true),
   );
   if (exact) return exact.id;
   return rest.length > 0 ? (module.pages.find((page) => page.detail)?.id ?? null) : null;

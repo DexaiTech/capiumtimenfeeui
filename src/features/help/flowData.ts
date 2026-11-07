@@ -182,7 +182,7 @@ export const LIFECYCLES: ReadonlyArray<Lifecycle> = [
   {
     name: 'Job',
     steps: ['Not started', 'In progress', 'On hold', 'Completed', 'Closed'],
-    note: 'A completed or closed job takes no more time; reopen it to log more.',
+    note: 'A completed or closed job takes no more time; reopen it to log more. An open job can also be cancelled, which is final.',
   },
   {
     name: 'Timesheet',
@@ -203,6 +203,21 @@ export const LIFECYCLES: ReadonlyArray<Lifecycle> = [
     name: 'Estimate',
     steps: ['Draft', 'Sent', 'Accepted', 'Converted to invoice'],
     note: 'A declined or expired estimate stays as a record.',
+  },
+  {
+    name: 'Overtime',
+    steps: ['Pending', 'Approved or rejected'],
+    note: 'Hours past a person’s standard hours, confirmed when recorded. Approved at once when their time needs no approval; rejecting removes only the overtime premium.',
+  },
+  {
+    name: 'WIP adjustment',
+    steps: ['Pending', 'Approved or rejected', 'Reversed'],
+    note: 'Approved at once within the practice’s threshold or when approval is off. An approved adjustment can be reversed.',
+  },
+  {
+    name: 'Recurring invoice schedule',
+    steps: ['Active', 'Paused', 'Ended'],
+    note: 'A paused schedule can be resumed. It ends once its next run would fall after its end date.',
   },
   {
     name: 'Ticket (Application Testing)',
