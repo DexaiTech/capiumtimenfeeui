@@ -18,7 +18,8 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
   endpoint: 'wip',
   fileName: 'wip',
   title: 'WIP & Ageing',
-  description: 'Work in progress with its age.',
+  description:
+    'Work in progress with its age: unbilled time, disbursements and approved expense recharges.',
   what: 'work in progress report',
   access: [P.reportFinancial],
   period: 'as_at',
@@ -33,7 +34,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       hideable: false,
       sortable: true,
       sortValue: (row) => row.client_name,
-      className: 'min-w-44 max-w-72',
+      className: 'min-w-32 max-w-72',
       cell: (row) => clientNamed(row.client_name, row.client_code),
     },
     {
@@ -41,7 +42,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       header: 'Job',
       sortable: true,
       sortValue: (row) => row.job_name,
-      className: 'min-w-44 max-w-72',
+      className: 'min-w-32 max-w-72',
       cell: (row) => named(row.job_name ?? 'No job', row.job_number),
     },
     {
@@ -60,7 +61,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
     },
     {
       id: 'disbursements',
-      header: 'Disbursements',
+      header: 'Disbursements & expenses',
       align: 'end',
       sortable: true,
       sortValue: (row) => row.disbursement_value,
@@ -82,7 +83,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       align: 'end',
       sortable: true,
       sortValue: (row) => row.age_0_30,
-      className: 'whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (row) => money(row.age_0_30, currency, false),
     },
     {
@@ -91,7 +92,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       align: 'end',
       sortable: true,
       sortValue: (row) => row.age_31_60,
-      className: 'whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (row) => money(row.age_31_60, currency, false),
     },
     {
@@ -100,7 +101,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       align: 'end',
       sortable: true,
       sortValue: (row) => row.age_61_90,
-      className: 'whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (row) => (
         <MoneyTone kind="out" value={row.age_61_90}>
           {money(row.age_61_90, currency, false)}
@@ -113,7 +114,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       align: 'end',
       sortable: true,
       sortValue: (row) => row.age_91_plus,
-      className: 'whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (row) => (
         <MoneyTone kind="out" value={row.age_91_plus}>
           {money(row.age_91_plus, currency, false)}
@@ -125,7 +126,7 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       header: 'Oldest item',
       sortable: true,
       sortValue: (row) => row.oldest_item_date,
-      className: 'whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (row) => date(row.oldest_item_date),
     },
   ],
@@ -136,7 +137,10 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
       hint: `${formatMinutes(totals.minutes)} of time recorded`,
     },
     { label: 'Time', value: formatMoney(totals.time_value, currency) },
-    { label: 'Disbursements', value: formatMoney(totals.disbursement_value, currency) },
+    {
+      label: 'Disbursements & expenses',
+      value: formatMoney(totals.disbursement_value, currency),
+    },
     {
       label: 'Over 90 days old',
       value: formatMoney(totals.age_91_plus, currency),
@@ -170,5 +174,6 @@ export const wipAgeingReport: ReportConfig<WipReportRow, WipReportTotals> = {
   }),
   note: 'A past date is frozen the first time it is read: the figures for that day no longer change.',
   emptyTitle: 'No work in progress',
-  emptyDescription: 'Unbilled time and disbursements appear here as at the day chosen.',
+  emptyDescription:
+    'Unbilled time, disbursements and approved expenses appear here as at the day chosen.',
 };

@@ -221,7 +221,12 @@ describe('WIP & Ageing', () => {
     expect(figures).toHaveTextContent('Work in progress£1,950.00');
     expect(figures).toHaveTextContent('25:00 of time recorded');
     expect(figures).toHaveTextContent('Time£1,900.00');
-    expect(figures).toHaveTextContent('Disbursements£50.00');
+    // disbursement_value also carries approved expense recharges since REP-01 (NEW-01).
+    expect(figures).toHaveTextContent('Disbursements & expenses£50.00');
+    expect(
+      screen.getByRole('columnheader', { name: /Disbursements & expenses/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/disbursements and approved expense recharges/)).toBeInTheDocument();
     expect(figures).toHaveTextContent('Over 90 days old£50.00');
     expect(figures).toHaveTextContent('2.56% of the work in progress');
 
