@@ -6,11 +6,12 @@ import { describe, expect, it } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
-import { findRowAction } from '@/test/rowActions';
+import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { ok, server } from '@/test/server';
 
-import { ACME, entry, PEOPLE, SAM } from '../test/fixtures';
+import { ACME, entry, ME, PEOPLE, SAM } from '../test/fixtures';
 import { callsTo, createBackend, orgApiPath, timeHandlers } from '../test/handlers';
+import type { TimeEntry } from '../types';
 import TimeEntriesPage from './TimeEntriesPage';
 
 describe('TimeEntriesPage: add entry', () => {
@@ -160,5 +161,55 @@ describe('TimeEntriesPage: revoke approval', () => {
     await screen.findByRole('group', { name: APPROVED });
     expect(screen.queryByRole('button', { name: 'Revoke approval' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete entry' })).not.toBeInTheDocument();
+  });
+});
+
+describe('TimeEntriesPage: correcting approved time (TIME-04, TIME-05)', () => {
+  const RANGE = '/acme/time/entries?from=2026-10-12&to=2026-10-18';
+  const APPROVED = /^Actions for the entry of 12\/10\/2026/;
+  const MANAGER = ['organization.read', 'time.read_all', 'time.manage_all', 'timesheet.approve'];
+
+  function setup(permissions: string[], overrides: Partial<TimeEntry> = {}, userId = SAM) {
+    const backend = createBackend({
+      entries: [
+        {
+          ...entry({
+            id: 'approved-1',
+            user_id: userId,
+            entry_date: '2026-10-12',
+            minutes: 60,
+            status: 'approved',
+          }),
+          ...overrides,
+        },
+      ],
+    });
+    server.use(...timeHandlers(backend));
+    renderInOrg(<TimeEntriesPage />, { route: RANGE, context: contextWith(permissions) });
+  }
+
+  it("offers to correct someone else's approved time", async () => {
+    setup(MANAGER);
+    await screen.findByRole('group', { name: APPROVED });
+    expect(rowActionNames(APPROVED)).toContain('Correct approved time');
+  });
+
+  it('does not offer to correct your own approved time without organization.update', async () => {
+    setup(MANAGER, {}, ME);
+    await screen.findByRole('group', { name: APPROVED });
+    expect(rowActionNames(APPROVED)).not.toContain('Correct approved time');
+    expect(rowActionNames(APPROVED)).not.toContain('Revoke approval');
+  });
+
+  it('offers it on your own time with organization.update', async () => {
+    setup([...MANAGER, 'organization.update'], {}, ME);
+    await screen.findByRole('group', { name: APPROVED });
+    expect(rowActionNames(APPROVED)).toContain('Correct approved time');
+  });
+
+  it('does not offer to correct time in a locked period', async () => {
+    setup(MANAGER, { period_locked_through: '2026-10-31' });
+    await screen.findByRole('group', { name: APPROVED });
+    expect(rowActionNames(APPROVED)).not.toContain('Correct approved time');
   });
 });

@@ -4,6 +4,8 @@ import type { TimeEntry, WeekGrid } from '../types';
 export interface RowIdentity {
   client_id: string | null;
   job_id: string | null;
+  /** Absent or null: no task (a row the person adds has none). */
+  task_id?: string | null;
   activity_code_id: string | null;
   is_billable: boolean;
 }
@@ -14,6 +16,7 @@ export interface DraftRow extends RowIdentity {
   client_name: string | null;
   job_number: string | null;
   job_name: string | null;
+  task_name?: string | null;
   activity_code: string | null;
   activity_name: string | null;
   service_name: string | null;
@@ -33,6 +36,8 @@ export function rowKey(row: RowIdentity): string {
     row.job_id ?? '',
     row.activity_code_id ?? '',
     row.is_billable ? 'billable' : 'non-billable',
+    // Last, and only when set: a row without a task keeps the key it always had.
+    ...(row.task_id ? [row.task_id] : []),
   ].join('|');
 }
 
@@ -86,6 +91,8 @@ export function buildRows(
     job_id: row.job_id,
     job_number: row.job_number,
     job_name: row.job_name,
+    task_id: row.task_id ?? null,
+    task_name: row.task_name ?? null,
     activity_code_id: row.activity_code_id,
     activity_code: row.activity_code,
     activity_name: row.activity_name,

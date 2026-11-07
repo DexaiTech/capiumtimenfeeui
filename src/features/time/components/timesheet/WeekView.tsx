@@ -137,6 +137,7 @@ export function WeekView({ grid, entries, canRecord, onOpenDay }: WeekViewProps)
             ...sure,
           };
           if (row.client_id) body.client_id = row.client_id;
+          if (row.task_id) body.task_id = row.task_id;
           if (row.activity_code_id) body.activity_code_id = row.activity_code_id;
           await timeApi.createEntry(organization.id, body);
         }

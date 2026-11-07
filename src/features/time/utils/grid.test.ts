@@ -104,4 +104,24 @@ describe('grid helpers', () => {
     ]);
     expect(rows[1]?.minutes).toEqual([0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it('keeps rows that differ only by task apart (TIME-01)', () => {
+    const base = GRID.rows[0];
+    if (!base) throw new Error('fixture');
+    const grid: WeekGrid = {
+      ...GRID,
+      rows: [base, { ...base, task_id: 't-1', task_name: 'Draft accounts', entry_ids: ['e2'] }],
+    };
+    const rows = buildRows(grid, [], new Map());
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.key).toBe(rowKey(identity));
+    expect(rows[1]?.key).not.toBe(rows[0]?.key);
+    expect(rows[1]?.task_name).toBe('Draft accounts');
+
+    const plain = entry({ entry_date: '2026-10-12', minutes: 60 });
+    const onTask = { ...entry({ entry_date: '2026-10-12', minutes: 30 }), task_id: 't-1' };
+    const cells = entriesByCell([plain, onTask]);
+    expect(cells.get(cellKey(rows[0]?.key ?? '', '2026-10-12'))).toEqual([plain]);
+    expect(cells.get(cellKey(rows[1]?.key ?? '', '2026-10-12'))).toEqual([onTask]);
+  });
 });

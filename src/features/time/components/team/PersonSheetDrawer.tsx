@@ -13,6 +13,7 @@ import {
   type DataTableColumn,
 } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
+import { useAuth } from '@/features/auth';
 import { useOrg } from '@/features/organizations';
 import { addDays, formatUkDate, todayInZone } from '@/utils/dates';
 import { formatMinutes } from '@/utils/minutes';
@@ -46,6 +47,7 @@ function Content({
   onClose,
 }: Omit<PersonSheetDrawerProps, 'person'> & { person: TeamRow }) {
   const { organization, can } = useOrg();
+  const { user } = useAuth();
   const week = useWeek(person.userId, weekStart);
   const sheet = useTimesheet(week.data?.timesheet_id);
   const [recording, setRecording] = useState(false);
@@ -65,9 +67,12 @@ function Content({
     (grid?.total_minutes ?? 0) - (grid?.targets?.weekly_minutes ?? 0),
   );
 
-  const canFix = can(PERMISSIONS.timesheetApprove);
+  // Nobody fixes their own approved week without `organization.update` (the API's self rule).
+  const mayDecide = person.userId !== user?.id || can(PERMISSIONS.organizationUpdate);
+  const canFix = can(PERMISSIONS.timesheetApprove) && mayDecide;
   const approved = (grid?.timesheet_status ?? person.status) === 'approved';
-  const canRemove = approved && (canFix || can(PERMISSIONS.timeManageAll));
+  const canRemove =
+    approved && mayDecide && (can(PERMISSIONS.timesheetApprove) || can(PERMISSIONS.timeManageAll));
 
   const columns: DataTableColumn<TimeEntry>[] = [
     {
@@ -135,7 +140,8 @@ function Content({
             align: 'end' as const,
             hideable: false,
             cell: (entry: TimeEntry) =>
-              entry.billing_status === 'unbilled' ? (
+              // A locked period stays locked: its time cannot be removed.
+              entry.billing_status === 'unbilled' && !entry.period_locked_through ? (
                 <Button
                   variant="ghost"
                   size="sm"

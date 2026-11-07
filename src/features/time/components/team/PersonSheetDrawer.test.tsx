@@ -6,7 +6,7 @@ import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
 import { renderInOrg } from '@/test/renderInOrg';
 import { server } from '@/test/server';
 
-import { entry, SAM, WEEK } from '../../test/fixtures';
+import { entry, ME, SAM, WEEK } from '../../test/fixtures';
 import { callsTo, createBackend, timeHandlers } from '../../test/handlers';
 import type { TeamRow } from '../../utils/team';
 import { PersonSheetDrawer } from './PersonSheetDrawer';
@@ -117,6 +117,62 @@ describe('PersonSheetDrawer: fixing approved time', () => {
     setup(OWNER_PERMISSIONS, 'billed');
 
     await screen.findByText(/Week of/);
+    expect(screen.queryByRole('button', { name: /^Remove the entry of/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('PersonSheetDrawer: your own week and locked periods (TIME-04, TIME-05)', () => {
+  const MANAGER = ['organization.read', 'time.read_all', 'time.manage_all', 'timesheet.approve'];
+
+  function setupFor(
+    permissions: string[],
+    { userId = SAM, lockedThrough = null }: { userId?: string; lockedThrough?: string | null } = {},
+  ) {
+    const backend = createBackend({
+      entries: [
+        {
+          ...entry({
+            id: 'own-1',
+            user_id: userId,
+            entry_date: WEEK,
+            minutes: 360,
+            status: 'approved',
+          }),
+          period_locked_through: lockedThrough,
+        },
+      ],
+    });
+    server.use(...timeHandlers(backend));
+    renderInOrg(
+      <PersonSheetDrawer
+        person={{ ...ROW, userId }}
+        weekStart={WEEK}
+        staff={undefined}
+        onClose={() => {}}
+      />,
+      { context: contextWith(permissions) },
+    );
+  }
+
+  it('offers neither action on your own week without organization.update', async () => {
+    setupFor(MANAGER, { userId: ME });
+
+    await screen.findByText('Themselves');
+    expect(screen.queryByRole('button', { name: 'Revoke approval' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Remove the entry of/ })).not.toBeInTheDocument();
+  });
+
+  it('offers both on your own week with organization.update', async () => {
+    setupFor([...MANAGER, 'organization.update'], { userId: ME });
+
+    expect(await screen.findByRole('button', { name: /^Remove the entry of/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Revoke approval' })).toBeInTheDocument();
+  });
+
+  it('does not offer to remove time in a locked period', async () => {
+    setupFor(MANAGER, { lockedThrough: '2026-10-31' });
+
+    await screen.findByText('Themselves');
     expect(screen.queryByRole('button', { name: /^Remove the entry of/ })).not.toBeInTheDocument();
   });
 });

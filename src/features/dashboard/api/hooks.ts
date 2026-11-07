@@ -138,9 +138,13 @@ export function useSendTimesheetReminders() {
   const { organization } = useOrg();
   return useMutation({
     mutationFn: (weekStart: string) => dashboardApi.sendReminders(organization.id, weekStart),
+    // The Team page's missing list shows the reminders too.
     onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: [...dashboardKeys.all(organization.id), 'missing-timesheets'],
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...dashboardKeys.all(organization.id), 'missing-timesheets'],
+        }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.org.timesheets(organization.id) }),
+      ]),
   });
 }

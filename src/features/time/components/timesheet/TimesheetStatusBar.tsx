@@ -19,6 +19,8 @@ export interface TimesheetStatusBarProps {
   grid: WeekGrid;
   /** The sheet with its decision, once the week has one. */
   sheet: TimesheetDetail | undefined;
+  /** The sheet is still loading: Submit waits, as its time with no rate is not known yet. */
+  sheetLoading?: boolean;
   /** The person may record time (`time.log`). */
   canRecord: boolean;
 }
@@ -27,7 +29,12 @@ export interface TimesheetStatusBarProps {
  * The week's status: totals against the target, submit and recall, and the notices that go with
  * the status (returned with its reason, submitted, approved, days with no time).
  */
-export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBarProps) {
+export function TimesheetStatusBar({
+  grid,
+  sheet,
+  sheetLoading = false,
+  canRecord,
+}: TimesheetStatusBarProps) {
   const { organization } = useOrg();
   const { toast } = useToast();
   const submit = useSubmitTimesheet();
@@ -46,9 +53,16 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
   const unpriced = sheet?.zero_rate_minutes ?? 0;
   // The practice may not approve timesheets (General Settings): submitting approves the week.
   const approving = organization.require_timesheet_approval;
-  const submittedText = approving
-    ? 'Your manager can now approve it.'
-    : 'Timesheets need no approval here: the week is approved and its time is locked.';
+  // The owner needs no approval (`timesheet.exempt` while the practice auto-approves it): say
+  // before submitting that the week is approved at once (TIME-02).
+  const exempt = approving && sheet?.approval_exempt === true;
+  // A person exempt from approval has the week approved at submit: what the API answers decides.
+  const submittedText = (result: TimesheetDetail) =>
+    result.status !== 'approved'
+      ? 'Your manager can now approve it.'
+      : approving
+        ? 'Your timesheets need no approval: the week is approved and its time is locked.'
+        : 'Timesheets need no approval here: the week is approved and its time is locked.';
 
   const close = () => {
     setConfirming(null);
@@ -77,12 +91,12 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
         }),
     };
     submit.mutate(timesheetId, {
-      onSuccess: () =>
+      onSuccess: (result) =>
         toast({
           tone: 'success',
           title: 'Timesheet submitted',
-          description: submittedText,
-          ...(approving ? { action: undo } : {}),
+          description: submittedText(result),
+          ...(result.status === 'submitted' ? { action: undo } : {}),
         }),
       // The API refused: show why in the usual dialog, where it can be retried.
       onError: (error) => {
@@ -95,13 +109,13 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
   const act = () => {
     if (!timesheetId || !confirming) return;
     const done = {
-      onSuccess: () => {
+      onSuccess: (result: TimesheetDetail) => {
         toast({
           tone: 'success',
           title: confirming === 'submit' ? 'Timesheet submitted' : 'Timesheet recalled',
           description:
             confirming === 'submit'
-              ? submittedText
+              ? submittedText(result)
               : 'It is open again: you can change it and submit it again.',
         });
         close();
@@ -178,7 +192,7 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
             <Button
               variant="primary"
               leftIcon={<Send className="size-4" aria-hidden="true" />}
-              disabled={timesheetId === null || grid.total_minutes === 0}
+              disabled={timesheetId === null || grid.total_minutes === 0 || sheetLoading}
               loading={submit.isPending && confirming === null}
               onClick={() =>
                 grid.missing_days.length === 0 && unpriced === 0
@@ -186,7 +200,7 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
                   : setConfirming('submit')
               }
             >
-              {approving ? 'Submit for approval' : 'Submit timesheet'}
+              {exempt ? 'Submit week' : approving ? 'Submit for approval' : 'Submit timesheet'}
             </Button>
           ) : null}
           {canRecord && status === 'submitted' ? (
@@ -280,7 +294,13 @@ export function TimesheetStatusBar({ grid, sheet, canRecord }: TimesheetStatusBa
           </p>
         ) : (
           <>
-            {approving ? (
+            {exempt ? (
+              <p>
+                Your week is approved as soon as you submit it: your timesheets need no approval.
+                The week of {formatWeekRange(grid.week_start)} with{' '}
+                {formatMinutes(grid.total_minutes)} recorded is then locked.
+              </p>
+            ) : approving ? (
               <p>
                 The week of {formatWeekRange(grid.week_start)} with{' '}
                 {formatMinutes(grid.total_minutes)} recorded goes to your manager. Its time is

@@ -21,6 +21,7 @@ import { formatUkDate } from '@/utils/dates';
 import { formatMinutes, roundUpToIncrement } from '@/utils/minutes';
 
 import { useClientRef, useJobRefs, useTimer, useTimerActions } from '../../api';
+import { MAX_DAY_MINUTES } from '../../constants';
 import { useOvertimeConfirm } from '../../hooks/useOvertimeConfirm';
 import type { Timer, TimerStop } from '../../types';
 import { activityOptions } from '../../utils/activities';
@@ -202,8 +203,9 @@ function StopTimerForm({ timer, onClose }: { timer: Timer; onClose: () => void }
   const [description, setDescription] = useState(timer.description ?? '');
   const [refusal, setRefusal] = useState<Refusal | null>(null);
 
+  // As the API: whole minutes rounded up, at least 1 and at most a day, then the increment.
   const minutes = roundUpToIncrement(
-    Math.max(1, Math.ceil(timer.elapsed_seconds / 60)),
+    Math.min(MAX_DAY_MINUTES, Math.max(1, Math.ceil(timer.elapsed_seconds / 60))),
     organization.time_increment_minutes,
   );
 

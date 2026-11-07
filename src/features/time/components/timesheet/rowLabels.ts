@@ -4,5 +4,5 @@ import type { GridRowModel } from '../../utils/grid';
 export function rowTitle(row: GridRowModel): string {
   const client = row.client_name ?? 'No client';
   const job = [row.job_number, row.job_name].filter(Boolean).join(' ');
-  return [client, job || null, row.activity_name].filter(Boolean).join(' · ');
+  return [client, job || null, row.task_name, row.activity_name].filter(Boolean).join(' · ');
 }

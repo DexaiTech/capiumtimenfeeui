@@ -67,7 +67,12 @@ function WeekPanel({
 
   return (
     <>
-      <TimesheetStatusBar grid={week.data} sheet={sheet.data} canRecord={canRecord} />
+      <TimesheetStatusBar
+        grid={week.data}
+        sheet={sheet.data}
+        sheetLoading={sheet.isLoading}
+        canRecord={canRecord}
+      />
       <WeekView
         key={week.data.week_start}
         grid={week.data}
