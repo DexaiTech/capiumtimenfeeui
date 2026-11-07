@@ -199,6 +199,44 @@ describe('StaffDetailPage working hours', () => {
     ).toBeInTheDocument();
   });
 
+  it('deletes a mistaken period after asking, with member.update only', async () => {
+    const deleted: string[] = [];
+    server.use(
+      http.delete(orgApiPath(`/staff/${sam.id}/hours/:hoursId`), ({ params }) => {
+        deleted.push(String(params.hoursId));
+        return ok(null);
+      }),
+    );
+    const user = userEvent.setup();
+    const first = renderDetail(['member.read']);
+    const readOnly = within(await card());
+    expect(await readOnly.findAllByText('28:00 per week')).toHaveLength(2);
+    expect(
+      readOnly.queryByRole('button', { name: /^Delete working hours/ }),
+    ).not.toBeInTheDocument();
+    first.unmount();
+
+    renderDetail();
+    const hours = within(await card());
+    const [target] = await hours.findAllByRole('button', { name: /^Delete working hours from/ });
+    if (!target) throw new Error('No delete action on the working hours');
+    await user.click(target);
+    const dialog = await screen.findByRole('dialog', { name: 'Delete working hours?' });
+    // Cancelling sends nothing.
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(deleted).toEqual([]);
+
+    await user.click(target);
+    await user.click(
+      within(await screen.findByRole('dialog', { name: 'Delete working hours?' })).getByRole(
+        'button',
+        { name: 'Delete hours' },
+      ),
+    );
+    expect(await screen.findByText('Sam Staff: working hours deleted')).toBeInTheDocument();
+    expect(deleted).toHaveLength(1);
+  });
+
   it('shows no overtime multiplier in the profile any more (APT81 retired it)', async () => {
     const withOvertime = {
       ...ownerContext,

@@ -163,7 +163,7 @@ function StaffList({
       id: 'code',
       header: 'Code',
       sortable: true,
-      className: 'w-24 whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (member) => (
         <span className="font-medium text-text-muted tabular-nums">{member.code}</span>
       ),
@@ -180,7 +180,7 @@ function StaffList({
             <span className="flex flex-wrap items-center gap-1.5">
               <Link
                 to={routes.org.staffMember(organization.slug, member.id)}
-                className="truncate font-semibold text-text hover:text-brand-text hover:underline"
+                className="font-semibold break-words text-text hover:text-brand-text hover:underline"
               >
                 {member.full_name}
               </Link>
@@ -198,7 +198,6 @@ function StaffList({
       id: 'grade',
       header: 'Grade',
       sortable: true,
-      className: 'w-32',
       cell: (member) =>
         member.grade ? (
           <span className="text-text-muted">{member.grade.name}</span>
@@ -209,7 +208,6 @@ function StaffList({
     {
       id: 'approver',
       header: 'Approver',
-      className: 'w-44',
       cell: (member) =>
         member.approver ? (
           <span className="flex items-center gap-2">
@@ -218,7 +216,7 @@ function StaffList({
               colorKey={member.approver.id}
               size="xs"
             />
-            <span className="truncate text-text-muted">{member.approver.full_name}</span>
+            <span className="break-words text-text-muted">{member.approver.full_name}</span>
           </span>
         ) : (
           <span className="text-text-subtle">—</span>
@@ -228,7 +226,7 @@ function StaffList({
       id: 'hours',
       header: 'Hours/day',
       align: 'end',
-      className: 'w-28 whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (member) => (
         <span
           className="text-text tabular-nums"
@@ -241,7 +239,7 @@ function StaffList({
     {
       id: 'days',
       header: 'Working days',
-      className: 'w-36 whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (member) => (
         <span className="text-text-muted">{formatWeekdays(member.working_days)}</span>
       ),
@@ -250,7 +248,7 @@ function StaffList({
       id: 'target',
       header: 'Chargeable target',
       align: 'end',
-      className: 'w-36 whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (member) => (
         <span className="text-text tabular-nums">
           {formatBasisPoints(member.chargeable_target_bp)}
@@ -263,7 +261,7 @@ function StaffList({
             id: 'charge_rate',
             header: 'Charge-out rate',
             align: 'end' as const,
-            className: 'w-36 whitespace-nowrap',
+            className: '[td&]:whitespace-nowrap',
             cell: (member: StaffMember) => (
               <span className="text-text tabular-nums">{formatRate(member.charge_rate)}</span>
             ),
@@ -272,7 +270,7 @@ function StaffList({
             id: 'cost_rate',
             header: 'Cost rate',
             align: 'end' as const,
-            className: 'w-32 whitespace-nowrap',
+            className: '[td&]:whitespace-nowrap',
             cell: (member: StaffMember) => (
               <span className="text-text tabular-nums">{formatRate(member.cost_rate)}</span>
             ),
@@ -283,13 +281,11 @@ function StaffList({
       id: 'status',
       header: 'Status',
       sortable: true,
-      className: 'w-28',
       cell: (member) => <StaffStatusBadge status={member.status} />,
     },
     {
       id: 'login',
       header: 'Login',
-      className: 'w-32',
       cell: (member) => <LoginStatusBadge status={member.login_status} />,
     },
     {

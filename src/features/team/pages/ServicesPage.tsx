@@ -172,9 +172,9 @@ function ServiceList() {
       hideable: false,
       cell: (service) => (
         <div className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold text-text">{service.name}</span>
+          <span className="font-semibold break-words text-text">{service.name}</span>
           {service.description ? (
-            <span className="truncate text-xs text-text-muted" title={service.description}>
+            <span className="line-clamp-2 text-xs text-text-muted" title={service.description}>
               {service.description}
             </span>
           ) : null}
@@ -186,7 +186,7 @@ function ServiceList() {
       header: 'Code',
       sortable: true,
       sortValue: (service) => service.code,
-      className: 'w-28 whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (service) => <span className="font-medium text-text-muted">{service.code}</span>,
     },
     {
@@ -194,7 +194,7 @@ function ServiceList() {
       header: 'Billing basis',
       sortable: true,
       sortValue: (service) => service.billing_basis,
-      className: 'w-36 whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (service) => (
         <span className="text-text">
           {service.billing_basis === 'fixed' ? 'Fixed fee' : 'Hourly'}
@@ -207,7 +207,7 @@ function ServiceList() {
       sortable: true,
       sortValue: (service) => service.default_fee,
       align: 'end',
-      className: 'w-36 whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (service) => (
         <span className="text-text tabular-nums">
           {service.default_fee === null ? '—' : formatMoney(service.default_fee)}
@@ -220,7 +220,7 @@ function ServiceList() {
             id: 'charge_rate',
             header: 'Charge-out rate',
             align: 'end',
-            className: 'w-36 whitespace-nowrap',
+            className: '[td&]:whitespace-nowrap',
             cell: (service) => (
               <span className="text-text tabular-nums">
                 {formatRate(chargeRateOf(service)?.rate)}
@@ -232,7 +232,7 @@ function ServiceList() {
     {
       id: 'billable',
       header: 'Billable',
-      className: 'w-32 whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (service) => (
         <Badge tone={service.default_billable ? 'success' : 'neutral'} size="sm">
           {service.default_billable ? 'Billable' : 'Non-billable'}
@@ -242,7 +242,6 @@ function ServiceList() {
     {
       id: 'vat',
       header: 'VAT code',
-      className: 'w-40 whitespace-nowrap',
       cell: (service) => (
         <span className="text-text">{vatName(vatCodes.data, service.vat_rate_id)}</span>
       ),
@@ -250,7 +249,7 @@ function ServiceList() {
     {
       id: 'invoice',
       header: 'Invoice description',
-      className: 'min-w-48 max-w-72',
+      className: 'min-w-32 max-w-72',
       cell: (service) =>
         service.invoice_description ? (
           <span className="line-clamp-2 text-text" title={service.invoice_description}>
@@ -263,7 +262,7 @@ function ServiceList() {
     {
       id: 'activity',
       header: 'Activity types',
-      className: 'min-w-48',
+      className: 'min-w-32',
       cell: (service) =>
         service.activity_code_ids.length === 0 ? (
           <span className="text-text-muted">All activity types</span>
@@ -288,7 +287,7 @@ function ServiceList() {
       sortable: true,
       sortValue: (service) => service.task_template_count,
       align: 'end',
-      className: 'w-36 whitespace-nowrap',
+      className: '[td&]:whitespace-nowrap',
       cell: (service) =>
         service.task_template_count === 0 ? (
           <span className="text-text-muted">—</span>
@@ -301,7 +300,6 @@ function ServiceList() {
       header: 'Status',
       sortable: true,
       sortValue: (service) => (service.is_active ? 'Active' : 'Inactive'),
-      className: 'w-28',
       cell: (service) => <ActiveBadge active={service.is_active} />,
     },
   ];

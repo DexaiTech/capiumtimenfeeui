@@ -27,6 +27,16 @@ export function useAddStaffHours(staffId: string) {
   });
 }
 
+/** Removes one period of a person's hours (a mistaken one); the others stay as they are. */
+export function useDeleteStaffHours(staffId: string) {
+  const { organization } = useOrg();
+  const invalidate = useTeamInvalidation();
+  return useMutation({
+    mutationFn: (hoursId: string) => teamApi.deleteStaffHours(organization.id, staffId, hoursId),
+    onSettled: invalidate.hours,
+  });
+}
+
 export function useOvertimeRates(filters: OvertimeRateFilters) {
   const { organization } = useOrg();
   return useInfiniteQuery({
