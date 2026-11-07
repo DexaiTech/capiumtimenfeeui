@@ -264,6 +264,15 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
       const ordered = sortRows(rows, `${order === 'desc' ? '-' : ''}${sortKey[sort] ?? 'used_bp'}`);
       const page = pageOf(ordered, params, backend.pageSize);
       const count = (rag: Rag) => rows.filter((row) => row.rag === rag).length;
+      // As the API: each percentage is of the jobs that have that kind of budget only (CLI-04).
+      const hoursJobs = rows.filter((row) => row.budget_minutes !== null);
+      const feeJobs = rows.filter((row) => row.budget_fee !== null);
+      const budgetMinutes = hoursJobs.reduce((sum, row) => sum + (row.budget_minutes ?? 0), 0);
+      const minutesBasis = hoursJobs.reduce((sum, row) => sum + row.logged_minutes, 0);
+      const budgetFee = feeJobs.reduce((sum, row) => sum + (row.budget_fee ?? 0), 0);
+      const feeBasis = feeJobs.reduce((sum, row) => sum + row.time_value, 0);
+      const usageBp = (actual: number, budget: number) =>
+        budget > 0 ? Math.round((actual * 10000) / budget) : null;
       return ok(
         {
           rows: page.rows,
@@ -272,13 +281,15 @@ export function jobHandlers(backend: JobsBackend): HttpHandler[] {
             green: count('green'),
             amber: count('amber'),
             red: count('red'),
-            budget_minutes: rows.reduce((sum, row) => sum + (row.budget_minutes ?? 0), 0),
+            budget_minutes: budgetMinutes,
             logged_minutes: rows.reduce((sum, row) => sum + row.logged_minutes, 0),
-            budget_minutes_used_bp: rows.length > 0 ? 5000 : null,
-            budget_fee: rows.reduce((sum, row) => sum + (row.budget_fee ?? 0), 0),
+            budget_minutes_used_bp: usageBp(minutesBasis, budgetMinutes),
+            minutes_basis_logged: minutesBasis,
+            budget_fee: budgetFee,
             time_value: rows.reduce((sum, row) => sum + row.time_value, 0),
             wip_value: rows.reduce((sum, row) => sum + row.wip_value, 0),
-            budget_fee_used_bp: null,
+            budget_fee_used_bp: usageBp(feeBasis, budgetFee),
+            fee_basis_value: feeBasis,
             cost_value: null,
             margin_value: null,
             margin_bp: null,

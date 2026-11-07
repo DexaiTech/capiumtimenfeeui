@@ -132,14 +132,14 @@ export default function BudgetTrackingPage() {
       header: 'Job',
       hideable: false,
       sortable: true,
-      className: 'min-w-56 max-w-96',
+      className: 'min-w-40 max-w-96',
       cell: (row) => (
         <Link
           to={routes.org.job(organization.slug, row.job_id)}
           className="flex min-w-0 flex-col hover:text-brand-text"
           title={`${row.number} ${row.name}`}
         >
-          <span className="truncate font-semibold text-text">{row.name}</span>
+          <span className="font-semibold break-words text-text">{row.name}</span>
           <span className="text-xs text-text-muted">{row.number}</span>
         </Link>
       ),
@@ -148,7 +148,7 @@ export default function BudgetTrackingPage() {
       id: 'client',
       header: 'Client',
       sortable: true,
-      className: 'min-w-40',
+      className: 'min-w-32',
       cell: (row) => <span className="text-text">{row.client_name}</span>,
     },
     {
@@ -160,7 +160,7 @@ export default function BudgetTrackingPage() {
     {
       id: 'manager',
       header: 'Manager',
-      className: 'min-w-36',
+      className: 'min-w-32',
       cell: (row) => <span className="text-text">{row.manager_name ?? '—'}</span>,
     },
     {
@@ -176,7 +176,7 @@ export default function BudgetTrackingPage() {
       id: 'hours',
       header: 'Hours',
       sortable: true,
-      className: 'min-w-48',
+      className: 'min-w-36',
       cell: (row) => (
         <div className="flex flex-col gap-1">
           <span className="text-text tabular-nums">
@@ -190,7 +190,7 @@ export default function BudgetTrackingPage() {
       id: 'value',
       header: 'Fee',
       sortable: true,
-      className: 'min-w-48',
+      className: 'min-w-36',
       cell: (row) => (
         <div className="flex flex-col gap-1">
           <span className="text-text tabular-nums">
@@ -255,7 +255,9 @@ export default function BudgetTrackingPage() {
           <Card padding="sm" className="flex flex-col gap-1">
             <dt className="text-xs text-text-muted">Hours logged</dt>
             <dd className="text-xl font-semibold text-text tabular-nums">
-              {hoursOf(totals.logged_minutes, totals.budget_minutes || null)}
+              {totals.budget_minutes > 0
+                ? hoursOf(totals.minutes_basis_logged, totals.budget_minutes)
+                : hoursOf(totals.logged_minutes, null)}
             </dd>
             <p className="text-2xs text-text-subtle">
               {totals.budget_minutes_used_bp === null
@@ -266,12 +268,14 @@ export default function BudgetTrackingPage() {
           <Card padding="sm" className="flex flex-col gap-1">
             <dt className="text-xs text-text-muted">Time value</dt>
             <dd className="text-xl font-semibold text-text tabular-nums">
-              {money(totals.time_value)}
+              {totals.budget_fee > 0
+                ? `${money(totals.fee_basis_value)} of ${money(totals.budget_fee)}`
+                : money(totals.time_value)}
             </dd>
             <p className="text-2xs text-text-subtle">
               {totals.budget_fee_used_bp === null
                 ? 'No fee budgets'
-                : `${formatBasisPoints(totals.budget_fee_used_bp)} of ${money(totals.budget_fee)} budgeted`}
+                : `${formatBasisPoints(totals.budget_fee_used_bp)} of the fees budgeted`}
             </p>
           </Card>
           <Card padding="sm" className="flex flex-col gap-1">
