@@ -178,6 +178,8 @@ export const teamApi = {
     api.get<StaffHours[]>(`${org(organizationId)}/staff/${seg(staffId)}/hours`, { signal }),
   addStaffHours: (organizationId: string, staffId: string, body: StaffHoursCreate) =>
     api.post<StaffHours>(`${org(organizationId)}/staff/${seg(staffId)}/hours`, body),
+  deleteStaffHours: (organizationId: string, staffId: string, hoursId: string) =>
+    api.delete<null>(`${org(organizationId)}/staff/${seg(staffId)}/hours/${seg(hoursId)}`),
   // Overtime rates of grades and staff (`rate.read`; written with `rate.manage`).
   listOvertimeRates: (
     organizationId: string,

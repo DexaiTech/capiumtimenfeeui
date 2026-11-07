@@ -94,19 +94,18 @@ export function RunsHistory() {
       id: 'when',
       header: 'When',
       card: 'title',
-      className: 'w-44 whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (run) => <span className="font-medium text-text">{when(run)}</span>,
     },
     {
       id: 'who',
       header: 'Who',
-      className: 'w-40',
       cell: (run) => <span className="text-text">{run.requested_by_name ?? '—'}</span>,
     },
     {
       id: 'kind',
       header: 'Kind',
-      className: 'w-40 whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (run) => (
         <span className="text-text-muted">{SOURCE_LABEL[run.source] ?? run.source}</span>
       ),
@@ -114,13 +113,12 @@ export function RunsHistory() {
     {
       id: 'scope',
       header: 'Scope',
-      className: 'min-w-64',
+      className: 'min-w-36',
       cell: (run) => <span className="text-text">{describeRunScope(run.scope)}</span>,
     },
     {
       id: 'entries',
       header: 'Entries',
-      className: 'w-52 whitespace-nowrap',
       cell: (run) => (
         <span className="text-text">
           {run.entries_changed} changed · {run.entries_skipped} left alone
@@ -131,7 +129,7 @@ export function RunsHistory() {
       id: 'value',
       header: 'Charge-out value',
       align: 'end',
-      className: 'w-64 whitespace-nowrap',
+      className: 'min-w-36',
       cell: (run) => (
         <span className="text-text tabular-nums">
           {formatMoney(run.charge_value_before)} → {formatMoney(run.charge_value_after)} (
@@ -145,7 +143,7 @@ export function RunsHistory() {
             id: 'cost',
             header: 'Cost value',
             align: 'end' as const,
-            className: 'w-32 whitespace-nowrap',
+            className: 'whitespace-nowrap',
             cell: (run: Rerun) => (
               <span className="text-text tabular-nums">{formatDelta(run.cost_value_delta)}</span>
             ),
@@ -155,7 +153,7 @@ export function RunsHistory() {
     {
       id: 'note',
       header: 'Note',
-      className: 'min-w-40',
+      className: 'min-w-32',
       cell: (run) =>
         run.note ? (
           <span className="text-text">{run.note}</span>

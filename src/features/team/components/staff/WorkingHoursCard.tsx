@@ -1,18 +1,27 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Clock } from 'lucide-react';
+import { Clock, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, Card, CardHeader, FormPanel, Input, Skeleton, useToast } from '@/components/ui';
+import {
+  Button,
+  Card,
+  CardHeader,
+  ConfirmDialog,
+  FormPanel,
+  Input,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 import { useOrg } from '@/features/organizations';
 import { todayInZone } from '@/utils/dates';
 import { formatMinutes, parseMinutes } from '@/utils/minutes';
 
-import { useAddStaffHours, useStaffHours } from '../../api';
+import { useAddStaffHours, useDeleteStaffHours, useStaffHours } from '../../api';
 import { staffHoursSchema, type StaffHoursValues } from '../../schemas/overtime';
 import type { HoursBasis, RuleStatus, StaffDetail, StaffHours } from '../../types';
-import { toFormError } from '../../utils/errors';
+import { dialogError, toFormError } from '../../utils/errors';
 import { formatPeriod } from '../../utils/format';
 import { RuleStatusBadge } from '../badges';
 import { DialogActions } from '../DialogActions';
@@ -154,13 +163,51 @@ function ChangeHoursForm({
 export function WorkingHoursCard({ staff, canEdit }: { staff: StaffDetail; canEdit: boolean }) {
   const { organization } = useOrg();
   const hours = useStaffHours(staff.id);
+  const remove = useDeleteStaffHours(staff.id);
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState<StaffHours | null>(null);
+  const [refusal, setRefusal] = useState<{ message: string; requestId?: string } | null>(null);
   const today = todayInZone(organization.timezone);
   const rows = hours.data ?? [];
   const current = rows.find((period) => statusOn(period, today) === 'current');
 
+  const closeDelete = () => {
+    setDeleting(null);
+    setRefusal(null);
+  };
+  const confirmDelete = () => {
+    if (!deleting) return;
+    remove.mutate(deleting.id, {
+      onSuccess: () => {
+        toast({ tone: 'success', title: `${staff.full_name}: working hours deleted` });
+        closeDelete();
+      },
+      onError: (error) => setRefusal(dialogError(error)),
+    });
+  };
+
   return (
     <>
+      <ConfirmDialog
+        open={deleting !== null}
+        onClose={closeDelete}
+        onConfirm={confirmDelete}
+        title="Delete working hours?"
+        confirmLabel="Delete hours"
+        loading={remove.isPending}
+        error={refusal}
+      >
+        {deleting ? (
+          <p>
+            {staff.full_name}&apos;s{' '}
+            <strong className="font-medium text-text">{formatHours(deleting)}</strong> (
+            {formatPeriod(deleting.effective_from, deleting.effective_to)}) will be removed. The
+            other periods stay as they are, and time already recorded keeps its overtime. This
+            cannot be undone.
+          </p>
+        ) : null}
+      </ConfirmDialog>
       <FormPanel
         open={open}
         onClose={() => setOpen(false)}
@@ -234,6 +281,11 @@ export function WorkingHoursCard({ staff, canEdit }: { staff: StaffDetail; canEd
                         <th scope="col" className="py-2 font-medium">
                           Status
                         </th>
+                        {canEdit ? (
+                          <th scope="col" className="py-2 text-right font-medium">
+                            <span className="sr-only">Actions</span>
+                          </th>
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -249,6 +301,19 @@ export function WorkingHoursCard({ staff, canEdit }: { staff: StaffDetail; canEd
                           <td className="py-2">
                             <RuleStatusBadge status={statusOn(period, today)} />
                           </td>
+                          {canEdit ? (
+                            <td className="py-2 text-right">
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                title="Delete"
+                                aria-label={`Delete working hours from ${formatPeriod(period.effective_from, period.effective_to)}`}
+                                onClick={() => setDeleting(period)}
+                              >
+                                <Trash2 aria-hidden="true" className="size-4" />
+                              </Button>
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                     </tbody>
