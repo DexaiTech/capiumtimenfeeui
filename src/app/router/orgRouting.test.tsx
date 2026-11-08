@@ -219,6 +219,16 @@ describe('practice route (/:orgSlug)', () => {
     ).toBeInTheDocument();
   });
 
+  it('sends the old Opening Balances address to the Opening Balances tab', async () => {
+    mockOrganizations([contextWith(['organization.read', 'opening_balance.import'])]);
+    const { router } = renderApp('/acme/billing/opening-balances');
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/acme/settings/import-export'),
+    );
+    // The page opens the tab named here (ImportExportPage.test.tsx, "the tab in the address").
+    expect(router.state.location.search).toBe('?tab=opening-balances');
+  });
+
   it('moves between the pages of a module with the secondary bar', async () => {
     mockOrganizations([ownerContext]);
     const { router } = renderApp('/acme/settings/general');

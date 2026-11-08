@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { contextWith, OWNER_PERMISSIONS } from '@/test/orgFixtures';
@@ -125,6 +126,56 @@ describe('what the page offers', () => {
       expect(within(section).getByRole('button', { name: `Export ${noun} (CSV)` })).toBeEnabled();
       expect(within(section).getByRole('button', { name: `Import ${noun}` })).toBeEnabled();
     }
+  });
+});
+
+describe('the tab in the address', () => {
+  /** Shows the address's query, so a test can see what the page wrote there. */
+  function Query() {
+    return <output aria-label="Address query">{useLocation().search}</output>;
+  }
+
+  function setupAt(route: string) {
+    server.use(...adminHandlers(createBackend()));
+    renderInOrg(
+      <>
+        <ImportExportPage />
+        <Query />
+      </>,
+      { context: contextWith(OWNER_PERMISSIONS), route },
+    );
+  }
+
+  it('opens the tab the address names', async () => {
+    setupAt('/acme/settings/import-export?tab=opening-balances');
+
+    expect(await screen.findByRole('tab', { name: 'Opening Balances' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('region', { name: 'Opening Balances' })).toBeInTheDocument();
+  });
+
+  it('opens the Clients tab when the address names no known tab', async () => {
+    setupAt('/acme/settings/import-export?tab=nonsense');
+
+    expect(await screen.findByRole('tab', { name: 'Clients' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('region', { name: 'Clients' })).toBeInTheDocument();
+  });
+
+  it('writes the chosen tab to the address, so a refresh keeps it', async () => {
+    const user = userEvent.setup();
+    setupAt('/acme/settings/import-export');
+    await openTab(user, 'Reports & logs');
+
+    expect(screen.getByRole('status', { name: 'Address query' })).toHaveTextContent('?tab=reports');
+    expect(screen.getByRole('tab', { name: 'Reports & logs' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 });
 

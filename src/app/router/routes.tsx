@@ -153,7 +153,7 @@ const MOVED: ReadonlyArray<readonly [string, string]> = [
   ['time/timer', 'time'],
   ['billing/wip', 'wip'],
   // Opening Balances import moved from a Billing placeholder to the real feature in Settings.
-  ['billing/opening-balances', 'settings/import-export'],
+  ['billing/opening-balances', 'settings/import-export?tab=opening-balances'],
   // Services moved from Team & Rates to Settings.
   ['team/services', 'settings/services'],
 ];
