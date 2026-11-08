@@ -49,9 +49,10 @@ scripts, not in any repo):
   item of 6,000. The WIP report total fell by £60; after reversal (`DELETE
 /wip/write-offs/{id}`) "Disbursements & expenses" rose by exactly 6,000.
 - **Label:** WIP & Ageing shows "Disbursements & expenses".
-- **Note:** the walkthrough ran as the Owner, so self-approval is allowed with
-  `organization.update`. A separate approver user was not set up locally (it needs an e-mailed
-  invite). The other-approver and self-submitter rules are covered by the automated tests.
+- **Note:** the walkthrough ran as the Owner, and the Owner is the only user who may approve an
+  invoice they prepared or submitted. A separate approver user was not set up locally (it needs
+  an e-mailed invite). The other-approver and self-submitter rules are covered by the automated
+  tests.
 
 ## 2. Diff review (both repositories, against `origin/main`, including new files)
 
@@ -83,10 +84,14 @@ scripts, not in any repo):
   expense lines too. The permission is still `wip.write_off`.
 - Verified in code, tests and the running app.
 
-**Invoice approval** (`domain.md:89-91`):
+**Invoice approval** (`domain.md:89-91`; API `billing.md` "Segregation";
+`services/invoices.py` `_can_approve`):
 
-- Approve follows the API's `can_approve`: self-approval is refused unless the user holds
-  `organization.update`.
+- Approve follows the API's `can_approve`. Whoever created the draft or last submitted it
+  cannot approve it (409 `SELF_APPROVAL_NOT_ALLOWED`); only the **Owner** is exempt. Holding
+  `organization.update` alone (for example an Admin or Partner) does **not** grant the
+  exception. Earlier wording here, and the BIL-01 commit message (`eee88ed`), said
+  "unless `organization.update`"; that was wrong, and the code was always Owner-only.
 - Reject is for holders of `invoice.approve` on `awaiting_approval` or `approved` invoices,
   matching the API route description.
 - Issue on `approved` needs `invoice.issue`.
