@@ -1,6 +1,6 @@
 import { Download, FileUp } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 
 import { Button, buttonClasses, Card, Tabs, useToast } from '@/components/ui';
 import { PERMISSIONS as P } from '@/constants/permissions';
@@ -23,6 +23,11 @@ const TABS: ReadonlyArray<{ value: ImportExportTab; label: string }> = [
   { value: 'other', label: 'Staff, rates & jobs' },
 ];
 
+/** The tab named by `?tab=` (the old Opening Balances address uses it); Clients otherwise. */
+function tabFrom(value: string | null): ImportExportTab {
+  return TABS.find((item) => item.value === value)?.value ?? 'clients';
+}
+
 /** What a practice can move in and out of the application in bulk. */
 export function ImportExportView() {
   const { organization, can } = useOrg();
@@ -30,7 +35,14 @@ export function ImportExportView() {
   const exporter = useExportClients();
   const [importing, setImporting] = useState(false);
   const [importingOpeningBalances, setImportingOpeningBalances] = useState(false);
-  const [tab, setTab] = useState<ImportExportTab>('clients');
+  // The tab lives in the URL, so a refresh or a shared link opens the same one.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = tabFrom(searchParams.get('tab'));
+  const setTab = (value: ImportExportTab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', value);
+    setSearchParams(next, { replace: true });
+  };
   const slug = organization.slug;
   const canExport = can(P.clientRead);
   const canImport = can(P.clientCreate);
