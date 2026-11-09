@@ -30,8 +30,8 @@ import { useBranches, useBranchesEnabled } from '@/features/settings';
 import { useDebouncedValue, useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { isApiError } from '@/services/api';
 import { downloadText, toCsv } from '@/utils/csv';
-import { formatDayMonthYear } from '@/utils/dates';
-import { formatMoney } from '@/utils/money';
+import { formatDayMonthYear, formatUkDate, todayInZone } from '@/utils/dates';
+import { formatMoney, penceToPoundsInput } from '@/utils/money';
 
 import '@/styles/capium-clients.css';
 
@@ -246,7 +246,7 @@ function LeadList() {
       plain: true,
       className: 'w-32 whitespace-nowrap tabular-nums',
       cell: (lead) => formatMoney(lead.acquisition_cost, currency),
-      csv: [['Acquisition', (lead) => formatMoney(lead.acquisition_cost, currency)]],
+      csv: [['Acquisition', (lead) => penceToPoundsInput(lead.acquisition_cost, currency)]],
     },
     {
       id: 'onboarding',
@@ -255,7 +255,7 @@ function LeadList() {
       plain: true,
       className: 'w-32 whitespace-nowrap tabular-nums',
       cell: (lead) => formatMoney(lead.onboarding_cost, currency),
-      csv: [['Onboarding', (lead) => formatMoney(lead.onboarding_cost, currency)]],
+      csv: [['Onboarding', (lead) => penceToPoundsInput(lead.onboarding_cost, currency)]],
     },
     {
       id: 'total',
@@ -266,7 +266,7 @@ function LeadList() {
       cell: (lead) => (
         <span className="font-semibold text-text">{formatMoney(lead.total_cost, currency)}</span>
       ),
-      csv: [['Total cost', (lead) => formatMoney(lead.total_cost, currency)]],
+      csv: [['Total cost', (lead) => penceToPoundsInput(lead.total_cost, currency)]],
     },
     {
       id: 'status',
@@ -295,11 +295,19 @@ function LeadList() {
       plain: true,
       className: 'w-28 whitespace-nowrap',
       cell: (lead) => formatDayMonthYear(lead.created_at, organization.timezone),
-      csv: [['Added', (lead) => formatDayMonthYear(lead.created_at, organization.timezone)]],
+      csv: [
+        [
+          'Added',
+          (lead) => formatUkDate(todayInZone(organization.timezone, new Date(lead.created_at))),
+        ],
+      ],
     },
   ];
 
-  /** The selected leads as a CSV of the columns on screen, in their order. */
+  /**
+   * The selected leads as a CSV of the columns on screen, in their order. Like the other exports,
+   * amounts are pounds with two decimals and dates are dd/mm/yyyy, so a spreadsheet reads them.
+   */
   const exportSelected = () => {
     const cells = columns
       .filter((column) => !hidden.has(column.id))
