@@ -1,4 +1,4 @@
-import { SearchX, Target, UserPlus } from 'lucide-react';
+import { Download, SearchX, Target, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Card,
+  ColumnVisibilityMenu,
   ConfirmDialog,
   CountTabs,
   DataTable,
@@ -26,8 +27,9 @@ import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useBranches, useBranchesEnabled } from '@/features/settings';
-import { useDebouncedValue, useDocumentTitle, useUrlParams } from '@/hooks';
+import { useDebouncedValue, useDocumentTitle, usePersistentColumns, useUrlParams } from '@/hooks';
 import { isApiError } from '@/services/api';
+import { downloadText, toCsv } from '@/utils/csv';
 import { formatDayMonthYear } from '@/utils/dates';
 import { formatMoney } from '@/utils/money';
 
@@ -64,6 +66,11 @@ type DialogState =
   | { type: 'archive'; lead: Lead }
   | null;
 
+/** A column of the list with the CSV columns "Export selected" writes for it, as shown. */
+type LeadColumn = DataTableColumn<Lead> & {
+  csv: ReadonlyArray<readonly [header: string, value: (lead: Lead) => string | null]>;
+};
+
 /** A refusal shown in a confirmation dialog, with the request id. */
 function refusalOf(error: unknown): ConfirmDialogError {
   if (isApiError(error)) return { message: error.message, requestId: error.requestId };
@@ -91,6 +98,19 @@ function LeadList() {
   const loaded = useMemo(() => flattenPages(leads.data), [leads.data]);
   const convert = useConvertLead();
   const archive = useArchiveLead();
+
+  const [hidden, setHidden] = usePersistentColumns('leads');
+  // The ticks belong to one tab and search: another list starts with nothing selected, and a
+  // ticked lead that leaves the list (archived, converted) is no longer exported. While a new
+  // list loads, the rows of the previous one still on screen cannot be exported.
+  const listKey = `${tab}|${searched}`;
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  const [selectedFor, setSelectedFor] = useState(listKey);
+  if (selectedFor !== listKey) {
+    setSelectedFor(listKey);
+    setSelected(new Set());
+  }
+  const chosen = leads.isPlaceholderData ? [] : loaded.filter((lead) => selected.has(lead.id));
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [refusal, setRefusal] = useState<ConfirmDialogError | null>(null);
@@ -189,12 +209,18 @@ function LeadList() {
     return items;
   };
 
-  const columns: DataTableColumn<Lead>[] = [
+  const columns: LeadColumn[] = [
     {
       id: 'name',
       header: 'Lead',
       hideable: false,
       plain: true,
+      csv: [
+        ['Lead', (lead) => lead.name],
+        ['Contact', (lead) => lead.contact_name],
+        ['Email', (lead) => lead.email],
+        ['Phone', (lead) => lead.phone],
+      ],
       cell: (lead) => (
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="font-semibold text-text">{lead.name}</span>
@@ -211,6 +237,7 @@ function LeadList() {
       plain: true,
       className: 'whitespace-nowrap',
       cell: (lead) => lead.source ?? <span className="text-text-subtle">—</span>,
+      csv: [['Source', (lead) => lead.source]],
     },
     {
       id: 'acquisition',
@@ -219,6 +246,7 @@ function LeadList() {
       plain: true,
       className: 'w-32 whitespace-nowrap tabular-nums',
       cell: (lead) => formatMoney(lead.acquisition_cost, currency),
+      csv: [['Acquisition', (lead) => formatMoney(lead.acquisition_cost, currency)]],
     },
     {
       id: 'onboarding',
@@ -227,6 +255,7 @@ function LeadList() {
       plain: true,
       className: 'w-32 whitespace-nowrap tabular-nums',
       cell: (lead) => formatMoney(lead.onboarding_cost, currency),
+      csv: [['Onboarding', (lead) => formatMoney(lead.onboarding_cost, currency)]],
     },
     {
       id: 'total',
@@ -237,10 +266,12 @@ function LeadList() {
       cell: (lead) => (
         <span className="font-semibold text-text">{formatMoney(lead.total_cost, currency)}</span>
       ),
+      csv: [['Total cost', (lead) => formatMoney(lead.total_cost, currency)]],
     },
     {
       id: 'status',
       header: 'Status',
+      hideable: false,
       plain: true,
       className: 'whitespace-nowrap',
       cell: (lead) => (
@@ -256,6 +287,7 @@ function LeadList() {
           ) : null}
         </div>
       ),
+      csv: [['Status', (lead) => STATUS_BADGE[lead.status].label]],
     },
     {
       id: 'added',
@@ -263,8 +295,23 @@ function LeadList() {
       plain: true,
       className: 'w-28 whitespace-nowrap',
       cell: (lead) => formatDayMonthYear(lead.created_at, organization.timezone),
+      csv: [['Added', (lead) => formatDayMonthYear(lead.created_at, organization.timezone)]],
     },
   ];
+
+  /** The selected leads as a CSV of the columns on screen, in their order. */
+  const exportSelected = () => {
+    const cells = columns
+      .filter((column) => !hidden.has(column.id))
+      .flatMap((column) => column.csv);
+    downloadText(
+      'leads-selected.csv',
+      toCsv([
+        cells.map(([header]) => header),
+        ...chosen.map((lead) => cells.map(([, value]) => value(lead))),
+      ]),
+    );
+  };
 
   const totals = summary.data?.[tab];
   const filtered = searched !== '';
@@ -318,6 +365,11 @@ function LeadList() {
         columns={columns}
         rows={loaded}
         rowKey={(lead) => lead.id}
+        selectable
+        selected={selected}
+        onSelectedChange={setSelected}
+        selectLabel={(lead) => `Select ${lead.name}`}
+        hiddenColumns={hidden}
         loading={leads.isPending}
         toolbar={
           <PageToolbar
@@ -339,6 +391,28 @@ function LeadList() {
                 value={search}
                 onChange={setSearch}
               />
+            }
+            actions={
+              <>
+                <ColumnVisibilityMenu
+                  columns={columns.map((column) => ({
+                    id: column.id,
+                    label: column.header,
+                    locked: column.hideable === false,
+                  }))}
+                  hidden={hidden}
+                  onChange={setHidden}
+                />
+                <Button
+                  size="sm"
+                  variant="brand-outline"
+                  disabled={chosen.length === 0}
+                  leftIcon={<Download aria-hidden="true" className="size-4" />}
+                  onClick={exportSelected}
+                >
+                  Export selected
+                </Button>
+              </>
             }
             primaryAction={
               canCreate ? (

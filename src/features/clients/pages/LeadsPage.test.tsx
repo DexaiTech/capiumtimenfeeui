@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { branchesOnContext, branchHandlers, london } from '@/test/branches';
 import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
@@ -13,6 +13,8 @@ import { fail, ok, server } from '@/test/server';
 import {
   brightside,
   corner,
+  dunmore,
+  lead,
   leadHandlers,
   newLeadCalls,
   oldLead,
@@ -24,6 +26,7 @@ import LeadsPage from './LeadsPage';
 
 type User = ReturnType<typeof userEvent.setup>;
 
+// A row's name starts with its checkbox, "Select <lead>".
 const row = (name: RegExp) => screen.findByRole('row', { name });
 
 async function actionsOf(name: string) {
@@ -33,6 +36,22 @@ async function actionsOf(name: string) {
 
 async function chooseAction(user: User, name: string, action: string) {
   await user.click(await findRowAction(`Actions for ${name}`, action));
+}
+
+const tick = (name: string) => screen.getByRole('checkbox', { name: `Select ${name}` });
+const exportButton = () => screen.getByRole('button', { name: 'Export selected' });
+
+/** Catches the CSV "Export selected" offers: jsdom has no object URLs and no downloads. */
+function catchDownloads() {
+  const createObjectURL = vi.fn<(blob: Blob) => string>(() => 'blob:leads');
+  Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+  const clicks: HTMLAnchorElement[] = [];
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    clicks.push(this);
+  });
+  return { createObjectURL, clicks };
 }
 
 function renderPage(options: Parameters<typeof renderInOrg>[1] = {}) {
@@ -69,14 +88,14 @@ describe('LeadsPage: the list', () => {
       'aria-current',
       'true',
     );
-    const bright = within(await row(/^Brightside Bakery Ltd/));
+    const bright = within(await row(/^Select Brightside Bakery Ltd/));
     expect(bright.getByText('Bea Bright · bea@brightside.example')).toBeInTheDocument();
     expect(bright.getByText('Referral')).toBeInTheDocument();
     expect(bright.getByText('£250.00')).toBeInTheDocument();
     expect(bright.getByText('£50.00')).toBeInTheDocument();
     expect(bright.getByText('£300.00')).toBeInTheDocument();
-    expect(await row(/^Corner Cafe/)).toBeInTheDocument();
-    expect(screen.queryByRole('row', { name: /^Dunmore/ })).not.toBeInTheDocument();
+    expect(await row(/^Select Corner Cafe/)).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /^Select Dunmore/ })).not.toBeInTheDocument();
     expect(calls.lists[0]?.get('status')).toBe('open');
 
     expect(await screen.findByRole('tab', { name: /^Open\s*2$/ })).toHaveAttribute(
@@ -95,10 +114,10 @@ describe('LeadsPage: the list', () => {
   it('shows the converted leads linked to their client', async () => {
     const user = userEvent.setup();
     renderPage();
-    await row(/^Brightside/);
+    await row(/^Select Brightside/);
 
     await user.click(screen.getByRole('tab', { name: /^Converted/ }));
-    const dunmore = within(await row(/^Dunmore Holdings/));
+    const dunmore = within(await row(/^Select Dunmore Holdings/));
     expect(dunmore.getByRole('link', { name: 'C0042 · Dunmore Holdings' })).toHaveAttribute(
       'href',
       '/acme/clients/client-dunmore',
@@ -112,13 +131,13 @@ describe('LeadsPage: the list', () => {
   it('searches the name, contact and email', async () => {
     const user = userEvent.setup();
     renderPage();
-    await row(/^Brightside/);
+    await row(/^Select Brightside/);
 
     await user.type(screen.getByRole('searchbox', { name: 'Search leads' }), 'corner');
     await waitFor(() =>
-      expect(screen.queryByRole('row', { name: /^Brightside/ })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('row', { name: /^Select Brightside/ })).not.toBeInTheDocument(),
     );
-    expect(await row(/^Corner Cafe/)).toBeInTheDocument();
+    expect(await row(/^Select Corner Cafe/)).toBeInTheDocument();
     expect(calls.lists.at(-1)?.get('q')).toBe('corner');
   });
 
@@ -144,14 +163,270 @@ describe('LeadsPage: the list', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('No open leads')).toBeInTheDocument();
   });
+
+  it('shows the loading state, then the rows', async () => {
+    renderPage();
+    expect(screen.getByRole('table', { name: 'Leads' })).toHaveAttribute('aria-busy', 'true');
+    await row(/^Select Brightside/);
+    expect(screen.getByRole('table', { name: 'Leads' })).not.toHaveAttribute('aria-busy');
+  });
+});
+
+describe('LeadsPage: selection, columns and export', () => {
+  it('selects leads one by one or all at once, like the other grids', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    // Toolbar order: Show/Hide Columns, Export selected, then the primary Add lead.
+    const columnsButton = screen.getByRole('button', { name: 'Show/Hide Columns' });
+    const addLead = screen.getByRole('button', { name: 'Add lead' });
+    expect(columnsButton.compareDocumentPosition(exportButton())).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(exportButton().compareDocumentPosition(addLead)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(exportButton()).toBeDisabled();
+
+    await user.click(tick(brightside.name));
+    expect(tick(brightside.name)).toBeChecked();
+    expect(tick(corner.name)).not.toBeChecked();
+    expect(exportButton()).toBeEnabled();
+
+    const all = screen.getByRole('checkbox', { name: 'Select all rows' });
+    await user.click(all);
+    expect(tick(brightside.name)).toBeChecked();
+    expect(tick(corner.name)).toBeChecked();
+    await user.click(all);
+    expect(tick(brightside.name)).not.toBeChecked();
+    expect(tick(corner.name)).not.toBeChecked();
+    expect(exportButton()).toBeDisabled();
+  });
+
+  it('toggles a lead with the Space key', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    tick(corner.name).focus();
+    expect(tick(corner.name)).toHaveFocus();
+    await user.keyboard(' ');
+    expect(tick(corner.name)).toBeChecked();
+    await user.keyboard(' ');
+    expect(tick(corner.name)).not.toBeChecked();
+  });
+
+  it('clears the selection when the tab or the search changes', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(tick(brightside.name));
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    await row(/^Select Dunmore/);
+    expect(tick(dunmore.name)).not.toBeChecked();
+    expect(exportButton()).toBeDisabled();
+    await user.click(screen.getByRole('tab', { name: /^Open/ }));
+    await row(/^Select Brightside/);
+    expect(tick(brightside.name)).not.toBeChecked();
+
+    await user.click(tick(corner.name));
+    await user.type(screen.getByRole('searchbox', { name: 'Search leads' }), 'corner');
+    await waitFor(() =>
+      expect(screen.queryByRole('row', { name: /^Select Brightside/ })).not.toBeInTheDocument(),
+    );
+    expect(tick(corner.name)).not.toBeChecked();
+    expect(exportButton()).toBeDisabled();
+  });
+
+  it('exports the visible columns of the selected leads as a CSV file', async () => {
+    const { createObjectURL, clicks } = catchDownloads();
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    // A hidden column is left out of the file too.
+    await user.click(screen.getByRole('button', { name: 'Show/Hide Columns' }));
+    const menu = await screen.findByRole('dialog', { name: 'Visible columns' });
+    await user.click(within(menu).getByRole('checkbox', { name: 'Onboarding' }));
+    await user.keyboard('{Escape}');
+
+    await user.click(tick(brightside.name));
+    await user.click(exportButton());
+
+    expect(clicks).toHaveLength(1);
+    expect(clicks[0]?.download).toBe('leads-selected.csv');
+    expect(clicks[0]?.href).toBe('blob:leads');
+    const blob = createObjectURL.mock.calls[0]?.[0];
+    // UTF-8 with a byte-order mark for Excel (`text()` drops the mark), CRLF line ends.
+    expect([...new Uint8Array((await blob?.arrayBuffer()) ?? new ArrayBuffer(0), 0, 3)]).toEqual([
+      0xef, 0xbb, 0xbf,
+    ]);
+    const csv = await blob?.text();
+    expect(csv).toBe(
+      'Lead,Contact,Email,Phone,Source,Acquisition,Total cost,Status,Added\r\n' +
+        'Brightside Bakery Ltd,Bea Bright,bea@brightside.example,,Referral,£250.00,£300.00,Open,01-Oct-2026\r\n',
+    );
+  });
+
+  it('leaves a selected lead that leaves the list out of the export', async () => {
+    const { createObjectURL } = catchDownloads();
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Corner/);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    await chooseAction(user, corner.name, 'Archive');
+    const dialog = await screen.findByRole('dialog', { name: 'Archive lead?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Archive' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('row', { name: /^Select Corner/ })).not.toBeInTheDocument(),
+    );
+    expect(tick(brightside.name)).toBeChecked();
+
+    await user.click(exportButton());
+    const csv = await createObjectURL.mock.calls[0]?.[0].text();
+    expect(csv).toContain(brightside.name);
+    expect(csv).not.toContain(corner.name);
+  });
+
+  it('writes a converted lead with its status, and neutralises a leading + as Clients does', async () => {
+    setup([...testLeads.filter((entry) => entry !== dunmore), { ...dunmore, phone: '+44 1' }]);
+    const { createObjectURL } = catchDownloads();
+    const user = userEvent.setup();
+    renderPage({ route: '/acme/clients/leads?tab=converted' });
+    await row(/^Select Dunmore/);
+
+    await user.click(tick(dunmore.name));
+    await user.click(exportButton());
+    const csv = await createObjectURL.mock.calls[0]?.[0].text();
+    expect(csv?.split('\r\n')[1]).toBe(
+      "Dunmore Holdings,,,'+44 1,,£400.00,£150.00,£550.00,Converted,01-Oct-2026",
+    );
+  });
+
+  it('selects only the loaded rows: Load more does not tick the next page', async () => {
+    const extra = lead('lead-extra', 'Extra Lead Ltd');
+    server.use(
+      http.get(orgApiPath('/leads'), ({ request }) =>
+        new URL(request.url).searchParams.get('cursor') === '2'
+          ? ok([extra], { meta: { next_cursor: null, has_more: false } })
+          : ok([brightside, corner], { meta: { next_cursor: '2', has_more: true } }),
+      ),
+    );
+    const { createObjectURL } = catchDownloads();
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    await user.click(screen.getByRole('button', { name: 'Load more' }));
+    await row(/^Select Extra Lead/);
+    expect(tick(extra.name)).not.toBeChecked();
+    expect(tick(brightside.name)).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Select all rows' })).toHaveProperty(
+      'indeterminate',
+      true,
+    );
+
+    await user.click(exportButton());
+    const csv = await createObjectURL.mock.calls[0]?.[0].text();
+    expect(csv?.trimEnd().split('\r\n')).toHaveLength(3);
+    expect(csv).not.toContain(extra.name);
+  });
+
+  it('cannot export the rows of the previous tab while the new one loads', async () => {
+    let release = () => {};
+    const archivedLoaded = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(orgApiPath('/leads'), async ({ request }) => {
+        const status = new URL(request.url).searchParams.get('status');
+        if (status === 'archived') await archivedLoaded;
+        return ok(status === 'archived' ? [oldLead] : [brightside, corner], {
+          meta: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(screen.getByRole('tab', { name: /^Archived/ }));
+    // The open leads stay on screen until the archived ones arrive.
+    await user.click(tick(brightside.name));
+    expect(exportButton()).toBeDisabled();
+
+    release();
+    await row(/^Select Old Prospect/);
+    expect(screen.queryByRole('row', { name: /^Select Brightside/ })).not.toBeInTheDocument();
+    expect(exportButton()).toBeDisabled();
+  });
+
+  it('hides a column and remembers it after a re-render', async () => {
+    const user = userEvent.setup();
+    const view = renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(screen.getByRole('button', { name: 'Show/Hide Columns' }));
+    const menu = await screen.findByRole('dialog', { name: 'Visible columns' });
+    // Nothing is hidden at first; the lead and its status cannot be hidden.
+    for (const name of ['Source', 'Acquisition', 'Onboarding', 'Total cost', 'Added']) {
+      expect(within(menu).getByRole('checkbox', { name })).toBeEnabled();
+      expect(within(menu).getByRole('checkbox', { name })).toBeChecked();
+    }
+    expect(within(menu).getByRole('checkbox', { name: 'Lead' })).toBeDisabled();
+    expect(within(menu).getByRole('checkbox', { name: 'Status' })).toBeDisabled();
+    await user.click(within(menu).getByRole('checkbox', { name: 'Source' }));
+
+    expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Referral')).not.toBeInTheDocument();
+    expect(window.localStorage.getItem('tf:columns:leads')).toBe('["source"]');
+
+    view.unmount();
+    renderPage();
+    await row(/^Select Brightside/);
+    expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Acquisition' })).toBeInTheDocument();
+  });
+
+  it('keeps Export selected disabled while there are no leads', async () => {
+    setup([]);
+    renderPage();
+    expect(await screen.findByText('No open leads')).toBeInTheDocument();
+    expect(exportButton()).toBeDisabled();
+  });
 });
 
 describe('LeadsPage: permissions', () => {
   it('lets a reader see the leads but offers no change', async () => {
     renderPage({ context: contextWith(STAFF_PERMISSIONS) });
-    expect(await row(/^Brightside/)).toBeInTheDocument();
+    expect(await row(/^Select Brightside/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add lead' })).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: /^Actions for/ })).not.toBeInTheDocument();
+  });
+
+  it('lets a reader select, choose the columns and export', async () => {
+    const { clicks } = catchDownloads();
+    const user = userEvent.setup();
+    renderPage({ context: contextWith(STAFF_PERMISSIONS) });
+    await row(/^Select Brightside/);
+
+    expect(screen.getByRole('button', { name: 'Show/Hide Columns' })).toBeInTheDocument();
+    await user.click(tick(brightside.name));
+    await user.click(exportButton());
+    expect(clicks[0]?.download).toBe('leads-selected.csv');
+  });
+
+  it('keeps the row actions of each tab, with no Delete', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(await actionsOf(brightside.name)).toEqual(['Edit', 'Convert to client', 'Archive']);
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    expect(await actionsOf(dunmore.name)).toEqual(['Open client', 'Edit', 'Archive']);
+    await user.click(screen.getByRole('tab', { name: /^Archived/ }));
+    expect(await actionsOf(oldLead.name)).toEqual(['Edit', 'Unarchive']);
+    expect(screen.queryByRole('button', { name: /Delete/ })).not.toBeInTheDocument();
   });
 
   it('offers each action only with its permission', async () => {
@@ -214,7 +489,7 @@ describe('LeadFormPanel', () => {
         onboarding_cost: 4999,
       },
     ]);
-    expect(await row(/^Evergreen LLP/)).toBeInTheDocument();
+    expect(await row(/^Select Evergreen LLP/)).toBeInTheDocument();
   });
 
   it('checks the name, the email and the amounts before sending', async () => {
@@ -239,7 +514,7 @@ describe('LeadFormPanel', () => {
   it('edits a lead, sending only what changed', async () => {
     const user = userEvent.setup();
     renderPage();
-    await row(/^Brightside/);
+    await row(/^Select Brightside/);
     await chooseAction(user, brightside.name, 'Edit');
     const dialog = await screen.findByRole('region', { name: 'Edit lead' });
 
@@ -252,7 +527,7 @@ describe('LeadFormPanel', () => {
 
     expect(await screen.findByText(`${brightside.name} saved`)).toBeInTheDocument();
     expect(calls.updates).toEqual([{ id: brightside.id, body: { onboarding_cost: 7500 } }]);
-    expect(await within(await row(/^Brightside/)).findByText('£325.00')).toBeInTheDocument();
+    expect(await within(await row(/^Select Brightside/)).findByText('£325.00')).toBeInTheDocument();
   });
 });
 
@@ -260,7 +535,7 @@ describe('LeadsPage: converting', () => {
   it('converts a lead into a client after asking, and opens the client', async () => {
     const user = userEvent.setup();
     renderPage();
-    await row(/^Brightside/);
+    await row(/^Select Brightside/);
 
     await chooseAction(user, brightside.name, 'Convert to client');
     const dialog = await screen.findByRole('dialog', { name: 'Convert to client?' });
@@ -270,7 +545,7 @@ describe('LeadsPage: converting', () => {
     expect(await screen.findByText(`${brightside.name} is now a client`)).toBeInTheDocument();
     expect(calls.converts).toEqual([{ id: brightside.id, body: {} }]);
     await waitFor(() =>
-      expect(screen.queryByRole('row', { name: /^Brightside/ })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('row', { name: /^Select Brightside/ })).not.toBeInTheDocument(),
     );
     expect(await screen.findByRole('tab', { name: /^Converted\s*2$/ })).toBeInTheDocument();
 
@@ -282,7 +557,7 @@ describe('LeadsPage: converting', () => {
     server.use(...branchHandlers());
     const user = userEvent.setup();
     renderPage({ context: branchesOnContext });
-    await row(/^Brightside/);
+    await row(/^Select Brightside/);
 
     await chooseAction(user, brightside.name, 'Convert to client');
     const dialog = await screen.findByRole('dialog', { name: 'Convert to client?' });
@@ -305,7 +580,7 @@ describe('LeadsPage: converting', () => {
       ),
     );
     renderPage();
-    await row(/^Corner/);
+    await row(/^Select Corner/);
 
     await chooseAction(user, corner.name, 'Convert to client');
     const dialog = await screen.findByRole('dialog', { name: 'Convert to client?' });
@@ -318,7 +593,7 @@ describe('LeadsPage: archiving', () => {
   it('archives a lead after asking, and unarchives it', async () => {
     const user = userEvent.setup();
     renderPage();
-    await row(/^Corner/);
+    await row(/^Select Corner/);
 
     await chooseAction(user, corner.name, 'Archive');
     const dialog = await screen.findByRole('dialog', { name: 'Archive lead?' });
@@ -326,11 +601,11 @@ describe('LeadsPage: archiving', () => {
     expect(await screen.findByText(`${corner.name} archived`)).toBeInTheDocument();
     expect(calls.archives).toEqual([corner.id]);
     await waitFor(() =>
-      expect(screen.queryByRole('row', { name: /^Corner/ })).not.toBeInTheDocument(),
+      expect(screen.queryByRole('row', { name: /^Select Corner/ })).not.toBeInTheDocument(),
     );
 
     await user.click(screen.getByRole('tab', { name: /^Archived/ }));
-    expect(await row(/^Corner Cafe/)).toBeInTheDocument();
+    expect(await row(/^Select Corner Cafe/)).toBeInTheDocument();
     await chooseAction(user, corner.name, 'Unarchive');
     expect(await screen.findByText(`${corner.name} unarchived`)).toBeInTheDocument();
     expect(calls.unarchives).toEqual([corner.id]);
