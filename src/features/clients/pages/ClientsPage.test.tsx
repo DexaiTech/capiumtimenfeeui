@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { useLocation } from 'react-router';
+import { Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { tokenStore } from '@/services/api';
@@ -696,5 +696,95 @@ describe('ClientsPage actions', () => {
     expect(within(card).queryByText('1 Overdue by 1d')).not.toBeInTheDocument();
     expect(within(card).queryByText('Local')).not.toBeInTheDocument();
     expect(useClientsPrefs.getState().view).toBe('grid');
+  });
+});
+
+describe('ClientsPage row actions stay on the list', () => {
+  /** The list with the client's own page as a real route, so a stray navigation shows. */
+  function renderListWithRoutes() {
+    server.use(...clientsHandlers());
+    renderInOrg(
+      <>
+        <Routes>
+          <Route path="/acme/clients" element={<ClientsPage />} />
+          <Route path="/acme/clients/:clientId/*" element={<p>Opened client page</p>} />
+        </Routes>
+        <Where />
+      </>,
+      { route: '/acme/clients' },
+    );
+  }
+
+  const stillOnList = () => {
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/acme\/clients$/);
+    expect(screen.queryByText('Opened client page')).not.toBeInTheDocument();
+  };
+
+  it('opens the client page from View', async () => {
+    const user = userEvent.setup();
+    renderListWithRoutes();
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'View'));
+    expect(await screen.findByText('Opened client page')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent(`/acme/clients/${techwave.id}`);
+  });
+
+  it('opens the Edit form from Edit and stays on the list', async () => {
+    const user = userEvent.setup();
+    renderListWithRoutes();
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'Edit'));
+    expect(
+      await screen.findByRole('region', { name: `Edit ${techwave.name}` }),
+    ).toBeInTheDocument();
+    stillOnList();
+  });
+
+  it('asks before archiving, without opening the client', async () => {
+    const user = userEvent.setup();
+    renderListWithRoutes();
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'Archive'));
+    expect(await screen.findByRole('dialog', { name: 'Archive client' })).toBeInTheDocument();
+    stillOnList();
+  });
+
+  it('asks before deleting, without opening the client', async () => {
+    const user = userEvent.setup();
+    renderListWithRoutes();
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'Delete'));
+    expect(await screen.findByRole('dialog', { name: 'Delete client' })).toBeInTheDocument();
+    stillOnList();
+  });
+
+  it('keeps the card actions on the list too, and View still opens the client', async () => {
+    const user = userEvent.setup();
+    renderListWithRoutes();
+    await clientRow(techwave.name);
+    await user.click(screen.getByRole('button', { name: 'Grid view' }));
+    await screen.findByRole('list', { name: 'Clients' });
+
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'Edit'));
+    expect(
+      await screen.findByRole('region', { name: `Edit ${techwave.name}` }),
+    ).toBeInTheDocument();
+    stillOnList();
+
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'Archive'));
+    const archive = await screen.findByRole('dialog', { name: 'Archive client' });
+    stillOnList();
+    await user.click(within(archive).getByRole('button', { name: 'Cancel' }));
+
+    await user.click(await findRowAction(`Actions for ${techwave.name}`, 'View'));
+    expect(await screen.findByText('Opened client page')).toBeInTheDocument();
+  });
+
+  it('still selects with the checkbox, and a click on the row still opens the client', async () => {
+    const user = userEvent.setup();
+    renderListWithRoutes();
+    const row = await clientRow(techwave.name);
+    await user.click(within(row).getByRole('checkbox', { name: `Select ${techwave.name}` }));
+    expect(row).toHaveAttribute('data-selected', 'true');
+    stillOnList();
+
+    await user.click(within(row).getByText('APX006'));
+    expect(await screen.findByText('Opened client page')).toBeInTheDocument();
   });
 });

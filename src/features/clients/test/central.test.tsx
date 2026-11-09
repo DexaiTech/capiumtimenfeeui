@@ -384,6 +384,9 @@ describe('Sync with central, from the row actions', () => {
     expect(
       notifications().getByText(/Globex Holdings plc: Postcode updated\./),
     ).toBeInTheDocument();
+    // The sync runs from the list: the click does not also open the client.
+    expect(screen.queryByText('Opened client page')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Clients' })).toBeInTheDocument();
   });
 
   it('says when the central service no longer knows the client', async () => {

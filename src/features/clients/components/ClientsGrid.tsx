@@ -112,11 +112,14 @@ export function ClientsGrid({
                     ) : null}
                   </span>
                 </span>
-                <RowActions
-                  label={`Actions for ${client.name}`}
-                  items={actionsFor(client)}
-                  size="sm"
-                />
+                {/* An action runs on its own: the click must not also open the client. */}
+                <div onClick={(event) => event.stopPropagation()}>
+                  <RowActions
+                    label={`Actions for ${client.name}`}
+                    items={actionsFor(client)}
+                    size="sm"
+                  />
+                </div>
               </div>
               <dl>
                 <dt>Registration</dt>
