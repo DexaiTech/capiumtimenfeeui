@@ -290,7 +290,8 @@ export function ClientsTable({
                       <td>{formatActivity(client.last_activity_at, timeZone)}</td>
                     ) : null}
                     {show('action') ? (
-                      <td>
+                      // An action runs on its own: the click must not also open the client.
+                      <td onClick={(event) => event.stopPropagation()}>
                         <RowActions
                           label={`Actions for ${client.name}`}
                           items={actionsFor(client)}
