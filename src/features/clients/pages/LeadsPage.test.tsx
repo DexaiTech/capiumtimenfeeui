@@ -264,7 +264,7 @@ describe('LeadsPage: selection, columns and export', () => {
     const csv = await blob?.text();
     expect(csv).toBe(
       'Lead,Contact,Email,Phone,Source,Acquisition,Total cost,Status,Added\r\n' +
-        'Brightside Bakery Ltd,Bea Bright,bea@brightside.example,,Referral,£250.00,£300.00,Open,01-Oct-2026\r\n',
+        'Brightside Bakery Ltd,Bea Bright,bea@brightside.example,,Referral,250.00,300.00,Open,01/10/2026\r\n',
     );
   });
 
@@ -300,7 +300,7 @@ describe('LeadsPage: selection, columns and export', () => {
     await user.click(exportButton());
     const csv = await createObjectURL.mock.calls[0]?.[0].text();
     expect(csv?.split('\r\n')[1]).toBe(
-      "Dunmore Holdings,,,'+44 1,,£400.00,£150.00,£550.00,Converted,01-Oct-2026",
+      "Dunmore Holdings,,,'+44 1,,400.00,150.00,550.00,Converted,01/10/2026",
     );
   });
 
