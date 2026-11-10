@@ -651,6 +651,7 @@ function List() {
                 <Button
                   variant="brand-outline"
                   size="sm"
+                  compactLabel
                   leftIcon={<Download className="size-4" aria-hidden="true" />}
                   loading={exporting}
                   disabled={rows.length === 0}
