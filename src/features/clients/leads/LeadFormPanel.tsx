@@ -1,9 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
 import { Button, FormPanel, Input, Select, Textarea, useToast } from '@/components/ui';
+import { PERMISSIONS } from '@/constants/permissions';
+import { RecordHistory } from '@/features/audit';
 import { useOrg } from '@/features/organizations';
 import { currencySymbol, formatMoney, parsePounds, penceToPoundsInput } from '@/utils/money';
 
@@ -28,15 +30,17 @@ export interface LeadFormPanelProps {
 }
 
 /** What a typed amount comes to, for the total under the costs (0 while it is not a number). */
-const penceOf = (value: string) => (value.trim() === '' ? 0 : (parsePounds(value) ?? 0));
+const penceOf = (value: string, currency: string) =>
+  value.trim() === '' ? 0 : (parsePounds(value, currency) ?? 0);
 
 function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void }) {
-  const { organization } = useOrg();
+  const { organization, can } = useOrg();
   const currency = organization.currency;
   const create = useCreateLead();
   const update = useUpdateLead();
   const { toast } = useToast();
   const formId = useId();
+  const schema = useMemo(() => leadFormSchema(currency), [currency]);
   const {
     register,
     handleSubmit,
@@ -44,7 +48,7 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
     control,
     formState: { errors, isDirty },
   } = useForm<LeadFormValues>({
-    resolver: zodResolver(leadFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: lead
       ? leadToForm(lead, (pence) => penceToPoundsInput(pence, currency))
       : EMPTY_LEAD_FORM,
@@ -56,11 +60,12 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
     control,
     name: ['acquisition_cost', 'onboarding_cost'],
   });
-  const total = Math.max(penceOf(acquisition), 0) + Math.max(penceOf(onboarding), 0);
+  const total =
+    Math.max(penceOf(acquisition, currency), 0) + Math.max(penceOf(onboarding, currency), 0);
 
   const onSubmit = handleSubmit((values) => {
     clearSubmitError();
-    const payload = toLeadPayload(values);
+    const payload = toLeadPayload(values, currency);
 
     if (!lead) {
       create.mutate(payload, {
@@ -184,6 +189,10 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
           {...register('notes')}
         />
       </form>
+      {/* The API opens a lead's history to whoever reads clients (`client.read`). */}
+      {lead && can(PERMISSIONS.clientRead) ? (
+        <RecordHistory targetType="lead" targetId={lead.id} className="mt-5" />
+      ) : null}
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button

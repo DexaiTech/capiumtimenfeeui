@@ -4,7 +4,9 @@ import { Archive, Eye, FileDown, Pencil, RefreshCw, Trash2, UserPlus } from 'luc
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
+import { PageHeader } from '@/components/layout';
 import { ConfirmDialog, useBulkFlow, useToast } from '@/components/ui';
+import { PAGE_DESCRIPTIONS } from '@/constants/pageDescriptions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
 import { useBranchesEnabled, useSegmentsEnabled } from '@/features/settings';
@@ -479,7 +481,11 @@ export default function ClientsPage() {
 
   return (
     <div className="capium-clients cc-page">
-      <h1 className="cc-sr-only">Clients</h1>
+      <PageHeader
+        title="Clients"
+        description={PAGE_DESCRIPTIONS['clients/list']}
+        className="mb-1"
+      />
       <ClientFormPanel
         open={formClient !== undefined || addRequested}
         client={formClient ?? null}
