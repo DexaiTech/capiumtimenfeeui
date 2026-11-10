@@ -14,12 +14,16 @@ export interface SearchFieldProps extends Omit<
   ref?: Ref<HTMLInputElement>;
 }
 
+/** The shortest cap the API puts on the `q` of a list; a longer search answers 422. */
+const SEARCH_MAX_LENGTH = 100;
+
 /** The compact quick-search input of a list toolbar, with a clear button. */
 export function SearchField({
   value,
   onChange,
   label,
   placeholder = 'Quick search',
+  maxLength = SEARCH_MAX_LENGTH,
   className,
   ref,
   ...rest
@@ -35,6 +39,7 @@ export function SearchField({
         type="search"
         aria-label={label}
         placeholder={placeholder}
+        maxLength={maxLength}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {

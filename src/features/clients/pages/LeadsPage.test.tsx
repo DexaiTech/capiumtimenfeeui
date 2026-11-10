@@ -3,13 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PAGE_DESCRIPTIONS } from '@/constants/pageDescriptions';
 import { branchesOnContext, branchHandlers, london } from '@/test/branches';
-import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
+import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
+import { CLIENT_TYPE_LABELS } from '../constants';
 import {
   brightside,
   corner,
@@ -74,6 +76,14 @@ function setup(leads = testLeads) {
 beforeEach(() => setup());
 
 describe('LeadsPage: the list', () => {
+  it('puts the title above the Clients and Leads switch (R-02)', () => {
+    renderPage();
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Leads' });
+    const tabs = screen.getByRole('navigation', { name: 'Clients and leads' });
+    expect(title.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('lists the open leads with their costs, the totals and the counts of each tab', async () => {
     renderPage();
 
@@ -169,6 +179,288 @@ describe('LeadsPage: the list', () => {
     expect(screen.getByRole('table', { name: 'Leads' })).toHaveAttribute('aria-busy', 'true');
     await row(/^Select Brightside/);
     expect(screen.getByRole('table', { name: 'Leads' })).not.toHaveAttribute('aria-busy');
+  });
+});
+
+// CLIENTS-LEADS-PARITY-01: Leads copies the Clients screen. One toolbar card holds the Clients |
+// Leads switch, the Open / Converted / Archived tabs and the search on row 1, and Show/Hide
+// Columns, Export selected and Add lead on row 2, in the `cc-*` look of the Client List.
+describe('LeadsPage: the toolbar card, as on Clients', () => {
+  const toolbar = () => screen.getByRole('toolbar', { name: 'Leads toolbar' });
+  const follows = (first: Element, second: Element) =>
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+  it('holds the Clients | Leads switch, with its counts, in the toolbar card', async () => {
+    renderPage();
+
+    const card = within(toolbar());
+    const tabs = card.getByRole('navigation', { name: 'Clients and leads' });
+    expect(within(tabs).getByRole('link', { name: /^Clients/ })).toHaveAttribute(
+      'href',
+      '/acme/clients',
+    );
+    // The open leads are counted on the marked Leads tab once the summary arrives.
+    await waitFor(() =>
+      expect(within(tabs).getByText('Leads').closest('[aria-current]')).toHaveTextContent('2'),
+    );
+    expect(card.getByRole('tablist', { name: 'Lead lists' })).toBeInTheDocument();
+    expect(card.getByRole('searchbox', { name: 'Search leads' })).toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Show/Hide Columns' })).toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Export selected' })).toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Add lead' })).toBeInTheDocument();
+    // The switch is no longer above the cards, outside any card.
+    expect(screen.getAllByRole('navigation', { name: 'Clients and leads' })).toHaveLength(1);
+  });
+
+  it('reads title, the toolbar card with the switch first, then the table card', () => {
+    renderPage();
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Leads' });
+    follows(title, toolbar());
+    // Nothing sits between the title and the toolbar card, as on Clients: the toolbar card opens
+    // the list and the table card follows it (the totals are a line inside that card).
+    expect(toolbar().previousElementSibling).toBeNull();
+    expect(toolbar().parentElement?.previousElementSibling).toContainElement(title);
+    const tableCard = screen.getByRole('table', { name: 'Leads' }).closest('.list-card');
+    expect(tableCard).not.toBeNull();
+    expect(toolbar().nextElementSibling).toBe(tableCard);
+    const card = within(toolbar());
+    const order = [
+      card.getByRole('navigation', { name: 'Clients and leads' }),
+      card.getByRole('tablist', { name: 'Lead lists' }),
+      card.getByRole('searchbox', { name: 'Search leads' }),
+      card.getByRole('button', { name: 'Show/Hide Columns' }),
+      card.getByRole('button', { name: 'Export selected' }),
+      card.getByRole('button', { name: 'Add lead' }),
+    ];
+    order.slice(1).forEach((element, index) => follows(order[index] as Element, element));
+  });
+
+  it('uses the Clients toolbar classes for the card, the search and the buttons', () => {
+    renderPage();
+
+    expect(toolbar()).toHaveClass('cc-toolbar');
+    const card = within(toolbar());
+    expect(card.getByRole('searchbox', { name: 'Search leads' }).closest('.cc-search')).not.toBe(
+      null,
+    );
+    expect(card.getByRole('button', { name: 'Show/Hide Columns' })).toHaveClass('cc-btn');
+    expect(card.getByRole('button', { name: 'Export selected' })).toHaveClass(
+      'cc-btn',
+      'cc-btn--outline',
+    );
+    expect(card.getByRole('button', { name: 'Add lead' })).toHaveClass('cc-btn', 'cc-btn--primary');
+    expect(card.getByRole('tablist', { name: 'Lead lists' })).toHaveClass('cc-tabswitch');
+    expect(card.getByRole('tab', { name: /^Open/ })).toHaveClass('cc-tab');
+  });
+
+  it('keeps the search label and placeholder, and Escape clears it', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    const search = screen.getByRole('searchbox', { name: 'Search leads' });
+    expect(search).toHaveAttribute('placeholder', 'Search name, contact or email');
+    // The API refuses a longer search with 422.
+    expect(search).toHaveAttribute('maxlength', '100');
+    await user.type(search, 'corner');
+    expect(search).toHaveValue('corner');
+    await user.keyboard('{Escape}');
+    expect(search).toHaveValue('');
+  });
+
+  it('moves between the tabs with the arrow keys and marks the chosen one', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    screen.getByRole('tab', { name: /^Open/ }).focus();
+    await user.keyboard('{ArrowRight}');
+    const converted = screen.getByRole('tab', { name: /^Converted/ });
+    expect(converted).toHaveAttribute('aria-selected', 'true');
+    expect(converted).toHaveFocus();
+    expect(screen.getByRole('tab', { name: /^Open/ })).toHaveAttribute('aria-selected', 'false');
+    await user.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: /^Archived/ })).toHaveAttribute('aria-selected', 'true');
+    expect(await row(/^Select Old Prospect/)).toBeInTheDocument();
+    expect(calls.lists.at(-1)?.get('status')).toBe('archived');
+  });
+
+  it('keeps the switch on screen when the list cannot be loaded', async () => {
+    server.use(http.get(orgApiPath('/leads'), () => fail(500, 'INTERNAL_ERROR', 'Boom.')));
+    renderPage();
+
+    expect(await screen.findByText('Could not load the leads')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Clients and leads' })).toBeInTheDocument();
+  });
+
+  it('shows every column again with Show all columns', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(screen.getByRole('button', { name: 'Show/Hide Columns' }));
+    const menu = await screen.findByRole('dialog', { name: 'Visible columns' });
+    const showAll = within(menu).getByRole('button', { name: 'Show all columns' });
+    expect(showAll).toBeDisabled();
+    await user.click(within(menu).getByRole('checkbox', { name: 'Source' }));
+    expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument();
+    await user.click(showAll);
+    expect(screen.getByRole('columnheader', { name: 'Source' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('tf:columns:leads')).toBe('[]');
+  });
+});
+
+describe('LeadsPage: the rows, as on Clients', () => {
+  it('puts a decorative initials avatar next to the lead name, keeping the second line', async () => {
+    renderPage();
+
+    const bright = within(await row(/^Select Brightside Bakery Ltd/));
+    // The avatar is the Clients one: round initials, hidden from assistive technology.
+    const avatar = bright.getByText('BL');
+    expect(avatar).toHaveClass('cc-avatar');
+    expect(avatar).toHaveAttribute('aria-hidden', 'true');
+    // The name stays the visible text, beside the avatar, over the contact line.
+    const name = bright.getByText('Brightside Bakery Ltd');
+    expect(name).not.toHaveAttribute('aria-hidden');
+    expect(name.closest('.cc-client')).toContainElement(avatar);
+    expect(bright.getByText('Bea Bright · bea@brightside.example')).toBeInTheDocument();
+    // A lead with no contact still shows its client type under the name.
+    const cafe = within(await row(/^Select Corner Cafe/));
+    expect(cafe.getByText('CC')).toHaveAttribute('aria-hidden', 'true');
+    expect(cafe.getByText(CLIENT_TYPE_LABELS.sole_trader)).toBeInTheDocument();
+  });
+
+  it('does not let the avatar into the name of the row', async () => {
+    renderPage();
+
+    await row(/^Select Brightside Bakery Ltd/);
+    expect(screen.queryByRole('row', { name: /\bBL\b/ })).not.toBeInTheDocument();
+  });
+
+  it('heads the last column "Action", right-aligned over its right-aligned icons', async () => {
+    renderPage();
+
+    const heading = await screen.findByRole('columnheader', { name: 'Action' });
+    expect(heading).toHaveTextContent(/^Action$/);
+    expect(heading).toHaveClass('text-right');
+    // The heading is visible text, not the hidden "Actions" the shared table used to give it.
+    expect(within(heading).queryByText('Actions')).not.toBeInTheDocument();
+
+    const group = await screen.findByRole('group', { name: 'Actions for Brightside Bakery Ltd' });
+    expect(group.closest('td')).toHaveClass('text-right');
+    expect(group).toHaveClass('justify-end');
+  });
+
+  it('keeps the actions group and its button names under the Action heading', async () => {
+    renderPage();
+
+    expect(await actionsOf(brightside.name)).toEqual(['Edit', 'Convert to client', 'Archive']);
+    expect(
+      within(screen.getByRole('group', { name: 'Actions for Brightside Bakery Ltd' })).getByRole(
+        'button',
+        { name: 'Archive' },
+      ),
+    ).toBeEnabled();
+  });
+
+  it('takes the page description from the page descriptions, as Clients does', () => {
+    renderPage();
+
+    const description = PAGE_DESCRIPTIONS['clients/leads'] ?? '';
+    expect(description).not.toBe('');
+    expect(screen.getByText(description)).toBeInTheDocument();
+    expect(screen.queryByText(/acquisition and onboarding/i)).not.toBeInTheDocument();
+  });
+});
+
+// Round 3 (10 Nov): the page is the Clients page. The four cost cards are one slim line in the
+// table card, and the Lead and Status cells are drawn with the Clients cell classes.
+describe('LeadsPage: the totals line and the cells, as on Clients', () => {
+  it('shows the same four figures as one slim line at the foot of the table card', async () => {
+    renderPage();
+
+    const totals = screen.getByLabelText('Lead totals');
+    const table = screen.getByRole('table', { name: 'Leads' });
+    // Inside the table card, after the rows, not a row of cards above the toolbar.
+    const card = table.closest('.list-card');
+    expect(card).toContainElement(totals);
+    expect(table.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(totals).toHaveClass('cc-leads-summary');
+    expect(totals.querySelectorAll('dt')).toHaveLength(4);
+    expect(totals.closest('.cc-leads-table')).not.toBeNull();
+
+    // The figures of the Open tab, as the cards showed them (open: Brightside + Corner Cafe).
+    const line = () => within(screen.getByLabelText('Lead totals'));
+    await waitFor(() => expect(line().getByText('£262.50')).toBeInTheDocument());
+    const figure = (label: string) => line().getByText(label).nextElementSibling;
+    expect(figure('Open leads')).toHaveTextContent('2');
+    expect(figure('Acquisition cost')).toHaveTextContent('£262.50');
+    expect(figure('Onboarding cost')).toHaveTextContent('£50.00');
+    expect(figure('Total cost')).toHaveTextContent('£312.50');
+  });
+
+  it('follows the tab: Converted leads and their figures', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    const line = () => within(screen.getByLabelText('Lead totals'));
+    await waitFor(() => expect(line().getByText('Converted leads')).toBeInTheDocument());
+    await waitFor(() => expect(line().getByText('£550.00')).toBeInTheDocument());
+  });
+
+  it('keeps the totals line below the rows when the list is empty', async () => {
+    setup([]);
+    renderPage();
+
+    expect(await screen.findByText('No open leads')).toBeInTheDocument();
+    const line = within(screen.getByLabelText('Lead totals'));
+    expect(line.getByText('Open leads').nextElementSibling).toHaveTextContent('0');
+  });
+
+  it('draws the Lead cell as a Clients cell: avatar, upper-case name, small meta line', async () => {
+    renderPage();
+
+    const bright = within(await row(/^Select Brightside Bakery Ltd/));
+    const name = bright.getByText('Brightside Bakery Ltd');
+    // The Clients name style (upper-case and truncated by `.cc-client-name`); the full name is
+    // the text and the title.
+    expect(name).toHaveClass('cc-client-name');
+    expect(name).toHaveAttribute('title', 'Brightside Bakery Ltd');
+    expect(name.closest('.cc-client-text')?.parentElement).toHaveClass('cc-client');
+    const meta = bright.getByText('Bea Bright · bea@brightside.example');
+    expect(meta.closest('.cc-client-meta')).not.toBeNull();
+    expect(meta.closest('.cc-client-text')).toBe(name.closest('.cc-client-text'));
+    expect(meta).toHaveAttribute('title', 'Bea Bright · bea@brightside.example');
+
+    const cafe = within(await row(/^Select Corner Cafe/));
+    expect(
+      cafe.getByText(CLIENT_TYPE_LABELS.sole_trader).closest('.cc-client-meta'),
+    ).not.toBeNull();
+  });
+
+  it('draws the Status as a Clients pill, keeping the label and the client link', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const open = within(await row(/^Select Brightside/));
+    expect(open.getByText('Open')).toHaveClass('cc-pill', 'cc-pill--info');
+
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    const converted = within(await row(/^Select Dunmore Holdings/));
+    expect(converted.getByText('Converted')).toHaveClass('cc-pill', 'cc-pill--success');
+    expect(converted.getByRole('link', { name: 'C0042 · Dunmore Holdings' })).toHaveClass(
+      'cc-link',
+    );
+
+    await user.click(screen.getByRole('tab', { name: /^Archived/ }));
+    const archived = within(await row(/^Select Old Prospect/));
+    const pill = archived.getByText('Archived');
+    expect(pill).toHaveClass('cc-pill');
+    expect(pill).not.toHaveClass('cc-pill--info');
+    expect(pill).not.toHaveClass('cc-pill--success');
   });
 });
 
@@ -511,6 +803,73 @@ describe('LeadFormPanel', () => {
     expect(calls.creates).toEqual([]);
   });
 
+  it('groups the fields in sections like the client form, under the required-fields note (R-06)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Add lead' }));
+    const dialog = await screen.findByRole('region', { name: 'Add lead' });
+
+    expect(
+      within(dialog).getByText('Fields marked with a red star are required.'),
+    ).toBeInTheDocument();
+    const about = within(within(dialog).getByRole('region', { name: 'About the lead' }));
+    expect(about.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+    expect(about.getByRole('combobox', { name: 'Client type' })).toBeInTheDocument();
+    expect(about.getByRole('textbox', { name: 'Source' })).toBeInTheDocument();
+    const contact = within(within(dialog).getByRole('region', { name: 'Contact' }));
+    expect(contact.getByRole('textbox', { name: 'Contact name' })).toBeInTheDocument();
+    expect(contact.getByRole('textbox', { name: 'Email' })).toBeInTheDocument();
+    expect(contact.getByRole('textbox', { name: 'Phone' })).toBeInTheDocument();
+    const costs = within(within(dialog).getByRole('region', { name: 'Costs' }));
+    expect(
+      costs.getByText('Optional. A blank amount counts as nothing spent.'),
+    ).toBeInTheDocument();
+    expect(costs.getByRole('textbox', { name: 'Acquisition cost (£)' })).toBeInTheDocument();
+    expect(costs.getByRole('textbox', { name: 'Onboarding cost (£)' })).toBeInTheDocument();
+    expect(costs.getByText('Total cost')).toBeInTheDocument();
+  });
+
+  it('folds Notes on Add lead and opens it on Edit lead', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Add lead' }));
+    const add = await screen.findByRole('region', { name: 'Add lead' });
+    const addNotes = within(add).getByText('Notes', { selector: 'summary span' });
+    expect(within(add).getByText('Optional.')).toBeInTheDocument();
+    expect(addNotes.closest('details')).not.toHaveAttribute('open');
+    await user.click(screen.getByRole('button', { name: 'Close Add lead' }));
+
+    await row(/^Select Brightside/);
+    await chooseAction(user, brightside.name, 'Edit');
+    const edit = await screen.findByRole('region', { name: 'Edit lead' });
+    const editNotes = within(edit).getByText('Notes', { selector: 'summary span' });
+    expect(editNotes.closest('details')).toHaveAttribute('open');
+  });
+
+  it('opens the folded Notes when the server refuses them', async () => {
+    server.use(
+      http.post(orgApiPath('/leads'), () =>
+        fail(422, 'VALIDATION_ERROR', 'Some fields are invalid.', {
+          details: [
+            { field: 'notes', code: 'string_too_long', message: 'Use at most 5000 characters' },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Add lead' }));
+    const dialog = await screen.findByRole('region', { name: 'Add lead' });
+    const notes = within(dialog).getByText('Notes', { selector: 'summary span' });
+    expect(notes.closest('details')).not.toHaveAttribute('open');
+
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Evergreen LLP');
+    await user.click(within(dialog).getByRole('button', { name: 'Add lead' }));
+
+    expect(await within(dialog).findByText('Use at most 5000 characters')).toBeInTheDocument();
+    expect(notes.closest('details')).toHaveAttribute('open');
+  });
+
   it('edits a lead, sending only what changed', async () => {
     const user = userEvent.setup();
     renderPage();
@@ -528,6 +887,46 @@ describe('LeadFormPanel', () => {
     expect(await screen.findByText(`${brightside.name} saved`)).toBeInTheDocument();
     expect(calls.updates).toEqual([{ id: brightside.id, body: { onboarding_cost: 7500 } }]);
     expect(await within(await row(/^Select Brightside/)).findByText('£325.00')).toBeInTheDocument();
+  });
+
+  it('shows the history of the lead at the foot of Edit lead, not of Add lead (R-17)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+    await user.click(screen.getByRole('button', { name: 'Add lead' }));
+    await screen.findByRole('region', { name: 'Add lead' });
+    expect(screen.queryByRole('list', { name: 'History entries' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Close Add lead' }));
+
+    await chooseAction(user, brightside.name, 'Edit');
+    const dialog = await screen.findByRole('region', { name: 'Edit lead' });
+    const history = await within(dialog).findByRole('list', { name: 'History entries' });
+    expect(within(history).getByText('Lead added')).toBeInTheDocument();
+    expect(calls.histories).toHaveLength(1);
+    expect(calls.histories[0]?.get('target_type')).toBe('lead');
+    expect(calls.histories[0]?.get('target_id')).toBe(brightside.id);
+    expect(calls.histories[0]?.get('include_related')).toBeNull();
+  });
+
+  it('reads the costs in the practice currency, so an edit keeps the amounts (R-18)', async () => {
+    const user = userEvent.setup();
+    // The yen has no minor unit: 5000 in the API is ¥5,000.
+    renderPage({
+      context: { ...ownerContext, organization: { ...ownerContext.organization, currency: 'JPY' } },
+    });
+    await row(/^Select Brightside/);
+    await chooseAction(user, brightside.name, 'Edit');
+    const dialog = await screen.findByRole('region', { name: 'Edit lead' });
+
+    const onboarding = within(dialog).getByRole('textbox', { name: /^Onboarding cost/ });
+    expect(onboarding).toHaveValue('5000');
+    await user.clear(onboarding);
+    await user.type(onboarding, '7500');
+    await user.click(within(dialog).getByRole('button', { name: 'Save lead' }));
+
+    expect(await screen.findByText(`${brightside.name} saved`)).toBeInTheDocument();
+    // The untouched acquisition cost is not rescaled, so it is not sent.
+    expect(calls.updates).toEqual([{ id: brightside.id, body: { onboarding_cost: 7500 } }]);
   });
 });
 
@@ -610,5 +1009,29 @@ describe('LeadsPage: archiving', () => {
     expect(await screen.findByText(`${corner.name} unarchived`)).toBeInTheDocument();
     expect(calls.unarchives).toEqual([corner.id]);
     expect(await screen.findByRole('tab', { name: /^Open\s*2$/ })).toBeInTheDocument();
+  });
+
+  it('says archiving a converted lead leaves its client alone (R-19)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Corner/);
+
+    // An open lead: the wording is unchanged.
+    await chooseAction(user, corner.name, 'Archive');
+    const open = await screen.findByRole('dialog', { name: 'Archive lead?' });
+    expect(open).toHaveTextContent(
+      'Corner Cafe moves to Archived and can no longer be converted. Unarchive it at any time to pick it up again.',
+    );
+    await user.click(within(open).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    await row(/^Select Dunmore Holdings/);
+    await chooseAction(user, dunmore.name, 'Archive');
+    const converted = await screen.findByRole('dialog', { name: 'Archive lead?' });
+    expect(converted).toHaveTextContent(
+      'Dunmore Holdings moves to Archived. The client it became is not changed. Unarchive it at any time.',
+    );
+    expect(converted).not.toHaveTextContent('can no longer be converted');
   });
 });

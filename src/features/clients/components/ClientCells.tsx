@@ -130,7 +130,13 @@ export function ServicesCell({ services }: { services: ServiceTag[] }) {
         {first.name}
       </span>
       {rest.length > 0 ? (
-        <>
+        // The popover renders in a portal, but React still bubbles its clicks through this cell
+        // to the row: stop them here, or a click on the list opens the client.
+        <span
+          className="inline-flex flex-none"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
           <button
             ref={anchorRef}
             type="button"
@@ -164,7 +170,7 @@ export function ServicesCell({ services }: { services: ServiceTag[] }) {
               ))}
             </ul>
           </Popover>
-        </>
+        </span>
       ) : null}
     </span>
   );

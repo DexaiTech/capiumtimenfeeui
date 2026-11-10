@@ -1485,3 +1485,75 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/*
+ * The Leads list is the shared DataTable inside `.capium-clients`. These rules give its card,
+ * checkbox column and row hover the look of the Client List table above (`.cc-table-card`,
+ * `.cc-table`); nothing else of the shared table changes.
+ */
+.cc-leads-table .list-card {
+  border-color: var(--cc-border);
+  border-radius: var(--cc-radius-card);
+  box-shadow: var(--cc-shadow-card);
+}
+
+.cc-leads-table th:first-child,
+.cc-leads-table td:first-child:not([colspan]) {
+  width: 45px;
+  padding-left: 14px;
+  padding-right: 0;
+}
+
+/* Cell padding and type of `.cc-table`: 8 px on the right only, 12/15 px. */
+.cc-leads-table th,
+.cc-leads-table td:not([colspan]) {
+  padding: 0 8px 0 0;
+  font-size: 12px;
+  line-height: 15px;
+}
+
+.cc-leads-table input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--cc-primary);
+}
+
+.cc-leads-table .row-glow:hover,
+.cc-leads-table .row-glow:focus-visible {
+  background-color: var(--cc-primary-5);
+  box-shadow: none;
+}
+
+/* The Lead cell's meta line (contacts, email, phone) can be long: one line, cut with an ellipsis. */
+.cc-leads-table .cc-client-meta > span {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The four cost figures of the tab: one slim line at the foot of the table card. */
+.cc-leads-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--cc-border);
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--cc-text);
+}
+
+.cc-leads-summary-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cc-leads-summary dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--cc-text-strong);
+  font-variant-numeric: tabular-nums;
+}

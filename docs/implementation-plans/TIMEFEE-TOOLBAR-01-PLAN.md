@@ -578,3 +578,7 @@ The check looked for controls cut off at the window edge, controls overlapping, 
 - **Cause:** the left group always kept 18rem (`min-w-72`). When it holds only a title, that squeezed the date range, the selects and the button onto a second row.
 - **Fix:** the left group keeps 18rem only when it holds a tab strip (`@3xl/toolbar:has-[[role=tablist]]:min-w-72`).
 - **Result:** every checked page is as good as `main` or better (the Client 360 Jobs and WIP tabs go from 2 rows to 1 at 768 px). The layout spec still passes 25 / 25.
+
+### 18.3 After the Leads redesign (10 Nov 2026)
+
+PRs #30 and #31 moved Leads onto its own Clients-style toolbar (`LeadsToolbar`), so Leads no longer uses `PageToolbar`. Leads was removed from the layout spec's page list, and the one-line `compactLabel` change this PR made to the old Leads Export button was dropped (main's `LeadsPage.tsx` was taken whole when merging `main` into this branch). The Leads toolbar layout is covered by the Clients-style toolbar work (R-14) and the Leads parity PRs.

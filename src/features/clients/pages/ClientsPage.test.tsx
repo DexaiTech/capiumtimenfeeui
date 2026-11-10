@@ -29,6 +29,34 @@ beforeEach(() => {
 });
 
 describe('ClientsPage list', () => {
+  it('shows a visible Clients title with its description, as the only H1 (R-02)', async () => {
+    server.use(...clientsHandlers());
+    renderInOrg(<ClientsPage />);
+    await clientRow(techwave.name);
+
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Clients');
+    expect(headings[0]).not.toHaveClass('cc-sr-only');
+    expect(
+      screen.getByText(
+        'All your clients: find one, add one, open its jobs, invoices and contacts.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the open-lead count on the Leads tab, with the title above the switch (R-02)', async () => {
+    server.use(...clientsHandlers());
+    renderInOrg(<ClientsPage />);
+    await clientRow(techwave.name);
+
+    const tabs = screen.getByRole('navigation', { name: 'Clients and leads' });
+    // Brightside and Corner Cafe are the open leads of the fixtures.
+    expect(await within(tabs).findByRole('link', { name: /^Leads/ })).toHaveTextContent('2');
+    const title = screen.getByRole('heading', { level: 1, name: 'Clients' });
+    expect(title.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('renders the rows with the columns of APT76', async () => {
     server.use(...clientsHandlers());
     renderInOrg(<ClientsPage />);
@@ -785,6 +813,43 @@ describe('ClientsPage row actions stay on the list', () => {
     stillOnList();
 
     await user.click(within(row).getByText('APX006'));
+    expect(await screen.findByText('Opened client page')).toBeInTheDocument();
+  });
+
+  /** Opens the Services popover from its "+n" chip with the keyboard, so no hover closes it. */
+  async function openServices(user: ReturnType<typeof userEvent.setup>, scope: HTMLElement) {
+    within(scope).getByRole('button', { name: 'Show all 2 services' }).focus();
+    await user.keyboard('{Enter}');
+    return screen.findByRole('group', { name: 'Services' });
+  }
+
+  it('keeps a click inside the Services popover on the list, in the table and on a card (R-21)', async () => {
+    const user = userEvent.setup();
+    renderListWithRoutes();
+    const row = await clientRow(techwave.name);
+
+    let popover = await openServices(user, row);
+    stillOnList();
+    await user.click(within(popover).getByText('Accounts'));
+    stillOnList();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Grid view' }));
+    const cards = await screen.findByRole('list', { name: 'Clients' });
+    popover = await openServices(
+      user,
+      within(cards).getByRole('listitem', { name: techwave.name }),
+    );
+    await user.click(within(popover).getByText('Accounts'));
+    stillOnList();
+    await user.keyboard('{Escape}');
+
+    // The first service pill is part of the card: a click on it still opens the client.
+    await user.click(
+      within(within(cards).getByRole('listitem', { name: techwave.name })).getAllByText(
+        'Accounts',
+      )[0] as HTMLElement,
+    );
     expect(await screen.findByText('Opened client page')).toBeInTheDocument();
   });
 });

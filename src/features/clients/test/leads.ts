@@ -1,5 +1,6 @@
 import { http, type HttpHandler } from 'msw';
 
+import type { HistoryEntry } from '@/features/audit';
 import { orgApiPath } from '@/test/renderInOrg';
 import { fail, ok } from '@/test/server';
 
@@ -71,17 +72,26 @@ export interface LeadCalls {
   archives: string[];
   unarchives: string[];
   converts: Array<{ id: string; body: unknown }>;
+  histories: URLSearchParams[];
 }
 
 export function newLeadCalls(): LeadCalls {
-  return { lists: [], creates: [], updates: [], archives: [], unarchives: [], converts: [] };
+  return {
+    lists: [],
+    creates: [],
+    updates: [],
+    archives: [],
+    unarchives: [],
+    converts: [],
+    histories: [],
+  };
 }
 
 /** The status the API derives: archived wins over converted. */
 const statusOf = (entry: Lead): LeadStatus =>
   entry.archived_at ? 'archived' : entry.converted_client_id ? 'converted' : 'open';
 
-function summaryOf(leads: Lead[]): LeadSummary {
+export function summaryOf(leads: Lead[]): LeadSummary {
   const totals = (status: LeadStatus) => {
     const rows = leads.filter((entry) => entry.status === status);
     const sum = (pick: (entry: Lead) => number) =>
@@ -117,6 +127,24 @@ export function leadHandlers(
   const find = (id: unknown) => leads.find((entry) => entry.id === String(id));
 
   return [
+    // The history of a lead: one entry, its creation.
+    http.get(orgApiPath('/audit-logs/history'), ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      calls.histories.push(params);
+      const created: HistoryEntry = {
+        id: `history-${params.get('target_id') ?? ''}`,
+        action: 'lead.created',
+        label: 'Lead added',
+        actor: { id: 'user-ada', name: 'Ada Lovelace' },
+        at: STAMP,
+        ip_address: null,
+        target_type: params.get('target_type'),
+        target_id: params.get('target_id'),
+        changes: [],
+        summary: `Lead added: ${find(params.get('target_id'))?.name ?? ''}`,
+      };
+      return ok([created], { meta: END });
+    }),
     http.get(orgApiPath('/leads/summary'), () => ok(summaryOf(leads))),
     http.get(orgApiPath('/leads'), ({ request }) => {
       const params = new URL(request.url).searchParams;

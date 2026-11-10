@@ -26,17 +26,17 @@ import { formatDateTime } from '../utils/datetime';
 import { NoAccess, SettingsSection } from '../components/SettingsSection';
 import type { AuditLogEntry, AuditLogFilters } from '../types';
 import {
-  ACTION_GROUPS,
   dayEndIso,
   dayStartIso,
   describeAuditEntry,
-  isKnownAction,
+  entryText,
+  FILTER_GROUPS,
 } from '../utils/audit';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const GROUP_OPTIONS = [
   { value: '', label: 'All activity' },
-  ...ACTION_GROUPS.map(({ value, label }) => ({ value, label })),
+  ...FILTER_GROUPS.map(({ value, label }) => ({ value, label })),
 ];
 
 function Actor({ actor }: { actor: AuditLogEntry['actor'] }) {
@@ -66,7 +66,7 @@ function Actor({ actor }: { actor: AuditLogEntry['actor'] }) {
 
 function AuditLogList() {
   const { params, setParam } = useUrlParams();
-  const group = ACTION_GROUPS.find((item) => item.value === params.get('group'));
+  const group = FILTER_GROUPS.find((item) => item.value === params.get('group'));
   const actorId = params.get('actor');
   const fromParam = params.get('from') ?? '';
   const toParam = params.get('to') ?? '';
@@ -107,13 +107,15 @@ function AuditLogList() {
       id: 'event',
       header: 'Event',
       card: 'title',
-      cell: (entry) =>
-        isKnownAction(entry.action) ? (
-          <span className="text-text">{describeAuditEntry(entry)}</span>
+      cell: (entry) => {
+        const text = entryText(entry);
+        return text ? (
+          <span className="text-text">{text}</span>
         ) : (
-          // An action this version does not know yet: show the raw code rather than guess.
+          // No sentence here and no wording from the API: show the raw code rather than guess.
           <code className="font-mono text-xs break-all text-text">{entry.action}</code>
-        ),
+        );
+      },
     },
     {
       id: 'ip',

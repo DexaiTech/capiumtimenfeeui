@@ -32,6 +32,24 @@ export const ACTION_GROUPS: ReadonlyArray<ActionGroup> = [
   { value: 'ticket-tags', label: 'Ticket tags', prefix: 'ticket_tag.' },
 ];
 
+/**
+ * Areas the Activity filter also offers. They are not in `ACTION_GROUPS`, so their entries keep
+ * the API's wording (`entryText`) rather than a generic sentence of this page.
+ */
+const API_WORDED_GROUPS: ReadonlyArray<ActionGroup> = [
+  { value: 'leads', label: 'Leads', prefix: 'lead.' },
+  { value: 'estimates', label: 'Estimates', prefix: 'estimate.' },
+  { value: 'recurring', label: 'Recurring invoices', prefix: 'recurring.' },
+  { value: 'expenses', label: 'Expenses', prefix: 'expense.' },
+  { value: 'expense-claims', label: 'Expense claims', prefix: 'expense_claim.' },
+  { value: 'time-entries', label: 'Time entries', prefix: 'time_entry.' },
+  { value: 'period-locks', label: 'Period locks', prefix: 'period_lock.' },
+  // No sign-in group: `auth.*` entries belong to no practice and never appear in this list.
+];
+
+/** Every choice of the Activity filter. */
+export const FILTER_GROUPS: ReadonlyArray<ActionGroup> = [...ACTION_GROUPS, ...API_WORDED_GROUPS];
+
 function isRecord(value: unknown): value is Metadata {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

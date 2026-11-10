@@ -78,6 +78,40 @@ describe('AuditLogSettingsPage', () => {
     expect(screen.getByRole('row', { name: /project\.archived/ })).toBeInTheDocument();
   });
 
+  it('shows the API wording for actions this page has no sentence for (R-16)', async () => {
+    server.use(
+      ...settingsHandlers({
+        auditLogs: [
+          auditEntry({
+            id: 'audit-lead',
+            action: 'lead.created',
+            label: 'Lead added',
+            summary: 'Lead added: Acme Prospects',
+            metadata: { name: 'Acme Prospects' },
+          }),
+          auditEntry({
+            id: 'audit-overtime',
+            action: 'overtime.recorded',
+            label: 'Overtime recorded',
+          }),
+          auditEntry({ id: 'audit-unknown', action: 'project.archived', metadata: null }),
+        ],
+      }),
+    );
+    renderSettings(<AuditLogSettingsPage />);
+
+    // The summary first: the label with the record it is about.
+    expect(
+      await screen.findByRole('row', { name: /Lead added: Acme Prospects/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('lead.created')).not.toBeInTheDocument();
+    // No summary: the label.
+    expect(screen.getByRole('row', { name: /Overtime recorded/ })).toBeInTheDocument();
+    expect(screen.queryByText('overtime.recorded')).not.toBeInTheDocument();
+    // Neither: the raw code, as a last resort.
+    expect(screen.getByText('project.archived')).toBeInTheDocument();
+  });
+
   it('expands a row to show metadata as plain text', async () => {
     const user = userEvent.setup();
     renderSettings(<AuditLogSettingsPage />);
@@ -116,6 +150,24 @@ describe('AuditLogSettingsPage', () => {
     await waitFor(() => expect(last().get('action')).toBe('ticket_attachment.'));
     await user.selectOptions(screen.getByLabelText('Activity'), 'Ticket tags');
     await waitFor(() => expect(last().get('action')).toBe('ticket_tag.'));
+
+    // The areas whose entries read in the API's wording (R-16).
+    for (const [label, prefix] of [
+      ['Leads', 'lead.'],
+      ['Estimates', 'estimate.'],
+      ['Recurring invoices', 'recurring.'],
+      ['Expenses', 'expense.'],
+      ['Expense claims', 'expense_claim.'],
+      ['Time entries', 'time_entry.'],
+      ['Period locks', 'period_lock.'],
+    ] as const) {
+      await user.selectOptions(screen.getByLabelText('Activity'), label);
+      await waitFor(() => expect(last().get('action')).toBe(prefix));
+    }
+    // Sign-ins belong to no practice, so the practice log never lists them: no option for them.
+    expect(
+      within(screen.getByLabelText('Activity')).queryByRole('option', { name: /sign-in/i }),
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Activity'), 'Invoices');
     await waitFor(() => expect(last().get('action')).toBe('invoice.'));
