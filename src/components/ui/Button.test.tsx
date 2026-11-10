@@ -69,4 +69,53 @@ describe('Button', () => {
     expect(onClick).toHaveBeenCalledTimes(2);
     expect(node).toBe(screen.getByRole('button', { name: 'Go' }));
   });
+
+  describe('compactLabel', () => {
+    it('keeps the label as the accessible name and the tooltip, in a span that can hide', () => {
+      render(
+        <Button compactLabel leftIcon={<svg data-testid="left-icon" />}>
+          Export
+        </Button>,
+      );
+      const button = screen.getByRole('button', { name: 'Export' });
+
+      expect(button).toHaveAttribute('title', 'Export');
+      expect(button.className).toContain('@max-6xl/toolbar:px-1.5');
+      const label = screen.getByText('Export');
+      expect(label.tagName).toBe('SPAN');
+      expect(label.className).toBe('@max-6xl/toolbar:sr-only');
+      expect(screen.getByTestId('left-icon')).toBeInTheDocument();
+    });
+
+    it('lets an explicit title win', () => {
+      render(
+        <>
+          <Button compactLabel title="Exporting reports needs the export permission">
+            Export
+          </Button>
+          <Button compactLabel title={undefined}>
+            Export CSV
+          </Button>
+        </>,
+      );
+
+      expect(screen.getByRole('button', { name: 'Export' })).toHaveAttribute(
+        'title',
+        'Exporting reports needs the export permission',
+      );
+      expect(screen.getByRole('button', { name: 'Export CSV' })).toHaveAttribute(
+        'title',
+        'Export CSV',
+      );
+    });
+
+    it('leaves the button unchanged without the prop', () => {
+      render(<Button>Export</Button>);
+      const button = screen.getByRole('button', { name: 'Export' });
+
+      expect(button).not.toHaveAttribute('title');
+      expect(button.querySelector('span')).toBeNull();
+      expect(button.className).not.toContain('@max-6xl/toolbar');
+    });
+  });
 });

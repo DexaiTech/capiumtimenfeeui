@@ -277,6 +277,7 @@ function HistoryList() {
               <Button
                 variant="brand-outline"
                 size="sm"
+                compactLabel
                 leftIcon={<Download aria-hidden="true" className="size-4" />}
                 onClick={exportCsv}
                 disabled={loaded.length === 0}

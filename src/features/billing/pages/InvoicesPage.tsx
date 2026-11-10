@@ -427,137 +427,140 @@ function InvoiceList() {
         onRowClick={(invoice) => void navigate(routes.org.invoice(slug, invoice.id))}
         loading={invoices.isPending}
         toolbar={
-          <PageToolbar
-            start={
-              <CountTabs
-                label="Invoice statuses"
-                items={TABS.map((item) => ({ ...item, count: tabCount(item.value) }))}
-                value={tab}
-                onChange={(value) => setParam({ tab: value === 'all' ? null : value })}
-              />
-            }
-            search={
-              <SearchField
-                label="Search invoices"
-                placeholder="Search number or client"
-                value={searchText}
-                onChange={setSearchText}
-              />
-            }
-            actions={
-              <>
-                {chosen.length > 0 ? (
-                  <div
-                    className="flex flex-wrap items-center gap-2"
-                    role="group"
-                    aria-label="Selected invoices"
-                  >
-                    <span aria-live="polite" className="text-xs font-medium text-text-muted">
-                      {chosen.length} selected
-                    </span>
-                    {canIssue && issuable.length > 0 ? (
-                      <Button
-                        size="sm"
-                        variant="brand-outline"
-                        onClick={() => setDialog({ type: 'bulk-issue' })}
-                      >
-                        Issue {issuable.length}
-                      </Button>
-                    ) : null}
-                    {canSubmit && submittable.length > 0 ? (
-                      <Button
-                        size="sm"
-                        variant="brand-outline"
-                        onClick={() => setDialog({ type: 'bulk-submit' })}
-                      >
-                        Submit {submittable.length} for approval
-                      </Button>
-                    ) : null}
-                    {canSend && sendable.length > 0 ? (
-                      <Button
-                        size="sm"
-                        variant="brand-outline"
-                        leftIcon={<Mail aria-hidden="true" className="size-4" />}
-                        onClick={() => setDialog({ type: 'bulk-send' })}
-                      >
-                        Email {sendable.length}
-                      </Button>
-                    ) : null}
-                    {canDelete ? (
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        disabled={chosen.length > MAX_BULK_IDS}
-                        leftIcon={<Trash2 aria-hidden="true" className="size-4" />}
-                        onClick={() => {
-                          deletion.clearRefusal();
-                          setDialog({ type: 'bulk-delete' });
-                        }}
-                      >
-                        Delete {chosen.length}
-                      </Button>
-                    ) : null}
-                    <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-                      Clear selection
-                    </Button>
-                    <span role="status" className="sr-only">
-                      {deletion.announcement}
-                    </span>
-                  </div>
-                ) : null}
-                <FilterPopover
-                  title="Filter invoices"
-                  count={filterCount}
-                  onClear={() => setParam({ client: null, from: null, to: null })}
-                >
-                  <InvoiceFilterFields
-                    clientId={clientId}
-                    from={from}
-                    to={to}
-                    canPickClient={can(P.clientRead)}
-                    onChange={(changes) =>
-                      setParam({
-                        ...(changes.client !== undefined ? { client: changes.client } : {}),
-                        ...(changes.from !== undefined ? { from: changes.from } : {}),
-                        ...(changes.to !== undefined ? { to: changes.to } : {}),
-                      })
-                    }
-                  />
-                </FilterPopover>
-                <ColumnVisibilityMenu
-                  columns={columns.map((column) => ({
-                    id: column.id,
-                    label: column.header,
-                    locked: column.hideable === false,
-                  }))}
-                  hidden={hidden}
-                  onChange={setHidden}
+          <>
+            <PageToolbar
+              start={
+                <CountTabs
+                  label="Invoice statuses"
+                  items={TABS.map((item) => ({ ...item, count: tabCount(item.value) }))}
+                  value={tab}
+                  onChange={(value) => setParam({ tab: value === 'all' ? null : value })}
                 />
-                <Button
-                  size="sm"
-                  variant="brand-outline"
-                  loading={exporting}
-                  leftIcon={<Download aria-hidden="true" className="size-4" />}
-                  onClick={() => void exportAll()}
-                >
-                  Export CSV
+              }
+              search={
+                <SearchField
+                  label="Search invoices"
+                  placeholder="Search number or client"
+                  value={searchText}
+                  onChange={setSearchText}
+                />
+              }
+              actions={
+                <>
+                  <FilterPopover
+                    title="Filter invoices"
+                    count={filterCount}
+                    onClear={() => setParam({ client: null, from: null, to: null })}
+                  >
+                    <InvoiceFilterFields
+                      clientId={clientId}
+                      from={from}
+                      to={to}
+                      canPickClient={can(P.clientRead)}
+                      onChange={(changes) =>
+                        setParam({
+                          ...(changes.client !== undefined ? { client: changes.client } : {}),
+                          ...(changes.from !== undefined ? { from: changes.from } : {}),
+                          ...(changes.to !== undefined ? { to: changes.to } : {}),
+                        })
+                      }
+                    />
+                  </FilterPopover>
+                  <ColumnVisibilityMenu
+                    columns={columns.map((column) => ({
+                      id: column.id,
+                      label: column.header,
+                      locked: column.hideable === false,
+                    }))}
+                    hidden={hidden}
+                    onChange={setHidden}
+                  />
+                  <Button
+                    size="sm"
+                    variant="brand-outline"
+                    loading={exporting}
+                    compactLabel
+                    leftIcon={<Download aria-hidden="true" className="size-4" />}
+                    onClick={() => void exportAll()}
+                  >
+                    Export CSV
+                  </Button>
+                </>
+              }
+              primaryAction={
+                can(P.invoiceCreate) ? (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    aria-expanded={creating !== null}
+                    leftIcon={<FilePlus2 aria-hidden="true" className="size-4" />}
+                    onClick={startCreating}
+                  >
+                    Create invoice
+                  </Button>
+                ) : undefined
+              }
+            />
+            {chosen.length > 0 ? (
+              <div
+                className="flex flex-wrap items-center gap-2 border-b border-row-border px-4 py-2"
+                role="group"
+                aria-label="Selected invoices"
+              >
+                <span aria-live="polite" className="text-xs font-medium text-text-muted">
+                  {chosen.length} selected
+                </span>
+                {canIssue && issuable.length > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="brand-outline"
+                    onClick={() => setDialog({ type: 'bulk-issue' })}
+                  >
+                    Issue {issuable.length}
+                  </Button>
+                ) : null}
+                {canSubmit && submittable.length > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="brand-outline"
+                    onClick={() => setDialog({ type: 'bulk-submit' })}
+                  >
+                    Submit {submittable.length} for approval
+                  </Button>
+                ) : null}
+                {canSend && sendable.length > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="brand-outline"
+                    leftIcon={<Mail aria-hidden="true" className="size-4" />}
+                    onClick={() => setDialog({ type: 'bulk-send' })}
+                  >
+                    Email {sendable.length}
+                  </Button>
+                ) : null}
+                {canDelete ? (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={chosen.length > MAX_BULK_IDS}
+                    leftIcon={<Trash2 aria-hidden="true" className="size-4" />}
+                    onClick={() => {
+                      deletion.clearRefusal();
+                      setDialog({ type: 'bulk-delete' });
+                    }}
+                  >
+                    Delete {chosen.length}
+                  </Button>
+                ) : null}
+                <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                  Clear selection
                 </Button>
-              </>
-            }
-            primaryAction={
-              can(P.invoiceCreate) ? (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  aria-expanded={creating !== null}
-                  leftIcon={<FilePlus2 aria-hidden="true" className="size-4" />}
-                  onClick={startCreating}
-                >
-                  Create invoice
-                </Button>
-              ) : undefined
-            }
-          />
+                <span role="status" className="sr-only">
+                  {deletion.announcement}
+                </span>
+              </div>
+            ) : null}
+          </>
         }
         rowActions={(invoice) => (
           <RowActions

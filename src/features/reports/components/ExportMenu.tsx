@@ -38,6 +38,7 @@ export function ExportMenu({ formats, onExport, busy, allowed, empty }: ExportMe
         loading={busy}
         disabled={!allowed || empty}
         title={allowed ? undefined : 'Exporting reports needs the export permission'}
+        compactLabel
         leftIcon={<Download aria-hidden="true" className="size-4" />}
         onClick={() => setOpen((value) => !value)}
       >
