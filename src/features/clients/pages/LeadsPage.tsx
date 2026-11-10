@@ -1,12 +1,10 @@
 import { SearchX, Target } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 
 import { PageHeader } from '@/components/layout';
 import {
-  Badge,
   Button,
-  Card,
   ConfirmDialog,
   DataTable,
   EmptyState,
@@ -54,10 +52,11 @@ const TABS: ReadonlyArray<{ value: LeadStatus; label: string }> = [
   { value: 'archived', label: 'Archived' },
 ];
 
-const STATUS_BADGE: Record<LeadStatus, { label: string; tone: 'info' | 'success' | 'neutral' }> = {
-  open: { label: 'Open', tone: 'info' },
-  converted: { label: 'Converted', tone: 'success' },
-  archived: { label: 'Archived', tone: 'neutral' },
+// The label of each status and its Clients pill (`cc-pill`, as the Client Type and Status pills).
+const STATUS_BADGE: Record<LeadStatus, { label: string; pill: string }> = {
+  open: { label: 'Open', pill: 'cc-pill cc-pill--info' },
+  converted: { label: 'Converted', pill: 'cc-pill cc-pill--success' },
+  archived: { label: 'Archived', pill: 'cc-pill' },
 };
 
 type DialogState =
@@ -70,6 +69,14 @@ type DialogState =
 type LeadColumn = DataTableColumn<Lead> & {
   csv: ReadonlyArray<readonly [header: string, value: (lead: Lead) => string | null]>;
 };
+
+/** The line under a lead's name: who to contact, or the client type when there is no contact. */
+function contactLine(lead: Lead): ReactNode {
+  const text =
+    [lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') ||
+    CLIENT_TYPE_LABELS[lead.client_type];
+  return <span title={text}>{text}</span>;
+}
 
 /** A refusal shown in a confirmation dialog, with the request id. */
 function refusalOf(error: unknown): ConfirmDialogError {
@@ -222,17 +229,16 @@ function LeadList({ clientCount }: { clientCount: number | null }) {
         ['Phone', (lead) => lead.phone],
       ],
       cell: (lead) => (
-        // The avatar of the Clients list, beside the name (decorative: the name is the text).
-        <div className="cc-client">
+        // The Clients cell: avatar (decorative), the name in the Clients style, a small meta line.
+        <span className="cc-client">
           <Initials name={lead.name} initials={initialsOf(lead.name)} />
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="font-semibold text-text">{lead.name}</span>
-            <span className="text-xs text-text-muted">
-              {[lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') ||
-                CLIENT_TYPE_LABELS[lead.client_type]}
+          <span className="cc-client-text">
+            <span className="cc-client-name" title={lead.name}>
+              {lead.name}
             </span>
-          </div>
-        </div>
+            <span className="cc-client-meta">{contactLine(lead)}</span>
+          </span>
+        </span>
       ),
     },
     {
@@ -240,7 +246,7 @@ function LeadList({ clientCount }: { clientCount: number | null }) {
       header: 'Source',
       plain: true,
       className: 'whitespace-nowrap',
-      cell: (lead) => lead.source ?? <span className="text-text-subtle">—</span>,
+      cell: (lead) => lead.source ?? <span className="cc-muted">—</span>,
       csv: [['Source', (lead) => lead.source]],
     },
     {
@@ -280,12 +286,9 @@ function LeadList({ clientCount }: { clientCount: number | null }) {
       className: 'whitespace-nowrap',
       cell: (lead) => (
         <div className="flex flex-col items-start gap-1">
-          <Badge tone={STATUS_BADGE[lead.status].tone}>{STATUS_BADGE[lead.status].label}</Badge>
+          <span className={STATUS_BADGE[lead.status].pill}>{STATUS_BADGE[lead.status].label}</span>
           {lead.converted_client ? (
-            <Link
-              to={clientHref(lead.converted_client.id)}
-              className="text-xs font-medium text-brand-text hover:underline"
-            >
+            <Link to={clientHref(lead.converted_client.id)} className="cc-link">
               {lead.converted_client.code} · {lead.converted_client.name}
             </Link>
           ) : null}
@@ -360,28 +363,6 @@ function LeadList({ clientCount }: { clientCount: number | null }) {
         lead={dialog?.type === 'form' ? dialog.lead : null}
         onClose={close}
       />
-      <dl aria-label="Lead totals" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          {
-            label: `${STATUS_BADGE[tab].label} leads`,
-            value: totals ? String(totals.count) : '–',
-          },
-          {
-            label: 'Acquisition cost',
-            value: totals ? formatMoney(totals.acquisition_cost, currency) : '–',
-          },
-          {
-            label: 'Onboarding cost',
-            value: totals ? formatMoney(totals.onboarding_cost, currency) : '–',
-          },
-          { label: 'Total cost', value: totals ? formatMoney(totals.total_cost, currency) : '–' },
-        ].map((stat) => (
-          <Card key={stat.label} padding="sm" className="flex flex-col gap-1">
-            <dt className="text-xs text-text-muted">{stat.label}</dt>
-            <dd className="text-xl font-semibold tabular-nums text-text">{stat.value}</dd>
-          </Card>
-        ))}
-      </dl>
       <DataTable
         className="capium-clients cc-leads-table"
         caption="Leads"
@@ -456,17 +437,45 @@ function LeadList({ clientCount }: { clientCount: number | null }) {
           )
         }
         footer={
-          loaded.length > 0 ? (
-            <div className="border-t border-row-border px-4 py-2">
-              <Pagination
-                hasMore={leads.hasNextPage}
-                onLoadMore={() => void leads.fetchNextPage()}
-                loading={leads.isFetchingNextPage}
-                count={loaded.length}
-                itemLabel={['lead', 'leads']}
-              />
-            </div>
-          ) : null
+          <>
+            {loaded.length > 0 ? (
+              <div className="border-t border-row-border px-4 py-2">
+                <Pagination
+                  hasMore={leads.hasNextPage}
+                  onLoadMore={() => void leads.fetchNextPage()}
+                  loading={leads.isFetchingNextPage}
+                  count={loaded.length}
+                  itemLabel={['lead', 'leads']}
+                />
+              </div>
+            ) : null}
+            {/* The four figures of the tab, one slim line at the foot of the table card. */}
+            <dl aria-label="Lead totals" className="cc-leads-summary">
+              {[
+                {
+                  label: `${STATUS_BADGE[tab].label} leads`,
+                  value: totals ? String(totals.count) : '–',
+                },
+                {
+                  label: 'Acquisition cost',
+                  value: totals ? formatMoney(totals.acquisition_cost, currency) : '–',
+                },
+                {
+                  label: 'Onboarding cost',
+                  value: totals ? formatMoney(totals.onboarding_cost, currency) : '–',
+                },
+                {
+                  label: 'Total cost',
+                  value: totals ? formatMoney(totals.total_cost, currency) : '–',
+                },
+              ].map((stat) => (
+                <div key={stat.label} className="cc-leads-summary-item">
+                  <dt>{stat.label}</dt>
+                  <dd>{stat.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </>
         }
       />
       <ConfirmDialog

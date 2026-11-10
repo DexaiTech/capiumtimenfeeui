@@ -212,13 +212,18 @@ describe('LeadsPage: the toolbar card, as on Clients', () => {
     expect(screen.getAllByRole('navigation', { name: 'Clients and leads' })).toHaveLength(1);
   });
 
-  it('reads title, cost cards, then the toolbar card with the switch first', () => {
+  it('reads title, the toolbar card with the switch first, then the table card', () => {
     renderPage();
 
     const title = screen.getByRole('heading', { level: 1, name: 'Leads' });
-    const cards = screen.getByLabelText('Lead totals');
-    follows(title, cards);
-    follows(cards, toolbar());
+    follows(title, toolbar());
+    // Nothing sits between the title and the toolbar card, as on Clients: the toolbar card opens
+    // the list and the table card follows it (the totals are a line inside that card).
+    expect(toolbar().previousElementSibling).toBeNull();
+    expect(toolbar().parentElement?.previousElementSibling).toContainElement(title);
+    const tableCard = screen.getByRole('table', { name: 'Leads' }).closest('.list-card');
+    expect(tableCard).not.toBeNull();
+    expect(toolbar().nextElementSibling).toBe(tableCard);
     const card = within(toolbar());
     const order = [
       card.getByRole('navigation', { name: 'Clients and leads' }),
@@ -366,6 +371,96 @@ describe('LeadsPage: the rows, as on Clients', () => {
     expect(description).not.toBe('');
     expect(screen.getByText(description)).toBeInTheDocument();
     expect(screen.queryByText(/acquisition and onboarding/i)).not.toBeInTheDocument();
+  });
+});
+
+// Round 3 (10 Nov): the page is the Clients page. The four cost cards are one slim line in the
+// table card, and the Lead and Status cells are drawn with the Clients cell classes.
+describe('LeadsPage: the totals line and the cells, as on Clients', () => {
+  it('shows the same four figures as one slim line at the foot of the table card', async () => {
+    renderPage();
+
+    const totals = screen.getByLabelText('Lead totals');
+    const table = screen.getByRole('table', { name: 'Leads' });
+    // Inside the table card, after the rows, not a row of cards above the toolbar.
+    const card = table.closest('.list-card');
+    expect(card).toContainElement(totals);
+    expect(table.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(totals).toHaveClass('cc-leads-summary');
+    expect(totals.querySelectorAll('dt')).toHaveLength(4);
+    expect(totals.closest('.cc-leads-table')).not.toBeNull();
+
+    // The figures of the Open tab, as the cards showed them (open: Brightside + Corner Cafe).
+    const line = () => within(screen.getByLabelText('Lead totals'));
+    await waitFor(() => expect(line().getByText('£262.50')).toBeInTheDocument());
+    const figure = (label: string) => line().getByText(label).nextElementSibling;
+    expect(figure('Open leads')).toHaveTextContent('2');
+    expect(figure('Acquisition cost')).toHaveTextContent('£262.50');
+    expect(figure('Onboarding cost')).toHaveTextContent('£50.00');
+    expect(figure('Total cost')).toHaveTextContent('£312.50');
+  });
+
+  it('follows the tab: Converted leads and their figures', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    const line = () => within(screen.getByLabelText('Lead totals'));
+    await waitFor(() => expect(line().getByText('Converted leads')).toBeInTheDocument());
+    await waitFor(() => expect(line().getByText('£550.00')).toBeInTheDocument());
+  });
+
+  it('keeps the totals line below the rows when the list is empty', async () => {
+    setup([]);
+    renderPage();
+
+    expect(await screen.findByText('No open leads')).toBeInTheDocument();
+    const line = within(screen.getByLabelText('Lead totals'));
+    expect(line.getByText('Open leads').nextElementSibling).toHaveTextContent('0');
+  });
+
+  it('draws the Lead cell as a Clients cell: avatar, upper-case name, small meta line', async () => {
+    renderPage();
+
+    const bright = within(await row(/^Select Brightside Bakery Ltd/));
+    const name = bright.getByText('Brightside Bakery Ltd');
+    // The Clients name style (upper-case and truncated by `.cc-client-name`); the full name is
+    // the text and the title.
+    expect(name).toHaveClass('cc-client-name');
+    expect(name).toHaveAttribute('title', 'Brightside Bakery Ltd');
+    expect(name.closest('.cc-client-text')?.parentElement).toHaveClass('cc-client');
+    const meta = bright.getByText('Bea Bright · bea@brightside.example');
+    expect(meta.closest('.cc-client-meta')).not.toBeNull();
+    expect(meta.closest('.cc-client-text')).toBe(name.closest('.cc-client-text'));
+    expect(meta).toHaveAttribute('title', 'Bea Bright · bea@brightside.example');
+
+    const cafe = within(await row(/^Select Corner Cafe/));
+    expect(
+      cafe.getByText(CLIENT_TYPE_LABELS.sole_trader).closest('.cc-client-meta'),
+    ).not.toBeNull();
+  });
+
+  it('draws the Status as a Clients pill, keeping the label and the client link', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const open = within(await row(/^Select Brightside/));
+    expect(open.getByText('Open')).toHaveClass('cc-pill', 'cc-pill--info');
+
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    const converted = within(await row(/^Select Dunmore Holdings/));
+    expect(converted.getByText('Converted')).toHaveClass('cc-pill', 'cc-pill--success');
+    expect(converted.getByRole('link', { name: 'C0042 · Dunmore Holdings' })).toHaveClass(
+      'cc-link',
+    );
+
+    await user.click(screen.getByRole('tab', { name: /^Archived/ }));
+    const archived = within(await row(/^Select Old Prospect/));
+    const pill = archived.getByText('Archived');
+    expect(pill).toHaveClass('cc-pill');
+    expect(pill).not.toHaveClass('cc-pill--info');
+    expect(pill).not.toHaveClass('cc-pill--success');
   });
 });
 
