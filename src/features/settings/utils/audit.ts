@@ -44,7 +44,7 @@ const API_WORDED_GROUPS: ReadonlyArray<ActionGroup> = [
   { value: 'expense-claims', label: 'Expense claims', prefix: 'expense_claim.' },
   { value: 'time-entries', label: 'Time entries', prefix: 'time_entry.' },
   { value: 'period-locks', label: 'Period locks', prefix: 'period_lock.' },
-  { value: 'sign-in', label: 'Sign-in', prefix: 'auth.' },
+  // No sign-in group: `auth.*` entries belong to no practice and never appear in this list.
 ];
 
 /** Every choice of the Activity filter. */

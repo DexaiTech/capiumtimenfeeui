@@ -160,11 +160,14 @@ describe('AuditLogSettingsPage', () => {
       ['Expense claims', 'expense_claim.'],
       ['Time entries', 'time_entry.'],
       ['Period locks', 'period_lock.'],
-      ['Sign-in', 'auth.'],
     ] as const) {
       await user.selectOptions(screen.getByLabelText('Activity'), label);
       await waitFor(() => expect(last().get('action')).toBe(prefix));
     }
+    // Sign-ins belong to no practice, so the practice log never lists them: no option for them.
+    expect(
+      within(screen.getByLabelText('Activity')).queryByRole('option', { name: /sign-in/i }),
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Activity'), 'Invoices');
     await waitFor(() => expect(last().get('action')).toBe('invoice.'));
