@@ -41,8 +41,7 @@ Gaps between title, cards and toolbar are the Clients 10 px (`gap-2.5`, was `gap
 - `src/features/clients/pages/LeadsPage.tsx`: uses `LeadsToolbar`; no `PageToolbar`, `CountTabs`,
   `SearchField` or `ColumnVisibilityMenu`; the switch is no longer rendered above the cards;
   `LeadList` takes `clientCount`; on a load error the switch still shows above the error card.
-- `src/styles/capium-clients.css`: `.cc-toolbar-group--row` (a group on its own row) and a small
-  `.cc-leads-table` block (card border/radius/shadow, checkbox column, checkbox size, hover).
+- `src/styles/capium-clients.css`: a small `.cc-leads-table` block (card border/radius/shadow, checkbox column, checkbox size, hover).
 - `src/features/clients/pages/LeadsPage.test.tsx`: new describe block (see 6).
 - Not touched: Clients page and components, shared `DataTable`, `PageToolbar`, `CountTabs`,
   `SearchField`, `ColumnVisibilityMenu`, API, MSW handlers.
@@ -80,3 +79,7 @@ tests pass unchanged.
 
 Leads shows one toolbar card with the switch first, tabs, search, then Show/Hide Columns, Export
 selected and Add lead, in the Clients look; every Leads function above still works.
+
+## Follow-up (10 Nov, after the owner checked it locally)
+
+The first version forced the buttons onto a second row of the card. Clients does not: its two groups sit on one row, the buttons right-aligned, and wrap only when there is no room. The forced row (and its `.cc-toolbar-group--row` rule) was removed, so Leads now has the same arrangement as Clients.

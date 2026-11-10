@@ -115,11 +115,6 @@
   min-width: 0;
 }
 
-/* A group that takes a row of the card for itself: the buttons under the tabs and the search. */
-.cc-toolbar-group--row {
-  flex: 1 1 100%;
-}
-
 .cc-tabswitch {
   display: inline-flex;
   align-items: center;
