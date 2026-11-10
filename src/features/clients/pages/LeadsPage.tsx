@@ -19,6 +19,7 @@ import {
   type DataTableColumn,
   type DropdownItem,
 } from '@/components/ui';
+import { PAGE_DESCRIPTIONS } from '@/constants/pageDescriptions';
 import { PERMISSIONS as P } from '@/constants/permissions';
 import { routes } from '@/constants/routes';
 import { useOrg } from '@/features/organizations';
@@ -27,6 +28,7 @@ import { useDebouncedValue, useDocumentTitle, usePersistentColumns, useUrlParams
 import { isApiError } from '@/services/api';
 import { downloadText, toCsv } from '@/utils/csv';
 import { formatDayMonthYear, formatUkDate, todayInZone } from '@/utils/dates';
+import { initialsOf } from '@/utils/format';
 import { formatMoney, penceToPoundsInput } from '@/utils/money';
 
 import '@/styles/capium-clients.css';
@@ -39,6 +41,7 @@ import {
   useLeadList,
   useLeadSummary,
 } from '../api';
+import { Initials } from '../components/ClientCells';
 import { ClientsLeadsSwitch } from '../components/ClientsLeadsSwitch';
 import { LeadsToolbar } from '../components/LeadsToolbar';
 import { branchOptions, CLIENT_TYPE_LABELS } from '../constants';
@@ -219,12 +222,16 @@ function LeadList({ clientCount }: { clientCount: number | null }) {
         ['Phone', (lead) => lead.phone],
       ],
       cell: (lead) => (
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-semibold text-text">{lead.name}</span>
-          <span className="text-xs text-text-muted">
-            {[lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') ||
-              CLIENT_TYPE_LABELS[lead.client_type]}
-          </span>
+        // The avatar of the Clients list, beside the name (decorative: the name is the text).
+        <div className="cc-client">
+          <Initials name={lead.name} initials={initialsOf(lead.name)} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="font-semibold text-text">{lead.name}</span>
+            <span className="text-xs text-text-muted">
+              {[lead.contact_name, lead.email, lead.phone].filter(Boolean).join(' · ') ||
+                CLIENT_TYPE_LABELS[lead.client_type]}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -415,9 +422,10 @@ function LeadList({ clientCount }: { clientCount: number | null }) {
         rowActions={(lead) => {
           const items = actionsFor(lead);
           return items.length > 0 ? (
-            <RowActions label={`Actions for ${lead.name}`} items={items} />
+            <RowActions label={`Actions for ${lead.name}`} items={items} size="sm" />
           ) : null;
         }}
+        actionsHeader="Action"
         empty={
           filtered ? (
             <EmptyState
@@ -531,11 +539,7 @@ export default function LeadsPage() {
   const clients = useClientSummary();
   return (
     <section className="flex min-w-0 flex-col gap-2.5">
-      <PageHeader
-        title="Leads"
-        description="Prospective clients and what winning them costs: acquisition and onboarding. Convert a lead into a client in one click once it is won, or archive it."
-        className="mb-1"
-      />
+      <PageHeader title="Leads" description={PAGE_DESCRIPTIONS['clients/leads']} className="mb-1" />
       <LeadList clientCount={clients.data?.total ?? null} />
     </section>
   );

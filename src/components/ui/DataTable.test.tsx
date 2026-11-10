@@ -20,6 +20,37 @@ const columns: DataTableColumn<Row>[] = [
   },
 ];
 
+describe('DataTable: actions heading', () => {
+  it('keeps a hidden "Actions" heading unless a visible one is given', () => {
+    const { rerender } = render(
+      <DataTable
+        caption="Rows"
+        columns={columns.slice(0, 1)}
+        rows={rows}
+        rowKey={(r) => r.id}
+        rowActions={() => <button type="button">Edit</button>}
+      />,
+    );
+    const hidden = screen.getByRole('columnheader', { name: 'Actions' });
+    expect(hidden.firstElementChild).toHaveClass('sr-only');
+
+    rerender(
+      <DataTable
+        caption="Rows"
+        columns={columns.slice(0, 1)}
+        rows={rows}
+        rowKey={(r) => r.id}
+        rowActions={() => <button type="button">Edit</button>}
+        actionsHeader="Action"
+      />,
+    );
+    const shown = screen.getByRole('columnheader', { name: 'Action' });
+    expect(shown).toHaveTextContent(/^Action$/);
+    expect(shown).toHaveClass('text-right');
+    expect(shown.firstElementChild).toBeNull();
+  });
+});
+
 describe('DataTable: row click', () => {
   it('opens the row from plain text in it', async () => {
     const user = userEvent.setup();

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PAGE_DESCRIPTIONS } from '@/constants/pageDescriptions';
 import { branchesOnContext, branchHandlers, london } from '@/test/branches';
 import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
@@ -10,6 +11,7 @@ import { expectRequiredFields } from '@/test/requiredFields';
 import { findRowAction, rowActionNames } from '@/test/rowActions';
 import { fail, ok, server } from '@/test/server';
 
+import { CLIENT_TYPE_LABELS } from '../constants';
 import {
   brightside,
   corner,
@@ -301,6 +303,69 @@ describe('LeadsPage: the toolbar card, as on Clients', () => {
     await user.click(showAll);
     expect(screen.getByRole('columnheader', { name: 'Source' })).toBeInTheDocument();
     expect(window.localStorage.getItem('tf:columns:leads')).toBe('[]');
+  });
+});
+
+describe('LeadsPage: the rows, as on Clients', () => {
+  it('puts a decorative initials avatar next to the lead name, keeping the second line', async () => {
+    renderPage();
+
+    const bright = within(await row(/^Select Brightside Bakery Ltd/));
+    // The avatar is the Clients one: round initials, hidden from assistive technology.
+    const avatar = bright.getByText('BL');
+    expect(avatar).toHaveClass('cc-avatar');
+    expect(avatar).toHaveAttribute('aria-hidden', 'true');
+    // The name stays the visible text, beside the avatar, over the contact line.
+    const name = bright.getByText('Brightside Bakery Ltd');
+    expect(name).not.toHaveAttribute('aria-hidden');
+    expect(name.closest('.cc-client')).toContainElement(avatar);
+    expect(bright.getByText('Bea Bright · bea@brightside.example')).toBeInTheDocument();
+    // A lead with no contact still shows its client type under the name.
+    const cafe = within(await row(/^Select Corner Cafe/));
+    expect(cafe.getByText('CC')).toHaveAttribute('aria-hidden', 'true');
+    expect(cafe.getByText(CLIENT_TYPE_LABELS.sole_trader)).toBeInTheDocument();
+  });
+
+  it('does not let the avatar into the name of the row', async () => {
+    renderPage();
+
+    await row(/^Select Brightside Bakery Ltd/);
+    expect(screen.queryByRole('row', { name: /\bBL\b/ })).not.toBeInTheDocument();
+  });
+
+  it('heads the last column "Action", right-aligned over its right-aligned icons', async () => {
+    renderPage();
+
+    const heading = await screen.findByRole('columnheader', { name: 'Action' });
+    expect(heading).toHaveTextContent(/^Action$/);
+    expect(heading).toHaveClass('text-right');
+    // The heading is visible text, not the hidden "Actions" the shared table used to give it.
+    expect(within(heading).queryByText('Actions')).not.toBeInTheDocument();
+
+    const group = await screen.findByRole('group', { name: 'Actions for Brightside Bakery Ltd' });
+    expect(group.closest('td')).toHaveClass('text-right');
+    expect(group).toHaveClass('justify-end');
+  });
+
+  it('keeps the actions group and its button names under the Action heading', async () => {
+    renderPage();
+
+    expect(await actionsOf(brightside.name)).toEqual(['Edit', 'Convert to client', 'Archive']);
+    expect(
+      within(screen.getByRole('group', { name: 'Actions for Brightside Bakery Ltd' })).getByRole(
+        'button',
+        { name: 'Archive' },
+      ),
+    ).toBeEnabled();
+  });
+
+  it('takes the page description from the page descriptions, as Clients does', () => {
+    renderPage();
+
+    const description = PAGE_DESCRIPTIONS['clients/leads'] ?? '';
+    expect(description).not.toBe('');
+    expect(screen.getByText(description)).toBeInTheDocument();
+    expect(screen.queryByText(/acquisition and onboarding/i)).not.toBeInTheDocument();
   });
 });
 
