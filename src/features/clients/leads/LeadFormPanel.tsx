@@ -3,7 +3,7 @@ import { useId, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { FormAlert, useSubmitError } from '@/components/forms';
-import { Button, FormPanel, Input, Select, Textarea, useToast } from '@/components/ui';
+import { Button, FormPanel, FormSection, Input, Select, Textarea, useToast } from '@/components/ui';
 import { PERMISSIONS } from '@/constants/permissions';
 import { RecordHistory } from '@/features/audit';
 import { useOrg } from '@/features/organizations';
@@ -106,34 +106,28 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
         id={formId}
         noValidate
         onSubmit={(event) => void onSubmit(event)}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-5"
       >
         {submitError ? (
           <FormAlert message={submitError.message} requestId={submitError.requestId} />
         ) : null}
-        <Input
-          label="Name"
-          required
-          autoComplete="off"
-          maxLength={200}
-          hint="The business or person, as the client will be called."
-          error={errors.name?.message}
-          {...register('name')}
-        />
-        <Select
-          label="Client type"
-          options={CLIENT_TYPE_OPTIONS}
-          error={errors.client_type?.message}
-          {...register('client_type')}
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <p className="text-xs text-text-muted">Fields marked with a red star are required.</p>
+        <FormSection title="About the lead" className="grid gap-4 sm:grid-cols-2">
           <Input
-            label="Contact name"
+            label="Name"
+            required
             autoComplete="off"
-            maxLength={120}
-            hint="Becomes the client's primary contact."
-            error={errors.contact_name?.message}
-            {...register('contact_name')}
+            maxLength={200}
+            hint="The business or person, as the client will be called."
+            error={errors.name?.message}
+            className="sm:col-span-2"
+            {...register('name')}
+          />
+          <Select
+            label="Client type"
+            options={CLIENT_TYPE_OPTIONS}
+            error={errors.client_type?.message}
+            {...register('client_type')}
           />
           <Input
             label="Source"
@@ -142,6 +136,18 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
             hint="Where the lead came from, for example Referral or Website."
             error={errors.source?.message}
             {...register('source')}
+          />
+        </FormSection>
+
+        <FormSection title="Contact" className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Contact name"
+            autoComplete="off"
+            maxLength={120}
+            hint="Becomes the client's primary contact."
+            error={errors.contact_name?.message}
+            className="sm:col-span-2"
+            {...register('contact_name')}
           />
           <Input
             label="Email"
@@ -159,6 +165,13 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
             error={errors.phone?.message}
             {...register('phone')}
           />
+        </FormSection>
+
+        <FormSection
+          title="Costs"
+          description="Optional. A blank amount counts as nothing spent."
+          className="grid gap-4 sm:grid-cols-2"
+        >
           <Input
             label={`Acquisition cost (${symbol})`}
             inputMode="decimal"
@@ -173,21 +186,31 @@ function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void })
             error={errors.onboarding_cost?.message}
             {...register('onboarding_cost')}
           />
-        </div>
-        <p className="text-sm text-text-muted">
-          Total cost{' '}
-          <strong className="font-semibold tabular-nums text-text">
-            {formatMoney(total, currency)}
-          </strong>
-        </p>
-        <Textarea
-          label="Notes"
-          rows={3}
-          maxLength={5000}
-          hint="Copied to the client when the lead is converted."
-          error={errors.notes?.message}
-          {...register('notes')}
-        />
+          <p className="text-sm text-text-muted sm:col-span-2">
+            Total cost{' '}
+            <strong className="font-semibold tabular-nums text-text">
+              {formatMoney(total, currency)}
+            </strong>
+          </p>
+        </FormSection>
+
+        <FormSection
+          title="Notes"
+          description="Optional."
+          className="grid gap-4"
+          collapsible
+          defaultOpen={lead !== null}
+          forceOpen={Boolean(errors.notes)}
+        >
+          <Textarea
+            label="Notes"
+            rows={3}
+            maxLength={5000}
+            hint="Copied to the client when the lead is converted."
+            error={errors.notes?.message}
+            {...register('notes')}
+          />
+        </FormSection>
       </form>
       {/* The API opens a lead's history to whoever reads clients (`client.read`). */}
       {lead && can(PERMISSIONS.clientRead) ? (

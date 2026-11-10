@@ -556,6 +556,11 @@ export default function LeadsPage() {
   const leads = useLeadSummary();
   return (
     <section className="flex min-w-0 flex-col gap-4">
+      <PageHeader
+        title="Leads"
+        description="Prospective clients and what winning them costs: acquisition and onboarding. Convert a lead into a client in one click once it is won, or archive it."
+        className="mb-1"
+      />
       {/* The same Clients | Leads tabs as the Client List, so neither page hides the other. */}
       <div className="capium-clients">
         <ClientsLeadsSwitch
@@ -564,11 +569,6 @@ export default function LeadsPage() {
           leadCount={leads.data?.open.count ?? null}
         />
       </div>
-      <PageHeader
-        title="Leads"
-        description="Prospective clients and what winning them costs: acquisition and onboarding. Convert a lead into a client in one click once it is won, or archive it."
-        className="mb-1"
-      />
       <LeadList />
     </section>
   );

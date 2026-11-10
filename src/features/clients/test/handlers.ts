@@ -6,6 +6,7 @@ import { ok } from '@/test/server';
 
 import type { ClientListItem, ClientSummary, MemberRead, ServiceRead } from '../types';
 import { testClients, testMembers, testServices, testSummary } from './fixtures';
+import { summaryOf as leadSummaryOf, testLeads } from './leads';
 
 const END = { next_cursor: null, has_more: false };
 
@@ -24,6 +25,8 @@ export function clientsHandlers(data: ClientsData = {}): HttpHandler[] {
   return [
     ...segmentHandlers(),
     http.get(orgApiPath('/clients/summary'), () => ok(data.summary ?? testSummary)),
+    // The Leads tab of the switch shows the open-lead count.
+    http.get(orgApiPath('/leads/summary'), () => ok(leadSummaryOf(testLeads))),
     http.get(orgApiPath('/clients'), ({ request }) => {
       const params = new URL(request.url).searchParams;
       data.onList?.(params, request);
