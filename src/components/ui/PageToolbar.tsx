@@ -35,8 +35,10 @@ export function PageToolbar({
     >
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center @3xl/toolbar:flex-nowrap">
         {/* Below 48rem the group dissolves (display: contents) so tabs, search and actions wrap as
-            siblings: tabs first, then search + actions. From 48rem it is the left half of one row. */}
-        <div className="contents @3xl/toolbar:flex @3xl/toolbar:min-w-72 @3xl/toolbar:flex-1 @3xl/toolbar:items-center @3xl/toolbar:gap-2.5">
+            siblings: tabs first, then search + actions. From 48rem it is the left half of one row.
+            It keeps 18rem only when it holds a tab strip: a title alone must not push the actions
+            onto a second row (Client 360 tabs). */}
+        <div className="contents @3xl/toolbar:flex @3xl/toolbar:flex-1 @3xl/toolbar:items-center @3xl/toolbar:gap-2.5 @3xl/toolbar:has-[[role=tablist]]:min-w-72">
           {start}
           {search}
         </div>
