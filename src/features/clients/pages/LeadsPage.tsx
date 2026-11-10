@@ -528,10 +528,18 @@ function LeadList() {
         loading={archive.isPending}
         error={refusal}
       >
-        <p>
-          <strong className="font-medium text-text">{target?.name}</strong> moves to Archived and
-          can no longer be converted. Unarchive it at any time to pick it up again.
-        </p>
+        {target?.converted_client_id ? (
+          // Archiving a converted lead never touches the client it became.
+          <p>
+            <strong className="font-medium text-text">{target.name}</strong> moves to Archived. The
+            client it became is not changed. Unarchive it at any time.
+          </p>
+        ) : (
+          <p>
+            <strong className="font-medium text-text">{target?.name}</strong> moves to Archived and
+            can no longer be converted. Unarchive it at any time to pick it up again.
+          </p>
+        )}
       </ConfirmDialog>
     </>
   );

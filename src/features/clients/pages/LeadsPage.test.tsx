@@ -4,7 +4,7 @@ import { http } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { branchesOnContext, branchHandlers, london } from '@/test/branches';
-import { contextWith, STAFF_PERMISSIONS } from '@/test/orgFixtures';
+import { contextWith, ownerContext, STAFF_PERMISSIONS } from '@/test/orgFixtures';
 import { orgApiPath, renderInOrg } from '@/test/renderInOrg';
 import { expectRequiredFields } from '@/test/requiredFields';
 import { findRowAction, rowActionNames } from '@/test/rowActions';
@@ -529,6 +529,46 @@ describe('LeadFormPanel', () => {
     expect(calls.updates).toEqual([{ id: brightside.id, body: { onboarding_cost: 7500 } }]);
     expect(await within(await row(/^Select Brightside/)).findByText('£325.00')).toBeInTheDocument();
   });
+
+  it('shows the history of the lead at the foot of Edit lead, not of Add lead (R-17)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+    await user.click(screen.getByRole('button', { name: 'Add lead' }));
+    await screen.findByRole('region', { name: 'Add lead' });
+    expect(screen.queryByRole('list', { name: 'History entries' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Close Add lead' }));
+
+    await chooseAction(user, brightside.name, 'Edit');
+    const dialog = await screen.findByRole('region', { name: 'Edit lead' });
+    const history = await within(dialog).findByRole('list', { name: 'History entries' });
+    expect(within(history).getByText('Lead added')).toBeInTheDocument();
+    expect(calls.histories).toHaveLength(1);
+    expect(calls.histories[0]?.get('target_type')).toBe('lead');
+    expect(calls.histories[0]?.get('target_id')).toBe(brightside.id);
+    expect(calls.histories[0]?.get('include_related')).toBeNull();
+  });
+
+  it('reads the costs in the practice currency, so an edit keeps the amounts (R-18)', async () => {
+    const user = userEvent.setup();
+    // The yen has no minor unit: 5000 in the API is ¥5,000.
+    renderPage({
+      context: { ...ownerContext, organization: { ...ownerContext.organization, currency: 'JPY' } },
+    });
+    await row(/^Select Brightside/);
+    await chooseAction(user, brightside.name, 'Edit');
+    const dialog = await screen.findByRole('region', { name: 'Edit lead' });
+
+    const onboarding = within(dialog).getByRole('textbox', { name: /^Onboarding cost/ });
+    expect(onboarding).toHaveValue('5000');
+    await user.clear(onboarding);
+    await user.type(onboarding, '7500');
+    await user.click(within(dialog).getByRole('button', { name: 'Save lead' }));
+
+    expect(await screen.findByText(`${brightside.name} saved`)).toBeInTheDocument();
+    // The untouched acquisition cost is not rescaled, so it is not sent.
+    expect(calls.updates).toEqual([{ id: brightside.id, body: { onboarding_cost: 7500 } }]);
+  });
 });
 
 describe('LeadsPage: converting', () => {
@@ -610,5 +650,29 @@ describe('LeadsPage: archiving', () => {
     expect(await screen.findByText(`${corner.name} unarchived`)).toBeInTheDocument();
     expect(calls.unarchives).toEqual([corner.id]);
     expect(await screen.findByRole('tab', { name: /^Open\s*2$/ })).toBeInTheDocument();
+  });
+
+  it('says archiving a converted lead leaves its client alone (R-19)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Corner/);
+
+    // An open lead: the wording is unchanged.
+    await chooseAction(user, corner.name, 'Archive');
+    const open = await screen.findByRole('dialog', { name: 'Archive lead?' });
+    expect(open).toHaveTextContent(
+      'Corner Cafe moves to Archived and can no longer be converted. Unarchive it at any time to pick it up again.',
+    );
+    await user.click(within(open).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('tab', { name: /^Converted/ }));
+    await row(/^Select Dunmore Holdings/);
+    await chooseAction(user, dunmore.name, 'Archive');
+    const converted = await screen.findByRole('dialog', { name: 'Archive lead?' });
+    expect(converted).toHaveTextContent(
+      'Dunmore Holdings moves to Archived. The client it became is not changed. Unarchive it at any time.',
+    );
+    expect(converted).not.toHaveTextContent('can no longer be converted');
   });
 });
