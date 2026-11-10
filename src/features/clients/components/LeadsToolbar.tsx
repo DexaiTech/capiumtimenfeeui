@@ -186,7 +186,7 @@ export function LeadsToolbar(props: LeadsToolbarProps) {
         </div>
       </div>
 
-      <div className="cc-toolbar-group cc-toolbar-group--row">
+      <div className="cc-toolbar-group">
         <ColumnsMenu
           columns={props.columns}
           hidden={props.hidden}
