@@ -53,6 +53,11 @@ export interface DataTableProps<TRow> {
   hiddenColumns?: ReadonlySet<string>;
   /** Trailing cell with the actions of one row. Return null for a row without actions. */
   rowActions?: (row: TRow) => ReactNode;
+  /**
+   * A visible, right-aligned heading over the `rowActions` column ("Action", as on the Clients
+   * list). Without it the column has a visually hidden "Actions" heading, as before.
+   */
+  actionsHeader?: string;
   /** Makes the whole row clickable (opening a detail page). Inner buttons stop propagation. */
   onRowClick?: (row: TRow) => void;
   loading?: boolean;
@@ -128,6 +133,7 @@ export function DataTable<TRow>({
   onSortChange,
   hiddenColumns,
   rowActions,
+  actionsHeader,
   onRowClick,
   loading = false,
   skeletonRows = 6,
@@ -277,8 +283,8 @@ export function DataTable<TRow>({
                   );
                 })}
                 {rowActions ? (
-                  <th scope="col" className={cn(headerCell, 'w-px')}>
-                    <span className="sr-only">Actions</span>
+                  <th scope="col" className={cn(headerCell, 'w-px', actionsHeader && 'text-right')}>
+                    {actionsHeader ?? <span className="sr-only">Actions</span>}
                   </th>
                 ) : null}
               </tr>
