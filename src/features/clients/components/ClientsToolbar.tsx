@@ -26,6 +26,8 @@ export interface ClientsToolbarProps {
   clientCount: number | undefined;
   /** The Leads page: a second tab next to Clients (the module has no sidebar). */
   leadsHref?: string;
+  /** The open leads, for the Leads tab of the switch: null while loading, undefined for none. */
+  leadCount?: number | null;
   search: string;
   onSearchChange: (value: string) => void;
   hidden: ReadonlySet<ToggleableColumnId>;
@@ -71,7 +73,11 @@ export function ClientsToolbar(props: ClientsToolbarProps) {
     <div className="cc-toolbar" role="toolbar" aria-label="Clients toolbar">
       <div className="cc-toolbar-group">
         {props.leadsHref ? (
-          <ClientsLeadsSwitch current="clients" clientCount={props.clientCount ?? null} />
+          <ClientsLeadsSwitch
+            current="clients"
+            clientCount={props.clientCount ?? null}
+            leadCount={props.leadCount}
+          />
         ) : (
           <div className="cc-tabswitch">
             <span className="cc-tab" aria-current="true">

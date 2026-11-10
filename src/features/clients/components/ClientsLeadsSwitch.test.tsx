@@ -19,6 +19,11 @@ describe('ClientsLeadsSwitch', () => {
     expect(within(tabs()).queryByRole('link', { name: /^Clients/ })).not.toBeInTheDocument();
   });
 
+  it('on the Client List: the Leads link carries the lead count when it is given', () => {
+    renderInOrg(<ClientsLeadsSwitch current="clients" clientCount={13} leadCount={8} />);
+    expect(within(tabs()).getByRole('link', { name: /^Leads/ })).toHaveTextContent('8');
+  });
+
   it('on Leads: Leads is marked, Clients is a link back to the list', () => {
     renderInOrg(<ClientsLeadsSwitch current="leads" clientCount={13} leadCount={8} />);
     expect(within(tabs()).getByText('Leads').closest('[aria-current]')).toHaveTextContent('8');

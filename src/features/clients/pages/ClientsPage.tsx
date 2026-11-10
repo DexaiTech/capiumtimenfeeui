@@ -23,6 +23,7 @@ import {
   useClientSummary,
   useDeleteClient,
   useExportClients,
+  useLeadSummary,
   useServiceOptions,
   useStaffDirectory,
   useSyncAllClients,
@@ -138,6 +139,7 @@ export default function ClientsPage() {
   const params = useMemo(() => ({ q, filters, sort, order }), [q, filters, sort, order]);
   const list = useClientList(params);
   const summary = useClientSummary();
+  const leadSummary = useLeadSummary();
   const services = useServiceOptions();
   const staff = useStaffDirectory();
   const archive = useArchiveClient();
@@ -495,6 +497,7 @@ export default function ClientsPage() {
       <ClientsToolbar
         clientCount={summary.data?.total}
         leadsHref={routes.org.leads(organization.slug)}
+        leadCount={leadSummary.data?.open.count ?? null}
         search={search}
         onSearchChange={setSearch}
         hidden={hidden}

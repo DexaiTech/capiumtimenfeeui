@@ -74,6 +74,14 @@ function setup(leads = testLeads) {
 beforeEach(() => setup());
 
 describe('LeadsPage: the list', () => {
+  it('puts the title above the Clients and Leads switch (R-02)', () => {
+    renderPage();
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Leads' });
+    const tabs = screen.getByRole('navigation', { name: 'Clients and leads' });
+    expect(title.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('lists the open leads with their costs, the totals and the counts of each tab', async () => {
     renderPage();
 
@@ -509,6 +517,73 @@ describe('LeadFormPanel', () => {
       within(dialog).getAllByText('Enter an amount in pounds, for example 250 or 99.50'),
     ).toHaveLength(2);
     expect(calls.creates).toEqual([]);
+  });
+
+  it('groups the fields in sections like the client form, under the required-fields note (R-06)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Add lead' }));
+    const dialog = await screen.findByRole('region', { name: 'Add lead' });
+
+    expect(
+      within(dialog).getByText('Fields marked with a red star are required.'),
+    ).toBeInTheDocument();
+    const about = within(within(dialog).getByRole('region', { name: 'About the lead' }));
+    expect(about.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+    expect(about.getByRole('combobox', { name: 'Client type' })).toBeInTheDocument();
+    expect(about.getByRole('textbox', { name: 'Source' })).toBeInTheDocument();
+    const contact = within(within(dialog).getByRole('region', { name: 'Contact' }));
+    expect(contact.getByRole('textbox', { name: 'Contact name' })).toBeInTheDocument();
+    expect(contact.getByRole('textbox', { name: 'Email' })).toBeInTheDocument();
+    expect(contact.getByRole('textbox', { name: 'Phone' })).toBeInTheDocument();
+    const costs = within(within(dialog).getByRole('region', { name: 'Costs' }));
+    expect(
+      costs.getByText('Optional. A blank amount counts as nothing spent.'),
+    ).toBeInTheDocument();
+    expect(costs.getByRole('textbox', { name: 'Acquisition cost (£)' })).toBeInTheDocument();
+    expect(costs.getByRole('textbox', { name: 'Onboarding cost (£)' })).toBeInTheDocument();
+    expect(costs.getByText('Total cost')).toBeInTheDocument();
+  });
+
+  it('folds Notes on Add lead and opens it on Edit lead', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Add lead' }));
+    const add = await screen.findByRole('region', { name: 'Add lead' });
+    const addNotes = within(add).getByText('Notes', { selector: 'summary span' });
+    expect(within(add).getByText('Optional.')).toBeInTheDocument();
+    expect(addNotes.closest('details')).not.toHaveAttribute('open');
+    await user.click(screen.getByRole('button', { name: 'Close Add lead' }));
+
+    await row(/^Select Brightside/);
+    await chooseAction(user, brightside.name, 'Edit');
+    const edit = await screen.findByRole('region', { name: 'Edit lead' });
+    const editNotes = within(edit).getByText('Notes', { selector: 'summary span' });
+    expect(editNotes.closest('details')).toHaveAttribute('open');
+  });
+
+  it('opens the folded Notes when the server refuses them', async () => {
+    server.use(
+      http.post(orgApiPath('/leads'), () =>
+        fail(422, 'VALIDATION_ERROR', 'Some fields are invalid.', {
+          details: [
+            { field: 'notes', code: 'string_too_long', message: 'Use at most 5000 characters' },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Add lead' }));
+    const dialog = await screen.findByRole('region', { name: 'Add lead' });
+    const notes = within(dialog).getByText('Notes', { selector: 'summary span' });
+    expect(notes.closest('details')).not.toHaveAttribute('open');
+
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Evergreen LLP');
+    await user.click(within(dialog).getByRole('button', { name: 'Add lead' }));
+
+    expect(await within(dialog).findByText('Use at most 5000 characters')).toBeInTheDocument();
+    expect(notes.closest('details')).toHaveAttribute('open');
   });
 
   it('edits a lead, sending only what changed', async () => {

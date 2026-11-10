@@ -45,6 +45,18 @@ describe('ClientsPage list', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows the open-lead count on the Leads tab, with the title above the switch (R-02)', async () => {
+    server.use(...clientsHandlers());
+    renderInOrg(<ClientsPage />);
+    await clientRow(techwave.name);
+
+    const tabs = screen.getByRole('navigation', { name: 'Clients and leads' });
+    // Brightside and Corner Cafe are the open leads of the fixtures.
+    expect(await within(tabs).findByRole('link', { name: /^Leads/ })).toHaveTextContent('2');
+    const title = screen.getByRole('heading', { level: 1, name: 'Clients' });
+    expect(title.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('renders the rows with the columns of APT76', async () => {
     server.use(...clientsHandlers());
     renderInOrg(<ClientsPage />);

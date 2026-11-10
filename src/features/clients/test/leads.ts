@@ -91,7 +91,7 @@ export function newLeadCalls(): LeadCalls {
 const statusOf = (entry: Lead): LeadStatus =>
   entry.archived_at ? 'archived' : entry.converted_client_id ? 'converted' : 'open';
 
-function summaryOf(leads: Lead[]): LeadSummary {
+export function summaryOf(leads: Lead[]): LeadSummary {
   const totals = (status: LeadStatus) => {
     const rows = leads.filter((entry) => entry.status === status);
     const sum = (pick: (entry: Lead) => number) =>
