@@ -180,6 +180,130 @@ describe('LeadsPage: the list', () => {
   });
 });
 
+// CLIENTS-LEADS-PARITY-01: Leads copies the Clients screen. One toolbar card holds the Clients |
+// Leads switch, the Open / Converted / Archived tabs and the search on row 1, and Show/Hide
+// Columns, Export selected and Add lead on row 2, in the `cc-*` look of the Client List.
+describe('LeadsPage: the toolbar card, as on Clients', () => {
+  const toolbar = () => screen.getByRole('toolbar', { name: 'Leads toolbar' });
+  const follows = (first: Element, second: Element) =>
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+  it('holds the Clients | Leads switch, with its counts, in the toolbar card', async () => {
+    renderPage();
+
+    const card = within(toolbar());
+    const tabs = card.getByRole('navigation', { name: 'Clients and leads' });
+    expect(within(tabs).getByRole('link', { name: /^Clients/ })).toHaveAttribute(
+      'href',
+      '/acme/clients',
+    );
+    // The open leads are counted on the marked Leads tab once the summary arrives.
+    await waitFor(() =>
+      expect(within(tabs).getByText('Leads').closest('[aria-current]')).toHaveTextContent('2'),
+    );
+    expect(card.getByRole('tablist', { name: 'Lead lists' })).toBeInTheDocument();
+    expect(card.getByRole('searchbox', { name: 'Search leads' })).toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Show/Hide Columns' })).toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Export selected' })).toBeInTheDocument();
+    expect(card.getByRole('button', { name: 'Add lead' })).toBeInTheDocument();
+    // The switch is no longer above the cards, outside any card.
+    expect(screen.getAllByRole('navigation', { name: 'Clients and leads' })).toHaveLength(1);
+  });
+
+  it('reads title, cost cards, then the toolbar card with the switch first', () => {
+    renderPage();
+
+    const title = screen.getByRole('heading', { level: 1, name: 'Leads' });
+    const cards = screen.getByLabelText('Lead totals');
+    follows(title, cards);
+    follows(cards, toolbar());
+    const card = within(toolbar());
+    const order = [
+      card.getByRole('navigation', { name: 'Clients and leads' }),
+      card.getByRole('tablist', { name: 'Lead lists' }),
+      card.getByRole('searchbox', { name: 'Search leads' }),
+      card.getByRole('button', { name: 'Show/Hide Columns' }),
+      card.getByRole('button', { name: 'Export selected' }),
+      card.getByRole('button', { name: 'Add lead' }),
+    ];
+    order.slice(1).forEach((element, index) => follows(order[index] as Element, element));
+  });
+
+  it('uses the Clients toolbar classes for the card, the search and the buttons', () => {
+    renderPage();
+
+    expect(toolbar()).toHaveClass('cc-toolbar');
+    const card = within(toolbar());
+    expect(card.getByRole('searchbox', { name: 'Search leads' }).closest('.cc-search')).not.toBe(
+      null,
+    );
+    expect(card.getByRole('button', { name: 'Show/Hide Columns' })).toHaveClass('cc-btn');
+    expect(card.getByRole('button', { name: 'Export selected' })).toHaveClass(
+      'cc-btn',
+      'cc-btn--outline',
+    );
+    expect(card.getByRole('button', { name: 'Add lead' })).toHaveClass('cc-btn', 'cc-btn--primary');
+    expect(card.getByRole('tablist', { name: 'Lead lists' })).toHaveClass('cc-tabswitch');
+    expect(card.getByRole('tab', { name: /^Open/ })).toHaveClass('cc-tab');
+  });
+
+  it('keeps the search label and placeholder, and Escape clears it', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    const search = screen.getByRole('searchbox', { name: 'Search leads' });
+    expect(search).toHaveAttribute('placeholder', 'Search name, contact or email');
+    // The API refuses a longer search with 422.
+    expect(search).toHaveAttribute('maxlength', '100');
+    await user.type(search, 'corner');
+    expect(search).toHaveValue('corner');
+    await user.keyboard('{Escape}');
+    expect(search).toHaveValue('');
+  });
+
+  it('moves between the tabs with the arrow keys and marks the chosen one', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    screen.getByRole('tab', { name: /^Open/ }).focus();
+    await user.keyboard('{ArrowRight}');
+    const converted = screen.getByRole('tab', { name: /^Converted/ });
+    expect(converted).toHaveAttribute('aria-selected', 'true');
+    expect(converted).toHaveFocus();
+    expect(screen.getByRole('tab', { name: /^Open/ })).toHaveAttribute('aria-selected', 'false');
+    await user.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: /^Archived/ })).toHaveAttribute('aria-selected', 'true');
+    expect(await row(/^Select Old Prospect/)).toBeInTheDocument();
+    expect(calls.lists.at(-1)?.get('status')).toBe('archived');
+  });
+
+  it('keeps the switch on screen when the list cannot be loaded', async () => {
+    server.use(http.get(orgApiPath('/leads'), () => fail(500, 'INTERNAL_ERROR', 'Boom.')));
+    renderPage();
+
+    expect(await screen.findByText('Could not load the leads')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Clients and leads' })).toBeInTheDocument();
+  });
+
+  it('shows every column again with Show all columns', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await row(/^Select Brightside/);
+
+    await user.click(screen.getByRole('button', { name: 'Show/Hide Columns' }));
+    const menu = await screen.findByRole('dialog', { name: 'Visible columns' });
+    const showAll = within(menu).getByRole('button', { name: 'Show all columns' });
+    expect(showAll).toBeDisabled();
+    await user.click(within(menu).getByRole('checkbox', { name: 'Source' }));
+    expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument();
+    await user.click(showAll);
+    expect(screen.getByRole('columnheader', { name: 'Source' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('tf:columns:leads')).toBe('[]');
+  });
+});
+
 describe('LeadsPage: selection, columns and export', () => {
   it('selects leads one by one or all at once, like the other grids', async () => {
     const user = userEvent.setup();
