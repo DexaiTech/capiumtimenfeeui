@@ -115,6 +115,11 @@
   min-width: 0;
 }
 
+/* A group that takes a row of the card for itself: the buttons under the tabs and the search. */
+.cc-toolbar-group--row {
+  flex: 1 1 100%;
+}
+
 .cc-tabswitch {
   display: inline-flex;
   align-items: center;
@@ -1484,4 +1489,33 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/*
+ * The Leads list is the shared DataTable inside `.capium-clients`. These rules give its card,
+ * checkbox column and row hover the look of the Client List table above (`.cc-table-card`,
+ * `.cc-table`); nothing else of the shared table changes.
+ */
+.cc-leads-table .list-card {
+  border-color: var(--cc-border);
+  border-radius: var(--cc-radius-card);
+  box-shadow: var(--cc-shadow-card);
+}
+
+.cc-leads-table th:first-child,
+.cc-leads-table td:first-child:not([colspan]) {
+  width: 45px;
+  padding-left: 14px;
+}
+
+.cc-leads-table input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--cc-primary);
+}
+
+.cc-leads-table .row-glow:hover,
+.cc-leads-table .row-glow:focus-visible {
+  background-color: var(--cc-primary-5);
+  box-shadow: none;
 }

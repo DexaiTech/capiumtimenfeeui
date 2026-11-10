@@ -1,4 +1,4 @@
-import { Download, SearchX, Target, UserPlus } from 'lucide-react';
+import { SearchX, Target } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
@@ -7,16 +7,12 @@ import {
   Badge,
   Button,
   Card,
-  ColumnVisibilityMenu,
   ConfirmDialog,
-  CountTabs,
   DataTable,
   EmptyState,
   ErrorState,
-  PageToolbar,
   Pagination,
   RowActions,
-  SearchField,
   Select,
   useToast,
   type ConfirmDialogError,
@@ -44,6 +40,7 @@ import {
   useLeadSummary,
 } from '../api';
 import { ClientsLeadsSwitch } from '../components/ClientsLeadsSwitch';
+import { LeadsToolbar } from '../components/LeadsToolbar';
 import { branchOptions, CLIENT_TYPE_LABELS } from '../constants';
 import { LeadFormPanel } from '../leads/LeadFormPanel';
 import { LEAD_STATUSES, type Lead, type LeadStatus } from '../leads/types';
@@ -77,7 +74,7 @@ function refusalOf(error: unknown): ConfirmDialogError {
   return { message: 'An unexpected error occurred. Please try again.' };
 }
 
-function LeadList() {
+function LeadList({ clientCount }: { clientCount: number | null }) {
   const { organization, can } = useOrg();
   const currency = organization.currency;
   const navigate = useNavigate();
@@ -326,14 +323,24 @@ function LeadList() {
 
   if (leads.isError && !leads.data) {
     return (
-      <div className="rounded-xl border border-border bg-surface shadow-card">
-        <ErrorState
-          title="Could not load the leads"
-          error={isApiError(leads.error) ? leads.error : null}
-          onRetry={() => void leads.refetch()}
-          retrying={leads.isRefetching}
-        />
-      </div>
+      <>
+        {/* The toolbar card is gone with the list, but Clients stays one click away. */}
+        <div className="capium-clients">
+          <ClientsLeadsSwitch
+            current="leads"
+            clientCount={clientCount}
+            leadCount={summary.data?.open.count ?? null}
+          />
+        </div>
+        <div className="rounded-xl border border-border bg-surface shadow-card">
+          <ErrorState
+            title="Could not load the leads"
+            error={isApiError(leads.error) ? leads.error : null}
+            onRetry={() => void leads.refetch()}
+            retrying={leads.isRefetching}
+          />
+        </div>
+      </>
     );
   }
 
@@ -369,6 +376,7 @@ function LeadList() {
         ))}
       </dl>
       <DataTable
+        className="capium-clients cc-leads-table"
         caption="Leads"
         columns={columns}
         rows={loaded}
@@ -380,60 +388,28 @@ function LeadList() {
         hiddenColumns={hidden}
         loading={leads.isPending}
         toolbar={
-          <PageToolbar
-            start={
-              <CountTabs
-                label="Lead lists"
-                items={TABS.map((item) => ({
-                  ...item,
-                  count: summary.data ? summary.data[item.value].count : null,
-                }))}
-                value={tab}
-                onChange={(value) => setParam({ tab: value === 'open' ? null : value })}
-              />
-            }
-            search={
-              <SearchField
-                label="Search leads"
-                placeholder="Search name, contact or email"
-                value={search}
-                onChange={setSearch}
-              />
-            }
-            actions={
-              <>
-                <ColumnVisibilityMenu
-                  columns={columns.map((column) => ({
-                    id: column.id,
-                    label: column.header,
-                    locked: column.hideable === false,
-                  }))}
-                  hidden={hidden}
-                  onChange={setHidden}
-                />
-                <Button
-                  size="sm"
-                  variant="brand-outline"
-                  disabled={chosen.length === 0}
-                  leftIcon={<Download aria-hidden="true" className="size-4" />}
-                  onClick={exportSelected}
-                >
-                  Export selected
-                </Button>
-              </>
-            }
-            primaryAction={
-              canCreate ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  leftIcon={<UserPlus aria-hidden="true" className="size-4" />}
-                  onClick={() => setDialog({ type: 'form', lead: null })}
-                >
-                  Add lead
-                </Button>
-              ) : undefined
-            }
+          <LeadsToolbar
+            clientCount={clientCount}
+            leadCount={summary.data?.open.count ?? null}
+            tabs={TABS.map((item) => ({
+              ...item,
+              count: summary.data ? summary.data[item.value].count : null,
+            }))}
+            tab={tab}
+            onTabChange={(value) => setParam({ tab: value === 'open' ? null : value })}
+            search={search}
+            onSearchChange={setSearch}
+            columns={columns.map((column) => ({
+              id: column.id,
+              label: column.header,
+              locked: column.hideable === false,
+            }))}
+            hidden={hidden}
+            onHiddenChange={setHidden}
+            canExport={chosen.length > 0}
+            onExport={exportSelected}
+            canCreate={canCreate}
+            onAddLead={() => setDialog({ type: 'form', lead: null })}
           />
         }
         rowActions={(lead) => {
@@ -553,23 +529,14 @@ function LeadList() {
 export default function LeadsPage() {
   useDocumentTitle('Leads');
   const clients = useClientSummary();
-  const leads = useLeadSummary();
   return (
-    <section className="flex min-w-0 flex-col gap-4">
+    <section className="flex min-w-0 flex-col gap-2.5">
       <PageHeader
         title="Leads"
         description="Prospective clients and what winning them costs: acquisition and onboarding. Convert a lead into a client in one click once it is won, or archive it."
         className="mb-1"
       />
-      {/* The same Clients | Leads tabs as the Client List, so neither page hides the other. */}
-      <div className="capium-clients">
-        <ClientsLeadsSwitch
-          current="leads"
-          clientCount={clients.data?.total ?? null}
-          leadCount={leads.data?.open.count ?? null}
-        />
-      </div>
-      <LeadList />
+      <LeadList clientCount={clients.data?.total ?? null} />
     </section>
   );
 }
