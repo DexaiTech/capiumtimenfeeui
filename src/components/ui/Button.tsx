@@ -13,6 +13,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   fullWidth?: boolean;
+  /**
+   * In a narrow `PageToolbar` (< 72rem) only the icon shows; the text stays the accessible name
+   * and becomes the tooltip. Use with `leftIcon` and a text label.
+   */
+  compactLabel?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -23,8 +28,10 @@ export function Button({
   leftIcon,
   rightIcon,
   fullWidth = false,
+  compactLabel = false,
   disabled,
   type = 'button',
+  title,
   className,
   children,
   ref,
@@ -36,11 +43,16 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(buttonClasses({ variant, size, fullWidth }), className)}
+      title={title ?? (compactLabel && typeof children === 'string' ? children : undefined)}
+      className={cn(
+        buttonClasses({ variant, size, fullWidth }),
+        compactLabel && '@max-6xl/toolbar:px-1.5',
+        className,
+      )}
       {...rest}
     >
       {loading ? <Spinner size="sm" /> : leftIcon}
-      {children}
+      {compactLabel ? <span className="@max-6xl/toolbar:sr-only">{children}</span> : children}
       {!loading && rightIcon}
     </button>
   );

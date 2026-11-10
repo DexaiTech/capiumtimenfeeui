@@ -25,7 +25,7 @@ export function SearchField({
   ...rest
 }: SearchFieldProps) {
   return (
-    <div className={cn('relative w-full sm:w-[241px]', className)}>
+    <div className={cn('relative w-full min-w-40 sm:w-[241px]', className)}>
       <Search
         aria-hidden="true"
         className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-text-muted"

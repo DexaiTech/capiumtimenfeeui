@@ -44,6 +44,7 @@ export function ColumnVisibilityMenu({
         size="sm"
         aria-expanded={open}
         aria-haspopup="dialog"
+        compactLabel
         leftIcon={<Columns3 aria-hidden="true" className="size-4" />}
         onClick={() => setOpen((value) => !value)}
       >

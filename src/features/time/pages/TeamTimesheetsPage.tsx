@@ -368,6 +368,7 @@ function Page() {
                 <Button
                   variant="outline"
                   size="sm"
+                  compactLabel
                   leftIcon={<Download className="size-4" aria-hidden="true" />}
                   disabled={sorted.length === 0}
                   onClick={exportCsv}

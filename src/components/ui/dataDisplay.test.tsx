@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CountTabs } from './CountTabs';
 import { DataTable, type DataTableColumn } from './DataTable';
@@ -97,6 +97,71 @@ describe('CountTabs', () => {
     selected.focus();
     await user.keyboard('{ArrowRight}');
     expect(onChange).toHaveBeenCalledWith('archived');
+  });
+
+  describe('when the strip overflows', () => {
+    const items = [
+      { value: 'all', label: 'All' },
+      { value: 'draft', label: 'Draft' },
+      { value: 'overdue', label: 'Overdue' },
+    ];
+    const scrollBy = vi.fn();
+    const originalScrollBy = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollBy');
+
+    /** jsdom has no layout: give the strip a 200 px box over 600 px of tabs. */
+    const stubLayout = () => {
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(600);
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(200);
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(80);
+      vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.dataset.tab === 'overdue' ? 500 : 0;
+      });
+      Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
+        configurable: true,
+        value: scrollBy,
+      });
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      scrollBy.mockReset();
+      if (originalScrollBy)
+        Object.defineProperty(HTMLElement.prototype, 'scrollBy', originalScrollBy);
+      else Reflect.deleteProperty(HTMLElement.prototype, 'scrollBy');
+    });
+
+    it('renders no scroll buttons when every tab fits', () => {
+      const { container } = render(<CountTabs label="Statuses" value="all" items={items} />);
+      expect(container.querySelectorAll('button')).toHaveLength(items.length);
+    });
+
+    it('shows an end arrow that pages the strip', async () => {
+      stubLayout();
+      const user = userEvent.setup();
+      const { container } = render(<CountTabs label="Statuses" value="all" items={items} />);
+
+      const arrows = container.querySelectorAll('button[aria-hidden="true"]');
+      expect(arrows).toHaveLength(1);
+      expect(arrows[0]).toHaveAttribute('tabindex', '-1');
+      // The tablist still holds only the tabs.
+      expect(
+        screen.getByRole('tablist', { name: 'Statuses' }).querySelectorAll('button'),
+      ).toHaveLength(items.length);
+      await user.click(arrows[0] as HTMLElement);
+      expect(scrollBy).toHaveBeenCalledWith({ left: 160, behavior: 'smooth' });
+    });
+
+    it('scrolls the selected tab into view', () => {
+      stubLayout();
+      render(<CountTabs label="Statuses" value="overdue" items={items} />);
+      const list = screen.getByRole('tablist', { name: 'Statuses' });
+
+      // The tab (500…580 px) lies inside the visible 200 px of the strip.
+      expect(list.scrollLeft).toBeLessThanOrEqual(500);
+      expect(list.scrollLeft + 200).toBeGreaterThanOrEqual(580);
+    });
   });
 });
 

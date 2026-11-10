@@ -415,6 +415,7 @@ function LeadList() {
                   size="sm"
                   variant="brand-outline"
                   disabled={chosen.length === 0}
+                  compactLabel
                   leftIcon={<Download aria-hidden="true" className="size-4" />}
                   onClick={exportSelected}
                 >
