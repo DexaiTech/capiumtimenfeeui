@@ -561,3 +561,20 @@ Known limitations, not changed here:
 - At 160 px the Invoices search placeholder is cut ("Search number o…"); its accessible label is whole.
 - The local practice has no payments, credit notes or expense claims, and only one invoice, so
   those toolbars were measured with empty lists.
+
+### 18.2 Spot-check of the other toolbar pages (10 Nov 2026, after review)
+
+Pages outside the spec, checked on the local stack at 1440 px, 1024 px @ 90 %, 1024 px with the sidebar collapsed and 768 px. Each one was compared with `main`:
+
+- Time analysis (Time and Reports)
+- Utilisation and Billing reports
+- Historic WIP, WIP Summary and Debtors
+- The Client 360 Jobs, Time, WIP, Invoices, Payments and Expenses tabs
+
+The check looked for controls cut off at the window edge, controls overlapping, page overflow and toolbar height. None of these pages had a control cut off, an overlap or page overflow.
+
+**One regression, found and fixed.** On the Client 360 Time and Expenses tabs, the toolbar went from one row on `main` to two rows (at 1024 @ 90 % and with the sidebar collapsed).
+
+- **Cause:** the left group always kept 18rem (`min-w-72`). When it holds only a title, that squeezed the date range, the selects and the button onto a second row.
+- **Fix:** the left group keeps 18rem only when it holds a tab strip (`@3xl/toolbar:has-[[role=tablist]]:min-w-72`).
+- **Result:** every checked page is as good as `main` or better (the Client 360 Jobs and WIP tabs go from 2 rows to 1 at 768 px). The layout spec still passes 25 / 25.
