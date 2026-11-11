@@ -24,7 +24,6 @@ const PAGES = [
   { name: 'Jobs', path: 'jobs' },
   { name: 'My Expenses', path: 'expenses/mine' },
   { name: 'Expense Claims', path: 'expenses' },
-  { name: 'Leads', path: 'clients/leads' },
   { name: 'Time entries', path: 'time/entries' },
   { name: 'Staff', path: 'team/staff' },
   { name: 'Credit notes', path: 'billing/credit-notes' },
