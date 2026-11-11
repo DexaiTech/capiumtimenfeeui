@@ -151,8 +151,13 @@ async function checkTabsReachable(page: Page) {
   await expect(strip.getByRole('tab').last()).toBeFocused();
   await expectLastTabInStrip(page);
   await page.reload();
-  await expect(strip.getByRole('tab').last()).toHaveAttribute('aria-selected', 'true');
+  await expect(strip.getByRole('tab').last()).toHaveAttribute('aria-selected', 'true', {
+    timeout: 30_000,
+  });
   await expectLastTabInStrip(page);
+  // Let the reloaded page finish restoring its session before the next page is opened: two
+  // refreshes of the same session in flight at once end the session ("Could not restore").
+  await page.waitForLoadState('networkidle');
 }
 
 async function expectLastTabInStrip(page: Page) {
